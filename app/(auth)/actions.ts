@@ -2,7 +2,6 @@
 
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { ATTRIBUTION_FIELDS, attributionProps, sanitizeAttribution } from "@/lib/analytics/attribution";
-import { recordReferralSignup } from "@/lib/referrals/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 import { revalidatePath } from "next/cache";
@@ -181,6 +180,21 @@ export async function signupAction(
   // crafted Host header on the signup request.
   const emailRedirectTo = `${getSiteBaseUrl()}/auth/callback`;
 
+  // The first-touch attribution the form carried (sessionStorage → hidden
+  // fields). A referral code rides into the account's metadata and is
+  // claimed at ONBOARDING — the first step an account takes with a
+  // CONFIRMED email (lib/onboarding/actions.ts) — never here: GoTrue hands
+  // an existing unconfirmed address the same user id, so a row written at
+  // signup let anyone claim a referral on an inbox they don't own.
+  const attribution = sanitizeAttribution({
+    referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
+    utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
+    utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
+    utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
+    surface: formData.get(ATTRIBUTION_FIELDS.surface),
+    ref: formData.get(ATTRIBUTION_FIELDS.ref),
+  });
+
   const { data: signUpData, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -189,6 +203,7 @@ export async function signupAction(
       data: {
         username: parsed.data.username,
         display_name: parsed.data.username,
+        ...(attribution.ref ? { referral_code: attribution.ref } : {}),
       },
     },
   });
@@ -225,14 +240,6 @@ export async function signupAction(
   // user with no identities, and that must record nothing.
   const newUser = signUpData.user;
   if (newUser?.id && (newUser.identities?.length ?? 0) > 0 && isAdminConfigured()) {
-    const attribution = sanitizeAttribution({
-      referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
-      utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
-      utmMedium: formData.get(ATTRIBUTION_FIELDS.utmMedium),
-      utmCampaign: formData.get(ATTRIBUTION_FIELDS.utmCampaign),
-      surface: formData.get(ATTRIBUTION_FIELDS.surface),
-      ref: formData.get(ATTRIBUTION_FIELDS.ref),
-    });
     const admin = createAdminClient();
     await recordFunnelEvent(admin, {
       event: "signup",
@@ -243,11 +250,6 @@ export async function signupAction(
         ...(formData.get(GUEST_DRAFT_FIELD) === "1" ? { guestDraft: true } : {}),
       },
     });
-    // Joined through a friend's link: the referral row (lib/referrals). Its
-    // reward waits for the first saved card. Best effort — never the signup.
-    if (attribution.ref) {
-      await recordReferralSignup(admin, { refereeId: newUser.id, code: attribution.ref });
-    }
   }
 
   // If email confirmation is OFF, signUp also signs the user in.

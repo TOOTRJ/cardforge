@@ -154,16 +154,18 @@ export function describeNotification(
     }
     case "referral_signup": {
       // A friend who joined through the recipient's link saved their first
-      // card with a confirmed email but earned the recipient NO month — sent
-      // only then (0164; the rewarded case is the referral_reward row).
+      // card with a confirmed email but earned the recipient NO reward — sent
+      // only then (0177; the rewarded case is the referral_reward row).
       // Never a fraud reason.
       const outcome = str(payload.outcome);
       const why =
         outcome === "capped_month"
-          ? "You've reached this month's referral limit, so this one doesn't add a free month for you — they still get theirs."
+          ? "You've reached this month's referral limit, so this one adds no reward for you — they still get theirs."
           : outcome === "capped_lifetime"
-            ? "You've earned every free month the program gives, so this one doesn't add one for you — they still get theirs."
-            : "This referral isn't eligible for a reward.";
+            ? "You've earned every reward the program gives, so this one adds none for you — they still get theirs."
+            : outcome === "capped_friends"
+              ? "You've reached this month's limit of rewarded friends, so this one earns no reward on either side."
+              : "This referral isn't eligible for a reward.";
       return {
         subject: actorName,
         body: `joined PipGlyph with your referral link and saved their first card. ${why}`,
@@ -171,28 +173,31 @@ export function describeNotification(
       };
     }
     case "referral_reward": {
-      // One free month, either side of a referral (lib/referrals/server.ts):
-      // a month of Plus with its AI credits, or a month off a paid plan.
+      // One reward, either side of a referral (lib/referrals/server.ts):
+      // free days of a tier (lib/billing/free-days.ts — added to a paying
+      // plan's time, else the perks overlay) or AI credits.
       const side = str(payload.side);
       const reward = str(payload.reward);
       const until = str(payload.until);
+      const holdEndsAt = str(payload.holdEndsAt);
+      const days = num(payload.days);
       const credits = num(payload.credits);
-      const amountCents = num(payload.amountCents);
-      const currency = str(payload.currency) ?? "usd";
-      const withCredits = credits != null && credits > 0 ? ` with ${credits} AI credits` : "";
-      const month =
-        reward === "balance_credit" && amountCents != null
-          ? `a free month — ${formatMoney(amountCents, currency)} off your next bill`
-          : `a free month of Plus${until ? ` (until ${formatShortDate(until)})` : ""}${withCredits}`;
+      const tierName = TIER_LABEL[str(payload.tier) ?? ""] ?? "Plus";
+      const what =
+        reward === "credits" && credits != null
+          ? `${credits} AI credit${credits === 1 ? "" : "s"}`
+          : `${days ?? 30} free days of ${tierName}${until ? ` (until ${formatShortDate(until)})` : ""}${
+              holdEndsAt ? " — added to the time you've paid for" : ""
+            }`;
       return side === "referee"
         ? {
             subject: actorName,
-            body: `invited you to PipGlyph — you've earned ${month} for saving your first card.`,
+            body: `invited you to PipGlyph — you've earned ${what} for saving your first card.`,
             href: "/dashboard/billing",
           }
         : {
             subject: actorName,
-            body: `saved their first card — you've earned ${month}. Thanks for spreading the word!`,
+            body: `saved their first card — you've earned ${what}. Thanks for spreading the word!`,
             href: "/dashboard/referrals",
           };
     }

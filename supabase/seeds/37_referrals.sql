@@ -1,16 +1,15 @@
 -- ---------------------------------------------------------------------------
--- 37_referrals.sql — the referral program (migration 0164), so a preview
+-- 37_referrals.sql — the referral program (migration 0177), so a preview
 -- branch, the dev database and the local stack show each case:
 --
 --   Codes — every seeded account has a fixed code (dev_free: d0000003, so
 --     its link is /?ref=d0000003).
---   dev_pro → dev_artist   REWARDED 10 days ago: dev_pro's month was a
---     balance credit ($15, a live Pro plan), dev_artist's a month of Plus
---     (recorded only — dev_artist's profile and credits are not changed
---     here).
+--   dev_pro → dev_artist   REWARDED 10 days ago: 30 free days each (dev_pro
+--     Pro, dev_artist Plus) — recorded only; no plan_grants row, no profile
+--     change (the live flow makes those through lib/billing/free-days.ts).
 --   dev_free → dev_new     SIGNED UP, no card yet: sign in as dev_new and
---     save a first card to watch both months land at once (dev_free and
---     dev_new: a month of Plus each, with 30 AI credits) and the two
+--     save a first card to watch both rewards land at once (dev_free and
+--     dev_new: 30 free days of Plus each, as a perks overlay) and the two
 --     referral_reward notifications. (Seeded emails are confirmed.)
 --   dev_pro's referral_reward notification for the first row.
 --
@@ -52,10 +51,9 @@ from (values
    'd0000000-0000-4000-a000-000000000002'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid,
    'd0000002', 'rewarded',
    now() - interval '12 days', now() - interval '10 days', now() - interval '10 days',
-   'balance_credit', 'plus_month',
-   '{"kind": "balance_credit", "amountCents": 1500, "currency": "usd"}'::jsonb,
-   jsonb_build_object('kind', 'plus_month', 'tier', 'plus', 'startsAt', now() - interval '10 days',
-                      'expiresAt', now() + interval '20 days', 'credits', 30)),
+   'free_days', 'free_days',
+   jsonb_build_object('kind', 'free_days', 'tier', 'pro', 'days', 30, 'appliedAs', 'overlay', 'endsAt', now() + interval '20 days', 'holdEndsAt', null, 'grantId', null),
+   jsonb_build_object('kind', 'free_days', 'tier', 'plus', 'days', 30, 'appliedAs', 'overlay', 'endsAt', now() + interval '20 days', 'holdEndsAt', null, 'grantId', null)),
   ('e0000000-0000-4000-a000-000000000002'::uuid,
    'd0000000-0000-4000-a000-000000000003'::uuid, 'd0000000-0000-4000-a000-000000000005'::uuid,
    'd0000003', 'signed_up',
@@ -72,7 +70,7 @@ select v.recipient_id, v.actor_id, v.type, v.payload
 from (values
   ('d0000000-0000-4000-a000-000000000002'::uuid, 'd0000000-0000-4000-a000-000000000004'::uuid,
    'referral_reward',
-   '{"referralId": "e0000000-0000-4000-a000-000000000001", "side": "referrer", "reward": "balance_credit", "amountCents": 1500, "currency": "usd"}'::jsonb)
+   '{"referralId": "e0000000-0000-4000-a000-000000000001", "side": "referrer", "reward": "free_days", "tier": "pro", "days": 30, "appliedAs": "overlay"}'::jsonb)
 ) as v (recipient_id, actor_id, type, payload)
 where exists (select 1 from public.profiles p where p.id = v.recipient_id)
   and exists (select 1 from public.referrals r where r.id = (v.payload ->> 'referralId')::uuid)

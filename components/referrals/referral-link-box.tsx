@@ -10,12 +10,14 @@ import { inputClass } from "@/components/ui/field-classes";
 // (where there is one) and an email draft. The message says what the friend
 // gets — the reason they'll click — and nothing about the referrer's month.
 
-const SHARE_TEXT =
-  "I make custom Magic cards on PipGlyph — join with my link and you get a free month of Plus when you save your first card.";
+/** The share text names what the FRIEND gets (the settings' words). */
+const shareText = (friendGets: string) =>
+  `I make custom Magic cards on PipGlyph — join with my link and you get ${friendGets} when you save your first card.`;
 
 const noop = () => () => {};
 
-export function ReferralLinkBox({ link }: { link: string }) {
+export function ReferralLinkBox({ link, friendGets = "30 free days of Plus" }: { link: string; friendGets?: string }) {
+  const SHARE_TEXT = shareText(friendGets);
   const [copied, setCopied] = useState(false);
   // navigator.share exists only in the browser (and not in every one): read
   // it after hydration so the server render and the first client render agree.
@@ -44,7 +46,7 @@ export function ReferralLinkBox({ link }: { link: string }) {
     }
   }
 
-  const mailto = `mailto:?subject=${encodeURIComponent("A free month of PipGlyph Plus")}&body=${encodeURIComponent(
+  const mailto = `mailto:?subject=${encodeURIComponent(`${friendGets.charAt(0).toUpperCase()}${friendGets.slice(1)} on PipGlyph`)}&body=${encodeURIComponent(
     `${SHARE_TEXT}\n\n${link}`,
   )}`;
 

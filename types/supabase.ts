@@ -465,6 +465,7 @@ export type Database = {
           applied_as: string;
           stripe_subscription_id: string | null;
           held_from: string | null;
+          reference: string | null;
           starts_at: string;
           ends_at: string | null;
           credits_from: string;
@@ -485,6 +486,7 @@ export type Database = {
           applied_as: string;
           stripe_subscription_id?: string | null;
           held_from?: string | null;
+          reference?: string | null;
           starts_at: string;
           ends_at?: string | null;
           credits_from: string;
@@ -505,6 +507,7 @@ export type Database = {
           applied_as?: string;
           stripe_subscription_id?: string | null;
           held_from?: string | null;
+          reference?: string | null;
           starts_at?: string;
           ends_at?: string | null;
           credits_from?: string;
@@ -3184,6 +3187,28 @@ export type Database = {
         Returns: boolean;
       };
       // Migration 0074 — private billing columns.
+      // Migration 0177 — referrals.
+      my_referral_code: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      claim_referral_reward: {
+        Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null };
+        /** 'rewarded' | 'capped_month' | 'capped_lifetime', or null. */
+        Returns: string | null;
+      };
+      normalize_referral_email: {
+        Args: { p_email: string | null };
+        Returns: string | null;
+      };
+      referral_email_in_use: {
+        Args: { p_user_id: string; p_normalized: string };
+        Returns: boolean;
+      };
+      admin_referral_stats: {
+        Args: { p_since: string };
+        Returns: Json;
+      };
       get_my_billing: {
         Args: Record<string, never>;
         Returns: {

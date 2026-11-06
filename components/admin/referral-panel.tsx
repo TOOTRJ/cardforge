@@ -2,10 +2,13 @@ import Link from "next/link";
 import { Gift } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { activationRate, type ReferralStatsSummary } from "@/lib/admin/referral-queries";
+import { ReferralSettingsForm } from "@/components/admin/referral-settings-form";
+import type { ReferralSettings } from "@/lib/referrals/settings";
 
 const BLOCK_LABEL: Record<string, string> = {
   same_email: "Same inbox",
   same_card: "Same card",
+  program_off: "Program paused",
   same_domain: "Same company domain (friend rewarded)",
   disposable_email: "Throwaway email",
   not_new: "Not a new account",
@@ -13,11 +16,12 @@ const BLOCK_LABEL: Record<string, string> = {
   account_deleted: "Friend's account deleted",
 };
 
-// Referral program numbers (0164's admin_referral_stats): the chain
-// signups → first card → rewarded, months granted on both sides, what was
-// held back and why, and the top referrers. Server component; the page
-// already runs as an admin.
-export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
+// Referral program numbers (0177's admin_referral_stats): the chain
+// signups → first card → rewarded, rewards granted on both sides, what was
+// held back and why, and the top referrers — and the program's SETTINGS
+// form (the switch, what each side gets, the caps). Server component; the
+// page already runs as an admin.
+export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSummary; settings?: ReferralSettings }) {
   const { last30, allTime } = summary;
   const rows: Array<{ label: string; d30: number; all: number }> = [
     { label: "Signed up through a link", d30: last30.signedUp, all: allTime.signedUp },
@@ -27,7 +31,7 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
     { label: "Blocked", d30: last30.blocked, all: allTime.blocked },
     { label: "Expired (no card or no confirmed email in 30 days)", d30: last30.expired, all: allTime.expired },
     { label: "Waiting (an email not confirmed yet)", d30: last30.waiting, all: allTime.waiting },
-    { label: "Free months granted", d30: last30.monthsGranted, all: allTime.monthsGranted },
+    { label: "Rewards granted (both sides)", d30: last30.rewardsGranted, all: allTime.rewardsGranted },
   ];
   const rate30 = activationRate(last30);
   const reasons = Object.entries(allTime.blockReasons).filter(([, n]) => n > 0);
@@ -64,8 +68,8 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
           </table>
           {allTime.grantsOwed > 0 ? (
             <p className="mt-2 text-xs text-gold-strong">
-              {allTime.grantsOwed} free {allTime.grantsOwed === 1 ? "month is" : "months are"} still owed — the hourly
-              sweep retries them.
+              {allTime.grantsOwed} reward{allTime.grantsOwed === 1 ? " is" : "s are"} still owed — the hourly sweep
+              retries them.
             </p>
           ) : null}
           {reasons.length > 0 ? (
@@ -85,7 +89,7 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
                   <th scope="col" className="pb-1 text-left font-medium">User</th>
                   <th scope="col" className="pb-1 pl-3 text-right font-medium">Joined</th>
                   <th scope="col" className="pb-1 pl-3 text-right font-medium">First card</th>
-                  <th scope="col" className="pb-1 pl-3 text-right font-medium">Months</th>
+                  <th scope="col" className="pb-1 pl-3 text-right font-medium">Rewards</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +102,7 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
                     </td>
                     <td className="py-1 pl-3 text-right tabular-nums text-muted">{r.referrals}</td>
                     <td className="py-1 pl-3 text-right tabular-nums text-muted">{r.activated}</td>
-                    <td className="py-1 pl-3 text-right tabular-nums text-foreground">{r.months}</td>
+                    <td className="py-1 pl-3 text-right tabular-nums text-foreground">{r.rewards}</td>
                   </tr>
                 ))}
               </tbody>
@@ -106,6 +110,7 @@ export function ReferralPanel({ summary }: { summary: ReferralStatsSummary }) {
           )}
         </div>
       </div>
+      {settings ? <ReferralSettingsForm initial={settings} /> : null}
     </SurfaceCard>
   );
 }

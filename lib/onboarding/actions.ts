@@ -160,11 +160,16 @@ export async function completeOnboardingAction(input: {
   }
 
   const profile = finished?.[0];
-  // First finish only (`finished` is empty on a repeat): a referral the
-  // signup action didn't record — the Google path. recordReferralSignup
-  // checks the account is new and keeps the first claim.
-  if (profile && parsed.data.referralCode && isAdminConfigured()) {
-    await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: parsed.data.referralCode });
+  // First finish only (`finished` is empty on a repeat): the referral is
+  // claimed HERE — the first step an account takes with a confirmed email
+  // (a session needs one) — from the code the signup put in the account's
+  // metadata, else the tab's first touch (a Google sign-up posts no signup
+  // form). recordReferralSignup checks the account is new, the program is
+  // on, and keeps the first claim.
+  const metadataCode = (user.user_metadata as { referral_code?: unknown } | null)?.referral_code;
+  const referralCode = typeof metadataCode === "string" ? metadataCode : parsed.data.referralCode;
+  if (profile && referralCode && isAdminConfigured()) {
+    await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: referralCode });
   }
   if (profile && isEmailConfigured() && isAdminConfigured()) {
     // After the response, identity passed in as plain values — never re-auth

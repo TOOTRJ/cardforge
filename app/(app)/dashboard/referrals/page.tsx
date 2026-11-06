@@ -12,8 +12,8 @@ import { ReferralLinkBox } from "@/components/referrals/referral-link-box";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { MONTHLY_CREDITS } from "@/lib/billing/plans";
 import { getMyReferralDashboard } from "@/lib/referrals/queries";
+import { rewardPhrase } from "@/lib/referrals/settings";
 import type { ReferralRow } from "@/lib/referrals/summary";
 import {
   REFERRAL_ACTIVATION_WINDOW_DAYS,
@@ -23,7 +23,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Refer a friend",
-  description: "Share your referral link: a friend who saves their first card gets a free month of Plus, and so do you.",
+  description: "Share your referral link: a friend who saves their first card gets free days of Plus, and so do you.",
   robots: { index: false, follow: false },
 };
 
@@ -43,8 +43,8 @@ const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "g
 };
 
 const REWARD_LABEL = {
-  plus_month: "A month of Plus",
-  balance_credit: "A month off your bill",
+  free_days: "Free days",
+  credits: "AI credits",
 } as const;
 
 /** The reward cell when no month was recorded for the viewer. */
@@ -64,41 +64,59 @@ export default async function ReferralsPage() {
 
   const dashboard = await getMyReferralDashboard();
   if (!dashboard) redirect("/login");
-  const { link, rows, summary, joinedThrough } = dashboard;
+  const { link, rows, summary, joinedThrough, settings } = dashboard;
+  // What each side gets — the settings' words (lib/referrals/settings.ts).
+  const friendGets = rewardPhrase(settings.friend);
+  const youGet = rewardPhrase(settings.referrer, { ownTierWord: "your plan" });
+  const freeDays = settings.friend.kind === "free_days" || settings.referrer.kind === "free_days";
 
   return (
     <DashboardShell readable>
       <PageHeader
         eyebrow="Account"
         title="Refer a friend"
-        description="Give a friend a free month of PipGlyph Plus — and get a free month yourself when they save their first card."
+        description={
+          settings.enabled
+            ? `Give a friend ${friendGets} — and get ${youGet} yourself when they save their first card.`
+            : "The referral program is paused right now."
+        }
       />
 
       <section className="mt-8">
         <SurfaceCard className="flex flex-col gap-5 p-6">
-          {link ? (
-            <ReferralLinkBox link={link} />
+          {!settings.enabled ? (
+            <p className="text-sm text-muted">
+              The referral program is paused: links don&apos;t count for now, and no new rewards are given. Rewards you
+              already earned stay on your account.
+            </p>
+          ) : link ? (
+            <ReferralLinkBox link={link} friendGets={friendGets} />
           ) : (
             <p className="text-sm text-muted">Your referral link couldn&apos;t be loaded. Refresh the page to try again.</p>
           )}
-          <ol className="grid gap-3 text-sm text-muted sm:grid-cols-3">
-            <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <span className="font-semibold text-foreground">1. Share your link.</span> A friend opens it and creates an account.
-            </li>
-            <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
-            </li>
-            <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-              <span className="font-semibold text-foreground">3. You both get a free month</span>{" "}
-              as soon as you&apos;ve both confirmed your email. On a paid plan, it comes off your next bill.
-            </li>
-          </ol>
-          <p className="text-xs leading-5 text-subtle">
-            You can earn up to {summary.monthlyCap} free months a month and {summary.lifetimeCap} in all; past that your
-            friends still get theirs. New accounts only, and one free month per email address. A free month is a month
-            of Plus with its {MONTHLY_CREDITS.plus} AI credits — or, if you already pay for a plan, one month of its price
-            as credit on your next bill.
-          </p>
+          {settings.enabled ? (
+            <>
+              <ol className="grid gap-3 text-sm text-muted sm:grid-cols-3">
+                <li className="rounded-lg border border-border/60 bg-background/40 p-3">
+                  <span className="font-semibold text-foreground">1. Share your link.</span> A friend opens it and creates an account.
+                </li>
+                <li className="rounded-lg border border-border/60 bg-background/40 p-3">
+                  <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
+                </li>
+                <li className="rounded-lg border border-border/60 bg-background/40 p-3">
+                  <span className="font-semibold text-foreground">3. You both get your reward</span> as soon as you&apos;ve both
+                  confirmed your email: {friendGets} for them, {youGet} for you.
+                </li>
+              </ol>
+              <p className="text-xs leading-5 text-subtle">
+                You can earn up to {summary.monthlyCap} rewards a month and {summary.lifetimeCap} in all; past that your friends
+                still get theirs. New accounts only, and one reward per email address.
+                {freeDays
+                  ? " Free days come with the plan's normal AI credits; on a paid plan they are added to the time you've paid for, so your next charge moves out by the same days."
+                  : ""}
+              </p>
+            </>
+          ) : null}
         </SurfaceCard>
       </section>
 
@@ -109,12 +127,12 @@ export default async function ReferralsPage() {
         <dl className="grid gap-3 sm:grid-cols-4">
           <Stat label="Friends joined" value={String(summary.joined)} />
           <Stat label="Saved a first card" value={String(summary.activated)} />
-          <Stat label="Free months earned" value={`${summary.monthsEarned} of ${summary.lifetimeCap}`} />
+          <Stat label="Rewards earned" value={`${summary.rewardsEarned} of ${summary.lifetimeCap}`} />
           <Stat label="This month" value={`${summary.thisMonth} of ${summary.monthlyCap}`} />
         </dl>
         {summary.lifetimeReached ? (
           <p className="mt-3 text-sm text-muted">
-            You&apos;ve earned every free month the program gives — thank you! Friends who join with your link still get
+            You&apos;ve earned every reward the program gives — thank you! Friends who join with your link still get
             theirs.
           </p>
         ) : null}
@@ -128,7 +146,7 @@ export default async function ReferralsPage() {
           <EmptyState
             icon={UserPlus}
             title="No one yet"
-            description="When someone signs up with your link, they show up here. You'll get a notification when your free month arrives."
+            description="When someone signs up with your link, they show up here. You'll get a notification when your reward arrives."
           />
         ) : (
           <SurfaceCard className="overflow-x-auto p-0">
@@ -180,11 +198,11 @@ export default async function ReferralsPage() {
         <p className="mt-6 text-sm text-muted">
           You joined through {joinedThrough.username ? `@${joinedThrough.username}` : "a friend"}&apos;s link
           {joinedThrough.status === "signed_up"
-            ? " — save your first card to get your free month."
+            ? ` — save your first card to get ${friendGets}.`
             : joinedThrough.status === "first_card"
-              ? " — your free month is on its way once both of you have confirmed your email."
+              ? " — your reward is on its way once both of you have confirmed your email."
               : joinedThrough.status === "rewarded" || joinedThrough.status === "capped"
-                ? " — your free month is on your account."
+                ? " — your reward is on your account."
                 : "."}
         </p>
       ) : null}

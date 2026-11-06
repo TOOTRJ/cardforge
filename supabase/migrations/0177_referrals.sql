@@ -1,84 +1,35 @@
--- 0164_referrals.sql — a double-sided referral program (2026-10-30; reworked
--- 2026-11-02 after the independent check and the owner's decisions).
--- Ships through a PR; never applied ad-hoc. The number may move at merge:
--- nothing in here (lock keys, names) and nothing in the app or its tests is
--- derived from it.
+-- 0177_referrals.sql — a double-sided referral program (2026-10-30; reworked
+-- 2026-11-02 after the independent check, and 2026-11-06 onto the free-days
+-- mechanism — owner decisions 2026-11-05; docs/BILLING.md "Referrals").
 --
--- Every user gets a referral link (`/?ref=<code>`). A NEW account that signs
--- up through it — first-touch attribution, sessionStorage → hidden fields →
--- the signup action (no cookie) — and then SAVES ITS FIRST CARD with a
--- CONFIRMED email earns one free month for itself and one for the referrer
--- (lib/referrals/*: the rules, the fraud checks and the decision of HOW each
--- side gets its month live in the app; this file holds the rows, who may read
--- them, and every step that must be atomic: the caps and the Plus month).
+-- A friend who joins through a referral link and saves a FIRST card rewards
+-- both sides. WHAT each side gets is a SETTING (site_settings key
+-- `referrals`, lib/referrals/settings.ts): free 30 days of a tier through
+-- lib/billing/free-days.ts — the ONE mechanism comps use (0176: added to a
+-- paying plan's time, the perks overlay otherwise), or AI credits, or
+-- nothing; an admin switch pauses the program. Nothing here moves money.
 --
 -- 1. referral_codes — one code per user, minted on first ask by
---    my_referral_code() (the owner's own session; 8 lowercase hex chars from
---    gen_random_uuid, retried on the unique index). Read: the owner, admins.
---
+--    my_referral_code() (8 hex characters; the link is /?ref=<code>).
 -- 2. referrals — one row per REFEREE: who referred them, and where it stands:
---      signed_up   the account was created through the link
---      first_card  it saved its first card (qualified) and waits for the
---                  reward step — both emails confirmed (auth.users
---                  .email_confirmed_at), then the caps
---      rewarded    the referrer earned a month (each side's grant is
---                  recorded in referrer_reward / referee_reward; NULL = not
---                  granted yet — the retry sweep finishes it)
---      capped      the referrer was at a cap — the referee still gets theirs
---      blocked     a fraud rule or a deleted account (block_reason)
---      expired     no first card within 30 days of signup, or an email never
---                  confirmed within 30 days of the first card
---    referee_id is ON DELETE SET NULL (P1-a of the check): a deleted friend
---    must not take the evidence with it — the caps count the REFERRER's
---    rewarded rows, whoever they were for, so deleting a rewarded friend can
---    never open a fourth month in the same month.
---    Users read their own rows through a COLUMN grant that leaves out
---    block_reason and the reward details (Stripe amounts): the dashboard
---    shows a status, never a fraud signal. Admins read everything through
---    RLS + admin_referral_stats(). Writes: the service role only.
+--    signed_up → first_card → rewarded | capped | blocked | expired. The
+--    reward each side got is `referrer_reward` / `referee_reward`
+--    ('free_days', 'credits', 'none'; NULL = still owed — the hourly sweep
+--    retries) with its detail. The friend's account going away SETS NULL:
+--    the row is the referrer's cap evidence.
+-- 2b. One email, one referral reward — ever: a KEYED hash of each referred
+--    email (no address, no user id) that outlives the account.
+-- 3. claim_referral_reward(id, monthly_cap, lifetime_cap, friends_cap) —
+--    the caps, atomic under the referrer's lock; the friends cap caps the
+--    FRIEND's reward too (N confirmable inboxes must not mint N rewards).
+-- 4. plan_grants.reference — a caller's own key per grant (the referral's
+--    `referral:<id>:<side>`), unique, so a retried reward never grants twice.
+-- 5. The referral settings row (defaults; an admin edits it in /admin/users).
+-- 6. The notification kinds 'referral_signup' / 'referral_reward' (0174's
+--    list plus those two), once per referral and side.
 --
--- 3. profiles.referral_plus_until — a referral's free month of PLUS, kept
---    APART from the admin comp (comp_tier / comp_expires_at): an admin comp
---    edit can't wipe it (P3), it never moves a Stripe trial or posts a
---    balance credit, and the monthly refill never reads it — the month's AI
---    credits are granted ONCE, with the month (owner 2026-11-02: one Plus
---    allotment per referral month, never a second refill because the month
---    crosses a calendar month). Private and pinned like every billing column
---    (protect_billing_columns, get_my_billing below); the plan readers take
---    it as a Plus overlay: lib/billing/entitlements.ts and card_capacity_for.
---
--- 4. claim_referral_reward(id, monthly_cap, lifetime_cap) — service role.
---    Moves ONE first_card row to rewarded or capped under a per-referrer
---    advisory lock, so two friends activating at once can't both slip under
---    the monthly cap.
---
--- 5. grant_referral_plus_month(id, side, days, credits) — service role. The
---    Plus month and its credits in ONE transaction under a per-user lock
---    (P2: two rewards no longer read-modify-write the end date from the
---    app), idempotent per referral and side (a retry grants nothing twice).
---
--- 6. One email, one referral month — ever (owner 2026-11-02). A referral is
---    NOT eligible (block_reason 'email_reused', neither side rewarded, the
---    friend never told why) when the friend's NORMALIZED email
---    (normalize_referral_email: lowercase, no "+tag", Gmail's dots off and
---    googlemail.com as gmail.com — the twin of lib/referrals/fraud.ts
---    normalizeReferralEmail) is
---      (a) the normalized email of ANY OTHER live account
---          (referral_email_in_use, reads auth.users), or
---      (b) already in referral_email_fingerprints from an EARLIER referral
---          signup. That table keeps a KEYED HASH (HMAC-SHA256 under the
---          server-only REFERRAL_EMAIL_HASH_KEY, computed by the app) — never
---          the address — and no user id: deleting a referred account leaves
---          its fingerprint, so the same inbox can't earn a month again
---          through a new account. Service role only.
---
--- 7. Notification kinds — see the REFERRAL KINDS block at the end.
---
--- Grants are stated, revoke first (every migration states its grants —
--- CLAUDE.md; 0097).
-
--- Advisory-lock namespace: a NAME, hashed — never the migration number.
--- Every function below locks with hashtext('pipglyph.referrals').
+-- Grants are explicit (0097). Idempotent. Ships through a PR; never
+-- applied ad-hoc.
 
 -- ---------------------------------------------------------------------------
 -- 1. Codes
@@ -158,16 +109,16 @@ create table if not exists public.referrals (
   block_reason text
     check (block_reason is null or block_reason in (
       'same_email', 'same_card', 'same_domain', 'disposable_email', 'not_new', 'account_deleted',
-      'email_reused'
+      'email_reused', 'program_off'
     )),
   signed_up_at timestamptz not null default now(),
   first_card_at timestamptz,
   rewarded_at timestamptz,
-  -- What each side got: 'plus_month' (profiles.referral_plus_until + one
-  -- Plus allotment of credits), 'balance_credit' (one month's price on the
-  -- Stripe customer), 'none'. NULL = not decided yet (the sweep retries).
-  referrer_reward text check (referrer_reward is null or referrer_reward in ('plus_month', 'balance_credit', 'none')),
-  referee_reward text check (referee_reward is null or referee_reward in ('plus_month', 'balance_credit', 'none')),
+  -- What each side got: 'free_days' (a plan_grants row, lib/billing/free-days.ts),
+  -- 'credits' (one grant_credits call), 'none'. NULL = not decided yet (the
+  -- sweep retries).
+  referrer_reward text check (referrer_reward is null or referrer_reward in ('free_days', 'credits', 'none')),
+  referee_reward text check (referee_reward is null or referee_reward in ('free_days', 'credits', 'none')),
   referrer_reward_detail jsonb not null default '{}'::jsonb,
   referee_reward_detail jsonb not null default '{}'::jsonb,
   -- Failed grant attempts (the retry sweep gives up past the app's limit
@@ -210,7 +161,7 @@ grant select (id, referrer_id, referee_id, status, signed_up_at, first_card_at,
 grant select, insert, update, delete on public.referrals to service_role;
 
 -- ---------------------------------------------------------------------------
--- 2b. One email, one referral month
+-- 2b. One email, one referral reward
 -- ---------------------------------------------------------------------------
 -- A keyed hash of each referred account's normalized email, written when the
 -- referral signup is recorded (and again at the reward step if the email
@@ -290,200 +241,18 @@ revoke all on function public.referral_email_in_use(uuid, text) from public, ano
 grant execute on function public.referral_email_in_use(uuid, text) to service_role;
 
 -- ---------------------------------------------------------------------------
--- 3. The referral month of Plus on the profile
+-- 3. The caps (atomic)
 -- ---------------------------------------------------------------------------
-alter table public.profiles
-  add column if not exists referral_plus_until timestamptz;
-
-comment on column public.profiles.referral_plus_until is
-  'End of the free month(s) of Plus earned through referrals (0164). A Plus overlay apart from the admin comp: the higher of subscription, comp and this applies. Never read by the monthly credit refill — each referral month grants its credits once (grant_referral_plus_month). Written only by grant_referral_plus_month (service role).';
-
--- No column grant: like every billing column it is private (0074's column
--- list doesn't name it); the owner reads it through get_my_billing().
-
--- The column-pinning trigger, with the new column. Body carried forward from
--- 0135 (the latest definition).
-create or replace function public.protect_billing_columns()
-returns trigger
-language plpgsql
-set search_path to 'public'
-as $function$
-begin
-  if current_user in ('service_role', 'postgres', 'supabase_admin') then
-    return new;
-  end if;
-  if tg_op = 'INSERT' then
-    new.stripe_customer_id := null;
-    new.subscription_tier := 'free';
-    new.subscription_status := null;
-    new.stripe_subscription_id := null;
-    new.current_period_end := null;
-    new.cancel_at_period_end := false;
-    new.subscription_ends_at := null;
-    new.subscription_canceled_at := null;
-    new.credits := 5;
-    new.is_admin := false;
-    new.featured_at := null;
-    new.comp_tier := null;
-    new.comp_expires_at := null;
-    new.card_limit_override := null;
-    new.referral_plus_until := null;
-  else
-    new.stripe_customer_id := old.stripe_customer_id;
-    new.subscription_tier := old.subscription_tier;
-    new.subscription_status := old.subscription_status;
-    new.stripe_subscription_id := old.stripe_subscription_id;
-    new.current_period_end := old.current_period_end;
-    new.cancel_at_period_end := old.cancel_at_period_end;
-    new.subscription_ends_at := old.subscription_ends_at;
-    new.subscription_canceled_at := old.subscription_canceled_at;
-    new.credits := old.credits;
-    new.is_admin := old.is_admin;
-    new.featured_at := old.featured_at;
-    new.comp_tier := old.comp_tier;
-    new.comp_expires_at := old.comp_expires_at;
-    new.card_limit_override := old.card_limit_override;
-    new.referral_plus_until := old.referral_plus_until;
-  end if;
-  return new;
-end;
-$function$;
-
--- Grants: unchanged. `create or replace` keeps the function's existing ACL
--- (0097 states it), and a trigger function is not called through the API.
-
--- The user's own billing slice, with the new column (0135's body + one
--- column). The return type changes, so the function is dropped and
--- re-created (the migration runs in one transaction).
-drop function if exists public.get_my_billing();
-
-create function public.get_my_billing()
-returns table (
-  subscription_tier text,
-  subscription_status text,
-  stripe_customer_id text,
-  stripe_subscription_id text,
-  current_period_end timestamptz,
-  cancel_at_period_end boolean,
-  credits integer,
-  comp_tier text,
-  comp_expires_at timestamptz,
-  card_limit_override integer,
-  is_admin boolean,
-  subscription_ends_at timestamptz,
-  subscription_canceled_at timestamptz,
-  referral_plus_until timestamptz
-)
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    p.subscription_tier, p.subscription_status, p.stripe_customer_id,
-    p.stripe_subscription_id, p.current_period_end, p.cancel_at_period_end,
-    p.credits, p.comp_tier, p.comp_expires_at, p.card_limit_override,
-    p.is_admin, p.subscription_ends_at, p.subscription_canceled_at,
-    p.referral_plus_until
-  from public.profiles p
-  where p.id = auth.uid();
-$$;
-
-revoke all on function public.get_my_billing() from public, anon, authenticated;
-grant execute on function public.get_my_billing() to authenticated, service_role;
-
--- The saved-card cap: 0104's body with the referral month as one more Plus
--- source (the higher of subscription, comp and referral month). Mirrors
--- lib/billing/entitlements.ts effectiveTierForProfile.
-create or replace function public.card_capacity_for(p_user_id uuid)
-returns integer
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  with p as (
-    select
-      is_admin,
-      card_limit_override,
-      case
-        when subscription_tier in ('plus', 'pro')
-         and subscription_status in ('active', 'trialing') then subscription_tier
-        else 'free'
-      end as subscribed,
-      case
-        when comp_tier = 'pro'
-         and (comp_expires_at is null or comp_expires_at > now()) then 'pro'
-        when (comp_tier = 'plus' and (comp_expires_at is null or comp_expires_at > now()))
-          or referral_plus_until > now() then 'plus'
-        else null
-      end as overlay
-    from public.profiles
-    where id = p_user_id
-  ),
-  ranked as (
-    select
-      is_admin,
-      card_limit_override,
-      case
-        when overlay is not null
-         and (case overlay when 'pro' then 2 when 'plus' then 1 else 0 end)
-           > (case subscribed when 'pro' then 2 when 'plus' then 1 else 0 end)
-        then overlay
-        else subscribed
-      end as tier
-    from p
-  )
-  select case
-    when is_admin then -1
-    when tier = 'pro' then -1
-    when tier = 'plus' then greatest(500, coalesce(card_limit_override, 0))
-    else greatest(50, coalesce(card_limit_override, 0))
-  end
-  from ranked;
-$$;
-
-comment on function public.card_capacity_for(uuid) is
-  'Saved-card cap for a user (-1 = unlimited). Mirrors lib/billing/entitlements.ts (subscription, admin comp, referral month of Plus — the higher); keep in sync.';
-
-revoke all on function public.card_capacity_for(uuid) from public, anon, authenticated;
-grant execute on function public.card_capacity_for(uuid) to service_role;
-
--- The owner's paid stamp on a DOWNLOAD (the custom footer text): 0074's body
--- with the referral month as one more paid source.
-create or replace function public.owner_export_stamp(p_owner_id uuid)
-returns table (paid boolean, footer_text text)
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select
-    coalesce(p.is_admin, false)
-      or (p.subscription_tier in ('plus', 'pro')
-          and p.subscription_status in ('active', 'trialing'))
-      or (p.comp_tier in ('plus', 'pro')
-          and (p.comp_expires_at is null or p.comp_expires_at > now()))
-      or coalesce(p.referral_plus_until > now(), false)
-      as paid,
-    nullif(btrim(p.export_watermark_text), '') as footer_text
-  from public.profiles p
-  where p.id = p_owner_id;
-$$;
-
-revoke all on function public.owner_export_stamp(uuid) from public, anon, authenticated;
-grant execute on function public.owner_export_stamp(uuid) to anon, authenticated;
-
--- ---------------------------------------------------------------------------
--- 4. The caps (atomic)
--- ---------------------------------------------------------------------------
--- Returns 'rewarded', 'capped_month', 'capped_lifetime', or NULL when the row
--- isn't a first_card row (already claimed, or unknown). The status written is
--- 'rewarded' or 'capped'.
+-- Returns 'rewarded', 'capped_month', 'capped_lifetime', 'capped_friends', or
+-- NULL when the row isn't a first_card row (already claimed, or unknown).
+-- The status written is 'rewarded' or 'capped'. capped_friends (the
+-- referrer brought p_friends_cap friends a reward this month already):
+-- the FRIEND's side is 'none' too — the other caps leave the friend theirs.
 create or replace function public.claim_referral_reward(
   p_referral_id uuid,
   p_monthly_cap int,
-  p_lifetime_cap int
+  p_lifetime_cap int,
+  p_friends_cap int default null
 )
 returns text
 language plpgsql
@@ -495,9 +264,11 @@ declare
   v_row public.referrals%rowtype;
   v_month int;
   v_life int;
+  v_friends int;
   v_outcome text;
 begin
-  if p_monthly_cap is null or p_monthly_cap < 0 or p_lifetime_cap is null or p_lifetime_cap < 0 then
+  if p_monthly_cap is null or p_monthly_cap < 0 or p_lifetime_cap is null or p_lifetime_cap < 0
+     or (p_friends_cap is not null and p_friends_cap < 0) then
     raise exception 'claim_referral_reward: caps must be non-negative';
   end if;
   select * into v_row from public.referrals where id = p_referral_id;
@@ -522,7 +293,17 @@ begin
   where referrer_id = v_row.referrer_id
     and status = 'rewarded';
 
+  -- Friends this referrer brought a reward to this month (rewarded or
+  -- capped rows alike — a capped row still rewarded the friend).
+  select count(*) into v_friends
+  from public.referrals
+  where referrer_id = v_row.referrer_id
+    and status in ('rewarded', 'capped')
+    and referee_reward is distinct from 'none'
+    and rewarded_at >= date_trunc('month', now() at time zone 'utc') at time zone 'utc';
+
   v_outcome := case
+    when p_friends_cap is not null and v_friends >= p_friends_cap then 'capped_friends'
     when v_life >= p_lifetime_cap then 'capped_lifetime'
     when v_month >= p_monthly_cap then 'capped_month'
     else 'rewarded'
@@ -535,122 +316,39 @@ begin
       referrer_reward_detail = case
         when v_outcome = 'rewarded' then referrer_reward_detail
         else jsonb_build_object('kind', 'none', 'reason', v_outcome)
+      end,
+      referee_reward = case when v_outcome = 'capped_friends' then 'none' else referee_reward end,
+      referee_reward_detail = case
+        when v_outcome = 'capped_friends' then jsonb_build_object('kind', 'none', 'reason', v_outcome)
+        else referee_reward_detail
       end
   where id = p_referral_id;
   return v_outcome;
 end;
 $$;
 
-revoke all on function public.claim_referral_reward(uuid, int, int) from public, anon, authenticated;
-grant execute on function public.claim_referral_reward(uuid, int, int) to service_role;
+drop function if exists public.claim_referral_reward(uuid, int, int);
+revoke all on function public.claim_referral_reward(uuid, int, int, int) from public, anon, authenticated;
+grant execute on function public.claim_referral_reward(uuid, int, int, int) to service_role;
 
 -- ---------------------------------------------------------------------------
--- 5. One side's month of Plus + its credits (atomic, idempotent)
+-- 4. A caller's own key on a free-days grant (0176's plan_grants)
 -- ---------------------------------------------------------------------------
--- The month starts where what the user already has ends: the later of now,
--- a running referral month, an unexpired admin comp with an end date, and a
--- live plan that is set to stop. p_credits is the Plus allotment
--- (lib/billing/plans.ts MONTHLY_CREDITS.plus — the app passes it, one
--- source), granted through grant_credits under the key
--- 'referral:<id>:<side>' in the same transaction. Returns the side's detail,
--- or NULL when the row has no such user (a deleted friend). A side already
--- decided returns its stored detail untouched.
-create or replace function public.grant_referral_plus_month(
-  p_referral_id uuid,
-  p_side text,
-  p_days int,
-  p_credits int
-)
-returns jsonb
-language plpgsql
-volatile
-security definer
-set search_path = public
-as $$
-declare
-  v_row public.referrals%rowtype;
-  v_user uuid;
-  v_profile public.profiles%rowtype;
-  v_start timestamptz;
-  v_end timestamptz;
-  v_detail jsonb;
-begin
-  if p_side not in ('referrer', 'referee') then
-    raise exception 'grant_referral_plus_month: side must be referrer or referee';
-  end if;
-  if p_days is null or p_days <= 0 or p_credits is null or p_credits < 0 then
-    raise exception 'grant_referral_plus_month: days must be positive, credits non-negative';
-  end if;
-  select * into v_row from public.referrals where id = p_referral_id;
-  if not found then
-    return null;
-  end if;
-  v_user := case p_side when 'referrer' then v_row.referrer_id else v_row.referee_id end;
-  if v_user is null then
-    return null;
-  end if;
-  -- One user at a time: two rewards for the same person (two friends, or a
-  -- user who is a referrer and a referee) never read the same end date.
-  perform pg_advisory_xact_lock(hashtext('pipglyph.referrals'), hashtext(v_user::text));
-  select * into v_row from public.referrals where id = p_referral_id for update;
-  if (p_side = 'referrer' and v_row.referrer_reward is not null)
-     or (p_side = 'referee' and v_row.referee_reward is not null) then
-    return case p_side when 'referrer' then v_row.referrer_reward_detail else v_row.referee_reward_detail end;
-  end if;
-
-  select * into v_profile from public.profiles where id = v_user for update;
-  if not found then
-    return null;
-  end if;
-
-  v_start := greatest(
-    now(),
-    coalesce(v_profile.referral_plus_until, now()),
-    case
-      when v_profile.comp_tier in ('plus', 'pro') and v_profile.comp_expires_at > now()
-        then v_profile.comp_expires_at
-      else now()
-    end,
-    case
-      when v_profile.subscription_tier in ('plus', 'pro')
-       and v_profile.subscription_status in ('active', 'trialing')
-       and v_profile.subscription_ends_at > now()
-        then v_profile.subscription_ends_at
-      else now()
-    end
-  );
-  v_end := v_start + make_interval(days => p_days);
-
-  update public.profiles set referral_plus_until = v_end where id = v_user;
-
-  if p_credits > 0 then
-    perform public.grant_credits(
-      v_user, p_credits, 'referral_month', 'referral:' || p_referral_id::text || ':' || p_side
-    );
-  end if;
-
-  v_detail := jsonb_build_object(
-    'kind', 'plus_month', 'tier', 'plus',
-    'startsAt', v_start, 'expiresAt', v_end, 'credits', p_credits
-  );
-  if p_side = 'referrer' then
-    update public.referrals
-    set referrer_reward = 'plus_month', referrer_reward_detail = v_detail
-    where id = p_referral_id;
-  else
-    update public.referrals
-    set referee_reward = 'plus_month', referee_reward_detail = v_detail
-    where id = p_referral_id;
-  end if;
-  return v_detail;
-end;
-$$;
-
-revoke all on function public.grant_referral_plus_month(uuid, text, int, int) from public, anon, authenticated;
-grant execute on function public.grant_referral_plus_month(uuid, text, int, int) to service_role;
+-- `referral:<id>:<side>` — unique, so a reward retried after a crash finds
+-- the grant it already made (lib/billing/free-days-apply.ts answers
+-- duplicate_reference) instead of adding the days twice.
+alter table public.plan_grants add column if not exists reference text check (reference is null or char_length(reference) <= 120);
+create unique index if not exists plan_grants_reference_idx on public.plan_grants (reference) where reference is not null;
 
 -- ---------------------------------------------------------------------------
--- Admin stats (next to the Funnel panel): conversions in the window, months
+-- 5. The settings row (lib/referrals/settings.ts holds the shape and the defaults)
+-- ---------------------------------------------------------------------------
+insert into public.site_settings (key, value)
+  values ('referrals', '{"enabled": true, "friend": {"kind": "free_days", "tier": "plus", "units": 1}, "referrer": {"kind": "free_days", "tier": "own", "units": 1}, "caps": {"perMonth": 3, "lifetime": 12, "friendsPerMonth": 5}}'::jsonb)
+  on conflict (key) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Admin stats (next to the Funnel panel): conversions in the window, rewards
 -- granted, top referrers. SECURITY DEFINER, admins only.
 -- ---------------------------------------------------------------------------
 create or replace function public.admin_referral_stats(p_since timestamptz)
@@ -669,10 +367,10 @@ begin
   with w as (
     select * from public.referrals where signed_up_at >= p_since
   ),
-  months as (
+  rewards as (
     select
-      count(*) filter (where referrer_reward in ('plus_month', 'balance_credit'))
-      + count(*) filter (where referee_reward in ('plus_month', 'balance_credit')) as n
+      count(*) filter (where referrer_reward in ('free_days', 'credits'))
+      + count(*) filter (where referee_reward in ('free_days', 'credits')) as n
     from public.referrals
     where rewarded_at >= p_since
   ),
@@ -683,7 +381,7 @@ begin
       count(*) as referrals,
       count(*) filter (where r.first_card_at is not null) as activated,
       count(*) filter (where r.status = 'rewarded') as rewarded,
-      count(*) filter (where r.referrer_reward in ('plus_month', 'balance_credit')) as months
+      count(*) filter (where r.referrer_reward in ('free_days', 'credits')) as rewards
     from public.referrals r
     left join public.profiles p on p.id = r.referrer_id
     where r.signed_up_at >= p_since
@@ -710,11 +408,11 @@ begin
       select jsonb_object_agg(block_reason, n)
       from (select block_reason, count(*) as n from w where status = 'blocked' group by block_reason) b
     ), '{}'::jsonb),
-    'monthsGranted', (select n from months),
+    'rewardsGranted', (select n from rewards),
     'topReferrers', coalesce((
       select jsonb_agg(jsonb_build_object(
         'userId', referrer_id, 'username', username, 'referrals', referrals,
-        'activated', activated, 'rewarded', rewarded, 'months', months))
+        'activated', activated, 'rewarded', rewarded, 'rewards', rewards))
       from top
     ), '[]'::jsonb)
   ) into v_out;
@@ -729,9 +427,9 @@ grant execute on function public.admin_referral_stats(timestamptz) to authentica
 -- 6. Notification kinds
 -- ---------------------------------------------------------------------------
 -- REFERRAL KINDS (added by this migration): 'referral_signup',
--- 'referral_reward'. The list below is 0161's plus those two. A migration
--- merged after this one that redefines notifications_type_check must keep
--- them (and this one, renumbered after another, must take that one's kinds):
+-- 'referral_reward'. The list below is 0174's (the last to redefine it) plus
+-- those two. A migration merged after this one that redefines
+-- notifications_type_check must keep them:
 -- tests/unit/db/referrals-migration.test.ts names them.
 alter table public.notifications
   drop constraint if exists notifications_type_check;
@@ -744,6 +442,8 @@ alter table public.notifications
       'deck_generated', 'trial_ending', 'payment_received', 'checkout_reminder',
       'trial_lapsed', 'render_sweep_paused', 'credit_refill_failed',
       'deck_like', 'deck_card_added', 'moderation_unhidden', 'comp_ending',
+      'deck_cloned', 'challenge_winner',
+      'payment_failed', 'billing_alert',
       -- REFERRAL KINDS
       'referral_signup', 'referral_reward'
     )
@@ -751,7 +451,7 @@ alter table public.notifications
 
 -- One notification per referral and side (a retried step must not toast
 -- twice). referral_signup goes to the referrer only when the friend
--- qualified and the referrer earned NO month (a cap, not eligible).
+-- qualified and the referrer earned NO reward (a cap, not eligible).
 create unique index if not exists notifications_referral_reward_once_idx
   on public.notifications (recipient_id, (payload ->> 'referralId'))
   where type = 'referral_reward';

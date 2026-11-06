@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
+import { DEFAULT_REFERRAL_SETTINGS } from "@/lib/referrals/settings";
 import { buildReferralSummary, type ReferralRow } from "@/lib/referrals/summary";
 import { activationRate, parseReferralStats } from "@/lib/admin/referral-queries";
 import { ReferralPanel } from "@/components/admin/referral-panel";
@@ -25,27 +26,28 @@ const row = (over: Partial<ReferralRow>): ReferralRow => ({
 });
 
 describe("buildReferralSummary", () => {
-  it("counts joined, activated, months earned and this UTC month against the caps", () => {
+  it("counts joined, activated, rewards earned and this UTC month against the settings' caps", () => {
     const rows = [
       row({}),
-      row({ status: "rewarded", firstCardAt: "2026-11-02T00:00:00Z", rewardedAt: "2026-11-02T00:00:00Z", reward: "plus_month" }),
-      row({ status: "rewarded", firstCardAt: "2026-10-31T23:00:00Z", rewardedAt: "2026-10-31T23:59:59Z", reward: "balance_credit" }),
+      row({ status: "rewarded", firstCardAt: "2026-11-02T00:00:00Z", rewardedAt: "2026-11-02T00:00:00Z", reward: "free_days" }),
+      row({ status: "rewarded", firstCardAt: "2026-10-31T23:00:00Z", rewardedAt: "2026-10-31T23:59:59Z", reward: "credits" }),
       row({ status: "capped", firstCardAt: "2026-11-03T00:00:00Z", rewardedAt: "2026-11-03T00:00:00Z" }),
       row({ status: "blocked", firstCardAt: "2026-11-04T00:00:00Z" }),
     ];
-    expect(buildReferralSummary(rows, NOW)).toEqual({
+    expect(buildReferralSummary(rows, DEFAULT_REFERRAL_SETTINGS.caps, NOW)).toEqual({
       joined: 5,
       activated: 4,
-      monthsEarned: 2,
+      rewardsEarned: 2,
       thisMonth: 1,
       monthlyCap: REFERRAL_MONTHLY_CAP,
       lifetimeCap: REFERRAL_LIFETIME_CAP,
       lifetimeReached: false,
     });
   });
-  it("says when the lifetime cap is reached", () => {
-    const rows = Array.from({ length: REFERRAL_LIFETIME_CAP }, () => row({ status: "rewarded", rewardedAt: "2026-01-01T00:00:00Z" }));
-    expect(buildReferralSummary(rows, NOW).lifetimeReached).toBe(true);
+  it("says when the lifetime cap is reached — the settings' cap, not a constant", () => {
+    const rows = Array.from({ length: 2 }, () => row({ status: "rewarded", rewardedAt: "2026-01-01T00:00:00Z" }));
+    expect(buildReferralSummary(rows, { ...DEFAULT_REFERRAL_SETTINGS.caps, lifetime: 2 }, NOW).lifetimeReached).toBe(true);
+    expect(buildReferralSummary(rows, DEFAULT_REFERRAL_SETTINGS.caps, NOW).lifetimeReached).toBe(false);
   });
   it("a blocked referral never names its reason to the user", () => {
     expect(REFERRAL_STATUS_LABELS.blocked).toBe("Not eligible");
@@ -61,28 +63,29 @@ describe("admin referral stats", () => {
       rewarded: 2,
       blocked: 1,
       blockReasons: { same_email: 1 },
-      monthsGranted: 4,
-      topReferrers: [{ userId: "u1", username: "dev_pro", referrals: 3, activated: 2, rewarded: 2, months: 2 }, { nope: true }],
+      rewardsGranted: 4,
+      topReferrers: [{ userId: "u1", username: "dev_pro", referrals: 3, activated: 2, rewarded: 2, rewards: 2 }, { nope: true }],
     });
-    expect(parsed).toMatchObject({ signedUp: 4, firstCard: 3, rewarded: 2, capped: 0, monthsGranted: 4, blockReasons: { same_email: 1 } });
-    expect(parsed.topReferrers).toEqual([{ userId: "u1", username: "dev_pro", referrals: 3, activated: 2, rewarded: 2, months: 2 }]);
+    expect(parsed).toMatchObject({ signedUp: 4, firstCard: 3, rewarded: 2, capped: 0, rewardsGranted: 4, blockReasons: { same_email: 1 } });
+    expect(parsed.topReferrers).toEqual([{ userId: "u1", username: "dev_pro", referrals: 3, activated: 2, rewarded: 2, rewards: 2 }]);
     expect(activationRate(parsed)).toBe(75);
     expect(activationRate({ signedUp: 0, firstCard: 0 })).toBeNull();
   });
 
-  it("the panel shows the chain, months granted, block reasons and links each top referrer to their admin page", () => {
+  it("the panel shows the chain, rewards granted, block reasons and links each top referrer to their admin page", () => {
     const w = parseReferralStats({
       signedUp: 2,
       firstCard: 1,
       rewarded: 1,
       blocked: 1,
-      monthsGranted: 2,
+      rewardsGranted: 2,
       blockReasons: { disposable_email: 1 },
-      topReferrers: [{ userId: "d0000000-0000-4000-a000-000000000002", username: "dev_pro", referrals: 2, activated: 1, rewarded: 1, months: 1 }],
+      topReferrers: [{ userId: "d0000000-0000-4000-a000-000000000002", username: "dev_pro", referrals: 2, activated: 1, rewarded: 1, rewards: 1 }],
     });
     const html = renderToStaticMarkup(createElement(ReferralPanel, { summary: { last30: w, allTime: w } }));
     expect(html).toContain("Referrals");
-    expect(html).toContain("Free months granted");
+    expect(html).toContain("Rewards granted (both sides)");
+    expect(html).not.toMatch(/free month/i);
     expect(html).toContain("Throwaway email 1");
     expect(html).toContain('href="/admin/users?u=d0000000-0000-4000-a000-000000000002"');
     expect(html).toContain("@dev_pro");
@@ -101,7 +104,7 @@ describe("admin referral stats", () => {
     expect(w).toMatchObject({ waiting: 2, grantsOwed: 1 });
     const html = renderToStaticMarkup(createElement(ReferralPanel, { summary: { last30: w, allTime: w } }));
     expect(html).toContain("Waiting (an email not confirmed yet)");
-    expect(html).toContain("1 free month is still owed");
+    expect(html).toContain("1 reward is still owed");
     expect(html).toContain("Email already used 1");
     expect(html).toContain("account deleted 1");
   });

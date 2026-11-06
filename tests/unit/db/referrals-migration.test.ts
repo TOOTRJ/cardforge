@@ -3,13 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
-// The referrals migration: RLS on every table, grants stated revoke-first,
-// users read a status and never a fraud reason or a Stripe detail, the caps
-// and the Plus month are the service role's alone under a NAMED lock, a
-// deleted friend keeps the cap's evidence, the referral month is a pinned
-// billing column the plan readers take as Plus, and the notification list
-// keeps every kind 0161 allowed. Found by NAME, never by number — the file is
-// renumbered at merge.
+// The referrals migration (0177, onto the free-days mechanism): RLS on every
+// table, grants stated revoke-first, users read a status and never a fraud
+// reason or a Stripe detail, the caps are the service role's alone under a
+// NAMED lock (the friends cap caps the friend too), a deleted friend keeps
+// the cap's evidence, a grant's reference is unique, the settings row is
+// seeded, and the notification list keeps every kind 0174 allowed. Found by
+// NAME, never by number.
 // ---------------------------------------------------------------------------
 
 const dir = join(process.cwd(), "supabase/migrations");
@@ -112,48 +112,29 @@ describe("the referrals migration", () => {
 
   it("locks in a NAMED namespace — never a migration number", () => {
     const locks = [...sql.matchAll(/pg_advisory_xact_lock\(([^,]+),/g)].map((m) => m[1].trim());
-    expect(locks.length).toBeGreaterThanOrEqual(2);
+    expect(locks.length).toBeGreaterThanOrEqual(1);
     for (const key of locks) expect(key).toBe("hashtext('pipglyph.referrals')");
     expect(sql).not.toMatch(/pg_advisory_xact_lock\(\d+/);
   });
 
-  it("the caps step: service role only, caps as arguments, only a first_card row moves", () => {
-    expect(sql).toContain("revoke all on function public.claim_referral_reward(uuid, int, int) from public, anon, authenticated;");
-    expect(sql).toContain("grant execute on function public.claim_referral_reward(uuid, int, int) to service_role;");
-    expect(fn("claim_referral_reward")).toContain("if v_row.status <> 'first_card' then");
+  it("the caps step: service role only, the settings' caps as arguments, only a first_card row moves; the friends cap caps the FRIEND too", () => {
+    expect(sql).toContain("drop function if exists public.claim_referral_reward(uuid, int, int);");
+    expect(sql).toContain("revoke all on function public.claim_referral_reward(uuid, int, int, int) from public, anon, authenticated;");
+    expect(sql).toContain("grant execute on function public.claim_referral_reward(uuid, int, int, int) to service_role;");
+    const claim = fn("claim_referral_reward");
+    expect(claim).toContain("if v_row.status <> 'first_card' then");
+    expect(claim).toContain("when p_friends_cap is not null and v_friends >= p_friends_cap then 'capped_friends'");
+    expect(claim).toContain("referee_reward = case when v_outcome = 'capped_friends' then 'none' else referee_reward end");
+    // The reward values are the free-days mechanism's — never money.
+    expect(sql).toContain("referrer_reward in ('free_days', 'credits', 'none')");
+    expect(sql).not.toMatch(/balance_credit|plus_month|referral_plus_until|grant_referral_plus_month|protect_billing_columns/);
   });
 
-  it("the Plus month: service role only, one transaction with its credits, once per referral and side", () => {
-    expect(sql).toContain(
-      "revoke all on function public.grant_referral_plus_month(uuid, text, int, int) from public, anon, authenticated;",
-    );
-    expect(sql).toContain("grant execute on function public.grant_referral_plus_month(uuid, text, int, int) to service_role;");
-    const grant = fn("grant_referral_plus_month");
-    // Idempotent: a side already decided returns its stored detail.
-    expect(grant).toContain("v_row.referrer_reward is not null");
-    expect(grant).toContain("v_row.referee_reward is not null");
-    // The end date is read and written in SQL, under the user's lock + a row lock.
-    expect(grant).toMatch(/select \* into v_profile from public\.profiles where id = v_user for update;/);
-    expect(grant).toContain("update public.profiles set referral_plus_until = v_end where id = v_user;");
-    // ONE credit grant per month, keyed per referral and side.
-    expect(grant).toContain("perform public.grant_credits(");
-    expect(grant).toContain("'referral:' || p_referral_id::text || ':' || p_side");
-    // Never the admin comp's columns.
-    expect(grant).not.toMatch(/set comp_tier|set comp_expires_at|comp_expires_at\s*=/);
-  });
-
-  it("the referral month is a pinned, private billing column every plan reader takes as Plus", () => {
-    expect(sql).toContain("add column if not exists referral_plus_until timestamptz;");
-    const protect = fn("protect_billing_columns");
-    expect(protect).toContain("new.referral_plus_until := null;");
-    expect(protect).toContain("new.referral_plus_until := old.referral_plus_until;");
-    expect(fn("get_my_billing")).toContain("p.referral_plus_until");
-    expect(sql).toContain("revoke all on function public.get_my_billing() from public, anon, authenticated;");
-    expect(sql).toContain("grant execute on function public.get_my_billing() to authenticated, service_role;");
-    expect(fn("card_capacity_for")).toContain("or referral_plus_until > now() then 'plus'");
-    expect(fn("owner_export_stamp")).toContain("p.referral_plus_until > now()");
-    // No column grant to the API roles (0074's list stays private).
-    expect(sql).not.toMatch(/grant select \([^)]*referral_plus_until/);
+  it("a grant's reference is unique (a retried reward finds its grant), and the settings row is seeded with the defaults", () => {
+    expect(sql).toContain("alter table public.plan_grants add column if not exists reference text");
+    expect(sql).toContain("create unique index if not exists plan_grants_reference_idx on public.plan_grants (reference) where reference is not null;");
+    expect(sql).toMatch(/insert into public\.site_settings \(key, value\)\s+values \('referrals', '\{"enabled": true, "friend": \{"kind": "free_days", "tier": "plus", "units": 1\}, "referrer": \{"kind": "free_days", "tier": "own", "units": 1\}, "caps": \{"perMonth": 3, "lifetime": 12, "friendsPerMonth": 5\}\}'::jsonb\)\s+on conflict \(key\) do nothing;/);
+    expect(sql).toContain("'program_off'");
   });
 
   it("the admin stats refuse anyone but an admin (or the service role)", () => {
@@ -161,16 +142,16 @@ describe("the referrals migration", () => {
     expect(sql).toContain("revoke all on function public.admin_referral_stats(timestamptz) from public, anon, authenticated;");
   });
 
-  it("keeps every notification kind 0161 allowed (the last to redefine it) and adds the two referral kinds", () => {
-    const before = typeCheckKinds(readFileSync(join(dir, "0161_comp_ending_notifications.sql"), "utf8"));
-    expect(before).toEqual(expect.arrayContaining(["moderation_unhidden", "comp_ending"]));
+  it("keeps every notification kind 0174 allowed (the last to redefine it) and adds the two referral kinds", () => {
+    const before = typeCheckKinds(readFileSync(join(dir, "0174_dunning_grace_refunds_disputes.sql"), "utf8"));
+    expect(before).toEqual(expect.arrayContaining(["comp_ending", "challenge_winner", "payment_failed", "billing_alert"]));
     expect(typeCheckKinds(sql)).toEqual([...before, "referral_signup", "referral_reward"]);
     expect(sql).toContain("-- REFERRAL KINDS");
   });
 
-  it("no other migration after 0161 redefined the CHECK without the referral kinds", () => {
+  it("no other migration after this one redefined the CHECK without the referral kinds", () => {
     const later = readdirSync(dir).filter(
-      (f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) > "0161" && f !== file,
+      (f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) > file.slice(0, 4) && f !== file,
     );
     for (const f of later) {
       const text = readFileSync(join(dir, f), "utf8");

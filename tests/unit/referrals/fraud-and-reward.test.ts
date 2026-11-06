@@ -5,7 +5,8 @@ import {
   normalizeReferralEmail,
   referralFraudVerdict,
 } from "@/lib/referrals/fraud";
-import { oneMonthCents, planReferralMonth } from "@/lib/referrals/reward";
+import { referralRewardFor } from "@/lib/referrals/reward";
+import { DEFAULT_REFERRAL_SETTINGS, parseReferralSettings, rewardPhrase } from "@/lib/referrals/settings";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -20,7 +21,6 @@ import {
 
 const NOW = new Date("2026-11-01T12:00:00Z");
 const DAY = 86_400_000;
-const at = (days: number) => new Date(NOW.getTime() + days * DAY).toISOString();
 
 describe("codes and links", () => {
   it("a code is 8 lowercase hex characters; anything else is no code", () => {
@@ -93,39 +93,39 @@ describe("fraud rules", () => {
   });
 });
 
-describe("how one free month is delivered", () => {
-  it("a free user: a month of Plus (the database places it and grants ONE Plus allotment)", () => {
-    expect(planReferralMonth({ subscription_tier: "free" }, NOW)).toEqual({ kind: "plus_month" });
+describe("how a side's reward is decided (the settings made concrete — lib/referrals/reward.ts)", () => {
+  const friend = DEFAULT_REFERRAL_SETTINGS.friend;
+  const referrer = DEFAULT_REFERRAL_SETTINGS.referrer;
+
+  it("the friend: 30 free days of Plus whatever they are on (free, comped, paying — lib/billing/free-days.ts decides the shape)", () => {
+    expect(referralRewardFor(friend, { subscription_tier: "free" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
+    expect(referralRewardFor(friend, { subscription_tier: "pro", subscription_status: "active" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
   });
 
-  it("a running or expired comp with an end date: a month of Plus (the database starts it after the comp)", () => {
-    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(10) }, NOW)).toEqual({ kind: "plus_month" });
-    expect(planReferralMonth({ comp_tier: "pro", comp_expires_at: at(-1) }, NOW)).toEqual({ kind: "plus_month" });
-  });
-
-  it("an open-ended comp or an admin: nothing to add", () => {
-    expect(planReferralMonth({ comp_tier: "plus", comp_expires_at: null }, NOW)).toEqual({ kind: "none", reason: "comp_open_ended" });
-    expect(planReferralMonth({ is_admin: true }, NOW)).toEqual({ kind: "none", reason: "admin" });
-  });
-
-  it("a renewing subscription (active OR trialing): a balance credit — dates and trial untouched", () => {
+  it("the referrer: their OWN paid tier while the plan is live, Plus otherwise (owner 2026-11-05)", () => {
+    expect(referralRewardFor(referrer, { subscription_tier: "free" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
     for (const status of ["active", "trialing"]) {
-      expect(
-        planReferralMonth({ subscription_tier: "pro", subscription_status: status, stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" }, NOW),
-      ).toEqual({ kind: "balance_credit", customerId: "cus_1", subscriptionId: "sub_1", tier: "pro" });
+      expect(referralRewardFor(referrer, { subscription_tier: "pro", subscription_status: status })).toEqual({ kind: "free_days", tier: "pro", units: 1 });
     }
+    expect(referralRewardFor(referrer, { subscription_tier: "pro", subscription_status: "canceled" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
   });
 
-  it("a cancelled plan still running, or a broken payment: a month of Plus, never a balance credit", () => {
-    const sub = { subscription_tier: "pro", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" };
-    expect(planReferralMonth({ ...sub, subscription_status: "active", subscription_ends_at: at(5) }, NOW)).toEqual({ kind: "plus_month" });
-    expect(planReferralMonth({ ...sub, subscription_status: "active", cancel_at_period_end: true }, NOW)).toEqual({ kind: "plus_month" });
-    expect(planReferralMonth({ ...sub, subscription_status: "past_due" }, NOW)).toEqual({ kind: "plus_month" });
+  it("an admin gets nothing; a 'credits' or 'none' setting is what it says", () => {
+    expect(referralRewardFor(friend, { is_admin: true })).toEqual({ kind: "none", reason: "admin" });
+    expect(referralRewardFor({ kind: "credits", amount: 20 }, { subscription_tier: "free" })).toEqual({ kind: "credits", amount: 20 });
+    expect(referralRewardFor({ kind: "none" }, { subscription_tier: "free" })).toEqual({ kind: "none", reason: "settings" });
   });
 
-  it("one month's price: the monthly price, a twelfth of an annual one, the list price as a fallback", () => {
-    expect(oneMonthCents({ unit_amount: 600, recurring: { interval: "month" } }, "plus")).toBe(600);
-    expect(oneMonthCents({ unit_amount: 15000, recurring: { interval: "year" } }, "pro")).toBe(1250);
-    expect(oneMonthCents(null, "pro")).toBe(1500);
+  it("the settings parse with defaults for anything missing or malformed, and phrase themselves", () => {
+    expect(parseReferralSettings(null)).toEqual(DEFAULT_REFERRAL_SETTINGS);
+    expect(parseReferralSettings({ enabled: false, friend: { kind: "credits", amount: 20 }, caps: { perMonth: 99 } })).toEqual({
+      ...DEFAULT_REFERRAL_SETTINGS,
+      enabled: false,
+      friend: { kind: "credits", amount: 20 },
+    });
+    expect(rewardPhrase({ kind: "free_days", tier: "plus", units: 1 })).toBe("30 free days of Plus");
+    expect(rewardPhrase({ kind: "free_days", tier: "own", units: 2 })).toBe("60 free days of your plan");
+    expect(rewardPhrase({ kind: "credits", amount: 1 })).toBe("1 AI credit");
+    expect(rewardPhrase({ kind: "none" })).toBe("nothing");
   });
 });

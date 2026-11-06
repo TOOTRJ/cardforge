@@ -128,8 +128,7 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
     // panel (lib/cards/capacity.ts) and every gate already treat them.
     tier: entitlements.effectiveTier,
     isPaid: entitlements.isPaid,
-    // A referral month of Plus brought its credits once — it has no refill.
-    monthlyAllotment: entitlements.referralMonthUntil ? 0 : (MONTHLY_CREDITS[entitlements.effectiveTier] ?? 0),
+    monthlyAllotment: MONTHLY_CREDITS[entitlements.effectiveTier] ?? 0,
     daily: [],
   };
   if (!isSupabaseConfigured()) return base;

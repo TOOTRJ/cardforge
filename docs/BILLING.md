@@ -1017,11 +1017,30 @@ sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
 `proration_behavior: none` — run it once on a test clock.
 
-## Referrals (2026-10-30, reworked 2026-11-02; migration `0164_referrals.sql`, number may move at merge)
+## Referrals (2026-10-30, reworked 2026-11-02 and 2026-11-06; migration `0177_referrals.sql`)
 
 Research and the numbers behind each rule: `docs/research/conversion-2026-10.md`
-§3 and §8. Code: `lib/referrals/` (rules, fraud, reward, server). Owner
-decisions of 2026-11-02 are marked **(owner)**.
+§3 and §8. Code: `lib/referrals/` (rules, settings, fraud, reward, server).
+Owner decisions of 2026-11-02 and 2026-11-05 are marked **(owner)**. Since
+2026-11-06 the reward is the FREE-DAYS mechanism comps use (the section
+"Free 30 days" above) — "free 30 days", never "a free month" **(owner)** —
+and what each side gets is a SETTING an admin changes without a deploy.
+
+**The settings** (`site_settings` key `referrals`, `lib/referrals/settings.ts`;
+0177 seeds the defaults; the form sits in the admin Referrals panel on
+`/admin/users`, saved whole through `adminSaveReferralSettingsAction` with a
+confirm step): `enabled` (OFF = the page says the program is paused and
+hides the link, a signup through a link records nothing, a friend's first
+card rewards nobody — the row is settled `blocked` / `program_off`; rewards
+already given stay), `friend` and `referrer` reward specs — `free_days`
+(a tier — `own` = the referrer's own paid tier while their plan is live,
+Plus otherwise **(owner)** — and 30-day units), `credits` (an amount), or
+`none` — and the caps: `perMonth` (3) and `lifetime` (12) referrer rewards,
+and `friendsPerMonth` (5) friends a referrer can bring a reward to in a
+UTC month, past which the FRIEND gets nothing either (`capped_friends`: N
+confirmable inboxes mint nothing — the independent check's P2). The
+settings are read at grant time; `parseReferralSettings` fills defaults for
+anything missing, so a hand-edited row never breaks the program.
 
 **The code and the link.** Every user has ONE code (`referral_codes`), minted
 the FIRST time it is asked for — `my_referral_code()` (security definer, the
@@ -1032,11 +1051,15 @@ link `<site>/?ref=<code>` with a Copy button. Nothing mints a code at signup.
 The code rides the existing first-touch attribution — `AttributionCapture`
 (sessionStorage, no cookie; a `ref` the tab doesn't hold yet is added to the
 first touch, the FIRST code wins) → `AttributionFields` (hidden `attr_ref`) →
-`signupAction`, which writes the `referrals` row (`recordReferralSignup`)
-beside the `signup` event (whose props say only `referred: true`, never the
-code). A Google sign-up never posts that form: onboarding's finish sends the
-tab's code instead (`completeOnboardingAction({ referralCode })`, first
-finish only). Either way the account must be NEW — under
+`signupAction`, which puts the code in the account's metadata
+(`referral_code`) beside the `signup` event (whose props say only
+`referred: true`, never the code) and writes NO row: the `referrals` row is
+written at ONBOARDING — the first step an account takes with a CONFIRMED
+email (`completeOnboardingAction`, first finish only; the metadata's code,
+else the tab's for a Google sign-up, which posts no signup form). Never at
+signup: GoTrue hands an existing unconfirmed address the same user id, so a
+row written then let anyone claim a referral on an inbox they don't own
+(the independent check's P1). Either way the account must be NEW — under
 `REFERRAL_CLAIM_WINDOW_DAYS` (7) old, never subscribed, no saved card — and
 the first claim wins (`referee_id` is unique). Nobody is notified at signup:
 nothing is earned yet.
@@ -1117,48 +1140,33 @@ and signing up again with the same inbox must not earn a second month.
 Development**, and in `.env.local`. Never rotate it casually — fingerprints
 kept under the old key stop matching, so an inbox could earn a month again.
 
-**What "one free month" is** (`planReferralMonth`, `lib/referrals/reward.ts`):
+**What a side gets** (`referralRewardFor`, `lib/referrals/reward.ts`: the
+settings' spec made concrete; `grantSide` in `lib/referrals/server.ts`
+writes it):
 
-| The account | The month |
+| The setting says | What happens |
 |---|---|
-| free, comped, a cancelled plan still running, a broken payment | **a month of Plus** (`plus_month`): `profiles.referral_plus_until`, and ONE Plus allotment of AI credits (`MONTHLY_CREDITS.plus`, 30) **(owner)**. The month starts after whatever runs longest — a running referral month, an unexpired comp, a cancelled plan's end |
-| a RENEWING subscription — active or trialing | a Stripe **customer-balance credit** of one month at the subscription's own price (a twelfth of an annual one), idempotency key `referral:<id>:<side>`. Stripe takes it off the next invoice; the plan's status, dates and trial are untouched; its credits are the plan's own (the invoice's refill) |
-| an admin, or an open-ended comp | nothing (nothing to add) |
+| `free_days` (the default: 30 days of Plus for the friend, 30 days of their own tier for the referrer) | `grantFreeDays` (`lib/billing/free-days-apply.ts`, source `referral_friend` / `referral_referrer`, reference `referral:<id>:<side>`): on a live, renewing plan or trial the days are ADDED to the paid time (Stripe `trial_end` moved, nothing charged); otherwise the perks overlay from the later of now and its end; a grant below the plan paid for is recorded and changes nothing. The grant's own credits — one allotment per 30 days (`lib/billing/free-days-credits.ts`), never a calendar month's |
+| `credits` | ONE `grant_credits` call, reason `referral_credits`, key `referral:<id>:<side>` |
+| `none` | the side records `none` (`settings`) |
+| the user is an admin | `none` (`admin`) |
 
-The month of Plus is NOT a comp: it lives in its own column, apart from the
-admin comp (`comp_tier` / `comp_expires_at`), so
-
-- an admin comp edit never touches it (the old comp-month design lost the
-  referral month on any comp edit);
-- it never moves a Stripe trial, posts a comp balance credit, or sends the
-  `comp_ending` reminders;
-- the monthly refill (`refillTierFor`, the daily cron and the webhook's
-  `grantCreditsForSync`) never reads it. Its credits are granted ONCE, with
-  the month, by `grant_referral_plus_month()` — one ledger row
-  (`referral_month`, key `referral:<id>:<side>`) per month — so a month that
-  crosses a calendar month is ONE allotment, never two **(owner)**;
-- the plan readers take it as a Plus overlay — the higher of subscription,
-  comp and referral month: `effectiveTierForProfile`
-  (`lib/billing/entitlements.ts`), `card_capacity_for()` and
-  `owner_export_stamp()` (0164 redefines both, plus `get_my_billing()` and
-  `protect_billing_columns()`, which pins the column like every billing
-  column). `Entitlements.referralMonthUntil` is set when the paid tier comes
-  from the referral month alone: the billing and usage pages then show no
-  monthly refill.
-
-`grant_referral_plus_month(id, side, days, credits)` (service role) does the
-month and its credits in ONE transaction under a per-USER advisory lock and a
-row lock on the profile — two rewards for the same person never read-modify-
-write the end date — and only while the side's reward is still NULL
-(idempotent). A subscriber who starts a plan during a referral month pays
-from the plan's start; the referral month keeps running beside it (the
-higher tier wins).
+No money moves, ever: the balance credit the first design posted on a
+paying referrer is gone. The reference is UNIQUE on `plan_grants` (0177):
+a reward retried after a lost record write finds its grant
+(`duplicate_reference`) and records it instead of adding the days twice.
+A refusal the writer makes for good (an admin) is recorded as `none`; one
+that can clear ("try again", a renewal in flight) is left owed for the
+sweep. The referral never touches `comp_tier` / `comp_expires_at` itself —
+the writer owns the overlay (the old separate `referral_plus_until` column
+and its readers are gone).
 
 **Retries.** A grant that fails leaves the side NULL and counts an attempt
 (`grant_attempts`). `/api/cron/referral-rewards` (hourly, `vercel.json`,
-`cronRouteGuard`) runs `sweepReferralRewards`: `first_card` rows not claimed
-yet (an email confirmed since, an `after()` that died) and claimed rows with
-a side still NULL. Every write is once per referral and side, so the sweep
+`cronRouteGuard`) runs `sweepReferralRewards`: `signed_up` rows older than
+ten minutes whose friend already has a card (a first-card `after()` the
+response outran), `first_card` rows not claimed yet (an email confirmed
+since) and claimed rows with a side still NULL. Every write is once per referral and side, so the sweep
 can run any number of times. After `REFERRAL_GRANT_MAX_ATTEMPTS` (5) a side
 is recorded as `none` with `grant_failed` for an admin (the admin panel's
 `grantsOwed` / reasons).
@@ -1169,22 +1177,25 @@ reward details): a blocked referral reads "Not eligible". Admins read
 everything (RLS `viewer_is_admin()`), and `admin_referral_stats(since)` is
 the admin panel's one read. Writes: the service role only.
 
-**Notification kinds.** `referral_signup` and `referral_reward` — 0164's
-`notifications_type_check` is 0161's list plus those two (the "REFERRAL
-KINDS" block). A migration merged before or after it that redefines the
-check takes the union.
+**Notification kinds.** `referral_signup` and `referral_reward` — 0177's
+`notifications_type_check` is 0174's list plus those two (the "REFERRAL
+KINDS" block). A migration merged after it that redefines the check takes
+the union. Both are notifications only (no email); the weekly digest lists
+them like every other kind.
 
 **Where it shows.** `/dashboard/referrals` ("Refer a friend" in the
 dashboard rail; a line under the plan card on `/dashboard/billing`): the
-link with Copy / the platform's Share sheet / an email draft, how it works,
-the caps, four numbers (`buildReferralSummary`: joined, first card, months
-earned of 12, this UTC month of 3) and the friends with their status
-(`getMyReferralDashboard`, the viewer's own session and column grant). The
-admin **Referrals** panel sits under Funnel on `/admin/users`
-(`getReferralStats` → `admin_referral_stats` for 30 days and all time):
-signups → first card → rewarded, capped, blocked (by reason), expired,
-months granted on both sides, the rows waiting and the grants still owed,
-and the top referrers linked to their admin page.
+link with Copy / the platform's Share sheet / an email draft (naming what
+the FRIEND gets, in the settings' words), how it works, the caps, four
+numbers (`buildReferralSummary`: joined, first card, rewards earned of the
+lifetime cap, this UTC month of the monthly cap) and the friends with their
+status (`getMyReferralDashboard`, the viewer's own session and column
+grant; the settings ride along). Paused: one sentence, no link. The admin
+**Referrals** panel sits under Funnel on `/admin/users` (`getReferralStats`
+→ `admin_referral_stats` for 30 days and all time): signups → first card →
+rewarded, capped, blocked (by reason), expired, rewards granted on both
+sides, the rows waiting and the grants still owed, the top referrers linked
+to their admin page — and the settings form.
 
 **Not built (owner decisions, PR body):** a click window longer than the tab
 (sessionStorage dies with it — a localStorage entry would be a new storage

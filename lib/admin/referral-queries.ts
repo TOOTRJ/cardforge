@@ -4,7 +4,7 @@ import { requireAdminClient } from "./users-queries";
 
 // ---------------------------------------------------------------------------
 // The admin Referrals panel's data (beside the Funnel panel on /admin/users):
-// 0164's admin_referral_stats() for the last 30 days and all time, parsed
+// 0177's admin_referral_stats() for the last 30 days and all time, parsed
 // defensively (it is jsonb) by parseReferralStats — pure, unit-tested.
 // ---------------------------------------------------------------------------
 
@@ -14,7 +14,8 @@ export type ReferralTopRow = {
   referrals: number;
   activated: number;
   rewarded: number;
-  months: number;
+  /** Rewards the referrer earned (free days or credits). */
+  rewards: number;
 };
 
 export type ReferralStatsWindow = {
@@ -30,7 +31,8 @@ export type ReferralStatsWindow = {
    *  Counted over ALL rows, whatever the window. */
   grantsOwed: number;
   blockReasons: Record<string, number>;
-  monthsGranted: number;
+  /** Rewards granted on both sides (free days or credits). */
+  rewardsGranted: number;
   topReferrers: ReferralTopRow[];
 };
 
@@ -55,7 +57,7 @@ export function parseReferralStats(raw: unknown): ReferralStatsWindow {
     waiting: num(o.waiting),
     grantsOwed: num(o.grantsOwed),
     blockReasons: reasons,
-    monthsGranted: num(o.monthsGranted),
+    rewardsGranted: num(o.rewardsGranted),
     topReferrers: top
       .filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === "object")
       .filter((r) => typeof r.userId === "string")
@@ -65,7 +67,7 @@ export function parseReferralStats(raw: unknown): ReferralStatsWindow {
         referrals: num(r.referrals),
         activated: num(r.activated),
         rewarded: num(r.rewarded),
-        months: num(r.months),
+        rewards: num(r.rewards),
       })),
   };
 }

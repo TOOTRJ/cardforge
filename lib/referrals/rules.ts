@@ -3,18 +3,17 @@
 // docs/research/conversion-2026-10.md §8, the rules in docs/BILLING.md
 // "Referrals"). Client-safe: the dashboard and the server read the same
 // numbers. The database's claim_referral_reward() takes the caps as
-// arguments — these constants are the one source.
+// arguments — the live values are the settings row's
+// (lib/referrals/settings.ts); the constants here are its defaults.
 // ---------------------------------------------------------------------------
 
-/** Rewarded referrals a referrer can earn a month for, per UTC calendar
- *  month. Past it the referral is "capped": the friend still gets theirs. */
+/** DEFAULT caps (lib/referrals/settings.ts — an admin changes the live
+ *  ones): rewarded referrals a referrer earns their reward for per UTC
+ *  calendar month, and ever. Past them the referral is "capped": the
+ *  friend still gets theirs (the friends cap, in the settings, caps the
+ *  friend too). */
 export const REFERRAL_MONTHLY_CAP = 3;
-/** Months a referrer can ever earn (a year free). */
 export const REFERRAL_LIFETIME_CAP = 12;
-/** "One free month" of Plus: days of profiles.referral_plus_until
- *  (0164's grant_referral_plus_month), with ONE Plus allotment of AI credits
- *  (MONTHLY_CREDITS.plus) granted with it — owner 2026-11-02. */
-export const REFERRAL_MONTH_DAYS = 30;
 /** Both emails must be confirmed before either side is rewarded (owner
  *  2026-11-02). A first card whose emails are still unconfirmed this many
  *  days later expires. There is NO hold after the friend qualifies (owner

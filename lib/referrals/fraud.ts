@@ -31,7 +31,9 @@ export type ReferralBlockReason =
   | "disposable_email"
   | "not_new"
   | "account_deleted"
-  | "email_reused";
+  | "email_reused"
+  /** The program was OFF (the admin switch) when the friend qualified. */
+  | "program_off";
 
 /** Free / consumer mail domains: a shared one says nothing. */
 export const FREE_MAIL_DOMAINS: ReadonlySet<string> = new Set([

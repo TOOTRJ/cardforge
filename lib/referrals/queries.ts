@@ -4,6 +4,8 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { isReferralStatus, referralLink, type ReferralStatus } from "@/lib/referrals/rules";
 import { buildReferralSummary, type ReferralRow, type ReferralSummary } from "@/lib/referrals/summary";
+import { readReferralSettings } from "@/lib/referrals/settings-server";
+import type { ReferralSettings } from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
 // The referral dashboard's one read (/dashboard/referrals) — the viewer's own
@@ -18,6 +20,8 @@ export type ReferralDashboard = {
   link: string | null;
   rows: ReferralRow[];
   summary: ReferralSummary;
+  /** The program's settings (the switch, what each side gets, the caps). */
+  settings: ReferralSettings;
   /** The referral that brought the viewer, if they joined through a link. */
   joinedThrough: { username: string | null; status: ReferralStatus } | null;
 };
@@ -30,7 +34,8 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
   if (!user) return null;
   const supabase = await createClient();
 
-  const [{ data: code }, { data: made }, { data: mine }] = await Promise.all([
+  const [settings, { data: code }, { data: made }, { data: mine }] = await Promise.all([
+    readReferralSettings(supabase),
     supabase.rpc("my_referral_code"),
     supabase
       .from("referrals")
@@ -65,14 +70,15 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
       signedUpAt: r.signed_up_at,
       firstCardAt: r.first_card_at,
       rewardedAt: r.rewarded_at,
-      reward: r.referrer_reward === "plus_month" || r.referrer_reward === "balance_credit" ? r.referrer_reward : null,
+      reward: r.referrer_reward === "free_days" || r.referrer_reward === "credits" ? r.referrer_reward : null,
     }));
 
   return {
     code: typeof code === "string" ? code : null,
     link: typeof code === "string" ? referralLink(getSiteBaseUrl(), code) : null,
     rows,
-    summary: buildReferralSummary(rows, now),
+    summary: buildReferralSummary(rows, settings.caps, now),
+    settings,
     joinedThrough:
       mine && isReferralStatus(mine.status)
         ? { username: names.get(mine.referrer_id) ?? null, status: mine.status }

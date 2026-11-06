@@ -61,6 +61,10 @@ export type GrantFreeDaysInput = {
   source: GrantSource;
   grantedBy: string | null;
   note: string | null;
+  /** A caller's own key for the grant (`referral:<id>:<side>`): unique
+   *  among grants (0177's partial index), so a retried call after a crash
+   *  finds `duplicate_reference` instead of granting twice. */
+  reference?: string | null;
 };
 
 export type GrantFreeDaysResult =
@@ -77,7 +81,14 @@ export type GrantFreeDaysResult =
       /** Something after the Stripe write did not land (logged). */
       warning?: string;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** `in_flight`: another grant for the user is being applied (try
+       *  again); `duplicate_reference`: this `reference` was granted before
+       *  (read the existing row). */
+      code?: "in_flight" | "duplicate_reference";
+    };
 
 async function readState(
   admin: AdminClient,
@@ -174,6 +185,7 @@ export async function grantFreeDays(
       applied_as: plan.kind === "hold" ? "subscription_hold" : plan.kind === "below_plan" ? "below_plan" : "overlay",
       stripe_subscription_id: plan.kind === "hold" ? plan.subscriptionId : null,
       held_from: plan.kind === "hold" ? plan.was : null,
+      reference: input.reference ?? null,
       starts_at: isoOf(startsAt),
       ends_at: endsAt == null ? null : isoOf(endsAt),
       credits_from: isoOf(startsAt),
@@ -184,7 +196,10 @@ export async function grantFreeDays(
   const grantId = (inserted as { id?: string } | null)?.id;
   if (insertError || !grantId) {
     if (insertError?.code === "23505") {
-      return { ok: false, error: "Another grant for this user is being applied right now. Try again in a moment." };
+      if (/plan_grants_reference_idx/.test(insertError.message ?? "")) {
+        return { ok: false, error: "This grant was already given.", code: "duplicate_reference" };
+      }
+      return { ok: false, error: "Another grant for this user is being applied right now. Try again in a moment.", code: "in_flight" };
     }
     console.warn(`grantFreeDays(${input.userId}): insert failed`, insertError?.message);
     return { ok: false, error: "Couldn't record the grant. Nothing was granted." };
