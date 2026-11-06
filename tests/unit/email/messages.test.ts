@@ -142,7 +142,7 @@ describe("email builders", () => {
     const trial = checkoutReminderEmail(recipient, { kind: "subscription", plan: "Pro", priceLabel: "$15 / month", trialEligible: true });
     expect(trial.subject).toBe("Your PipGlyph Pro trial is still waiting");
     expect(trial.html).toContain("nothing was charged");
-    expect(trial.html).toContain("7-day free trial");
+    expect(trial.html).toContain("banked free days");
     expect(trial.html).toContain("/dashboard/billing#plans");
     expect(trial.text).toContain("Start the Pro trial");
 

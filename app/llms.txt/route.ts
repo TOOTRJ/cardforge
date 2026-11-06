@@ -31,7 +31,7 @@ const KEY_PAGES: Array<[path: string, label: string, blurb: string]> = [
   ["/tools", "Tools", "Directory of the card creator, AI card generator, mana pip editor, deck builder and print sheets."],
   ["/glossary", "Glossary", "Plain definitions of Magic card terms (pip, frame, type line, mana value, double-faced cards…) and PipGlyph's own words (proxy, import, remix, original), one anchor per term."],
   ["/help", "Help & FAQ", "How to use PipGlyph: direct answers and short how-tos, one page per topic (list below)."],
-  ["/pricing", "Pricing", "Free forever for the creator; paid plans add AI credits, watermark-free HD downloads and deck exports."],
+  ["/pricing", "Pricing", "Free forever for the creator; paid plans bring a one-time stock of AI credits, watermark-free HD downloads and deck exports."],
   ["/news", "What's new", "Release notes and upcoming changes (RSS at /news/feed.xml)."],
   ["/frames", "Frames", "Every card frame the creator offers — the 1993, 1997, 2003 and 2015 borders, variations such as borderless and snow, card layouts and showcases — with the colors each is verified in and an example card."],
   ["/roadmap", "Roadmap", "What PipGlyph is building now and next, and what recently shipped — no dates, each item marked exploring, building or shipped."],

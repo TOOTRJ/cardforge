@@ -280,6 +280,56 @@ before). Copy: `lib/notifications/describe.ts`; dedupe: 0140's unique index on
 about how or when credits are granted changed. A real gap is remedied with an
 admin grant on `/admin/users` naming the month.
 
+## AI credits are ONE-TIME (owner 2026-11-06)
+
+Supersedes the monthly allotment in §8–§9 and the comps' allotment table
+("Free 30 days") for everything granted from this date; balances already
+on an account are untouched. Design and the owner's ten answers:
+`docs/research/credits-one-time-2026-11.md`.
+
+| Event | Credits | Once per… | Key | Code |
+|---|---|---|---|---|
+| Signup | 5 | account | the signup trigger | `SIGNUP_CREDITS` |
+| The first free period starts — the subscription the checkout created `trialing` (the bank applied), or the first "Apply banked days" on a live plan | 10 | account | `free-period:<user>` | `grantFreePeriodCredits` (an old `trial_grant` row counts as served) |
+| The FIRST PAID invoice on a tier (`invoice.paid`, `amount_paid > 0`, `billing_reason` subscription_create / cycle / update — a $0 trial-start invoice or a 100 %-off coupon grants nothing) | Plus 60 / Pro 120 | account + tier | `plan-once:<user>:<tier>` | `grantPlanCreditsOnce`: Pro after Plus grants the DIFFERENCE (60); a downgrade, a second invoice or a resubscribe grant nothing; an unreadable ledger is an error, never a guess |
+| Packs, admin grants, the referral ladder's credit steps | as before | | | |
+
+What stopped: the daily subscriber sweep (`refillActiveSubscribers`, the
+35-day backstop, the missed month, the annual backfill, `heldBeforeStart`),
+the 25-credit trial tranche, the month-key shortfall top-up on an upgrade,
+and the credits of NEW free-days grants (an admin comp is banked days; staff
+"no end" access gets nothing automatic — an admin grants by hand). The
+refill cron still runs the DATED free-days grants made before this date to
+their end (`LEGACY_FREE_DAYS_ALLOTMENT`: 30 / 100 per 30 days) and the
+bank's stale-reservation release. `subscription.updated` and the admin's
+Resync grant nothing. Annual plans get the same one-time stock (owner
+question 3). Existing subscribers at rollout get the one-time stock once
+through `scripts/grant-plan-credits-once.mjs` (owner-run, dry-run by
+default; question 5), so no paying customer is worse off than a new one.
+
+Rollout runbook (owner, once, after the deploy that carries the rule):
+
+```bash
+SUPABASE_URL=https://zkwkisxoqdhdchqyjwdc.supabase.co node scripts/grant-plan-credits-once.mjs
+```
+
+reads production's service-role key on the terminal (`promptHidden`, never
+an env var) and lists every active Plus / Pro subscriber with what they
+would get — nothing is written. Add `--apply` to grant; a rerun grants
+nothing twice (the `plan-once:<user>:<tier>` key), a trialing plan is left
+to its first paid invoice, and `/admin/users` → "Credits granted" shows the
+`Plan credits` total afterwards.
+
+Copy: every surface says "with your first payment" / "to start" — the plan
+features, pricing, the upgrade modal, the billing page's "Plan credits"
+stat, the dashboard card, Settings, the credit meter, the lapsed-plan copy,
+the trial-ending / checkout-reminder / win-back emails, the
+`payment_received` notification ("renewed — $X charged."), the help centre,
+the FAQ, the guides and the landings. `isLowCredits(balance, isPaid)` is a
+fixed ≤ 3 on a paid plan, ≤ 1 on free. Ledger reasons: `plan_credits_once`
+("Plan credits"), `free_period_bonus` ("Free-period credits");
+`subscription_refill` rows before this date keep "Monthly plan credits".
+
 ## 8. Free credits once, packs where the need is felt (2026-09-24)
 
 Owner decisions of 2026-09-24 (audit §6 recommendations 1 and 2):

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
   robots: { index: false, follow: true },
   description:
-    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits to start. Upgrade for monthly credits, watermark-free hi-res downloads and deck-aware AI — first-time subscribers get a 7-day free trial, cancel anytime. Monthly or annual.",
+    "Design custom MTG-style cards for free — every AI tool included, 5 AI credits to start. Upgrade for a stock of AI credits, watermark-free hi-res downloads and deck-aware AI — every new account banks 7 free days to start a plan with, cancel anytime. Monthly or annual.",
 };
 
 export default async function PricingMemberPage() {

@@ -1931,10 +1931,21 @@ Rules and gotchas:
   subscription re-read by id + the customer's list), never the event's
   snapshot — pass a webhook object as `eventSub`, an object you just read or
   wrote as `currentSub`; only `deleted` is taken from the event
-  (`docs/BILLING.md` "a late event"). FREE DOES NOT REFILL (owner decision
-  2026-09-24): `SIGNUP_CREDITS` (5, the `profiles.credits` default) once,
-  `MONTHLY_CREDITS.free` = 0, `refillTierFor` → null for free — copy says
-  "5 to start", never "a month". Three packs (`PACK_ORDER` mini/small/large,
+  (`docs/BILLING.md` "a late event"). AI CREDITS ARE ONE-TIME (owner
+  2026-11-06; before it a monthly allotment): `SIGNUP_CREDITS` (5, the
+  `profiles.credits` default) once at signup; `PLAN_CREDITS_ONCE` {plus 60,
+  pro 120} ONCE per account and tier with the FIRST PAID invoice
+  (`invoice.paid`, `amount_paid > 0`, create / cycle / update —
+  `grantPlanCreditsOnce`, key `plan-once:<user>:<tier>`; Pro after Plus the
+  DIFFERENCE, a downgrade or a resubscribe nothing); `FREE_PERIOD_CREDITS`
+  (10) ONCE per account when the first free period starts (the subscription
+  created `trialing`, or the first Apply of banked days —
+  `grantFreePeriodCredits`, key `free-period:<user>`; an old `trial_grant`
+  counts as served). No cron refill, no calendar month, no shortfall
+  arithmetic; the refill cron keeps only the old dated free-days grants'
+  allotments (`LEGACY_FREE_DAYS_ALLOTMENT`; staff "no end" access gets
+  nothing automatic). Copy says "with your first payment" / "to start",
+  never "a month"; `isLowCredits(balance, isPaid)` is ≤ 3 paid / ≤ 1 free. Three packs (`PACK_ORDER` mini/small/large,
   lookup keys `pack_<key>`), listed inside the out-of-credits modal;
   ACTIVE subscribers get coupon `PACK_SUBSCRIBER_COUPON_ID` applied by the
   checkout action (never client-supplied). FUNNEL: every money step writes

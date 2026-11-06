@@ -333,7 +333,7 @@ export function describeNotification(
       if (reason === "subscription_cycle" && plan) {
         return {
           subject: `Your ${plan} plan`,
-          body: `renewed — ${money} charged; your monthly AI credits are refilled.`,
+          body: `renewed — ${money} charged.`,
           href: "/dashboard/billing",
         };
       }
@@ -425,7 +425,7 @@ export function describeNotification(
       return {
         subject: `Your ${plan} checkout`,
         body: payload.trialEligible === true
-          ? "wasn't finished — your 7-day free trial is still waiting; nothing is charged until it ends, cancel anytime."
+          ? "wasn't finished — your banked free days are still waiting; nothing is charged until they end, cancel anytime."
           : "wasn't finished — pick up where you left off whenever you're ready.",
         href: "/dashboard/billing#plans",
       };
@@ -448,7 +448,7 @@ export function describeNotification(
         const invoiceId = str(payload.invoiceId);
         return {
           subject: "Credit grant failed",
-          body: `on a paid invoice${invoiceId ? ` (${invoiceId})` : ""}${error ? ` — ${error}` : ""}. The daily refill retries it; check the account's credits.`,
+          body: `on a paid invoice${invoiceId ? ` (${invoiceId})` : ""}${error ? ` — ${error}` : ""}. Plan credits are one-time: check the account's ledger and grant by hand if they are missing.`,
           href: isUuid(userId) ? `/admin/users?u=${userId}` : "/admin/users",
         };
       }
