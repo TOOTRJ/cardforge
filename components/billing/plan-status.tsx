@@ -161,7 +161,7 @@ export function PlanStatusLine({
           {compExpiresAt ? (
             <>
               {"Courtesy of the PipGlyph team until "}
-              <LocalDate iso={compExpiresAt} />
+              <LocalDate iso={compExpiresAt} format="stampYear" />
               {"."}
             </>
           ) : (
