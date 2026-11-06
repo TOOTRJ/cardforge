@@ -37,7 +37,7 @@ describe("ShareTargets with the viewer's referral", () => {
     expect(xUrl.searchParams.get("via")).toBe("x");
     expect(xUrl.searchParams.get("ref")).toBe("ab12cd34");
     expect(x.searchParams.get("text")).toBe(
-      "Hedge Witch's Familiar — a custom Magic card I forged on PipGlyph\nJoin with my link and you get 7 free days toward a plan once you've saved your first cards.",
+      "Hedge Witch's Familiar — a custom Magic card I forged on PipGlyph\nJoin with my link and you get 7 free days toward a plan once you've saved your first cards and started one.",
     );
     const reddit = new URL(new URL(h.Reddit).searchParams.get("url") ?? "");
     expect(reddit.searchParams.get("ref")).toBe("ab12cd34");

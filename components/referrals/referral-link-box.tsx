@@ -12,7 +12,7 @@ import { inputClass } from "@/components/ui/field-classes";
 
 /** The share text names what the FRIEND gets (the settings' words). */
 const shareText = (friendGets: string) =>
-  `I make custom Magic cards on PipGlyph — join with my link and you get ${friendGets} toward a plan once you've saved your first cards.`;
+  `I make custom Magic cards on PipGlyph — join with my link and you get ${friendGets} toward a plan once you've saved your first cards and started one.`;
 
 const noop = () => () => {};
 

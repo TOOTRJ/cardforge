@@ -23,7 +23,7 @@ describe("shareUrlFor", () => {
   });
   it("the referral line names what the friend gets, in the settings' words", () => {
     expect(referralShareLine("7 free days")).toBe(
-      "Join with my link and you get 7 free days toward a plan once you've saved your first cards.",
+      "Join with my link and you get 7 free days toward a plan once you've saved your first cards and started one.",
     );
   });
 });

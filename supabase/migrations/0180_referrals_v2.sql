@@ -135,6 +135,59 @@ $$;
 revoke all on function public.claim_referral_reward_v2(uuid, int, text) from public, anon, authenticated;
 grant execute on function public.claim_referral_reward_v2(uuid, int, text) to service_role;
 
+-- THE SWEEP'S READS (independent check P2: a plain "every cards_saved row,
+-- oldest first, 100 at a time" starves once a hundred friends have the
+-- cards and never a plan). Only rows that CAN move are returned: a
+-- cards_saved row whose friend now holds a Stripe subscription (a card on
+-- file), and a signed_up row — older than p_after, inside the window —
+-- whose friend has saved the bar's cards. Service role only.
+create or replace function public.referrals_awaiting_plan(p_limit int default 100)
+returns setof public.referrals
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.*
+  from public.referrals r
+  join public.profiles p on p.id = r.referee_id
+  where r.status in ('cards_saved', 'first_card')
+    and r.card_on_file_at is null
+    and p.stripe_subscription_id is not null
+    and p.subscription_status in ('trialing', 'active', 'past_due', 'unpaid')
+  order by coalesce(r.cards_saved_at, r.first_card_at) asc nulls first
+  limit greatest(1, least(coalesce(p_limit, 100), 500));
+$$;
+
+revoke all on function public.referrals_awaiting_plan(int) from public, anon, authenticated;
+grant execute on function public.referrals_awaiting_plan(int) to service_role;
+
+create or replace function public.referrals_stranded_signups(
+  p_cards int,
+  p_since timestamptz,
+  p_until timestamptz,
+  p_limit int default 100
+)
+returns table (id uuid, referee_id uuid)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.id, r.referee_id
+  from public.referrals r
+  where r.status = 'signed_up'
+    and r.referee_id is not null
+    and r.signed_up_at >= p_since
+    and r.signed_up_at < p_until
+    and (select count(*) from public.cards c where c.owner_id = r.referee_id) >= greatest(1, coalesce(p_cards, 1))
+  order by r.signed_up_at asc
+  limit greatest(1, least(coalesce(p_limit, 100), 500));
+$$;
+
+revoke all on function public.referrals_stranded_signups(int, timestamptz, timestamptz, int) from public, anon, authenticated;
+grant execute on function public.referrals_stranded_signups(int, timestamptz, timestamptz, int) to service_role;
+
 -- THE ADMIN'S NUMBERS, v2 (the same name and signature as 0177's: replaced).
 create or replace function public.admin_referral_stats(p_since timestamptz)
 returns jsonb

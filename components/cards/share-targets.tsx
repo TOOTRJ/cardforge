@@ -218,8 +218,8 @@ export function ShareTargets({
             {friendGets ? (
               <>
                 {" "}
-                These links carry your referral link: a friend who joins through one gets {friendGets} when they save
-                their first card — and so do you.
+                These links carry your referral link: a friend who joins through one gets {friendGets} toward a plan once
+                they save their first cards and start one — and so do you.
               </>
             ) : null}
           </DialogDescription>

@@ -67,6 +67,12 @@ type World = {
   stranded: Row[];
   /** What bankDays answers: ok, or a throw. */
   bank: { kind: "ok" } | { kind: "throw"; error: string };
+  /** The friend's pre-banked entry as the bank holds it (null = none). */
+  bankEntry: { id: string; status: string } | null;
+  /** Rows referrals_awaiting_plan answers (cards saved, a plan now). */
+  awaiting: Row[];
+  /** The referrer's rewarded friends this month (the cap's count). */
+  friendsThisMonth: number;
   settings: ReferralSettings;
 };
 let world: World;
@@ -107,6 +113,11 @@ function db() {
     }
     if (table === "cards") return { count: world.refereeCards };
     if (table === "referral_email_fingerprints" && called(calls, "select")) return { data: world.seen };
+    if (table === "day_bank_entries") {
+      if (called(calls, "update")) return { data: world.bankEntry?.status === "banked" ? [{ id: world.bankEntry.id }] : [] };
+      return { data: world.bankEntry };
+    }
+    if (table === "referrals" && called(calls, "select") && called(calls, "gte")) return { count: world.friendsThisMonth };
     if (table === "referrals" && called(calls, "insert")) {
       return world.insertError ? { data: null, error: world.insertError } : { data: { id: REFERRAL } };
     }
@@ -127,6 +138,8 @@ function db() {
   });
   stub.rpc.mockImplementation((async (name: string) => {
     if (name === "claim_referral_reward_v2") return { data: world.claim ? [world.claim] : [], error: null };
+    if (name === "referrals_awaiting_plan") return { data: world.awaiting, error: null };
+    if (name === "referrals_stranded_signups") return { data: world.stranded, error: null };
     if (name === "referral_email_in_use") return { data: world.inUse, error: null };
     return { data: null, error: null };
   }) as never);
@@ -178,6 +191,9 @@ function freshWorld(): World {
     owed: [],
     stranded: [],
     bank: { kind: "ok" },
+    bankEntry: null,
+    awaiting: [],
+    friendsThisMonth: 0,
     settings: DEFAULT_REFERRAL_SETTINGS,
   };
 }
@@ -240,7 +256,7 @@ describe("recordReferralSignup", () => {
     for (const change of [
       () => (world.refereeCreatedAt = at(-8)),
       () => (world.refereeStatus = "canceled"),
-      () => (world.refereeCards = 1),
+      () => (world.refereeCards = 5),
     ]) {
       world = freshWorld();
       world.refereeCards = 0;
@@ -249,6 +265,11 @@ describe("recordReferralSignup", () => {
       expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "not_new" });
       expect(stub.forTable("referrals")).toEqual([]);
     }
+  });
+
+  it("a friend with a card or two already (a guest draft) is still new — only the bar's cards refuse", async () => {
+    world.refereeCards = 4;
+    expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toMatchObject({ ok: true });
   });
 
   it("first claim wins: a second claim for the same account is 'exists'", async () => {
@@ -414,6 +435,7 @@ describe("advanceReferral — the two bars, then the reward at once", () => {
       block_reason: "email_reused",
       referrer_reward: "none",
       referee_reward: "none",
+      referee_reward_detail: { kind: "none", reason: "email_reused" },
     });
     expect(notifications(stub)).toEqual([
       { recipient_id: REFERRER, actor_id: REFEREE, type: "referral_signup", payload: { referralId: REFERRAL, outcome: "not_eligible" } },
@@ -456,7 +478,7 @@ describe("advanceReferral — the two bars, then the reward at once", () => {
     const row = openRow({ status: "cards_saved", cards_saved_at: at(-1), card_on_file_at: at(-1), referee_id: null });
     expect(await rewardReferral(stub.client as never, row as never, deps)).toEqual({ status: "blocked", reason: "account_deleted", referee: null });
     expect(referralUpdates(stub)).toEqual([
-      { status: "blocked", block_reason: "account_deleted", referrer_reward: "none", referee_reward: "none" },
+      { status: "blocked", block_reason: "account_deleted", referrer_reward: "none", referee_reward: "none", referee_reward_detail: { kind: "none", reason: "account_deleted" } },
     ]);
     expect(stub.rpc).not.toHaveBeenCalled();
   });
@@ -466,7 +488,7 @@ describe("advanceReferral — the two bars, then the reward at once", () => {
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "blocked", reason: "same_email", referee: null });
     expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
-    expect(referralUpdates(stub).at(-1)).toEqual({ status: "blocked", block_reason: "same_email", referrer_reward: "none", referee_reward: "none" });
+    expect(referralUpdates(stub).at(-1)).toMatchObject({ status: "blocked", block_reason: "same_email", referrer_reward: "none", referee_reward: "none" });
   });
 
   it("the same card fingerprint on both Stripe customers: blocked", async () => {
@@ -574,6 +596,88 @@ describe("preBankFriendDays — the friend's checkout", () => {
     expect(await preBankFriendDays(db().client as never, REFEREE, deps)).toBe(true);
     expect(bankCalls()).toEqual([{ userId: REFEREE, days: 7, source: "referral_friend", reference: FRIEND_REF }]);
   });
+  it("the reward step's gate is judged BEFORE banking (check P1): an unconfirmed email, the same inbox, a reused email, the friends cap, an admin friend, no hash key — nothing banked", async () => {
+    const ready = () => openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    for (const change of [
+      () => (world.users[REFEREE].confirmed = false),
+      () => (world.users[REFERRER].confirmed = false),
+      () => (world.users[REFEREE].email = "r.e.f+alt@gmail.com"),
+      () => (world.users[REFEREE].email = "z@yopmail.com"),
+      () => (world.inUse = true),
+      () => (world.seen = { referral_id: OTHER_REFERRAL }),
+      () => (world.friendsThisMonth = DEFAULT_REFERRAL_SETTINGS.caps.friendsPerMonth),
+      () => (world.profiles = [{ id: REFERRER, subscription_tier: "free" }, { id: REFEREE, subscription_tier: "free", is_admin: true }]),
+      () => vi.stubEnv("REFERRAL_EMAIL_HASH_KEY", ""),
+    ]) {
+      world = freshWorld();
+      world.open = ready();
+      change();
+      expect(await preBankFriendDays(db().client as never, REFEREE, deps)).toBe(false);
+      vi.stubEnv("REFERRAL_EMAIL_HASH_KEY", TEST_KEY);
+    }
+    expect(bankCalls()).toEqual([]);
+    // A referrer-only block (the same custom domain) still banks the friend's days: the step rewards them.
+    world = freshWorld();
+    world.open = ready();
+    world.users = { [REFERRER]: { email: "a@smallshop.com", confirmed: true }, [REFEREE]: { email: "b@smallshop.com", confirmed: true } };
+    const stub = db();
+    expect(await preBankFriendDays(stub.client as never, REFEREE, deps)).toBe(true);
+    // The cap's count is the claim's: this month's rewarded/capped/blocked rows whose friend was rewarded.
+    const capRead = stub.forTable("referrals").find((e) => called(e.calls, "gte"))!;
+    expect(capRead.calls.find((c) => c.method === "neq")?.args).toEqual(["referee_reward", "none"]);
+    expect(capRead.calls.find((c) => c.method === "gte")?.args).toEqual(["rewarded_at", "2026-11-01T00:00:00.000Z"]);
+  });
+
+  it("pre-banked days are taken back when the row ends with nothing for the friend — revoked while banked, named as spent once a checkout used them (check P1)", async () => {
+    // Banked still: the same card is judged at the webhook → revoked by reference.
+    world.bankEntry = { id: "e_pre", status: "banked" };
+    world.profiles = [
+      { id: REFERRER, subscription_tier: "free", stripe_customer_id: "cus_a" },
+      { id: REFEREE, subscription_tier: "free", stripe_customer_id: "cus_b" },
+    ];
+    const stripe = { paymentMethods: { list: vi.fn(async () => ({ data: [{ card: { fingerprint: "fp_same" } }] })) } };
+    let stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, { ...deps, stripe: stripe as never })).toMatchObject({ status: "blocked", reason: "same_card" });
+    const revoke = stub.forTable("day_bank_entries").find((e) => called(e.calls, "update"))!;
+    expect(payloadOf(revoke.calls, "update")).toEqual({ status: "revoked", revoked_at: NOW.toISOString(), revoke_reason: "referral same_card" });
+    expect(revoke.calls.find((c) => c.method === "eq" && c.args[0] === "reference")?.args[1]).toBe(FRIEND_REF);
+    expect(revoke.calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1]).toBe("banked");
+    expect(referralUpdates(stub).at(-1)).toMatchObject({ status: "blocked", referee_reward_detail: { kind: "none", reason: "same_card" } });
+
+    // Already APPLIED by the checkout: nothing to revoke — the detail says so for the admin.
+    world = freshWorld();
+    world.bankEntry = { id: "e_pre", status: "applied" };
+    world.profiles = [
+      { id: REFERRER, subscription_tier: "free", stripe_customer_id: "cus_a" },
+      { id: REFEREE, subscription_tier: "free", stripe_customer_id: "cus_b" },
+    ];
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    stub = db();
+    await qualifyReferral(stub.client as never, REFEREE, { ...deps, stripe: stripe as never });
+    expect(referralUpdates(stub).at(-1)).toMatchObject({
+      status: "blocked",
+      referee_reward_detail: { kind: "none", reason: "same_card", preBankedEntryId: "e_pre", spent: true },
+    });
+    warn.mockRestore();
+
+    // The friends cap at the claim: the same, on the row's detail.
+    world = freshWorld();
+    world.bankEntry = { id: "e_pre", status: "reserved" };
+    world.claim = { outcome: "capped_friends", step: null };
+    const warn2 = vi.spyOn(console, "warn").mockImplementation(() => {});
+    stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "capped", referrer: null, referee: null });
+    expect(referralUpdates(stub)).toContainEqual({ referee_reward_detail: { kind: "none", reason: "capped_friends", preBankedEntryId: "e_pre", spent: true } });
+    warn2.mockRestore();
+    // …and banked still → revoked.
+    world = freshWorld();
+    world.bankEntry = { id: "e_pre", status: "banked" };
+    world.claim = { outcome: "capped_friends", step: null };
+    stub = db();
+    await qualifyReferral(stub.client as never, REFEREE, deps);
+    expect(stub.forTable("day_bank_entries").some((e) => called(e.calls, "update"))).toBe(true);
+  });
+
   it("nothing without the cards, with a card already on file, with the side already recorded, with the program off, or with billing off", async () => {
     for (const change of [
       () => (world.open = openRow()),
@@ -641,14 +745,25 @@ describe("sweepReferralRewards (the cron's retry)", () => {
     const expiry = stub.forTable("referrals").find((e) => called(e.calls, "update") && called(e.calls, "eq", "status") && called(e.calls, "lt"))!;
     expect(payloadOf(expiry.calls, "update")).toEqual({ status: "expired", referrer_reward: "none", referee_reward: "none" });
     expect(expiry.calls.find((c) => c.method === "lt")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 30 * DAY).toISOString()]);
-    const read = stub.forTable("referrals").find((e) => called(e.calls, "select") && called(e.calls, "eq", "status") && called(e.calls, "lt"))!;
-    expect(read.calls.find((c) => c.method === "lt")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 10 * 60_000).toISOString()]);
-    expect(read.calls.find((c) => c.method === "gte")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 30 * DAY).toISOString()]);
-    // Not enough cards yet: left alone.
+    // The read is the database's (the card count judged there): before now
+    // − 10 min, inside the window, the bar's cards.
+    expect(stub.rpc).toHaveBeenCalledWith("referrals_stranded_signups", {
+      p_cards: 5,
+      p_since: new Date(NOW.getTime() - 30 * DAY).toISOString(),
+      p_until: new Date(NOW.getTime() - 10 * 60_000).toISOString(),
+      p_limit: 100,
+    });
+    // The pending reads: the rows with both stamps, and the database's
+    // "cards saved, a plan now" rows (referrals_awaiting_plan), deduplicated.
     world = freshWorld();
-    world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
-    world.refereeCards = 2;
-    expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 0, retried: 0, failed: 0, released: 0 });
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    world.awaiting = [{ ...world.open }];
+    world.pending = [{ ...world.open }];
+    const both = db();
+    expect(await sweepReferralRewards(both.client as never, deps)).toMatchObject({ claimed: 1 });
+    const stampedRead = both.forTable("referrals").find((e) => called(e.calls, "select") && called(e.calls, "not"))!;
+    expect(stampedRead.calls.find((c) => c.method === "not")?.args).toEqual(["card_on_file_at", "is", null]);
+    expect(both.rpc).toHaveBeenCalledWith("referrals_awaiting_plan", { p_limit: 100 });
   });
 
   it(`gives up after ${REFERRAL_GRANT_MAX_ATTEMPTS} attempts: the side is recorded as none (grant_failed) for an admin`, async () => {

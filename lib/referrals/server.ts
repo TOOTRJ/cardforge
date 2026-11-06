@@ -142,11 +142,13 @@ export async function recordReferralSignup(
     if (!(age <= REFERRAL_CLAIM_WINDOW_DAYS * DAY_MS) || referee.subscription_status != null) {
       return { ok: false, reason: "not_new" };
     }
+    // Under the bar's cards (a guest draft saved before onboarding is no
+    // reason to refuse); at or past it the account isn't new to the program.
     const { count } = await admin
       .from("cards")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", input.refereeId);
-    if ((count ?? 0) > 0) return { ok: false, reason: "not_new" };
+    if ((count ?? 0) >= settings.activation.cardsRequired) return { ok: false, reason: "not_new" };
 
     const { data: row, error } = await admin
       .from("referrals")
@@ -285,6 +287,28 @@ export async function preBankFriendDays(admin: AdminClient, refereeId: string, d
     if (!row || !qualifiedAt(row) || row.card_on_file_at || row.referee_reward != null) return false;
     const settings = deps.settings ?? (await readReferralSettings(admin));
     if (!settings.enabled || settings.friend.days < 1) return false;
+    // The reward step's gate, judged NOW (independent check P1): the
+    // checkout spends these days as the free period, so nothing may be
+    // banked that the step would refuse — both emails confirmed, the key
+    // present, the fraud rules (all but the shared card, which exists only
+    // after this checkout; `reclaimFriendDays` takes that case back), one
+    // email one reward, the friends cap, an admin friend.
+    const [referrerUser, refereeUser, profiles] = await Promise.all([
+      authUserOf(admin, row.referrer_id),
+      authUserOf(admin, refereeId),
+      admin.from("profiles").select(`id, ${REWARD_PROFILE_COLUMNS}`).in("id", [row.referrer_id, refereeId]),
+    ]);
+    if (!refereeUser?.confirmed || !referrerUser?.confirmed) return false;
+    const hashKey = referralEmailHashKey();
+    if (!hashKey) return false;
+    const rows = (profiles.data ?? []) as Array<ReferralRewardProfile & { id: string }>;
+    const referee = rows.find((r) => r.id === refereeId) ?? null;
+    if (!referee || referee.is_admin) return false;
+    const verdict = referralFraudVerdict({ referrerEmail: referrerUser.email, refereeEmail: refereeUser.email, sameCard: false });
+    if (verdict.block && !verdict.refereeRewarded) return false;
+    const reused = await emailReused(admin, row.id, refereeId, refereeUser.email, hashKey);
+    if (reused !== false) return false;
+    if (await friendsCapReached(admin, row.referrer_id, settings.caps.friendsPerMonth, deps.now ?? new Date())) return false;
     const banked = await bankDays(admin, {
       userId: refereeId,
       days: settings.friend.days,
@@ -296,6 +320,62 @@ export async function preBankFriendDays(admin: AdminClient, refereeId: string, d
     console.warn(`[referrals] pre-bank for ${refereeId} failed:`, error instanceof Error ? error.message : error);
     return false;
   }
+}
+
+/** The friends cap as the claim counts it (rewarded, capped and
+ *  referrer-blocked rows this UTC month whose friend was rewarded) — a
+ *  best-effort read; the claim is the judge. */
+async function friendsCapReached(admin: AdminClient, referrerId: string, cap: number, now: Date): Promise<boolean> {
+  if (cap <= 0) return true;
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const { count } = await admin
+    .from("referrals")
+    .select("id", { count: "exact", head: true })
+    .eq("referrer_id", referrerId)
+    .in("status", ["rewarded", "capped", "blocked"])
+    .neq("referee_reward", "none")
+    .gte("rewarded_at", monthStart);
+  return (count ?? 0) >= cap;
+}
+
+/**
+ * The friend's pre-banked days when the row ends with NO reward for them
+ * (blocked, capped, expired, the account gone): an entry still BANKED is
+ * revoked; one already reserved or applied — the checkout spent it — is
+ * named in the side's detail so the admin sees it (`spent`).
+ */
+async function reclaimFriendDays(
+  admin: AdminClient,
+  referralId: string,
+  reason: string,
+  now: Date,
+): Promise<{ revoked: boolean; spentEntryId: string | null }> {
+  const reference = referralRewardKey(referralId, "referee");
+  try {
+    const { data: revoked } = await admin
+      .from("day_bank_entries")
+      .update({ status: "revoked", revoked_at: now.toISOString(), revoke_reason: `referral ${reason}`.slice(0, 200) })
+      .eq("reference", reference)
+      .eq("status", "banked")
+      .select("id");
+    if ((revoked?.length ?? 0) > 0) return { revoked: true, spentEntryId: null };
+    const { data: entry } = await admin.from("day_bank_entries").select("id, status").eq("reference", reference).maybeSingle();
+    const e = entry as { id: string; status: string } | null;
+    if (e && (e.status === "reserved" || e.status === "applied")) {
+      console.warn(`[referrals] ${referralId}: the friend's pre-banked days were already ${e.status} (${reason})`);
+      return { revoked: false, spentEntryId: e.id };
+    }
+    return { revoked: false, spentEntryId: null };
+  } catch (error) {
+    console.warn(`[referrals] ${referralId}: reclaim failed:`, error instanceof Error ? error.message : error);
+    return { revoked: false, spentEntryId: null };
+  }
+}
+
+/** The friend's side ends with nothing: the detail names why — and the
+ *  pre-banked entry the checkout already spent, if any. */
+function noneDetail(reason: string, spentEntryId: string | null): Record<string, unknown> {
+  return spentEntryId ? { kind: "none", reason, preBankedEntryId: spentEntryId, spent: true } : { kind: "none", reason };
 }
 
 /** The reward step for one qualified row. Safe to run again (the sweep):
@@ -319,11 +399,13 @@ export async function rewardReferral(
   // The friend's account is gone: nobody is rewarded (the row stays — it is
   // evidence, never cascaded).
   if (!referral.referee_id) {
+    const reclaimed = await reclaimFriendDays(admin, referral.id, "account_deleted", now);
     const moved = await settleQualified(admin, referral.id, {
       status: "blocked",
       block_reason: "account_deleted",
       referrer_reward: "none",
       referee_reward: "none",
+      referee_reward_detail: noneDetail("account_deleted", reclaimed.spentEntryId) as Json,
     });
     return moved ? { status: "blocked", reason: "account_deleted", referee: null } : { status: "none" };
   }
@@ -339,10 +421,12 @@ export async function rewardReferral(
   if (!refereeUser?.confirmed || !referrerUser?.confirmed) {
     const since = Date.parse(qualifiedAt(referral) ?? "") || now.getTime();
     if (now.getTime() - since > REFERRAL_CONFIRM_WINDOW_DAYS * DAY_MS) {
+      const reclaimed = await reclaimFriendDays(admin, referral.id, "expired", now);
       const moved = await settleQualified(admin, referral.id, {
         status: "expired",
         referrer_reward: "none",
         referee_reward: "none",
+        referee_reward_detail: noneDetail("expired", reclaimed.spentEntryId) as Json,
       });
       return moved ? { status: "expired" } : { status: "none" };
     }
@@ -376,11 +460,13 @@ export async function rewardReferral(
   }
 
   if (fullBlock) {
+    const reclaimed = await reclaimFriendDays(admin, referral.id, fullBlock, now);
     const moved = await settleQualified(admin, referral.id, {
       status: "blocked",
       block_reason: fullBlock,
       referrer_reward: "none",
       referee_reward: "none",
+      referee_reward_detail: noneDetail(fullBlock, reclaimed.spentEntryId) as Json,
     });
     if (!moved) return { status: "none" };
     // The friend is never told why (anti-enumeration); the referrer reads
@@ -410,7 +496,15 @@ export async function rewardReferral(
     await notifyNoReward(admin, referral.referrer_id, refereeId, referral.id, "not_eligible");
   } else if (claim.outcome === "capped_friends") {
     await notifyNoReward(admin, referral.referrer_id, refereeId, referral.id, "capped_friends");
-    // The friends cap: the friend's side is 'none' too (the database wrote it).
+    // The friends cap: the friend's side is 'none' too (the database wrote
+    // it) — their pre-banked days come back, or are named as spent.
+    const reclaimed = await reclaimFriendDays(admin, referral.id, "capped_friends", now);
+    if (reclaimed.spentEntryId) {
+      await admin
+        .from("referrals")
+        .update({ referee_reward_detail: noneDetail("capped_friends", reclaimed.spentEntryId) as Json })
+        .eq("id", referral.id);
+    }
     return { status: "capped", referrer: null, referee: null };
   } else return { status: "none" };
 
@@ -618,17 +712,29 @@ export async function sweepReferralRewards(admin: AdminClient, deps0: RewardDeps
   let retried = 0;
   let failed = 0;
 
-  // Qualified-not-claimed rows: both stamps may stand now (the card arrived
-  // while the program was off, an email got confirmed) or the card is still
-  // missing — advanceReferral judges both from the live profile.
-  const { data: pending, error } = await admin
+  // Qualified-not-claimed rows that CAN move (independent check P2: a
+  // friend with the cards and no plan has no deadline, so those rows
+  // accumulate and a plain oldest-first batch would starve): the rows with
+  // BOTH stamps (an email got confirmed, the program came back on), and the
+  // rows whose friend now holds a subscription (a lost webhook) — the
+  // latter joined in the database (referrals_awaiting_plan).
+  const { data: stamped, error } = await admin
     .from("referrals")
     .select(REFERRAL_ROW_COLUMNS)
     .in("status", ["cards_saved", "first_card"])
+    .not("card_on_file_at", "is", null)
     .order("cards_saved_at", { ascending: true, nullsFirst: true })
     .limit(REFERRAL_SWEEP_BATCH);
   if (error) return { ok: false, error: error.message };
-  for (const row of (pending ?? []) as ReferralRow[]) {
+  const { data: awaiting, error: awaitingError } = await admin.rpc("referrals_awaiting_plan", { p_limit: REFERRAL_SWEEP_BATCH });
+  if (awaitingError) return { ok: false, error: awaitingError.message };
+  const seen = new Set<string>();
+  const pending = [...((stamped ?? []) as ReferralRow[]), ...((awaiting ?? []) as ReferralRow[])].filter((row) => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
+  for (const row of pending) {
     if (!row.referee_id) {
       const result = await rewardReferral(admin, row, deps);
       if (result.status !== "none") claimed += 1;
@@ -648,21 +754,17 @@ export async function sweepReferralRewards(admin: AdminClient, deps0: RewardDeps
     .lt("signed_up_at", new Date(now.getTime() - windowMs).toISOString());
 
   // A save whose `after()` was lost: a signed_up row older than a few
-  // minutes — and inside the window — whose friend has the cards is
-  // advanced here.
-  const { data: stranded, error: strandedError } = await admin
-    .from("referrals")
-    .select("id, referee_id")
-    .eq("status", "signed_up")
-    .lt("signed_up_at", new Date(now.getTime() - STRANDED_AFTER_MS).toISOString())
-    .gte("signed_up_at", new Date(now.getTime() - windowMs).toISOString())
-    .order("signed_up_at", { ascending: true })
-    .limit(REFERRAL_SWEEP_BATCH);
+  // minutes — and inside the window — whose friend has the bar's cards is
+  // advanced here (the card count judged in the database).
+  const { data: stranded, error: strandedError } = await admin.rpc("referrals_stranded_signups", {
+    p_cards: settings.activation.cardsRequired,
+    p_since: new Date(now.getTime() - windowMs).toISOString(),
+    p_until: new Date(now.getTime() - STRANDED_AFTER_MS).toISOString(),
+    p_limit: REFERRAL_SWEEP_BATCH,
+  });
   if (strandedError) return { ok: false, error: strandedError.message };
   for (const row of (stranded ?? []) as Array<{ id: string; referee_id: string | null }>) {
     if (!row.referee_id) continue;
-    const { count } = await admin.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", row.referee_id);
-    if ((count ?? 0) < settings.activation.cardsRequired) continue;
     const result = await advanceReferral(admin, row.referee_id, deps);
     if (result.status === "waiting") waiting += 1;
     else if (result.status !== "none") claimed += 1;

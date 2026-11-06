@@ -75,6 +75,21 @@ describe("the referrals v2 migration", () => {
     expect(sql).toContain("grant execute on function public.admin_referral_stats(timestamptz) to service_role;");
   });
 
+  it("the sweep's reads are the database's (check P2): cards_saved rows whose friend now holds a subscription, and stranded signups judged on the card count — service role only", () => {
+    const awaiting = fn("referrals_awaiting_plan");
+    expect(awaiting).toContain("returns setof public.referrals");
+    expect(awaiting).toContain("join public.profiles p on p.id = r.referee_id");
+    expect(awaiting).toContain("and r.card_on_file_at is null");
+    expect(awaiting).toContain("and p.subscription_status in ('trialing', 'active', 'past_due', 'unpaid')");
+    const stranded = fn("referrals_stranded_signups");
+    expect(stranded).toContain("returns table (id uuid, referee_id uuid)");
+    expect(stranded).toMatch(/select count\(\*\) from public\.cards c where c\.owner_id = r\.referee_id\) >= greatest\(1, coalesce\(p_cards, 1\)\)/);
+    for (const sig of ["referrals_awaiting_plan(int)", "referrals_stranded_signups(int, timestamptz, timestamptz, int)"]) {
+      expect(sql).toContain(`revoke all on function public.${sig} from public, anon, authenticated;`);
+      expect(sql).toContain(`grant execute on function public.${sig} to service_role;`);
+    }
+  });
+
   it("rewrites the settings row to the v2 shape, keeping the switch and the friends cap, and seeds it where missing", () => {
     expect(sql).toMatch(/'enabled', coalesce\(\(value->>'enabled'\)::boolean, true\)/);
     expect(sql).toMatch(/'friendsPerMonth', coalesce\(\(value->'caps'->>'friendsPerMonth'\)::int, 5\)/);

@@ -3267,6 +3267,14 @@ export type Database = {
         /** 'rewarded' | 'capped_month' | 'capped_lifetime' | 'capped_friends' | 'blocked', or null. */
         Returns: string | null;
       };
+      referrals_awaiting_plan: {
+        Args: { p_limit?: number | null };
+        Returns: Array<Database["public"]["Tables"]["referrals"]["Row"]>;
+      };
+      referrals_stranded_signups: {
+        Args: { p_cards: number; p_since: string; p_until: string; p_limit?: number | null };
+        Returns: Array<{ id: string; referee_id: string | null }>;
+      };
       claim_referral_reward_v2: {
         Args: { p_referral_id: string; p_friends_cap?: number | null; p_block_reason?: string | null };
         /** One row — 'rewarded' (with the referrer's ladder step), 'capped_friends' or 'blocked' — or none. */

@@ -61,11 +61,11 @@ export function buildReferralSummary(
     cardsSaved: rows.filter((r) => r.cardsSavedAt != null).length,
     cardOnFile: rows.filter((r) => r.cardOnFileAt != null).length,
     rewardsEarned,
+    // As the claim counts it: rows whose FRIEND was rewarded this month —
+    // rewarded, and blocked-for-the-referrer-only (same domain); a capped
+    // row rewarded nobody and never counts (so the number never passes the cap).
     friendsThisMonth: rows.filter(
-      (r) =>
-        (r.status === "rewarded" || r.status === "capped" || r.status === "blocked") &&
-        r.rewardedAt != null &&
-        Date.parse(r.rewardedAt) >= monthStart,
+      (r) => (r.status === "rewarded" || r.status === "blocked") && r.rewardedAt != null && Date.parse(r.rewardedAt) >= monthStart,
     ).length,
     friendsPerMonth: settings.caps.friendsPerMonth,
     nextReward,

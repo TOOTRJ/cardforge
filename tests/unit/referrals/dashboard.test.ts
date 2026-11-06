@@ -48,8 +48,9 @@ describe("buildReferralSummary", () => {
       cardsSaved: 5,
       cardOnFile: 4,
       rewardsEarned: 2,
-      // Rewarded, capped and blocked rows this month all brought a friend to the cap.
-      friendsThisMonth: 3,
+      // As the claim counts it: the rewarded and the referrer-blocked rows
+      // (their friend was rewarded); the capped row rewarded nobody.
+      friendsThisMonth: 2,
       friendsPerMonth: DEFAULT_REFERRAL_SETTINGS.caps.friendsPerMonth,
       nextReward: { kind: "days", days: 7 },
       nextRewardPhrase: "7 free days",
