@@ -5,7 +5,7 @@ import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 import { grantFreeDays } from "@/lib/billing/free-days-apply";
-import type { PaidTier } from "@/lib/billing/plans";
+import { SIGNUP_BANK_DAYS, type PaidTier } from "@/lib/billing/plans";
 import { MAX_FREE_DAYS_EXACT, MIN_ADMIN_BANK_DAYS } from "@/lib/billing/free-days";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ type AdminClient = ReturnType<typeof createAdminClient>;
 type UserClient = Awaited<ReturnType<typeof createClient>>;
 
 /** What a new account starts with (the 7-day trial, as a bank). */
-export const SIGNUP_BANK_DAYS = 7;
+export { SIGNUP_BANK_DAYS };
 /** A checkout applies the bank as `trial_period_days` (whole days from the
  *  moment it completes; Stripe's floor is one day) — a single banked day
  *  checks out. */

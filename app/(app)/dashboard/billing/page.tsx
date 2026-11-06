@@ -29,6 +29,7 @@ import {
   SIGNUP_CREDITS,
   formatCredits,
   planForTier,
+  TRIAL_CREDITS,
 } from "@/lib/billing/plans";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
@@ -331,7 +332,9 @@ export default async function BillingPage() {
               ? "Your plan's last payment didn't go through. Update your card to keep it — the buttons below open the billing portal, never a second subscription."
               : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
-              : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
+              : bank.banked > 0
+                ? `Start a plan with your ${bank.banked} banked free day${bank.banked === 1 ? "" : "s"}: they're its free time, with ${TRIAL_CREDITS} AI credits to try. Nothing is charged until the days end — cancel anytime before then — and your plan's full monthly credits arrive with your first payment.`
+                : "Start a plan with the free days you've banked — nothing is charged until they end, cancel anytime before then. Your plan's full monthly credits arrive with your first payment."}
         </p>
         <PricingPlans initialViewer={gridViewer} surface="billing" />
       </section>

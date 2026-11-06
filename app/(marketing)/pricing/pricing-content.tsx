@@ -4,6 +4,7 @@ import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { siteConfig } from "@/lib/site-config";
+import { SIGNUP_BANK_DAYS, TRIAL_CREDITS } from "@/lib/billing/plans";
 import type { BillingViewer } from "@/lib/billing/viewer";
 import { PageContainer } from "@/components/layout/page-container";
 
@@ -44,7 +45,7 @@ export function PricingContent({ initialViewer }: { initialViewer?: BillingViewe
           for MTG-style rendering.
         </p>
         <p className="text-sm font-medium text-gold-strong">
-          First time subscribing? Try any plan free for 7 days — 25 AI credits to play with, nothing charged until day 7, cancel anytime. Your plan&apos;s full monthly credits arrive with your first payment.
+          {`Every new account starts with ${SIGNUP_BANK_DAYS} free days in the bank — start any plan with them, with ${TRIAL_CREDITS} AI credits to play with. Nothing is charged until the days end, cancel anytime before then, and your plan's full monthly credits arrive with your first payment. Refer a friend to bank more.`}
         </p>
       </div>
 
