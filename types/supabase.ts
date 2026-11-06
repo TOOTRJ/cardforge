@@ -469,6 +469,8 @@ export type Database = {
           starts_at: string;
           ends_at: string | null;
           credits_from: string;
+          days: number | null;
+          grants_credits: boolean;
           status: string;
           stripe_error: string | null;
           revoked_at: string | null;
@@ -490,6 +492,8 @@ export type Database = {
           starts_at: string;
           ends_at?: string | null;
           credits_from: string;
+          days?: number | null;
+          grants_credits?: boolean;
           status?: string;
           stripe_error?: string | null;
           revoked_at?: string | null;
@@ -511,6 +515,8 @@ export type Database = {
           starts_at?: string;
           ends_at?: string | null;
           credits_from?: string;
+          days?: number | null;
+          grants_credits?: boolean;
           status?: string;
           stripe_error?: string | null;
           revoked_at?: string | null;
@@ -533,6 +539,61 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      // Migration 0179 — the days bank.
+      day_bank_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          days: number;
+          source: string;
+          reference: string | null;
+          note: string | null;
+          status: string;
+          batch_id: string | null;
+          reserved_at: string | null;
+          applied_at: string | null;
+          applied_via: string | null;
+          applied_ref: string | null;
+          revoked_at: string | null;
+          revoke_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          days: number;
+          source: string;
+          reference?: string | null;
+          note?: string | null;
+          status?: string;
+          batch_id?: string | null;
+          reserved_at?: string | null;
+          applied_at?: string | null;
+          applied_via?: string | null;
+          applied_ref?: string | null;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          days?: number;
+          source?: string;
+          reference?: string | null;
+          note?: string | null;
+          status?: string;
+          batch_id?: string | null;
+          reserved_at?: string | null;
+          applied_at?: string | null;
+          applied_via?: string | null;
+          applied_ref?: string | null;
+          revoked_at?: string | null;
+          revoke_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       // Migration 0177 — referrals.
       referral_codes: {

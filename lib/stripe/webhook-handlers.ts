@@ -15,6 +15,7 @@ import {
   type SubscriptionSyncResult,
 } from "./subscription-sync";
 import { ACCOUNT_DELETED_CANCEL_COMMENT } from "./cancel-comment";
+import { settleCheckoutBank } from "@/lib/billing/day-bank";
 import { tierForPrice } from "./config";
 import { checkoutReminderEmail, paymentFailedEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { dunningGraceUntil } from "@/lib/billing/dunning";
@@ -1044,6 +1045,8 @@ export async function handleStripeEvent(
       await handleCheckoutPaid(session, admin, event.created);
       await handleSupersededSubscription(session, stripe);
       await markWinbackRedeemed(session, admin);
+      // The days bank (0179): the days this session applied are spent.
+      await settleCheckoutBank(admin, session, "completed");
       await recordFunnelEvent(admin, {
         event: "checkout_completed",
         userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
@@ -1094,6 +1097,8 @@ export async function handleStripeEvent(
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
+      // The days bank (0179): the days it held go back to the bank.
+      await settleCheckoutBank(admin, session, "expired");
       await handleCheckoutExpired(session, deps);
       await recordFunnelEvent(admin, {
         event: "checkout_expired",

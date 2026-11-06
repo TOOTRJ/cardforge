@@ -100,6 +100,8 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     const insert = stub.forTable("plan_grants").find((e) => called(e.calls, "insert"))!;
     expect(payloadOf(insert.calls, "insert")).toEqual({
       user_id: USER,
+      days: null,
+      grants_credits: true,
       tier: "pro",
       units: 1,
       source: "comp",

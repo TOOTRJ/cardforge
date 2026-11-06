@@ -62,7 +62,9 @@ export const FREE_DAYS_UNIT_SECONDS = FREE_DAYS_UNIT_DAYS * 86_400;
  *  730-day trial limit even on top of a running hold of the same length). */
 export const MAX_FREE_DAY_UNITS = 12;
 
-export type GrantSource = "comp" | "referral_friend" | "referral_referrer" | "promo";
+export type GrantSource = "comp" | "referral_friend" | "referral_referrer" | "promo" | "day_bank";
+/** An exact length (the days bank, lib/billing/day-bank.ts): 1 … 730 days. */
+export const MAX_FREE_DAYS_EXACT = 730;
 export type GrantAppliedAs = "overlay" | "subscription_hold" | "below_plan";
 
 export type FreeDaysProfile = {
@@ -186,23 +188,48 @@ export function planFreeDays(input: {
   sub: FreeDaysSubscription | null;
   subscribedTier: PlanTier | null;
   tier: PaidTier;
-  /** 30-day units, 1 … MAX_FREE_DAY_UNITS; null = no end (staff). */
+  /** 30-day units, 1 … MAX_FREE_DAY_UNITS; null = no end (staff) — unless
+   *  `days` is given. */
   units: number | null;
+  /** An EXACT length in days (the days bank) instead of units. */
+  days?: number | null;
+  /** The days bank's rule: only a hold on a live, renewing plan or free
+   *  period — never a perks overlay (the days must end in a charge). */
+  holdOnly?: boolean;
   now?: Date;
 }): FreeDaysPlan {
-  const { profile, sub, tier, units } = input;
+  const { profile, sub, tier } = input;
+  const days = input.days ?? null;
+  const units = days != null ? null : input.units;
   const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000);
   if (profile.is_admin) {
     return { kind: "refused", error: "An admin account already has every perk and unlimited credits." };
   }
-  if (units != null && (!Number.isInteger(units) || units < 1 || units > MAX_FREE_DAY_UNITS)) {
+  if (days != null && (!Number.isInteger(days) || days < 1 || days > MAX_FREE_DAYS_EXACT)) {
+    return { kind: "refused", error: `Free days run from 1 to ${MAX_FREE_DAYS_EXACT}.` };
+  }
+  if (days == null && units != null && (!Number.isInteger(units) || units < 1 || units > MAX_FREE_DAY_UNITS)) {
     return { kind: "refused", error: `Free days come in 30-day units, 1 to ${MAX_FREE_DAY_UNITS}.` };
   }
   const existing = activeOverlayOf(profile, nowSec);
   const live = sub != null && LIVE.has(sub.status);
   const dunning = sub != null && DUNNING.has(sub.status);
 
-  if (units == null) {
+  if (input.holdOnly) {
+    if (!live) {
+      return {
+        kind: "refused",
+        error: dunning
+          ? "Your plan's payment is still being retried — fix the card first, then apply your banked days."
+          : "Banked days need a live plan: start a plan first, and they become its free period.",
+      };
+    }
+    if (isEnding(sub)) {
+      return { kind: "refused", error: "Your plan is set to end. Resume it first, then apply your banked days." };
+    }
+  }
+
+  if (days == null && units == null) {
     if (live || dunning) return { kind: "refused", error: STAFF_NEEDS_NO_PLAN };
     if (existing && existing.endSec == null) {
       return { kind: "refused", error: "This account already has open-ended access." };
@@ -222,7 +249,7 @@ export function planFreeDays(input: {
       error: "This account has open-ended (staff) access, so dated free days would change nothing. Revoke it first.",
     };
   }
-  const seconds = units * FREE_DAYS_UNIT_SECONDS;
+  const seconds = days != null ? days * 86_400 : (units as number) * FREE_DAYS_UNIT_SECONDS;
   const overlayTier = higher(existing?.tier ?? null, tier);
   const overlayFrom = (base: number) => {
     const startsAt = Math.max(nowSec, existing?.endSec ?? 0, base);

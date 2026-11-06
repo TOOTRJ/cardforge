@@ -1839,13 +1839,28 @@ Rules and gotchas:
   the refill cron), never the calendar month's. Every surface says "free
   days", never "a free month"; the end is exact to the second, printed with
   its time (`<LocalDate format="stampYear">`). Revoke = the newest grant
-  only (`planRevoke`). One
-  trial per account, Plus or Pro: `createCheckoutSessionAction` grants
-  `trial_period_days` only when the profile has never synced a subscription
-  AND Stripe's history (status "all") is empty. The trial REQUIRES A CARD
-  (2026-09-24; never reintroduce `payment_method_collection: if_required`),
-  grants `TRIAL_CREDITS` (25, reason `trial_grant`, under the month's base
-  refill key) at creation and the full allotment on first payment; a
+  only (`planRevoke`). THE
+  DAYS BANK is the free period (owner 2026-11-06, migration 0179,
+  `lib/billing/day-bank.ts`, `docs/BILLING.md` "The days bank"): every new
+  account gets 7 SIGNUP days in `day_bank_entries` (written at onboarding,
+  or lazily at the first checkout), the referral program banks more, and a
+  fresh subscription's Checkout applies the WHOLE bank as `trial_end` —
+  CARD REQUIRED (2026-09-24; never reintroduce `payment_method_collection:
+  if_required`) — after `prepareCheckoutBank` has judged the signup days
+  owed by the one-free-period rule (never subscribed on this account AND
+  no Stripe history under the email, `isTrialEligible`; not owed → the
+  entry is revoked) and RESERVED every banked day under a batch
+  (`bank_batch` in the session metadata: `checkout.session.completed`
+  spends it, `.expired` returns it, a session that can't be created returns
+  it at once, a stale reservation is released after 25 h). Under
+  `MIN_BANK_DAYS_AT_CHECKOUT` (2, Stripe's 48 h) the days wait. Days earned
+  later are applied by the USER (`applyBankedDaysAction` → `applyBankToPlan`:
+  a HOLD on a live plan only — `grantFreeDays` with `days`, `grantsCredits:
+  false`, `holdOnly` — never an overlay; no live plan → /pricing). The bank
+  is TIER-LESS; banked days carry NO credits; `TRIAL_CREDITS` (25, reason
+  `trial_grant`, under the month's base refill key) is granted ONCE per
+  account at the first free period (`grantTrialCreditsForPeriod` reads the
+  ledger) and the full allotment on first payment; a
   card-backed trial switches plans through the portal confirm flow, a legacy
   no-card one is superseded by a checkout that carries `trial_end` over
   (≥48 h left, Stripe's minimum). A trial that ends unconverted

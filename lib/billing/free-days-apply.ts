@@ -66,6 +66,12 @@ export type GrantFreeDaysInput = {
    *  among grants (0177's partial index), so a retried call after a crash
    *  finds `duplicate_reference` instead of granting twice. */
   reference?: string | null;
+  /** The days bank (0179): an EXACT length instead of 30-day units … */
+  days?: number | null;
+  /** … with no credit allotments of its own (default true: a comp's). */
+  grantsCredits?: boolean;
+  /** … and only as a hold on a live plan (lib/billing/free-days.ts). */
+  holdOnly?: boolean;
 };
 
 export type GrantFreeDaysResult =
@@ -162,12 +168,19 @@ export async function grantFreeDays(
     subscribedTier,
     tier: input.tier,
     units: input.units,
+    days: input.days ?? null,
+    holdOnly: input.holdOnly,
     now: deps.now,
   });
   if (plan.kind === "refused") return { ok: false, error: plan.error };
 
+  const exactDays = input.days ?? null;
+  const grantsCredits = input.grantsCredits ?? true;
   const startsAt = plan.kind === "below_plan" ? Math.floor((deps.now ?? new Date()).getTime() / 1000) : plan.startsAt;
-  const endsAt = plan.kind === "below_plan" ? startsAt + (input.units ?? 0) * 30 * 86_400 : plan.endsAt;
+  const endsAt =
+    plan.kind === "below_plan"
+      ? startsAt + (exactDays != null ? exactDays * 86_400 : (input.units ?? 0) * 30 * 86_400)
+      : plan.endsAt;
   // ONE grant in flight per user (0176's partial unique index): a row left
   // `pending` by a crash would block the user for good, so one older than
   // STALE_PENDING_MS is marked failed first.
@@ -182,7 +195,9 @@ export async function grantFreeDays(
     .insert({
       user_id: input.userId,
       tier: input.tier,
-      units: input.units,
+      units: exactDays != null ? null : input.units,
+      days: exactDays,
+      grants_credits: grantsCredits,
       source: input.source,
       granted_by: input.grantedBy,
       note: input.note,
@@ -261,7 +276,7 @@ export async function grantFreeDays(
   if (applyError) {
     console.error(`grantFreeDays(${input.userId}): status write failed`, applyError.message);
     warnings.push("The grant is still listed as pending (its credits wait until it reads applied).");
-  } else if (plan.kind !== "below_plan") {
+  } else if (plan.kind !== "below_plan" && grantsCredits) {
     // The first allotment NOW (lib/billing/free-days-credits.ts): a user
     // whose plan just read Plus saw "Remaining 4" until the daily cron. A
     // hold's credits_from is the paid time's end, so nothing is due yet.
@@ -276,6 +291,7 @@ export async function grantFreeDays(
         ends_at: endsAt == null ? null : isoOf(endsAt),
         applied_as: plan.kind === "hold" ? "subscription_hold" : "overlay",
         status: "applied",
+        grants_credits: true,
       },
       deps.now,
       // Stripe's own answer, not the profile's copy (a webhook may lag it).

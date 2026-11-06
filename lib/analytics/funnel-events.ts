@@ -34,6 +34,8 @@ export const SERVER_FUNNEL_EVENTS = [
   // An in-app "Resume <Plan>" on a plan that was set to end
   // (resumeSubscriptionAction) — a cancellation that did not happen.
   "subscription_resumed",
+  // The days bank (0179): banked free days the user applied to a live plan.
+  "bank_days_applied",
   "payment_received",
   "payment_failed",
   "pack_purchased",
@@ -105,7 +107,7 @@ const PROP_KEYS = new Set([
   "kind", "tier", "period", "pack", "surface", "reason", "trial", "discount",
   "signedIn", "mode", "interval", "amountCents", "credits", "billingReason",
   "cancelReason", "cancelFeedback", "attempt", "fromTier", "toTier",
-  "scheduled", "sessionId", "subscriptionId",
+  "scheduled", "sessionId", "subscriptionId", "bankDays",
   "referrer", "utmSource", "utmMedium", "utmCampaign", "referred",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
   "item", "bucket",

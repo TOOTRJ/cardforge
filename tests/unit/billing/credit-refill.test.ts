@@ -41,6 +41,8 @@ type GrantCall = {
 type LedgerRow = { delta: number; idempotency_key: string };
 
 function stubAdmin(opts: {
+    /** A trial_grant row already on the ledger: the tranche is spent. */
+    trialEarlier?: boolean;
   /** The ledger row found under the month's base refill key. */
   baseRow?: { delta: number } | null;
   /** Every refill row of the month (base + upgrade top-ups) when the
@@ -59,6 +61,8 @@ function stubAdmin(opts: {
   const admin = {
     from: () => ({
       select: () => ({
+        // The trial tranche's once-per-account read (reason = trial_grant).
+        eq: () => ({ eq: () => ({ limit: async () => ({ data: opts.trialEarlier ? [{ id: "l_1" }] : [], error: null }) }) }),
         like: (_column: string, pattern: string) => {
           // The month's refill rows share the base key as a prefix — one LIKE;
           // the newest-grant read is a LIKE on the user prefix, ordered, limit 1.
@@ -175,6 +179,12 @@ describe("grantMonthlyCreditsForPeriod", () => {
     const result = await grantMonthlyCreditsForPeriod(admin, USER, "plus", PERIOD);
 
     expect(result).toEqual({ ok: true, granted: 0 });
+    expect(grants).toHaveLength(0);
+  });
+
+  it("the trial tranche is ONCE per account: a trial_grant row already on the ledger means nothing more (the days bank can start a second free period)", async () => {
+    const { admin, grants } = stubAdmin({ baseRow: null, trialEarlier: true });
+    expect(await grantTrialCreditsForPeriod(admin, USER, PERIOD)).toEqual({ ok: true, granted: 0 });
     expect(grants).toHaveLength(0);
   });
 

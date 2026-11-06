@@ -866,6 +866,47 @@ subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.
 
+## The days bank — the free period (owner 2026-11-06, migration 0179)
+
+A free trial is no longer a thing of its own. **Every new account gets 7
+SIGNUP days in a bank** (`day_bank_entries`, `lib/billing/day-bank.ts`); the
+referral program banks more (the ladder, docs below once PR 2 lands). The
+bank is TIER-LESS: banked days are days of whatever plan the user checks
+out on or already has.
+
+- **The first checkout applies the whole bank** as the free period before
+  the first charge — card required (Checkout collects it), Stripe
+  `trial_end` = now + days, `missing_payment_method: cancel`; the plan bills
+  by itself when the days end. `createCheckoutSessionAction` →
+  `prepareCheckoutBank`: the signup entry is made (or REVOKED) under the
+  rule the trial had — never subscribed on this account, no Stripe history
+  under the email (`isTrialEligible`) — then every banked day is RESERVED
+  under a batch (`bank_batch` in the session metadata). An account that
+  trialled before and EARNED days checks them out as a free period all the
+  same. Under `MIN_BANK_DAYS_AT_CHECKOUT` (2 — Stripe's 48 h minimum) the
+  days wait. `checkout.session.completed` spends the batch (`applied`, via
+  `checkout`), `checkout.session.expired` returns it; a session that could
+  not be created returns it at once; a reservation nothing settled is
+  released after 25 h (`releaseStaleReservations`, the referral sweep).
+- **Days earned later wait in the bank** and the user applies them by hand
+  (the billing page's "Apply N banked days", `applyBankedDaysAction` →
+  `applyBankToPlan`): on a LIVE plan — a free period or paid time — the days
+  are added to its time through the free-days mechanism as a HOLD only
+  (`holdOnly`: never a perks overlay, the days must end in a charge; a
+  cancelled or past-due plan is refused with the reason), a `plan_grants`
+  row of source `day_bank` with an exact `days` and `grants_credits` false.
+  With no live plan the page sends them to /pricing: the checkout applies
+  the bank.
+- **No credits** come with banked days (the ladder's credits are their own);
+  the trial tranche (`TRIAL_CREDITS`, 25) is granted ONCE per account, on the
+  first free period only (`grantTrialCreditsForPeriod` reads the ledger for
+  an earlier `trial_grant`).
+- **Existing users**: no backfill. The signup days are decided at the first
+  checkout by the rule above; a running trial continues untouched; an
+  account past its trial banks nothing and earns through referrals.
+- The win-back offer and the "trial ended" notice keep working on whatever
+  free period ends unconverted.
+
 ## Free 30 days — comps on one mechanism (owner 2026-11-05, migration 0176)
 
 A comp is **N units of exactly 30 days** (30 × 86 400 s, exact to the second)

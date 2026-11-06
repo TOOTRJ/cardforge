@@ -206,6 +206,7 @@ const SOURCE_LABEL: Record<PlanGrantRow["source"], string> = {
   referral_friend: "referral (friend)",
   referral_referrer: "referral (referrer)",
   promo: "promotion",
+  day_bank: "banked days applied",
 };
 
 /** The user's free-days grants, newest first; the newest applied one can be

@@ -46,6 +46,8 @@ export type PlanGrantCreditRow = {
   ends_at: string | null;
   applied_as: string;
   status: string;
+  /** False: a days-bank application (0179) — no allotments of its own. */
+  grants_credits?: boolean | null;
 };
 
 export const GRANT_SWEEP_PAGE_SIZE = 500;
@@ -65,10 +67,11 @@ export function planGrantCreditKey(grantId: string, k: number): string {
  * grant's end. Pure; the caller subtracts what the ledger already holds.
  */
 export function freeDaysAllotmentsDue(
-  grant: Pick<PlanGrantCreditRow, "units" | "credits_from" | "ends_at" | "status" | "applied_as">,
+  grant: Pick<PlanGrantCreditRow, "units" | "credits_from" | "ends_at" | "status" | "applied_as" | "grants_credits">,
   now: Date = new Date(),
 ): number[] {
   if (grant.status !== "applied") return [];
+  if (grant.grants_credits === false) return [];
   if (grant.applied_as !== "overlay" && grant.applied_as !== "subscription_hold") return [];
   const from = Date.parse(grant.credits_from);
   if (!Number.isFinite(from)) return [];
@@ -108,7 +111,7 @@ export async function grantFreeDaysCredits(
   for (let from = 0; ; from += GRANT_SWEEP_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("plan_grants")
-      .select("id, user_id, tier, units, credits_from, ends_at, applied_as, status")
+      .select("id, user_id, tier, units, credits_from, ends_at, applied_as, status, grants_credits")
       .eq("status", "applied")
       .in("applied_as", ["overlay", "subscription_hold"])
       .or(`ends_at.is.null,ends_at.gte.${cutoff}`)

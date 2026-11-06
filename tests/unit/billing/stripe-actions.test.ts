@@ -66,6 +66,11 @@ const s = vi.hoisted(() => ({
   revalidated: [] as string[],
   customersCreate: vi.fn(),
   customersSearch: vi.fn(),
+  bankCalls: [] as Array<{ userId: string; signupEligible: boolean }>,
+  /** undefined = the default 7 signup days; null = nothing to apply. */
+  bank: undefined as undefined | null | { batchId: string; days: number },
+  bankEarned: null as null | { batchId: string; days: number },
+  bankSettled: vi.fn(async (_admin: unknown, _batchId: string, _outcome: unknown) => ({ ok: true, days: 0 })),
   /** Subscription history of OTHER Stripe customers under the same email. */
   otherHistory: [] as Array<{ id: string; status?: string }>,
   lapsedRedeemed: false,
@@ -156,6 +161,17 @@ vi.mock("@/lib/stripe/config", () => ({
   priceIdForTier: (tier: string, period: string) => `price_${tier}_${period}`,
   priceIdForPack: (pack: string) => `price_pack_${pack}`,
 }));
+// The days bank (0179): the checkout asks it for the free period. The
+// signup days answer when the one-free-period rule holds (`signupEligible`),
+// earned days whatever the rule says (`s.bankEarned`).
+vi.mock("@/lib/billing/day-bank", () => ({
+  prepareCheckoutBank: async (_admin: unknown, userId: string, opts: { signupEligible: boolean }) => {
+    s.bankCalls.push({ userId, signupEligible: opts.signupEligible });
+    if (opts.signupEligible) return s.bank === undefined ? { batchId: "bb_1", days: 7 } : s.bank;
+    return s.bankEarned;
+  },
+  settleBankBatch: (admin: unknown, batchId: string, outcome: unknown) => s.bankSettled(admin, batchId, outcome),
+}));
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findCheckoutSubscriptions: async () => (s.listUnreadable ? null : { live: s.live, delinquent: s.delinquent }),
   findLiveSubscription: async () => s.live,
@@ -222,6 +238,10 @@ beforeEach(() => {
   s.otherHistory = [];
   s.lapsedRedeemed = false;
   s.customersSearch.mockReset().mockResolvedValue({ data: [] });
+  s.bankCalls = [];
+  s.bank = undefined;
+  s.bankEarned = null;
+  s.bankSettled.mockClear();
   s.subscriptionsUpdate.mockReset().mockResolvedValue({});
   s.subscriptionsRetrieve.mockReset().mockImplementation(async (id: string) => {
     // The win-back check reads the subscription the trial_lapsed row names.
@@ -278,11 +298,18 @@ describe("createCheckoutSessionAction", () => {
       allow_promotion_codes: true,
       success_url: "https://test.local/dashboard?billing=success",
     });
+    // The days bank IS the free period (0179): the 7 signup days as
+    // `trial_end`, never `trial_period_days`; the reservation rides in the
+    // session metadata for the webhook to settle.
     expect(params.subscription_data).toMatchObject({
       metadata: { supabase_user_id: USER },
-      trial_period_days: TRIAL_DAYS,
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
     });
+    expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+    const bankEnd = (params.subscription_data as { trial_end: number }).trial_end;
+    expect(Math.abs(bankEnd - (Math.floor(Date.now() / 1000) + TRIAL_DAYS * 86_400))).toBeLessThanOrEqual(5);
+    expect(params.metadata).toMatchObject({ bank_batch: "bb_1", bank_days: "7" });
+    expect(s.bankCalls).toEqual([{ userId: USER, signupEligible: true }]);
     // Nothing superseded on a first subscription — only the purchase stamp.
     expect(params.metadata).not.toHaveProperty("supersedes_subscription_id");
     // Card required: Checkout's default collection, never `if_required`.
@@ -299,7 +326,7 @@ describe("createCheckoutSessionAction", () => {
     // Funnel: the click became a checkout_started row, and its id rides in the
     // session metadata so the webhook can tie completion back to it.
     expect(s.funnelInserts).toEqual([
-      { event: "checkout_started", user_id: USER, props: { kind: "subscription", tier: "pro", period: "monthly", trial: true, discount: "none" }, source: "server" },
+      { event: "checkout_started", user_id: USER, props: { kind: "subscription", tier: "pro", period: "monthly", trial: true, bankDays: 7, discount: "none" }, source: "server" },
     ]);
     expect(params.metadata).toMatchObject({ funnel_id: "fe_1" });
   });
@@ -310,6 +337,9 @@ describe("createCheckoutSessionAction", () => {
     const params = checkoutParams();
     expect(params.line_items).toEqual([{ price: "price_plus_annual", quantity: 1 }]);
     expect(params.subscription_data).not.toHaveProperty("trial_period_days");
+    expect(params.subscription_data).not.toHaveProperty("trial_end");
+    // The signup days are judged NOT owed — the bank revokes them.
+    expect(s.bankCalls).toEqual([{ userId: USER, signupEligible: false }]);
     expect(params).not.toHaveProperty("payment_method_collection");
     // No free period → no trial terms under the button.
     expect(params).not.toHaveProperty("custom_text");
@@ -341,7 +371,7 @@ describe("createCheckoutSessionAction", () => {
     s.subscriptionsList.mockClear();
     s.customersSearch.mockResolvedValue({ data: [{ id: "cus_near", email: "a.x@example.test" }] });
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
-    expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
+    expect(checkoutParams().subscription_data).toMatchObject({ trial_end: expect.any(Number) });
     expect(s.subscriptionsList.mock.calls.map((c) => c[0]?.customer)).toEqual(["cus_1"]);
 
     // The address is lowercased and a double quote escaped in Stripe's documented shape.
@@ -350,7 +380,7 @@ describe("createCheckoutSessionAction", () => {
     s.user = { id: USER, email: 'O"Brien@Example.test' };
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     expect(s.customersSearch).toHaveBeenLastCalledWith({ query: 'email:"o\\"brien@example.test"', limit: 20 });
-    expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
+    expect(checkoutParams().subscription_data).toMatchObject({ trial_end: expect.any(Number) });
 
     s.checkoutCreate.mockClear();
     s.customersSearch.mockRejectedValue(new Error("search down"));
@@ -440,7 +470,7 @@ describe("createCheckoutSessionAction", () => {
     await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
     data = checkoutParams().subscription_data as { trial_end: number; metadata: Record<string, string> };
     const trialDaysEnd = Number(data.metadata[TRIAL_END_BEFORE_COMP_KEY]);
-    expect(Math.abs(trialDaysEnd - (nowSec() + TRIAL_DAYS * 86_400))).toBeLessThanOrEqual(5);
+    expect(Math.abs(trialDaysEnd - (Math.floor(Date.now() / 1000) + TRIAL_DAYS * 86_400))).toBeLessThanOrEqual(5);
     sub = { id: "sub_new", status: "trialing", trial_end: data.trial_end, metadata: data.metadata };
     expect(planRevoke({ grant, profile: s.profile, sub, otherGrants: [] })).toMatchObject({
       kind: "revoke",
@@ -640,6 +670,32 @@ describe("createCheckoutSessionAction", () => {
     expect(retry).not.toHaveProperty("discounts");
     expect(retry.allow_promotion_codes).toBe(true);
     expect(retry.metadata.discount).toBe("none");
+  });
+
+  it("the days bank: an account that trialled before checks out its EARNED days as a free period (owner 2026-11-06), and nothing banked means no free period", async () => {
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.history = [{ id: "sub_old_trial", status: "canceled" }];
+    s.bankEarned = { batchId: "bb_2", days: 5 };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    const data = checkoutParams().subscription_data as { trial_end: number };
+    expect(Math.abs(data.trial_end - (Math.floor(Date.now() / 1000) + 5 * 86_400))).toBeLessThanOrEqual(5);
+    expect(checkoutParams().metadata).toMatchObject({ bank_batch: "bb_2", bank_days: "5" });
+    expect(checkoutParams().custom_text).toEqual({ submit: { message: expect.stringMatching(/^Your free trial lasts 5 days/) } });
+    expect(s.bankCalls).toEqual([{ userId: USER, signupEligible: false }]);
+
+    s.checkoutCreate.mockClear();
+    s.bankEarned = null;
+    await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(checkoutParams().subscription_data).not.toHaveProperty("trial_end");
+    expect(checkoutParams()).not.toHaveProperty("custom_text");
+    expect(checkoutParams().metadata).not.toHaveProperty("bank_batch");
+  });
+
+  it("the days bank: a Checkout that can't be created hands the reserved days straight back", async () => {
+    s.checkoutCreate.mockReset().mockRejectedValue(new Error("stripe down"));
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(result.ok).toBe(false);
+    expect(s.bankSettled).toHaveBeenCalledWith(expect.anything(), "bb_1", { kind: "banked" });
   });
 
   it("with under 48 hours of trial left (Stripe's minimum) the switch simply starts paying", async () => {

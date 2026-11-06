@@ -30,6 +30,8 @@ function makeAdmin(profile: Record<string, unknown> = {}) {
                   data: table === "profiles" ? { id: "user-1", ...profile } : null,
                   error: null,
                 }),
+                // The trial tranche's once-per-account ledger read.
+                eq: () => ({ limit: async () => ({ data: [], error: null }) }),
               };
             },
             // No refill rows this month (credit-refill.ts's LIKE read); the
