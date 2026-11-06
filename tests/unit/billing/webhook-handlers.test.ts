@@ -24,6 +24,8 @@ const chargeEvents = vi.hoisted(() => ({
   dispute: vi.fn(),
   fraud: vi.fn(),
 }));
+// The referral program's card-on-file hook (0180) — its own tests.
+vi.mock("@/lib/referrals/server", () => ({ advanceReferral: async () => ({ status: "none" }) }));
 vi.mock("@/lib/stripe/charge-events", () => ({
   handleChargeRefunded: (...args: unknown[]) => chargeEvents.refunded(...args),
   handleDispute: (...args: unknown[]) => chargeEvents.dispute(...args),
@@ -794,6 +796,33 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
     );
     const state = updates.find((u) => "subscription_status" in u.values);
     expect(state?.values).toMatchObject({ subscription_status: "past_due" });
+  });
+
+  it("the days bank (0179): checkout.session.completed spends the session's batch (applied via checkout); checkout.session.expired returns it; a pack session touches nothing", async () => {
+    const profile = { id: "user-1", subscription_tier: "free", subscription_status: null, stripe_subscription_id: null, stripe_customer_id: "cus_1" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const noApiStripe = { subscriptions: { list: async () => { throw new Error("no api"); }, retrieve: async () => { throw new Error("no api"); } } } as any;
+    const done = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(
+      { id: "evt_bank_done", type: "checkout.session.completed", data: { object: { id: "cs_bank", mode: "subscription", payment_status: "paid", client_reference_id: "user-1", subscription: "sub_new", metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "plus", period: "monthly", discount: "none", bank_batch: "bb_1", bank_days: "7" } } } } as never,
+      { admin: done.admin, stripe: noApiStripe },
+    );
+    const spent = done.updates.find((u) => u.table === "day_bank_entries");
+    expect(spent?.values).toMatchObject({ status: "applied", applied_via: "checkout", applied_ref: "cs_bank" });
+
+    const back = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(
+      { id: "evt_bank_exp", type: "checkout.session.expired", data: { object: { id: "cs_bank", mode: "subscription", status: "expired", client_reference_id: "user-1", created: 1_790_000_000, metadata: { supabase_user_id: "user-1", purchase_kind: "subscription", tier: "plus", period: "monthly", bank_batch: "bb_1" } } } } as never,
+      { admin: back.admin, stripe: noApiStripe },
+    );
+    expect(back.updates.find((u) => u.table === "day_bank_entries")?.values).toEqual({ status: "banked", batch_id: null, reserved_at: null });
+
+    const pack = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(
+      { id: "evt_pack", type: "checkout.session.completed", data: { object: { id: "cs_pack", mode: "payment", payment_status: "paid", client_reference_id: "user-1", metadata: { supabase_user_id: "user-1", purchase_kind: "pack", pack: "mini", pack_credits: "10", discount: "none", bank_batch: "bb_1" } } } } as never,
+      { admin: pack.admin, stripe: noApiStripe },
+    );
+    expect(pack.updates.find((u) => u.table === "day_bank_entries")).toBeUndefined();
   });
 
   it("checkout.session.completed cancels the superseded trial once the new plan is paid", async () => {

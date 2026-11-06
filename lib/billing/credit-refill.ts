@@ -412,6 +412,18 @@ export async function grantTrialCreditsForPeriod(
   userId: string,
   period: string,
 ): Promise<MonthlyGrantResult> {
+  // ONCE per account (owner 2026-11-06): the days bank can start a second
+  // free period for an account that trialled before (earned days with no
+  // live plan check out as a free period) — the tranche is the FIRST free
+  // period's alone. An unreadable ledger falls through to the grant (the
+  // period key still dedupes within a month).
+  const { data: earlier, error: readError } = await admin
+    .from("credit_ledger")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reason", "trial_grant")
+    .limit(1);
+  if (!readError && (earlier?.length ?? 0) > 0) return { ok: true, granted: 0 };
   const { error } = await admin.rpc("grant_credits", {
     p_user_id: userId,
     p_amount: TRIAL_CREDITS,

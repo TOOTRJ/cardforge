@@ -4435,6 +4435,56 @@ month-unit comps, then RF1 (#689 / #691), then the trial items.
   flexible billing mode decided explicitly; Stripe Tax threshold monitoring; a CI
   sandbox.
 
+**Status 2026-11-06:** BA1–BA3 merged (#758–#760, migrations 0173–0175);
+BA4 merged as the free-30-days mechanism (#761, 0176); BA5 merged (#762,
+0177); BA6 merged (#763); BA7 = #764 (0178). Still the owner's: the
+Dashboard checklist in `docs/BILLING.md` §9 (trial reminder email, Smart
+Retries), and the reverse-trial experiment
+(`docs/research/reverse-trial-2026-11.md` — a decision, not started).
+
+## Sharing and referral growth (research 2026-11-06)
+
+Full report: `docs/research/share-growth-2026-11.md`. Owner approved SG1–SG3
+2026-11-06 (SG3 explained first); every other item is **ASK FIRST** — the
+owner is asked before each one starts, never started on a green light for
+another.
+
+- [ ] **SG1 [P2 · S] The referral link on every share button + the Copy link fix
+  + the landing line** — a signed-in viewer's share links carry `ref=<code>`
+  (`shareUrlFor`, one helper; `/api/referrals/share` read when the dialog
+  opens) and one line saying what the friend gets; the share modal's Copy
+  link row shows the clean address with an ellipsis (`min-w-0`) and says the
+  copied link is theirs; a card opened with `?ref` by a visitor shows "your
+  friend's link gets you …" with a Create button.
+- [ ] **SG2 [P2 · S] The post-save prompt leads with the card picture and the
+  friend's gift** — the moment-of-pride dialog shows the new card's own render
+  and, on a referral link, what a friend gets.
+- [ ] **SG3 [P2 · S · ASK FIRST — explained, awaiting the owner's refinement] A reward
+  paid referrers can use** — a Plus / Pro referrer's "30 free days of your plan"
+  is time added to a plan they already pay for (fine) but reads as nothing new;
+  Duolingo's referral moved 3 % for exactly this reason. Make the referrer's
+  reward depend on their plan: free → 30 days of Plus (as now); paying → N AI
+  credits (or days ADDED to the paid plan, the mechanism supports both), chosen
+  in the admin Referrals settings per tier.
+- [ ] **SG4 [P2 · M · ASK FIRST] Milestone tiers with a progress bar** — "1 of 3
+  friends — next: +50 credits" on Refer a friend and in the share prompt;
+  `referral_tiers` in the settings; thresholds from a month of data (Harry's
+  median referrer brought 5).
+- [ ] **SG5 [P3 · S/M · ASK FIRST] Discord-first unfurl + a tiny bot** — both
+  faces as an `og:image` gallery (needs a `face=back` on the OG route); later a
+  100-line bot answering a PipGlyph link or `[[name]]` with the card and "Make
+  your own".
+- [ ] **SG6 [P3 · M · ASK FIRST] A monthly prompt event with sharing built in**
+  ("Pipglyph-tober": each entry has Share with the ref; the digest lists the
+  theme) — on the challenges system.
+- [ ] **SG7 [P3 · S · ASK FIRST] Reminder surfaces** — a dashboard banner after the
+  first public card, one line in the weekly digest, a post-render toast once per
+  7 days (frequency-capped).
+- [ ] **SG8 [P3 · M · ASK FIRST] A creator leaderboard by likes / shares** (never by
+  referrals) — an ISR page over likes + `share_count`.
+- Avoid (owner may overrule): share-to-unlock, queue-jumping waitlists,
+  auto-posting to Reddit, Discord DM or bulk invites.
+
 ## Home page conversion (review 2026-11-03)
 
 Audit of the home page and research on turning visitors into sign-ups (owner

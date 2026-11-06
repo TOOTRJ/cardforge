@@ -15,6 +15,8 @@ import {
   type SubscriptionSyncResult,
 } from "./subscription-sync";
 import { ACCOUNT_DELETED_CANCEL_COMMENT } from "./cancel-comment";
+import { settleCheckoutBank } from "@/lib/billing/day-bank";
+import { advanceReferral } from "@/lib/referrals/server";
 import { tierForPrice } from "./config";
 import { checkoutReminderEmail, paymentFailedEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { dunningGraceUntil } from "@/lib/billing/dunning";
@@ -178,6 +180,14 @@ async function handleSubscriptionEvent(
       userId,
       props: { tier, interval: interval ?? undefined, subscriptionId: sub.id },
     });
+    // A card on file — the referral program's second bar (0180): a friend
+    // whose cards are saved qualifies with this subscription. Best effort,
+    // never fails the sync (the hourly sweep finishes what this misses).
+    try {
+      await advanceReferral(admin, userId, { stripe });
+    } catch (error) {
+      console.error(`[referrals] advance after subscription ${sub.id} failed:`, error instanceof Error ? error.message : error);
+    }
   } else if (opts.previous) {
     // What an updated event changed: a trial converting, or a plan switch.
     // A paying plan coming off a free-days hold converts no trial.
@@ -1044,6 +1054,8 @@ export async function handleStripeEvent(
       await handleCheckoutPaid(session, admin, event.created);
       await handleSupersededSubscription(session, stripe);
       await markWinbackRedeemed(session, admin);
+      // The days bank (0179): the days this session applied are spent.
+      await settleCheckoutBank(admin, session, "completed");
       await recordFunnelEvent(admin, {
         event: "checkout_completed",
         userId: session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
@@ -1094,6 +1106,8 @@ export async function handleStripeEvent(
       break;
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
+      // The days bank (0179): the days it held go back to the bank.
+      await settleCheckoutBank(admin, session, "expired");
       await handleCheckoutExpired(session, deps);
       await recordFunnelEvent(admin, {
         event: "checkout_expired",

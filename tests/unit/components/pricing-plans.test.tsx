@@ -76,7 +76,7 @@ describe("PricingPlans", () => {
   it("renders the anonymous storefront without touching the network", async () => {
     render(<PricingPlans />);
     expect(screen.getByRole("link", { name: /get started free/i })).toHaveProperty("href", expect.stringContaining("/signup"));
-    expect(screen.getAllByRole("link", { name: /start free — 7-day trial/i })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /start free — 7 free days/i })).toHaveLength(2);
     expect(fetch).not.toHaveBeenCalled();
     // Funnel: one pricing_view per mount, tagged with the surface.
     expect(s.track).toHaveBeenCalledTimes(1);
@@ -85,7 +85,7 @@ describe("PricingPlans", () => {
 
   it("funnel: a signup link click and a checkout click both record cta_click with the surface", async () => {
     render(<PricingPlans surface="billing" />);
-    fireEvent.click(screen.getAllByRole("link", { name: /start free — 7-day trial/i })[0]);
+    fireEvent.click(screen.getAllByRole("link", { name: /start free — 7 free days/i })[0]);
     expect(s.track).toHaveBeenCalledWith("cta_click", { surface: "billing", kind: "signup", tier: "plus" });
 
     cleanup();
@@ -93,8 +93,8 @@ describe("PricingPlans", () => {
     s.signedIn = true;
     s.me = freeUser;
     render(<PricingPlans />);
-    await waitFor(() => expect(button(/try pro free for 7 days/i)).toBeTruthy());
-    fireEvent.click(button(/try pro free for 7 days/i));
+    await waitFor(() => expect(button(/start pro with your free days/i)).toBeTruthy());
+    fireEvent.click(button(/start pro with your free days/i));
     expect(s.track).toHaveBeenCalledWith("cta_click", { surface: "pricing", kind: "subscription", tier: "pro", period: "monthly" });
   });
 
@@ -116,8 +116,8 @@ describe("PricingPlans", () => {
     );
     // Synchronous assertions: what the server HTML carries is what shows.
     expect(screen.getByText("Your current plan")).toBeTruthy();
-    expect(button(/try plus free for 7 days/i)).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /start free — 7-day trial/i })).toBeNull();
+    expect(button(/start plus with your free days/i)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /start free — 7 free days/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /manage plan/i })).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -127,8 +127,8 @@ describe("PricingPlans", () => {
     s.me = freeUser;
     render(<PricingPlans />);
     await screen.findByText("Your current plan");
-    expect(button(/try plus free for 7 days/i)).toBeTruthy();
-    expect(button(/try pro free for 7 days/i)).toBeTruthy();
+    expect(button(/start plus with your free days/i)).toBeTruthy();
+    expect(button(/start pro with your free days/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /manage plan/i })).toBeNull();
   });
 
@@ -138,7 +138,7 @@ describe("PricingPlans", () => {
     render(<PricingPlans />);
     await screen.findByText("Your current plan");
     fireEvent.click(screen.getByRole("tab", { name: /annual/i }));
-    fireEvent.click(button(/try pro free for 7 days/i));
+    fireEvent.click(button(/start pro with your free days/i));
     await waitFor(() =>
       expect(s.checkout).toHaveBeenCalledWith({ kind: "subscription", tier: "pro", period: "annual" }),
     );
@@ -152,7 +152,7 @@ describe("PricingPlans", () => {
     s.checkout.mockResolvedValue({ ok: false, error: "Billing isn't available right now." });
     render(<PricingPlans />);
     await screen.findByText("Your current plan");
-    fireEvent.click(button(/try plus free for 7 days/i));
+    fireEvent.click(button(/start plus with your free days/i));
     await waitFor(() => expect(s.toastError).toHaveBeenCalledWith("Billing isn't available right now."));
     expect(s.navigateTo).not.toHaveBeenCalled();
   });
@@ -183,7 +183,7 @@ describe("PricingPlans", () => {
     render(<PricingPlans />);
     await screen.findByText("Your current plan");
     expect(screen.queryByRole("button", { name: /manage plan/i })).toBeNull();
-    expect(button(/try plus free for 7 days/i)).toBeTruthy();
+    expect(button(/start plus with your free days/i)).toBeTruthy();
     expect(s.portal).not.toHaveBeenCalled();
   });
 

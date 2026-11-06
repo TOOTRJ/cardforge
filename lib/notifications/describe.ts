@@ -129,6 +129,20 @@ export function describeNotification(
         href: "/settings",
       };
     }
+    case "banked_days": {
+      // The admin's comp since 0179: days in the bank, the user applies them.
+      const days = num(payload.days) ?? 0;
+      const note = str(payload.note);
+      const revoked = num(payload.revoked) === 1;
+      const d = `${days} free day${days === 1 ? "" : "s"}`;
+      return {
+        subject: "PipGlyph team",
+        body: revoked
+          ? `took back ${d} from your bank${note ? ` (${note})` : ""}.`
+          : `banked ${d} for you${note ? ` (${note})` : ""} — start a plan and they're its free period, or apply them to the plan you have, any time from your billing page.`,
+        href: "/dashboard/billing#banked-days",
+      };
+    }
     case "render_update": {
       const count = num(payload.count);
       return {
@@ -168,21 +182,39 @@ export function describeNotification(
               : "This referral isn't eligible for a reward.";
       return {
         subject: actorName,
-        body: `joined PipGlyph with your referral link and saved their first card. ${why}`,
+        body: `joined PipGlyph with your referral link and qualified (cards saved, a plan started). ${why}`,
         href: "/dashboard/referrals",
       };
     }
     case "referral_reward": {
-      // One reward, either side of a referral (lib/referrals/server.ts):
-      // free days of a tier (lib/billing/free-days.ts — added to a paying
-      // plan's time, else the perks overlay) or AI credits.
+      // One reward, either side of a referral (lib/referrals/server.ts).
+      // Since 0180: DAYS INTO THE BANK (lib/billing/day-bank.ts — applied at
+      // the friend's qualifying checkout, or by the user from their billing
+      // page) or AI credits; the referrer's carries their ladder step. The
+      // older shape (free days of a tier, 0177) still reads.
       const side = str(payload.side);
       const reward = str(payload.reward);
       const until = str(payload.until);
       const holdEndsAt = str(payload.holdEndsAt);
       const days = num(payload.days);
       const credits = num(payload.credits);
+      const step = num(payload.step);
       const tierName = TIER_LABEL[str(payload.tier) ?? ""] ?? "Plus";
+      const nth = step != null ? ` — referral #${step}` : "";
+      if (reward === "banked_days") {
+        const d = `${days ?? 0} free day${days === 1 ? "" : "s"}`;
+        return side === "referee"
+          ? {
+              subject: actorName,
+              body: `invited you to PipGlyph — ${d} are in your bank for saving your first cards and starting a plan. They're your plan's free time; apply them any time from your billing page.`,
+              href: "/dashboard/billing#banked-days",
+            }
+          : {
+              subject: actorName,
+              body: `saved their first cards and started a plan${nth} — ${d} are in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!`,
+              href: "/dashboard/referrals",
+            };
+      }
       const what =
         reward === "credits" && credits != null
           ? `${credits} AI credit${credits === 1 ? "" : "s"}`
@@ -197,7 +229,9 @@ export function describeNotification(
           }
         : {
             subject: actorName,
-            body: `saved their first card — you've earned ${what}. Thanks for spreading the word!`,
+            body: step != null
+              ? `saved their first cards and started a plan${nth} — you've earned ${what}. Thanks for spreading the word!`
+              : `saved their first card — you've earned ${what}. Thanks for spreading the word!`,
             href: "/dashboard/referrals",
           };
     }

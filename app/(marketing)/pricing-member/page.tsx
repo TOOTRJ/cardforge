@@ -15,7 +15,7 @@ import { PricingContent } from "../pricing/pricing-content";
 // the visible URL stays /pricing and a direct hit on this path 308s there.
 // Reading the session here keeps the anonymous page on the CDN while every
 // signed-in visitor gets their own buttons in the server HTML: "Your current
-// plan", "Try Plus free for 7 days", "Switch to Pro", "Update payment" —
+// plan", "Start Plus with your free days", "Switch to Pro", "Update payment" —
 // never the anonymous storefront first.
 // ---------------------------------------------------------------------------
 

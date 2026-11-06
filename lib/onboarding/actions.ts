@@ -7,6 +7,8 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { usernameSchema } from "@/lib/auth/schemas";
 import { recordReferralSignup } from "@/lib/referrals/server";
+import { ensureSignupBankEntry } from "@/lib/billing/day-bank";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { welcomeEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
@@ -158,6 +160,16 @@ export async function completeOnboardingAction(input: {
   const referralCode = metadataCode ?? parsed.data.referralCode;
   if (referralCode && isAdminConfigured()) {
     await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: referralCode });
+  }
+  // The signup days (the days bank, 0179): every new account's free period
+  // in waiting. Once per account; the first checkout judges whether they
+  // are owed (lib/stripe/actions.ts) and applies them.
+  if (isBillingEnabled() && isAdminConfigured()) {
+    try {
+      await ensureSignupBankEntry(createAdminClient(), user.id);
+    } catch {
+      // Best effort: the checkout writes the entry itself if this was lost.
+    }
   }
 
   // `is null` makes a double submit (or a second tab) a no-op, so the welcome

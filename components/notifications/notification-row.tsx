@@ -42,6 +42,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   credit_grant: Coins,
   comp_plan: Crown,
   comp_ending: Crown,
+  banked_days: Crown,
   card_limit: Layers,
   render_update: Sparkles,
   render_sweep_paused: CirclePause,

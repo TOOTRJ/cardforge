@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Coins, CreditCard, Crown, Receipt, Sparkles } from "lucide-react";
+import { Coins, CreditCard, Crown, Gift, Receipt, Sparkles } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -15,6 +15,8 @@ import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { readOwnHoldGrant } from "@/lib/billing/plan-grants";
+import { readBank } from "@/lib/billing/day-bank";
+import { ApplyBankButton } from "@/components/billing/apply-bank-button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -28,6 +30,7 @@ import {
   capacityPitch,
   formatCredits,
   planForTier,
+  TRIAL_CREDITS,
 } from "@/lib/billing/plans";
 import { getCreditsUsedThisMonth } from "@/lib/ai/usage-queries";
 import { getStripeBillingDetails, formatMoney } from "@/lib/billing/subscription-details";
@@ -61,6 +64,20 @@ const STATUS_LABEL: Record<string, string> = {
   incomplete: "Incomplete",
   unpaid: "Unpaid",
   paused: "Paused",
+};
+
+const BANK_SOURCE_LABEL: Record<string, string> = {
+  signup: "Welcome days",
+  referral_friend: "A friend's link",
+  referral_step: "Referral reward",
+  admin: "From PipGlyph",
+  promo: "Promotion",
+};
+const BANK_STATUS_LABEL: Record<string, string> = {
+  banked: "banked",
+  reserved: "being applied",
+  applied: "applied",
+  revoked: "not owed",
 };
 
 export default async function BillingPage() {
@@ -113,6 +130,9 @@ export default async function BillingPage() {
   // from that start. Revoked: Stripe still reads `trialing` until that
   // start, where the plan simply renews — never "your free trial".
   const hold = status === "trialing" ? await readOwnHoldGrant(await createClient()) : null;
+  // The viewer's days bank (0179, lib/billing/day-bank.ts): banked free days
+  // a live plan can take now, or a checkout applies as its free period.
+  const bank = await readBank(await createClient(), user.id);
   const paidThrough = hold?.status === "revoked" && !heldByComp ? hold.startsAt : null;
   const sub = stripeDetails?.subscription ?? null;
   const priceLine = sub?.amountCents != null && sub.interval
@@ -241,6 +261,65 @@ export default async function BillingPage() {
         </SurfaceCard>
       </section>
 
+      {/* ---- Banked free days (the days bank, 0179) ---- */}
+      {!profile?.is_admin ? (
+        <section className="mt-8" id="banked-days">
+          <SurfaceCard className="flex flex-col gap-4 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-elevated text-gold-strong">
+                  <Gift className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-[11px] uppercase tracking-wider text-subtle">Banked free days</span>
+                  <span className="font-display text-2xl font-semibold text-foreground">
+                    {bank.banked} day{bank.banked === 1 ? "" : "s"}
+                    {bank.reserved > 0 ? (
+                      <span className="ml-2 text-sm font-normal text-muted">({bank.reserved} being applied)</span>
+                    ) : null}
+                  </span>
+                </div>
+              </div>
+              {bank.banked > 0 && live && !ending && !delinquent ? (
+                <ApplyBankButton days={bank.banked} />
+              ) : bank.banked > 0 && !live ? (
+                <Button asChild size="sm">
+                  <Link href="/pricing">Start a plan with {bank.banked} free day{bank.banked === 1 ? "" : "s"}</Link>
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-sm leading-6 text-muted">
+              {live
+                ? "Banked days are added to the end of your plan's free period or paid time the moment you apply them — your next charge moves out by as many days. "
+                : "Start a plan and your banked days are its free period, card on file: nothing is charged until they end. "}
+              When the free days end, your plan bills at its usual price unless you cancel — and you can cancel any time on
+              this page. Earn more by{" "}
+              <Link href="/dashboard/referrals" className="text-primary-bright underline-offset-4 hover:underline">
+                referring a friend
+              </Link>
+              .
+            </p>
+            {bank.entries.length > 0 ? (
+              <ul className="divide-y divide-border/40 text-sm">
+                {bank.entries.slice(0, 8).map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <span className="text-foreground">
+                      {BANK_SOURCE_LABEL[entry.source] ?? entry.source}
+                      <span className="text-muted">
+                        {" "}· <LocalDate iso={entry.createdAt} />
+                      </span>
+                    </span>
+                    <span className="tabular-nums text-muted">
+                      {entry.days} day{entry.days === 1 ? "" : "s"} · {BANK_STATUS_LABEL[entry.status] ?? entry.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </SurfaceCard>
+        </section>
+      ) : null}
+
       {/* ---- Change plan ---- */}
       <section className="mt-10" id="plans">
         <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
@@ -260,7 +339,9 @@ export default async function BillingPage() {
               ? "Your plan's last payment didn't go through. Update your card to keep it — the buttons below open the billing portal, never a second subscription."
               : entitlements.isPaid
               ? "Your account is unlocked without a subscription. Starting a plan is optional."
-              : "First-time subscribers get a 7-day free trial: 25 AI credits to try, nothing charged until day 7, cancel anytime. Your plan's full monthly credits arrive with your first payment."}
+              : bank.banked > 0
+                ? `Start a plan with your ${bank.banked} banked free day${bank.banked === 1 ? "" : "s"}: they're its free time, with ${TRIAL_CREDITS} AI credits to try. Nothing is charged until the days end — cancel anytime before then — and your plan's full monthly credits arrive with your first payment.`
+                : "Start a plan with the free days you've banked — nothing is charged until they end, cancel anytime before then. Your plan's full monthly credits arrive with your first payment."}
         </p>
         <PricingPlans initialViewer={gridViewer} surface="billing" />
       </section>

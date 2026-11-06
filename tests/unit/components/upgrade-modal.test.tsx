@@ -68,7 +68,7 @@ describe("UpgradeModal — out of credits", () => {
   it("free account: says the 5 starter credits don't refill, lists plans first, then all three packs", async () => {
     s.me = freeUser;
     render(<UpgradeModal open reason="credits" onOpenChange={() => {}} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
     expect(screen.getByText(/Free accounts get 5 credits to start and don't refill/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /buy 10 credits/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /buy 30 credits/i })).toBeTruthy();
@@ -102,7 +102,7 @@ describe("UpgradeModal — out of credits", () => {
   it("the capacity reason keeps the cards safe and names the caps from the table (owner 2026-11-06)", async () => {
     s.me = freeUser;
     render(<UpgradeModal open reason="capacity" onOpenChange={() => {}} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
     expect(screen.getByRole("heading", { name: "Your library is full" })).toBeTruthy();
     const description = screen.getByText(/While a Plus or Pro plan is active/).textContent ?? "";
     expect(description).toContain(`your account has the plan's full card limit: Plus holds ${CARD_CAPACITY.plus} saved cards, Pro holds them all`);
@@ -116,7 +116,7 @@ describe("UpgradeModal — out of credits", () => {
   it("other reasons show no packs", async () => {
     s.me = freeUser;
     render(<UpgradeModal open reason="hi_res_export" onOpenChange={() => {}} />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: /start pro with your free days/i })).toBeTruthy());
     expect(screen.queryByRole("button", { name: /buy 10 credits/i })).toBeNull();
   });
 

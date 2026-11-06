@@ -24,7 +24,7 @@ import {
   PRINT_PERK_COPY,
   SIGNUP_CREDITS,
   TRIAL_CREDITS,
-  TRIAL_DAYS,
+  SIGNUP_BANK_DAYS,
   capacityHoldsLine,
   type PaidTier,
 } from "@/lib/billing/plans";
@@ -279,12 +279,12 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
 
           {!subscriber ? packs : null}
 
-          {/* Honest trial framing: only an account that has never subscribed
-              is promised the trial (checkout re-checks server-side). */}
+          {/* Honest framing: only an account that has never subscribed is
+              promised its free days (checkout re-checks server-side). The
+              days are the bank's (0179): the signup days, plus any earned. */}
           {!viewer.hasSubscribed ? (
             <p className="text-xs leading-5 text-gold-strong">
-              {TRIAL_DAYS}-day free trial for first-time subscribers — {TRIAL_CREDITS} AI credits to try,
-              nothing charged until day {TRIAL_DAYS}, cancel anytime.
+              {`Your banked free days are your plan's free time — ${SIGNUP_BANK_DAYS} to start, more from referrals — with ${TRIAL_CREDITS} AI credits to try. Nothing is charged until the days end, and you can cancel anytime before then.`}
             </p>
           ) : null}
 

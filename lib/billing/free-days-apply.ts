@@ -5,6 +5,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { resolveSubscriptionTier, syncSubscriptionForUser } from "@/lib/stripe/subscription-sync";
 import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { grantCreditsForGrant } from "@/lib/billing/free-days-credits";
 import {
   freeDaysNote,
   isoOf,
@@ -65,6 +66,12 @@ export type GrantFreeDaysInput = {
    *  among grants (0177's partial index), so a retried call after a crash
    *  finds `duplicate_reference` instead of granting twice. */
   reference?: string | null;
+  /** The days bank (0179): an EXACT length instead of 30-day units … */
+  days?: number | null;
+  /** … with no credit allotments of its own (default true: a comp's). */
+  grantsCredits?: boolean;
+  /** … and only as a hold on a live plan (lib/billing/free-days.ts). */
+  holdOnly?: boolean;
 };
 
 export type GrantFreeDaysResult =
@@ -78,6 +85,9 @@ export type GrantFreeDaysResult =
       holdEndsAt: string | null;
       /** One line for the admin. */
       note: string;
+      /** Credit allotments granted right away (an overlay's first one; a
+       *  hold's wait for the paid time to end). */
+      creditsGranted: number;
       /** Something after the Stripe write did not land (logged). */
       warning?: string;
     }
@@ -158,12 +168,19 @@ export async function grantFreeDays(
     subscribedTier,
     tier: input.tier,
     units: input.units,
+    days: input.days ?? null,
+    holdOnly: input.holdOnly,
     now: deps.now,
   });
   if (plan.kind === "refused") return { ok: false, error: plan.error };
 
+  const exactDays = input.days ?? null;
+  const grantsCredits = input.grantsCredits ?? true;
   const startsAt = plan.kind === "below_plan" ? Math.floor((deps.now ?? new Date()).getTime() / 1000) : plan.startsAt;
-  const endsAt = plan.kind === "below_plan" ? startsAt + (input.units ?? 0) * 30 * 86_400 : plan.endsAt;
+  const endsAt =
+    plan.kind === "below_plan"
+      ? startsAt + (exactDays != null ? exactDays * 86_400 : (input.units ?? 0) * 30 * 86_400)
+      : plan.endsAt;
   // ONE grant in flight per user (0176's partial unique index): a row left
   // `pending` by a crash would block the user for good, so one older than
   // STALE_PENDING_MS is marked failed first.
@@ -178,7 +195,9 @@ export async function grantFreeDays(
     .insert({
       user_id: input.userId,
       tier: input.tier,
-      units: input.units,
+      units: exactDays != null ? null : input.units,
+      days: exactDays,
+      grants_credits: grantsCredits,
       source: input.source,
       granted_by: input.grantedBy,
       note: input.note,
@@ -253,14 +272,42 @@ export async function grantFreeDays(
     }
   }
   const { error: applyError } = await admin.from("plan_grants").update({ status: "applied" }).eq("id", grantId);
+  let creditsGranted = 0;
   if (applyError) {
     console.error(`grantFreeDays(${input.userId}): status write failed`, applyError.message);
     warnings.push("The grant is still listed as pending (its credits wait until it reads applied).");
+  } else if (plan.kind !== "below_plan" && grantsCredits) {
+    // The first allotment NOW (lib/billing/free-days-credits.ts): a user
+    // whose plan just read Plus saw "Remaining 4" until the daily cron. A
+    // hold's credits_from is the paid time's end, so nothing is due yet.
+    const credits = await grantCreditsForGrant(
+      admin,
+      {
+        id: grantId,
+        user_id: input.userId,
+        tier: input.tier,
+        units: input.units,
+        credits_from: isoOf(startsAt),
+        ends_at: endsAt == null ? null : isoOf(endsAt),
+        applied_as: plan.kind === "hold" ? "subscription_hold" : "overlay",
+        status: "applied",
+        grants_credits: true,
+      },
+      deps.now,
+      // Stripe's own answer, not the profile's copy (a webhook may lag it).
+      { subscription_status: sub?.status ?? null, subscription_tier: subscribedTier },
+    );
+    if (credits.ok) creditsGranted = credits.granted;
+    else {
+      console.error(`grantFreeDays(${input.userId}): first credits failed`, credits.error);
+      warnings.push("The free days are on, but their first credits couldn't be granted yet — the daily refill run grants them.");
+    }
   }
 
   return {
     ok: true,
     grantId,
+    creditsGranted,
     plan,
     endsAt: endsAt == null ? null : isoOf(endsAt),
     holdEndsAt,
@@ -284,7 +331,7 @@ export async function revokeFreeDays(
 ): Promise<RevokeFreeDaysResult> {
   const { data: grantRow, error: grantError } = await admin
     .from("plan_grants")
-    .select("id, user_id, tier, units, ends_at, status")
+    .select("id, user_id, tier, units, days, ends_at, status")
     .eq("id", input.grantId)
     .maybeSingle();
   if (grantError || !grantRow) return { ok: false, error: "No grant with that id." };
@@ -293,7 +340,7 @@ export async function revokeFreeDays(
 
   const { data: siblings } = await admin
     .from("plan_grants")
-    .select("id, user_id, tier, units, ends_at, status")
+    .select("id, user_id, tier, units, days, ends_at, status")
     .eq("user_id", grant.user_id)
     .eq("status", "applied")
     .order("created_at", { ascending: false });

@@ -25,6 +25,13 @@
 // fires a GA `share` event so we can see which targets get used even when
 // the destination is unobservable.
 //
+// A signed-in viewer's links ALSO carry their referral code (`ref=`, TODO
+// SG1, owner 2026-11-06 — Substack's shape): the dialog asks
+// /api/referrals/share once when it opens, every link goes through
+// `shareUrlFor`, the share text gains ONE line saying what the friend gets
+// (the settings' words), and the Copy link row says the link is theirs. A
+// visitor, or the program off, shares plain links as before.
+//
 // Wrapped in a Radix Dialog so the link list has a real focus trap and an
 // Esc close. The trigger button defaults to a ghost "Share" button; callers
 // can pass `trigger` to swap it, or drive the dialog programmatically with
@@ -32,7 +39,7 @@
 // it with no trigger at all).
 // ---------------------------------------------------------------------------
 
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { sendGAEvent } from "@next/third-parties/google";
 import { recordCardShareAction } from "@/lib/cards/actions";
 import {
@@ -53,6 +60,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { cleanShareUrl, referralShareLine, shareUrlFor } from "@/lib/sharing/share-url";
+import { readReferralShareInfo, type ReferralShareInfo } from "@/lib/sharing/referral-share-client";
 
 type ShareTargetsProps = {
   /** Title of the thing being shared (card or set name). */
@@ -75,19 +84,13 @@ type ShareTargetsProps = {
   heading?: string;
   /** Override the dialog blurb under the title. */
   description?: string;
+  /** A picture to lead the dialog with — the post-save prompt's own card
+   *  (TODO SG2: the moment of pride shows the thing made). */
+  picture?: { src: string; alt: string };
+  /** The viewer's referral, when the caller already knows it (tests; a
+   *  surface that read it). Undefined = the dialog reads it when it opens. */
+  referral?: ReferralShareInfo | null;
 };
-
-/** Append the share-source attribution param without disturbing anything
- *  else about the URL. */
-function withVia(url: string, via: string): string {
-  try {
-    const next = new URL(url);
-    next.searchParams.set("via", via);
-    return next.toString();
-  } catch {
-    return url;
-  }
-}
 
 export function ShareTargets({
   title,
@@ -100,11 +103,36 @@ export function ShareTargets({
   onOpenChange,
   heading,
   description,
+  picture,
+  referral: referralProp,
 }: ShareTargetsProps) {
-  const shareText =
+  // The viewer's referral: read once the dialog is open (never on a page
+  // view), unless the caller handed it in. Until it arrives the links are
+  // plain; they gain `ref` when it does.
+  const [selfOpen, setSelfOpen] = useState(false);
+  const isOpen = open ?? selfOpen;
+  const [referralRead, setReferralRead] = useState<ReferralShareInfo | null>(null);
+  useEffect(() => {
+    if (!isOpen || referralProp !== undefined) return;
+    let live = true;
+    void readReferralShareInfo().then((info) => {
+      if (live && info) setReferralRead(info);
+    });
+    return () => {
+      live = false;
+    };
+  }, [isOpen, referralProp]);
+  const referral = referralProp === undefined ? referralRead : referralProp;
+  const ref = referral?.enabled && referral.code ? referral.code : null;
+  const friendGets = ref && referral?.friendGets ? referral.friendGets : null;
+  const withVia = (target: string, via: string) => shareUrlFor(target, { via, ref });
+
+  const cardText =
     entity === "deck"
       ? `${title} — a Magic deck with custom cards on PipGlyph`
       : `${title} — a custom Magic card I forged on PipGlyph`;
+  // The card first; the friend's gift second, only on a referral link.
+  const shareText = friendGets ? `${cardText}\n${referralShareLine(friendGets)}` : cardText;
 
   const track = (method: string) => {
     // No-ops (with a console.warn in dev) when GA isn't configured.
@@ -112,6 +140,7 @@ export function ShareTargets({
       method,
       content_type: entity,
       item_id: itemId ?? url,
+      referred: Boolean(ref),
     });
     // Card shares also feed the gallery's discover weighting (fire-and-forget).
     if (entity === "card" && itemId) void recordCardShareAction(itemId);
@@ -160,10 +189,17 @@ export function ShareTargets({
     },
   ];
 
-  const discordMessage = `**${title}** — a custom Magic ${entity} I made on PipGlyph\n${withVia(url, "discord")}`;
+  const discordMessage = `**${title}** — a custom Magic ${entity} I made on PipGlyph\n${withVia(url, "discord")}${
+    friendGets ? `\n${referralShareLine(friendGets)}` : ""
+  }`;
+
+  const handleOpenChange = (next: boolean) => {
+    setSelfOpen(next);
+    onOpenChange?.(next);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {open === undefined || trigger !== undefined ? (
         <DialogTrigger asChild>
           {trigger ?? (
@@ -179,17 +215,33 @@ export function ShareTargets({
           <DialogDescription>
             {description ??
               "Send it to a playgroup or post it to a community. We don't send anything on your behalf — the buttons just prefill the respective forms."}
+            {friendGets ? (
+              <>
+                {" "}
+                These links carry your referral link: a friend who joins through one gets {friendGets} toward a plan once
+                they save their first cards and start one — and so do you.
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 p-5">
+          {picture ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a freshly made card's own render, any size
+            <img
+              src={picture.src}
+              alt={picture.alt}
+              className="mx-auto max-h-56 w-auto rounded-md border border-border/60 bg-background/60 object-contain"
+            />
+          ) : null}
           <NativeShare
             title={title}
             shareText={shareText}
             url={url}
+            referralCode={ref}
             imageUrl={imageUrl}
             onShared={() => track("native")}
           />
-          <CopyLink url={withVia(url, "copy")} onCopied={() => track("copy")} />
+          <CopyLink url={withVia(url, "copy")} referral={Boolean(ref)} onCopied={() => track("copy")} />
           <div className="grid grid-cols-2 gap-2">
             {networks.map((network) => (
               <ExternalShareButton
@@ -222,12 +274,14 @@ function NativeShare({
   title,
   shareText,
   url,
+  referralCode,
   imageUrl,
   onShared,
 }: {
   title: string;
   shareText: string;
   url: string;
+  referralCode: string | null;
   imageUrl?: string;
   onShared: () => void;
 }) {
@@ -241,7 +295,7 @@ function NativeShare({
   );
   if (!supported) return null;
 
-  const taggedUrl = withVia(url, "native");
+  const taggedUrl = shareUrlFor(url, { via: "native", ref: referralCode });
 
   const onShare = async () => {
     // Preferred: share the actual PNG file (+ link in the text). Any
@@ -310,8 +364,11 @@ function subscribeNever() {
 // Individual targets
 // ---------------------------------------------------------------------------
 
-function CopyLink({ url, onCopied }: { url: string; onCopied: () => void }) {
+function CopyLink({ url, referral, onCopied }: { url: string; referral: boolean; onCopied: () => void }) {
   const [copied, setCopied] = useState(false);
+  // The row SHOWS the clean address (the tags read as a mistake); the
+  // clipboard gets the tagged one — said in the row's title.
+  const shown = cleanShareUrl(url);
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(url);
@@ -331,6 +388,7 @@ function CopyLink({ url, onCopied }: { url: string; onCopied: () => void }) {
         "hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
       )}
       aria-label={copied ? "Link copied" : "Copy link"}
+      title={referral ? "Copies the link with your referral code and a share tag." : "Copies the link with a share tag."}
     >
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/60 text-foreground">
         {copied ? (
@@ -339,11 +397,13 @@ function CopyLink({ url, onCopied }: { url: string; onCopied: () => void }) {
           <Link2 className="h-3.5 w-3.5" aria-hidden />
         )}
       </span>
-      <span className="flex flex-1 flex-col gap-0.5">
+      {/* min-w-0: without it the column grows to the address's full width
+          and the button clips it mid-word with no ellipsis (owner 2026-11-06). */}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm font-medium text-foreground">
-          {copied ? "Copied!" : "Copy link"}
+          {copied ? "Copied!" : referral ? "Copy link (with your referral link)" : "Copy link"}
         </span>
-        <span className="truncate font-mono text-[10px] text-subtle">{url}</span>
+        <span className="truncate font-mono text-[10px] text-subtle">{shown}</span>
       </span>
       <Copy className="h-3.5 w-3.5 text-subtle" aria-hidden />
     </button>

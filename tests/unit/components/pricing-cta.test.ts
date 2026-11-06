@@ -4,7 +4,7 @@ import {
   ANONYMOUS_BILLING_VIEWER,
   type BillingViewer,
 } from "@/components/billing/use-billing-viewer";
-import { TRIAL_DAYS } from "@/lib/billing/plans";
+import { SIGNUP_BANK_DAYS } from "@/lib/billing/plans";
 
 // ---------------------------------------------------------------------------
 // The storefront CTA table — every viewer state × every plan card. The bug
@@ -25,15 +25,15 @@ describe("pricingCtaFor", () => {
   it("anonymous: signup links everywhere, the paid cards leading with the trial", () => {
     const anon = viewer({});
     expect(pricingCtaFor(anon, "free")).toEqual({ kind: "signup", label: "Get started free" });
-    expect(pricingCtaFor(anon, "plus")).toEqual({ kind: "signup", label: `Start free — ${TRIAL_DAYS}-day trial` });
+    expect(pricingCtaFor(anon, "plus")).toEqual({ kind: "signup", label: `Start free — ${SIGNUP_BANK_DAYS} free days` });
     expect(pricingCtaFor(anon, "pro").kind).toBe("signup");
   });
 
   it("free account, never subscribed: nothing on the free card, a trial checkout on each paid card", () => {
     const free = signedIn({ currentTier: "free" });
     expect(pricingCtaFor(free, "free")).toEqual({ kind: "none" });
-    expect(pricingCtaFor(free, "plus")).toEqual({ kind: "checkout", label: `Try Plus free for ${TRIAL_DAYS} days` });
-    expect(pricingCtaFor(free, "pro")).toEqual({ kind: "checkout", label: `Try Pro free for ${TRIAL_DAYS} days` });
+    expect(pricingCtaFor(free, "plus")).toEqual({ kind: "checkout", label: "Start Plus with your free days" });
+    expect(pricingCtaFor(free, "pro")).toEqual({ kind: "checkout", label: "Start Pro with your free days" });
   });
 
   it("lapsed (canceled) subscriber: no trial promise — 'Choose', and no portal on the free card", () => {
@@ -80,7 +80,7 @@ describe("pricingCtaFor", () => {
   it("comped Pro (or admin) with NO billing account: no portal button anywhere, a real checkout on the other tier", () => {
     const comped = signedIn({ isPaid: true, currentTier: "pro" });
     expect(pricingCtaFor(comped, "free")).toEqual({ kind: "none" });
-    expect(pricingCtaFor(comped, "plus")).toEqual({ kind: "checkout", label: `Try Plus free for ${TRIAL_DAYS} days` });
+    expect(pricingCtaFor(comped, "plus")).toEqual({ kind: "checkout", label: "Start Plus with your free days" });
   });
 
   it("payment broken (past_due / unpaid / incomplete): every paid card opens the portal to fix the card", () => {

@@ -100,6 +100,8 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     const insert = stub.forTable("plan_grants").find((e) => called(e.calls, "insert"))!;
     expect(payloadOf(insert.calls, "insert")).toEqual({
       user_id: USER,
+      days: null,
+      grants_credits: true,
       tier: "pro",
       units: 1,
       source: "comp",
@@ -137,6 +139,13 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     expect(payloadOf(applied.at(-1)!.calls, "update")).toEqual({ status: "applied" });
     // The profile's dates follow at once.
     expect(sync.syncSubscriptionForUser).toHaveBeenCalledWith(stub.client, s, USER, expect.objectContaining({ customerId: "cus_1" }));
+  });
+
+  it("a HOLD grants no credits now: its allotments start when the paid time ends (the cron's), the paid months keep theirs", async () => {
+    const stub = db({ profile: activeProfile });
+    const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "pro", units: 1, source: "referral_referrer", grantedBy: null, note: null }, { stripe: stripe(activeSub) as never, now: NOW });
+    expect(result).toMatchObject({ ok: true, creditsGranted: 0, plan: { kind: "hold" } });
+    expect(stub.rpc).not.toHaveBeenCalledWith("grant_credits", expect.anything());
   });
 
   it("the tier paid for comes from Stripe (resolveSubscriptionTier), not the profile's copy", async () => {
@@ -198,6 +207,30 @@ describe("grantFreeDays — no live plan (the overlay)", () => {
     expect(payloadOf(overlay.calls, "update")).toEqual({ comp_tier: "plus", comp_expires_at: iso(nowSec + 60 * DAY) });
     const insert = stub.forTable("plan_grants").find((e) => called(e.calls, "insert"))!;
     expect(payloadOf(insert.calls, "insert")).toMatchObject({ source: "referral_friend", granted_by: null, applied_as: "overlay", units: 2, starts_at: iso(nowSec), credits_from: iso(nowSec) });
+  });
+
+  it("the FIRST credit allotment lands the moment the grant is applied — never a wait for the daily cron (owner, production 2026-11-06)", async () => {
+    const stub = db();
+    const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 2, source: "referral_friend", grantedBy: null, note: null }, { stripe: stripe(null) as never, now: NOW });
+    expect(result).toMatchObject({ ok: true, creditsGranted: 1 });
+    expect(stub.rpc).toHaveBeenCalledTimes(1);
+    expect(stub.rpc).toHaveBeenCalledWith("grant_credits", {
+      p_user_id: USER,
+      p_amount: 30,
+      p_reason: "plan_grant",
+      p_idempotency_key: `grant:${GRANT}:0`,
+    });
+    // Only the first of the two units: the second is due 30 days on (the cron's).
+    expect((result as { warning?: string }).warning).toBeUndefined();
+  });
+
+  it("a refused first allotment is a WARNING on an applied grant (the cron catches up), never a failed grant", async () => {
+    const stub = db();
+    stub.rpc.mockResolvedValueOnce({ data: null, error: { message: "grant_credits down" } } as never);
+    const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never, now: NOW });
+    expect(result).toMatchObject({ ok: true, creditsGranted: 0, warning: expect.stringMatching(/first credits couldn't be granted yet — the daily refill run grants them/) });
+    const applied = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status?: string }).status === "applied");
+    expect(applied).toBeTruthy();
   });
 
   it("the overlay write fails: the row is marked failed and nothing is granted", async () => {

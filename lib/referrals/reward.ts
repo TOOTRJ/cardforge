@@ -1,16 +1,15 @@
-import type { PaidTier } from "@/lib/billing/plans";
-import type { RewardSpec } from "@/lib/referrals/settings";
+import { ladderRewardFor, type ReferralSettings, type RewardStep } from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
-// What one side of a referral is given (owner 2026-11-05): the settings'
-// reward spec made concrete for the user — pure. "Free days" are then
-// lib/billing/free-days.ts's business (the one mechanism comps use: added to
-// a paying plan's time, the perks overlay otherwise, nothing below the plan
-// paid for); credits are one grant_credits call.
+// What one side of a referral is given (owner 2026-11-06): the settings made
+// concrete — pure. Days go into the DAYS BANK (lib/billing/day-bank.ts: a
+// free period the user applies with a card on file), credits are one
+// grant_credits call. The bank is tier-less, so a reward has no tier.
 //
-//   tier "own" (the referrer's side): the tier they PAY for while their plan
-//   is live (active or trialing), else Plus — a free account's reward is
-//   Plus, a Pro payer's reward is Pro days (owner 2026-11-05).
+//   the friend    `friend.days` banked when the referral qualifies;
+//   the referrer  the ladder's step for their N-th qualified referral, the
+//                 tail past it.
+// An admin account gets nothing (every perk and unlimited credits already).
 // ---------------------------------------------------------------------------
 
 export type ReferralRewardProfile = {
@@ -22,23 +21,32 @@ export type ReferralRewardProfile = {
 };
 
 export type ReferralReward =
-  | { kind: "free_days"; tier: PaidTier; units: number }
+  | { kind: "days"; days: number }
   | { kind: "credits"; amount: number }
   | { kind: "none"; reason: "admin" | "settings" };
 
-const LIVE = new Set(["active", "trialing"]);
-
-export function referralRewardFor(spec: RewardSpec, profile: ReferralRewardProfile): ReferralReward {
+function concrete(step: RewardStep, profile: ReferralRewardProfile): ReferralReward {
   if (profile.is_admin) return { kind: "none", reason: "admin" };
-  switch (spec.kind) {
-    case "free_days": {
-      const paid = profile.subscription_tier === "plus" || profile.subscription_tier === "pro" ? profile.subscription_tier : null;
-      const own = LIVE.has(profile.subscription_status ?? "") && paid ? paid : "plus";
-      return { kind: "free_days", tier: spec.tier === "own" ? own : spec.tier, units: spec.units };
-    }
+  switch (step.kind) {
+    case "days":
+      return step.days > 0 ? { kind: "days", days: step.days } : { kind: "none", reason: "settings" };
     case "credits":
-      return { kind: "credits", amount: spec.amount };
+      return { kind: "credits", amount: step.amount };
     default:
       return { kind: "none", reason: "settings" };
   }
+}
+
+/** The friend's reward. */
+export function friendRewardFor(settings: Pick<ReferralSettings, "friend">, profile: ReferralRewardProfile): ReferralReward {
+  return concrete({ kind: "days", days: settings.friend.days }, profile);
+}
+
+/** The referrer's reward for their N-th qualified referral (1-based). */
+export function referrerRewardFor(
+  settings: Pick<ReferralSettings, "ladder" | "tail">,
+  step: number,
+  profile: ReferralRewardProfile,
+): ReferralReward {
+  return concrete(ladderRewardFor(settings, step), profile);
 }
