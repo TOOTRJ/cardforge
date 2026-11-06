@@ -23,7 +23,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Refer a friend",
-  description: "Share your referral link: a friend who saves their first card gets free days of Plus, and so do you.",
+  description: "Share your referral link: a friend who saves their first card earns you both a reward.",
   robots: { index: false, follow: false },
 };
 
@@ -67,7 +67,7 @@ export default async function ReferralsPage() {
   const { link, rows, summary, joinedThrough, settings } = dashboard;
   // What each side gets — the settings' words (lib/referrals/settings.ts).
   const friendGets = rewardPhrase(settings.friend);
-  const youGet = rewardPhrase(settings.referrer, { ownTierWord: "your plan" });
+  const youGet = rewardPhrase(settings.referrer, { ownTierWord: "your plan (Plus on the free plan)" });
   const freeDays = settings.friend.kind === "free_days" || settings.referrer.kind === "free_days";
 
   return (
@@ -201,9 +201,11 @@ export default async function ReferralsPage() {
             ? ` — save your first card to get ${friendGets}.`
             : joinedThrough.status === "first_card"
               ? " — your reward is on its way once both of you have confirmed your email."
-              : joinedThrough.status === "rewarded" || joinedThrough.status === "capped"
+              : joinedThrough.rewarded === true
                 ? " — your reward is on your account."
-                : "."}
+                : joinedThrough.rewarded == null && (joinedThrough.status === "rewarded" || joinedThrough.status === "capped" || joinedThrough.status === "blocked")
+                  ? " — your reward is on its way."
+                  : "."}
         </p>
       ) : null}
     </DashboardShell>

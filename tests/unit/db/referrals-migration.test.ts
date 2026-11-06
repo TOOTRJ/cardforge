@@ -119,12 +119,16 @@ describe("the referrals migration", () => {
 
   it("the caps step: service role only, the settings' caps as arguments, only a first_card row moves; the friends cap caps the FRIEND too", () => {
     expect(sql).toContain("drop function if exists public.claim_referral_reward(uuid, int, int);");
-    expect(sql).toContain("revoke all on function public.claim_referral_reward(uuid, int, int, int) from public, anon, authenticated;");
-    expect(sql).toContain("grant execute on function public.claim_referral_reward(uuid, int, int, int) to service_role;");
+    expect(sql).toContain("drop function if exists public.claim_referral_reward(uuid, int, int, int);");
+    expect(sql).toContain("revoke all on function public.claim_referral_reward(uuid, int, int, int, text) from public, anon, authenticated;");
+    expect(sql).toContain("grant execute on function public.claim_referral_reward(uuid, int, int, int, text) to service_role;");
     const claim = fn("claim_referral_reward");
     expect(claim).toContain("if v_row.status <> 'first_card' then");
     expect(claim).toContain("when p_friends_cap is not null and v_friends >= p_friends_cap then 'capped_friends'");
     expect(claim).toContain("referee_reward = case when v_outcome = 'capped_friends' then 'none' else referee_reward end");
+    // A referrer-only block (same_domain) goes through the claim, and its friends count toward the cap.
+    expect(claim).toContain("when p_block_reason is not null then 'blocked'");
+    expect(claim).toContain("and status in ('rewarded', 'capped', 'blocked')");
     // The reward values are the free-days mechanism's — never money.
     expect(sql).toContain("referrer_reward in ('free_days', 'credits', 'none')");
     expect(sql).not.toMatch(/balance_credit|plus_month|referral_plus_until|grant_referral_plus_month|protect_billing_columns/);
@@ -134,7 +138,7 @@ describe("the referrals migration", () => {
     expect(sql).toContain("alter table public.plan_grants add column if not exists reference text");
     expect(sql).toContain("create unique index if not exists plan_grants_reference_idx on public.plan_grants (reference) where reference is not null;");
     expect(sql).toMatch(/insert into public\.site_settings \(key, value\)\s+values \('referrals', '\{"enabled": true, "friend": \{"kind": "free_days", "tier": "plus", "units": 1\}, "referrer": \{"kind": "free_days", "tier": "own", "units": 1\}, "caps": \{"perMonth": 3, "lifetime": 12, "friendsPerMonth": 5\}\}'::jsonb\)\s+on conflict \(key\) do nothing;/);
-    expect(sql).toContain("'program_off'");
+    expect(sql).not.toContain("'program_off'");
   });
 
   it("the admin stats refuse anyone but an admin (or the service role)", () => {

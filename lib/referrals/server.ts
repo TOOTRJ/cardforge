@@ -37,9 +37,9 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 //                         on the first_card_saved milestone): signed_up →
 //                         first_card (one-shot), the activation window, then
 //                         the reward step at once (owner 2026-11-02: no hold).
-//   rewardReferral        a first_card row: the program ON (else settled
-//                         `blocked` / program_off: nothing granted), both
-//                         emails CONFIRMED (else it waits — the sweep looks
+//   rewardReferral        a first_card row: the program ON (else the row
+//                         WAITS — a pause, not a kill), both emails
+//                         CONFIRMED (else it waits — the sweep looks
 //                         again), the fraud rules, the caps
 //                         (claim_referral_reward, atomic; the settings'
 //                         numbers), then each side's reward (grantOwedSides).
@@ -173,7 +173,7 @@ export type GrantedReward =
 export type RewardReferralResult =
   | { status: "none" }
   | { status: "expired" }
-  | { status: "waiting"; reason: "billing_off" | "email_unconfirmed" | "hash_key_missing" | "check_failed" }
+  | { status: "waiting"; reason: "billing_off" | "program_off" | "email_unconfirmed" | "hash_key_missing" | "check_failed" }
   | { status: "blocked"; reason: ReferralBlockReason; referee: GrantedReward | null }
   | { status: "rewarded" | "capped"; referrer: GrantedReward | null; referee: GrantedReward | null };
 
@@ -219,16 +219,10 @@ export async function rewardReferral(
   if (!(deps.billingEnabled ?? isBillingEnabled())) return { status: "waiting", reason: "billing_off" };
   if (referral.status !== "first_card") return { status: "none" };
   const settings = deps.settings ?? (await readReferralSettings(admin));
-  // The program is OFF (an admin's switch): nothing is granted, nobody told.
-  if (!settings.enabled) {
-    const moved = await settleFirstCard(admin, referral.id, {
-      status: "blocked",
-      block_reason: "program_off",
-      referrer_reward: "none",
-      referee_reward: "none",
-    });
-    return moved ? { status: "blocked", reason: "program_off", referee: null } : { status: "none" };
-  }
+  // The program is PAUSED (an admin's switch): the row waits — the sweep
+  // rewards it once the program is on again, or the confirm window below
+  // expires it. Nothing is granted, nobody told, while it is off.
+  if (!settings.enabled) return { status: "waiting", reason: "program_off" };
 
   // The friend's account is gone: nobody is rewarded (the row stays — it is
   // evidence, never cascaded).
@@ -305,38 +299,31 @@ export async function rewardReferral(
     return { status: "blocked", reason: fullBlock, referee: null };
   }
 
+  // The claim (atomic, the settings' caps): a referrer-only block
+  // (same_domain — the friend keeps theirs, the referrer gets none) goes
+  // through it too, so those friends count toward the friends cap.
   let outcome: "rewarded" | "capped" | "blocked";
-  if (verdict.block) {
-    // same_domain: the friend keeps their month, the referrer gets none.
-    const moved = await settleFirstCard(admin, referral.id, {
-      status: "blocked",
-      block_reason: verdict.block,
-      rewarded_at: now.toISOString(),
-      referrer_reward: "none",
-      referrer_reward_detail: { kind: "none", reason: verdict.block },
-    });
-    if (!moved) return { status: "none" };
+  const { data: claimed, error } = await admin.rpc("claim_referral_reward", {
+    p_referral_id: referral.id,
+    p_monthly_cap: settings.caps.perMonth,
+    p_lifetime_cap: settings.caps.lifetime,
+    p_friends_cap: settings.caps.friendsPerMonth,
+    ...(verdict.block ? { p_block_reason: verdict.block } : {}),
+  });
+  if (error) {
+    console.warn(`[referrals] claim ${referral.id} failed:`, error.message);
+    return { status: "none" };
+  }
+  if (claimed === "rewarded") outcome = "rewarded";
+  else if (claimed === "blocked") {
     outcome = "blocked";
     await notifyNoMonth(admin, referral.referrer_id, refereeId, referral.id, "not_eligible");
-  } else {
-    const { data: claimed, error } = await admin.rpc("claim_referral_reward", {
-      p_referral_id: referral.id,
-      p_monthly_cap: settings.caps.perMonth,
-      p_lifetime_cap: settings.caps.lifetime,
-      p_friends_cap: settings.caps.friendsPerMonth,
-    });
-    if (error) {
-      console.warn(`[referrals] claim ${referral.id} failed:`, error.message);
-      return { status: "none" };
-    }
-    if (claimed === "rewarded") outcome = "rewarded";
-    else if (claimed === "capped_month" || claimed === "capped_lifetime" || claimed === "capped_friends") {
-      outcome = "capped";
-      await notifyNoMonth(admin, referral.referrer_id, refereeId, referral.id, claimed);
-      // The friends cap: the friend's side is 'none' too (the database wrote it).
-      if (claimed === "capped_friends") return { status: "capped", referrer: null, referee: null };
-    } else return { status: "none" }; // claimed elsewhere (a concurrent run)
-  }
+  } else if (claimed === "capped_month" || claimed === "capped_lifetime" || claimed === "capped_friends") {
+    outcome = "capped";
+    await notifyNoMonth(admin, referral.referrer_id, refereeId, referral.id, claimed);
+    // The friends cap: the friend's side is 'none' too (the database wrote it).
+    if (claimed === "capped_friends") return { status: "capped", referrer: null, referee: null };
+  } else return { status: "none" }; // claimed elsewhere (a concurrent run)
 
   const granted = await grantOwedSides(
     admin,
@@ -399,6 +386,7 @@ export async function grantOwedSides(
       continue;
     }
     const reward = await grantSide(admin, referral.id, side, userId, { ...deps, settings });
+    if (reward === "deferred") continue;
     if (reward === "failed") {
       failed = true;
       continue;
@@ -435,14 +423,16 @@ export function referralRewardKey(referralId: string, side: Side): string {
   return `referral:${referralId}:${side}`;
 }
 
-/** One side's reward. "failed" leaves the side owed for the sweep. */
+/** One side's reward. "failed" leaves the side owed for the sweep (an
+ *  attempt counted); "deferred" leaves it owed with NO attempt counted (a
+ *  plan under a scheduled change — the sweep tries again until it lands). */
 async function grantSide(
   admin: AdminClient,
   referralId: string,
   side: Side,
   userId: string,
   deps: RewardDeps & { settings: ReferralSettings; profiles?: Record<string, ReferralRewardProfile | null> },
-): Promise<GrantedReward | "failed"> {
+): Promise<GrantedReward | "failed" | "deferred"> {
   try {
     let profile = deps.profiles?.[userId] ?? null;
     if (!profile) {
@@ -508,32 +498,39 @@ async function grantSide(
         .select("id, tier, units, ends_at, applied_as, status")
         .eq("reference", reference)
         .maybeSingle();
-      const row = data as { id: string; tier: "plus" | "pro"; units: number | null; ends_at: string | null; applied_as: GrantedReward extends { appliedAs: infer A } ? A : never; status: string } | null;
-      if (!row || row.status === "failed") throw new Error(granted.error);
+      const row = data as { id: string; tier: "plus" | "pro"; units: number | null; ends_at: string | null; applied_as: string; status: string } | null;
+      // Only a grant that APPLIED (or was revoked since) is a reward made:
+      // a pending one is still in flight (the sweep looks again), a failed
+      // one that kept its reference never finished (an admin's to look at).
+      if (!row || row.status === "pending" || row.status === "failed") throw new Error(granted.error);
+      const appliedAs = row.applied_as as "overlay" | "subscription_hold" | "below_plan";
       reward = {
         kind: "free_days",
         tier: row.tier,
         days: (row.units ?? 0) * FREE_DAYS_UNIT_DAYS,
         endsAt: row.ends_at,
-        holdEndsAt: null,
-        appliedAs: row.applied_as as "overlay" | "subscription_hold" | "below_plan",
+        // A hold's end IS the moved charge / trial end.
+        holdEndsAt: appliedAs === "subscription_hold" ? row.ends_at : null,
+        appliedAs,
         grantId: row.id,
       };
     } else if (granted.code === "in_flight") {
       // Another grant for this user is being applied: the sweep retries.
       throw new Error(granted.error);
     } else {
-      // The decision refused (an admin, a plan the days can't be added to
-      // right now…): the side is NONE, said in the detail — never a loop.
-      const reason = /admin/i.test(granted.error) ? "admin" : "refused";
-      const reward0: GrantedReward = { kind: "none", reason };
-      if (reason === "refused") {
-        console.warn(`[referrals] ${side} free days for ${userId} (${referralId}) refused: ${granted.error}`);
-        // A refusal that can clear (a renewal in flight, Stripe unreadable) is retried by the sweep.
-        if (/try again|renewing right now|Couldn't read/i.test(granted.error)) throw new Error(granted.error);
+      // The decision refused. An admin: NONE for good. A plan under a
+      // scheduled change (a pending downgrade): DEFERRED — the sweep tries
+      // again each hour, no attempt counted, until the change lands and the
+      // days can be added. Anything else that can clear (a renewal in
+      // flight, Stripe unreadable): a counted retry.
+      if (/admin/i.test(granted.error)) {
+        const reward0: GrantedReward = { kind: "none", reason: "admin" };
+        await recordSide(admin, referralId, side, reward0);
+        return reward0;
       }
-      await recordSide(admin, referralId, side, reward0);
-      return reward0;
+      console.warn(`[referrals] ${side} free days for ${userId} (${referralId}) refused: ${granted.error}`);
+      if (/scheduled change/i.test(granted.error)) return "deferred";
+      throw new Error(granted.error);
     }
     await recordSide(admin, referralId, side, reward);
     return reward;
@@ -591,14 +588,26 @@ export async function sweepReferralRewards(admin: AdminClient, deps0: RewardDeps
     else if (result.status !== "none") claimed += 1;
   }
 
+  // A signup whose friend never saved a card inside the activation window
+  // is over (the dashboard's "waiting for their first card" ends; the
+  // stranded read below never fills with them).
+  const now = deps.now ?? new Date();
+  await admin
+    .from("referrals")
+    .update({ status: "expired", referrer_reward: "none", referee_reward: "none" })
+    .eq("status", "signed_up")
+    .lt("signed_up_at", new Date(now.getTime() - REFERRAL_ACTIVATION_WINDOW_DAYS * DAY_MS).toISOString());
+
   // A first card whose `after()` was lost (the response went out, the step
-  // never ran): a signed_up row older than a few minutes whose friend has
-  // a card is qualified here (the independent check's "stranded row").
+  // never ran): a signed_up row older than a few minutes — and inside the
+  // activation window — whose friend has a card is qualified here (the
+  // independent check's "stranded row").
   const { data: stranded, error: strandedError } = await admin
     .from("referrals")
     .select("id, referee_id")
     .eq("status", "signed_up")
-    .lt("signed_up_at", new Date((deps.now ?? new Date()).getTime() - STRANDED_AFTER_MS).toISOString())
+    .lt("signed_up_at", new Date(now.getTime() - STRANDED_AFTER_MS).toISOString())
+    .gte("signed_up_at", new Date(now.getTime() - REFERRAL_ACTIVATION_WINDOW_DAYS * DAY_MS).toISOString())
     .order("signed_up_at", { ascending: true })
     .limit(REFERRAL_SWEEP_BATCH);
   if (strandedError) return { ok: false, error: strandedError.message };
@@ -777,7 +786,7 @@ async function notify(
     type: input.type,
     payload: input.payload,
   });
-  // 23505: already told (0164's once-per-referral index).
+  // 23505: already told (0177's once-per-referral index).
   if (error && error.code !== "23505") {
     console.warn(`[referrals] ${input.type} notification failed:`, error.message);
   }

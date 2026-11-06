@@ -534,7 +534,7 @@ export type Database = {
           },
         ];
       };
-      // Migration 0164 — referrals.
+      // Migration 0177 — referrals.
       referral_codes: {
         Row: { user_id: string; code: string; created_at: string };
         Insert: { user_id: string; code: string; created_at?: string };
@@ -3193,8 +3193,8 @@ export type Database = {
         Returns: string | null;
       };
       claim_referral_reward: {
-        Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null };
-        /** 'rewarded' | 'capped_month' | 'capped_lifetime', or null. */
+        Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null; p_block_reason?: string | null };
+        /** 'rewarded' | 'capped_month' | 'capped_lifetime' | 'capped_friends' | 'blocked', or null. */
         Returns: string | null;
       };
       normalize_referral_email: {

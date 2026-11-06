@@ -30,7 +30,7 @@ export const REFERRAL_ACTIVATION_WINDOW_DAYS = 30;
  *  onboarding) counts only for an account this young with no saved card. */
 export const REFERRAL_CLAIM_WINDOW_DAYS = 7;
 
-/** my_referral_code(): 8 lowercase hex characters (0164). */
+/** my_referral_code(): 8 lowercase hex characters (0177). */
 export const REFERRAL_CODE_RE = /^[a-f0-9]{8}$/;
 
 /** The query parameter a referral link carries (`/?ref=<code>`). */

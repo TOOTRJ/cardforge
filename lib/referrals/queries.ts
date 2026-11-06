@@ -9,7 +9,7 @@ import type { ReferralSettings } from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
 // The referral dashboard's one read (/dashboard/referrals) — the viewer's own
-// session, through 0164's RLS and COLUMN grant: the code (minted on first
+// session, through 0177's RLS and COLUMN grant: the code (minted on first
 // ask), the friends they referred (status and dates only — never a fraud
 // reason or a Stripe detail), and the referral that brought THEM, if any.
 // Usernames come from the public profile columns.
@@ -22,11 +22,12 @@ export type ReferralDashboard = {
   summary: ReferralSummary;
   /** The program's settings (the switch, what each side gets, the caps). */
   settings: ReferralSettings;
-  /** The referral that brought the viewer, if they joined through a link. */
-  joinedThrough: { username: string | null; status: ReferralStatus } | null;
+  /** The referral that brought the viewer, if they joined through a link —
+   *  and whether THEIR side was rewarded (their own reward column). */
+  joinedThrough: { username: string | null; status: ReferralStatus; rewarded: boolean | null } | null;
 };
 
-/** The columns 0164 grants a signed-in user — `select *` is refused. */
+/** The columns 0177 grants a signed-in user — `select *` is refused. */
 const REFERRAL_COLUMNS = "id, referrer_id, referee_id, status, signed_up_at, first_card_at, rewarded_at, referrer_reward";
 
 export async function getMyReferralDashboard(now: Date = new Date()): Promise<ReferralDashboard | null> {
@@ -43,10 +44,11 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
       .eq("referrer_id", user.id)
       .order("signed_up_at", { ascending: false })
       .limit(200),
-    supabase.from("referrals").select(REFERRAL_COLUMNS).eq("referee_id", user.id).maybeSingle(),
+    // The friend's own row: their side only — never the referrer's reward.
+    supabase.from("referrals").select("id, referrer_id, status, referee_reward").eq("referee_id", user.id).maybeSingle(),
   ]);
 
-  // A friend whose account was deleted keeps the row (referee_id NULL, 0164).
+  // A friend whose account was deleted keeps the row (referee_id NULL, 0177).
   const ids = [
     ...new Set(
       [...(made ?? []).map((r) => r.referee_id), ...(mine ? [mine.referrer_id] : [])].filter(
@@ -81,7 +83,12 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
     settings,
     joinedThrough:
       mine && isReferralStatus(mine.status)
-        ? { username: names.get(mine.referrer_id) ?? null, status: mine.status }
+        ? {
+            username: names.get(mine.referrer_id) ?? null,
+            status: mine.status,
+            rewarded:
+              mine.referee_reward == null ? null : mine.referee_reward === "free_days" || mine.referee_reward === "credits",
+          }
         : null,
   };
 }

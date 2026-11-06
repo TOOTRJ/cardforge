@@ -717,7 +717,7 @@ export async function createCardAction(
       },
     });
     // The first saved card is the referral program's activation: a friend
-    // who joined through a link earns both sides a free month
+    // who joined through a link earns both sides a reward
     // (lib/referrals/server.ts). After the response — Stripe calls never
     // hold up a save — and never able to fail it.
     if (firstCard) {

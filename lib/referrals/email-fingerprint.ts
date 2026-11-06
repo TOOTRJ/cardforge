@@ -8,7 +8,7 @@ import { normalizeReferralEmail } from "@/lib/referrals/fraud";
 // program KEEPS of a referred account's email: a keyed hash (HMAC-SHA256) of
 // its normalized form (normalizeReferralEmail) under the server-only secret
 // REFERRAL_EMAIL_HASH_KEY — never the address, and never an unkeyed hash (a
-// plain SHA-256 of an email is reversible by guessing). Stored in 0164's
+// plain SHA-256 of an email is reversible by guessing). Stored in 0177's
 // referral_email_fingerprints, which no account deletion touches.
 //
 // No key → null: the caller FAILS CLOSED (nothing is rewarded; the retry

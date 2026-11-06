@@ -8,7 +8,6 @@ import type { ReferralSettings } from "@/lib/referrals/settings";
 const BLOCK_LABEL: Record<string, string> = {
   same_email: "Same inbox",
   same_card: "Same card",
-  program_off: "Program paused",
   same_domain: "Same company domain (friend rewarded)",
   disposable_email: "Throwaway email",
   not_new: "Not a new account",

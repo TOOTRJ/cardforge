@@ -4,13 +4,13 @@ import type { ReferralSettings } from "@/lib/referrals/settings";
 // ---------------------------------------------------------------------------
 // The referral dashboard's numbers, from the viewer's own rows — pure, so the
 // progress ("2 of 3 this month") is a unit test. "This month" is the UTC
-// calendar month, the same month claim_referral_reward() counts (0164).
+// calendar month, the same month claim_referral_reward() counts (0177).
 // ---------------------------------------------------------------------------
 
 export type ReferralRow = {
   id: string;
   username: string | null;
-  /** The friend deleted their account (the row stays: 0164's SET NULL). */
+  /** The friend deleted their account (the row stays: 0177's SET NULL). */
   accountDeleted?: boolean;
   status: ReferralStatus;
   signedUpAt: string;

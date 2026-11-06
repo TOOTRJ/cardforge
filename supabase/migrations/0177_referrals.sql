@@ -19,9 +19,11 @@
 --    the row is the referrer's cap evidence.
 -- 2b. One email, one referral reward — ever: a KEYED hash of each referred
 --    email (no address, no user id) that outlives the account.
--- 3. claim_referral_reward(id, monthly_cap, lifetime_cap, friends_cap) —
---    the caps, atomic under the referrer's lock; the friends cap caps the
---    FRIEND's reward too (N confirmable inboxes must not mint N rewards).
+-- 3. claim_referral_reward(id, monthly_cap, lifetime_cap, friends_cap,
+--    block_reason) — the caps, atomic under the referrer's lock; the friends
+--    cap caps the FRIEND's reward too (N confirmable inboxes must not mint
+--    N rewards), and a referrer-only block (same_domain) goes through it as
+--    well, so those friends count toward the cap.
 -- 4. plan_grants.reference — a caller's own key per grant (the referral's
 --    `referral:<id>:<side>`), unique, so a retried reward never grants twice.
 -- 5. The referral settings row (defaults; an admin edits it in /admin/users).
@@ -109,7 +111,7 @@ create table if not exists public.referrals (
   block_reason text
     check (block_reason is null or block_reason in (
       'same_email', 'same_card', 'same_domain', 'disposable_email', 'not_new', 'account_deleted',
-      'email_reused', 'program_off'
+      'email_reused'
     )),
   signed_up_at timestamptz not null default now(),
   first_card_at timestamptz,
@@ -243,16 +245,19 @@ grant execute on function public.referral_email_in_use(uuid, text) to service_ro
 -- ---------------------------------------------------------------------------
 -- 3. The caps (atomic)
 -- ---------------------------------------------------------------------------
--- Returns 'rewarded', 'capped_month', 'capped_lifetime', 'capped_friends', or
--- NULL when the row isn't a first_card row (already claimed, or unknown).
--- The status written is 'rewarded' or 'capped'. capped_friends (the
--- referrer brought p_friends_cap friends a reward this month already):
--- the FRIEND's side is 'none' too — the other caps leave the friend theirs.
+-- Returns 'rewarded', 'capped_month', 'capped_lifetime', 'capped_friends',
+-- 'blocked', or NULL when the row isn't a first_card row (already claimed,
+-- or unknown). The status written is 'rewarded', 'capped' or (with
+-- p_block_reason — a referrer-only block such as same_domain) 'blocked'.
+-- capped_friends (the referrer brought p_friends_cap friends a reward this
+-- month already): the FRIEND's side is 'none' too — the other outcomes
+-- leave the friend theirs.
 create or replace function public.claim_referral_reward(
   p_referral_id uuid,
   p_monthly_cap int,
   p_lifetime_cap int,
-  p_friends_cap int default null
+  p_friends_cap int default null,
+  p_block_reason text default null
 )
 returns text
 language plpgsql
@@ -293,28 +298,31 @@ begin
   where referrer_id = v_row.referrer_id
     and status = 'rewarded';
 
-  -- Friends this referrer brought a reward to this month (rewarded or
-  -- capped rows alike — a capped row still rewarded the friend).
+  -- Friends this referrer brought a reward to this month (rewarded, capped
+  -- or referrer-blocked rows alike — each still rewarded the friend).
   select count(*) into v_friends
   from public.referrals
   where referrer_id = v_row.referrer_id
-    and status in ('rewarded', 'capped')
+    and status in ('rewarded', 'capped', 'blocked')
     and referee_reward is distinct from 'none'
     and rewarded_at >= date_trunc('month', now() at time zone 'utc') at time zone 'utc';
 
   v_outcome := case
     when p_friends_cap is not null and v_friends >= p_friends_cap then 'capped_friends'
+    when p_block_reason is not null then 'blocked'
     when v_life >= p_lifetime_cap then 'capped_lifetime'
     when v_month >= p_monthly_cap then 'capped_month'
     else 'rewarded'
   end;
 
   update public.referrals
-  set status = case when v_outcome = 'rewarded' then 'rewarded' else 'capped' end,
+  set status = case when v_outcome = 'rewarded' then 'rewarded' when v_outcome = 'blocked' then 'blocked' else 'capped' end,
+      block_reason = case when v_outcome = 'blocked' then p_block_reason else block_reason end,
       rewarded_at = now(),
       referrer_reward = case when v_outcome = 'rewarded' then null else 'none' end,
       referrer_reward_detail = case
         when v_outcome = 'rewarded' then referrer_reward_detail
+        when v_outcome = 'blocked' then jsonb_build_object('kind', 'none', 'reason', p_block_reason)
         else jsonb_build_object('kind', 'none', 'reason', v_outcome)
       end,
       referee_reward = case when v_outcome = 'capped_friends' then 'none' else referee_reward end,
@@ -328,8 +336,9 @@ end;
 $$;
 
 drop function if exists public.claim_referral_reward(uuid, int, int);
-revoke all on function public.claim_referral_reward(uuid, int, int, int) from public, anon, authenticated;
-grant execute on function public.claim_referral_reward(uuid, int, int, int) to service_role;
+drop function if exists public.claim_referral_reward(uuid, int, int, int);
+revoke all on function public.claim_referral_reward(uuid, int, int, int, text) from public, anon, authenticated;
+grant execute on function public.claim_referral_reward(uuid, int, int, int, text) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- 4. A caller's own key on a free-days grant (0176's plan_grants)

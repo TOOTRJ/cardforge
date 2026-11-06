@@ -1029,16 +1029,18 @@ and what each side gets is a SETTING an admin changes without a deploy.
 **The settings** (`site_settings` key `referrals`, `lib/referrals/settings.ts`;
 0177 seeds the defaults; the form sits in the admin Referrals panel on
 `/admin/users`, saved whole through `adminSaveReferralSettingsAction` with a
-confirm step): `enabled` (OFF = the page says the program is paused and
-hides the link, a signup through a link records nothing, a friend's first
-card rewards nobody — the row is settled `blocked` / `program_off`; rewards
-already given stay), `friend` and `referrer` reward specs — `free_days`
+confirm step): `enabled` (OFF = a PAUSE: the page says so and hides the
+link, a signup through a link records nothing, a friend's first card is
+left WAITING — rewarded once the program is on again, expired after the
+30-day confirm window like any waiting row; rewards already given stay), `friend` and `referrer` reward specs — `free_days`
 (a tier — `own` = the referrer's own paid tier while their plan is live,
 Plus otherwise **(owner)** — and 30-day units), `credits` (an amount), or
 `none` — and the caps: `perMonth` (3) and `lifetime` (12) referrer rewards,
 and `friendsPerMonth` (5) friends a referrer can bring a reward to in a
 UTC month, past which the FRIEND gets nothing either (`capped_friends`: N
-confirmable inboxes mint nothing — the independent check's P2). The
+confirmable inboxes mint nothing — the independent check's P2; a
+referrer-only block such as `same_domain` goes through the claim too, so
+those friends count). A cap of 0 pauses that side. The
 settings are read at grant time; `parseReferralSettings` fills defaults for
 anything missing, so a hand-edited row never breaks the program.
 
@@ -1051,8 +1053,10 @@ link `<site>/?ref=<code>` with a Copy button. Nothing mints a code at signup.
 The code rides the existing first-touch attribution — `AttributionCapture`
 (sessionStorage, no cookie; a `ref` the tab doesn't hold yet is added to the
 first touch, the FIRST code wins) → `AttributionFields` (hidden `attr_ref`) →
-`signupAction`, which puts the code in the account's metadata
-(`referral_code`) beside the `signup` event (whose props say only
+`signupAction`, which puts the code on the account's `app_metadata`
+(`referral_code` — the server's; never `user_metadata`, which GoTrue merges
+for an existing unconfirmed address and the user can edit) for a REAL new
+user only, beside the `signup` event (whose props say only
 `referred: true`, never the code) and writes NO row: the `referrals` row is
 written at ONBOARDING — the first step an account takes with a CONFIRMED
 email (`completeOnboardingAction`, first finish only; the metadata's code,
@@ -1087,7 +1091,7 @@ the code):
    a throwaway domain (`DISPOSABLE_EMAIL_DOMAINS`); **the friend only**: the
    same CUSTOM domain (free mail — gmail, outlook, … — and reserved TLDs like
    `.test` never match). Self-referral by id is a table CHECK;
-3a. **(owner)** one email, one referral month — ever (below): the friend's
+3a. **(owner)** one email, one referral reward — ever (below): the friend's
    normalized email matching ANY OTHER live account (the referrer's
    included), or a fingerprint an EARLIER referral signup left → `blocked`
    (`email_reused`), **nobody rewarded**, the friend never told why;
@@ -1095,10 +1099,10 @@ the code):
    lock in the NAMED namespace `hashtext('pipglyph.referrals')`):
    `REFERRAL_MONTHLY_CAP` (3 a UTC month) and `REFERRAL_LIFETIME_CAP` (12)
    rewarded referrals; past either the row is `capped` and the FRIEND still
-   gets their month. The count reads every rewarded row of the referrer —
+   gets their reward. The count reads every rewarded row of the referrer —
    `referee_id` is `ON DELETE SET NULL`, so deleting a rewarded friend
    never frees a slot;
-5. each side's month (`grantOwedSides`) and its `referral_reward`
+5. each side's reward (`grantOwedSides`) and its `referral_reward`
    notification (0164's unique index: once per referral and side). When the
    friend qualified but the REFERRER earns nothing (a cap, not eligible), the
    referrer gets ONE `referral_signup` notification that says so — never a
@@ -1107,8 +1111,8 @@ the code):
 Nothing runs while billing is off (`NEXT_PUBLIC_BILLING_ENABLED`): the
 rows wait in `first_card` (the dashboard page is a 404 then).
 
-**One email, one referral month (owner 2026-11-02).** Deleting an account
-and signing up again with the same inbox must not earn a second month.
+**One email, one referral reward (owner 2026-11-02).** Deleting an account
+and signing up again with the same inbox must not earn a second reward.
 
 - ONE normalization, `normalizeReferralEmail` (`lib/referrals/fraud.ts`):
   trim, lowercase, everything from the first `+` to the `@` dropped (every
@@ -1162,11 +1166,18 @@ the writer owns the overlay (the old separate `referral_plus_until` column
 and its readers are gone).
 
 **Retries.** A grant that fails leaves the side NULL and counts an attempt
-(`grant_attempts`). `/api/cron/referral-rewards` (hourly, `vercel.json`,
-`cronRouteGuard`) runs `sweepReferralRewards`: `signed_up` rows older than
-ten minutes whose friend already has a card (a first-card `after()` the
-response outran), `first_card` rows not claimed yet (an email confirmed
-since) and claimed rows with a side still NULL. Every write is once per referral and side, so the sweep
+(`grant_attempts`); a free-days grant refused for a plan under a SCHEDULED
+change (a pending downgrade) is DEFERRED — owed, no attempt counted — until
+the change lands. A free-days row that failed before anything was granted
+frees its `reference`, so the retry can grant under the same key (a stale
+pending row keeps it: Stripe may have been written — an admin's to look at
+after the attempts run out). `/api/cron/referral-rewards` (hourly,
+`vercel.json`, `cronRouteGuard`) runs `sweepReferralRewards`: `signed_up`
+rows past the 30-day activation window are expired; `signed_up` rows older
+than ten minutes whose friend already has a card (a first-card `after()`
+the response outran) are qualified; `first_card` rows not claimed yet (an
+email confirmed since, the program on again) and claimed rows with a side
+still NULL are retried. Every write is once per referral and side, so the sweep
 can run any number of times. After `REFERRAL_GRANT_MAX_ATTEMPTS` (5) a side
 is recorded as `none` with `grant_failed` for an admin (the admin panel's
 `grantsOwed` / reasons).

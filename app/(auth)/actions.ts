@@ -181,11 +181,13 @@ export async function signupAction(
   const emailRedirectTo = `${getSiteBaseUrl()}/auth/callback`;
 
   // The first-touch attribution the form carried (sessionStorage → hidden
-  // fields). A referral code rides into the account's metadata and is
-  // claimed at ONBOARDING — the first step an account takes with a
-  // CONFIRMED email (lib/onboarding/actions.ts) — never here: GoTrue hands
-  // an existing unconfirmed address the same user id, so a row written at
-  // signup let anyone claim a referral on an inbox they don't own.
+  // fields). A referral code is kept on the account (app_metadata, below —
+  // the server's, never user_metadata, which GoTrue merges for an EXISTING
+  // unconfirmed address and the user can edit) and claimed at ONBOARDING,
+  // the first step an account takes with a CONFIRMED email
+  // (lib/onboarding/actions.ts) — never here: GoTrue hands an existing
+  // unconfirmed address the same user id, so a row written at signup let
+  // anyone claim a referral on an inbox they don't own.
   const attribution = sanitizeAttribution({
     referrer: formData.get(ATTRIBUTION_FIELDS.referrer),
     utmSource: formData.get(ATTRIBUTION_FIELDS.utmSource),
@@ -203,7 +205,6 @@ export async function signupAction(
       data: {
         username: parsed.data.username,
         display_name: parsed.data.username,
-        ...(attribution.ref ? { referral_code: attribution.ref } : {}),
       },
     },
   });
@@ -241,6 +242,15 @@ export async function signupAction(
   const newUser = signUpData.user;
   if (newUser?.id && (newUser.identities?.length ?? 0) > 0 && isAdminConfigured()) {
     const admin = createAdminClient();
+    // A REAL new user only (identities: an already-registered address gets
+    // an obfuscated user with none): the referral code goes on the
+    // account's app_metadata, which only the server writes.
+    if (attribution.ref) {
+      const { error: metaError } = await admin.auth.admin.updateUserById(newUser.id, {
+        app_metadata: { referral_code: attribution.ref },
+      });
+      if (metaError) console.warn("signupAction: referral code not kept", metaError.message);
+    }
     await recordFunnelEvent(admin, {
       event: "signup",
       userId: newUser.id,

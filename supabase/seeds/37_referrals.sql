@@ -10,7 +10,8 @@
 --   dev_free → dev_new     SIGNED UP, no card yet: sign in as dev_new and
 --     save a first card to watch both rewards land at once (dev_free and
 --     dev_new: 30 free days of Plus each, as a perks overlay) and the two
---     referral_reward notifications. (Seeded emails are confirmed.)
+--     referral_reward notifications. (Seeded emails are confirmed; the
+--     reward needs REFERRAL_EMAIL_HASH_KEY set, else it waits.)
 --   dev_pro's referral_reward notification for the first row.
 --
 -- Runs after 36_*.sql (config.toml → [db.seed] sql_paths, filename order).

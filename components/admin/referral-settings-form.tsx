@@ -156,7 +156,9 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
       <p className="text-xs leading-5 text-muted">
         What each side gets when a referred friend saves their first card — changed here, never with a deploy. Free days
         are the same mechanism as a comp: added to a paying plan&apos;s time, a perks overlay otherwise, with the plan&apos;s
-        normal AI credits. OFF pauses new signups and rewards; what was already given stays.
+        normal AI credits. OFF pauses new signups and rewards (a friend who qualifies meanwhile waits, up to 30 days);
+        what was already given stays. A cap of 0 pauses that side: 0 referrer rewards a month means referrers earn
+        nothing, 0 rewarded friends a month means nobody is rewarded.
       </p>
       <RewardFields label="Friend gets" value={draft.friend} onChange={(friend) => setDraft({ ...draft, friend })} allowOwn={false} />
       <RewardFields label="Referrer gets" value={draft.referrer} onChange={(referrer) => setDraft({ ...draft, referrer })} allowOwn />

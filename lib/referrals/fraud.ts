@@ -31,9 +31,7 @@ export type ReferralBlockReason =
   | "disposable_email"
   | "not_new"
   | "account_deleted"
-  | "email_reused"
-  /** The program was OFF (the admin switch) when the friend qualified. */
-  | "program_off";
+  | "email_reused";
 
 /** Free / consumer mail domains: a shared one says nothing. */
 export const FREE_MAIL_DOMAINS: ReadonlySet<string> = new Set([
@@ -81,7 +79,7 @@ export function emailDomain(email: string | null | undefined): string | null {
  *  everything from the first "+" to the "@" dropped (every domain); for
  *  gmail.com / googlemail.com the local part's dots dropped too and
  *  googlemail.com read as gmail.com. The LAST "@" splits the address. Its
- *  SQL twin is 0164's normalize_referral_email — one table of cases holds
+ *  SQL twin is 0177's normalize_referral_email — one table of cases holds
  *  both (tests/unit/referrals/email-normalization-cases.json); change them
  *  together. */
 export function normalizeReferralEmail(email: string | null | undefined): string | null {
