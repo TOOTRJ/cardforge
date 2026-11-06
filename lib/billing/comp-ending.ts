@@ -135,9 +135,10 @@ export function compEndingPlanFor(input: {
   }
   const next =
     sub.status === "trialing" && typeof sub.trial_end === "number" ? sub.trial_end : periodEndOf(sub);
-  // A next charge INSIDE the comp (the balance credit reduces it) is not
-  // "after the comp" — no date is named then; the copy says invoices after
-  // the comp's end are charged as usual, credit first.
+  // A next charge INSIDE the comp (a plan the days could not be added to:
+  // past due, or a hold that failed) is not "after the comp" — no date is
+  // named then; the copy says invoices after the comp's end are charged as
+  // usual.
   return {
     send: true,
     kind: "paying",

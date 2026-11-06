@@ -779,56 +779,68 @@ subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.
 
-## Comps and a live subscription (audit 2026-10-30)
+## Free 30 days — comps on one mechanism (owner 2026-11-05, migration 0176)
 
-An admin comp (`profiles.comp_tier` / `comp_expires_at`, set on
-`/admin/users` → a user → Comp) is an OVERLAY on the profile: perks are the
-higher of the comp and the live subscription (`effectiveTierForProfile`),
-credits the higher of the two tiers' monthly allotment (`refillTierFor` —
-a comp is owed its tier like a payer, even on a trial), and capacity the
-same in the database (`card_capacity_for`, 0104). It expires by itself: no
-job, the next read is the plan underneath.
+A comp is **N units of exactly 30 days** (30 × 86 400 s, exact to the second)
+of a paid tier with that tier's normal monthly AI credits and nothing else —
+the same mechanism the referral reward (PR F) uses. It replaces the dated
+overlay the admin typed by hand, #688's balance credit and #726's coupon:
+**no money moves for free days, ever.** Design and the owner's answers:
+`docs/research/free-months-design-2026-11.md` §6.
 
-Until this audit a comp never touched Stripe, so a user on a card-backed
-trial who was comped "a free month" was CHARGED when the 7-day trial ended,
-inside the month. The owner's rule: **a comp month is free, the month after
-it is charged normally.** `lib/billing/comp-stripe.ts` decides,
-`lib/billing/comp-stripe-apply.ts` writes (best effort, after the row):
+- **The row**: `plan_grants` (user, tier, units — NULL = no end —, source
+  `comp` / `referral_friend` / `referral_referrer` / `promo`, who granted it
+  and a note, `applied_as`, `starts_at` / `ends_at`, `credits_from`, status
+  `pending` → `applied` | `failed` | `revoked`). Service role only; a user
+  reads their own rows' public columns (never the note or the granter).
+- **The decision** (`lib/billing/free-days.ts` `planFreeDays`, pure; read
+  from the profile and Stripe's CURRENT subscription) and **the writer**
+  (`lib/billing/free-days-apply.ts` `grantFreeDays`: the row first, then
+  Stripe under the idempotency key `plan-grant:<id>`, then the overlay, then
+  `applied`; a Stripe failure leaves a `failed` row and nothing else):
 
-| The user has | A comp (same tier or higher, dated) | When it ends / is cleared |
+| The user has | N × 30 days become | Credits |
 |---|---|---|
-| a TRIAL that renews | `trial_end` moved to the comp's end (never earlier than its own; `proration_behavior: none`); the old end kept in the subscription's metadata `pipglyph_trial_end_before_comp` | the trial converts at that second — the card, the subscription's own price. Cleared or shortened: the trial goes back to its own end, or ends now if that has passed (the charge it would have made) |
-| an ACTIVE plan (incl. a scheduled downgrade) | the comp period's share of the subscription's own price is CREDITED to the Stripe customer balance (owner answer 1, 2026-10-30); status, dates and trial untouched — Stripe takes it off the next invoices | ends: nothing more happens (the credit was for that period). Shortened or cleared: the part not yet lived through is CLAWED BACK, capped at the credit still unspent |
-| a CANCELLED plan, still running | nothing — it stops on its date; the comp carries the perks after it (a credit would sit unused) | free; nothing is charged |
-| no subscription, then subscribes from the billing page | Checkout starts it with `trial_end` = the comp's end (when ≥ 48 h out, the plan bought ≤ the comp; the 7-day trial's end if later) and writes `pipglyph_trial_end_before_comp` = the 7-day trial's end, or the checkout time when there is no trial, so clearing the comp puts it back (or charges at once) | charged normally |
+| a live, RENEWING plan or trial, the tier at or above the one paid for (`subscription_hold`) | **added to the time paid for**: `trial_end` = the current period's end (a trial: its own end) + N × 30 d, `proration_behavior: none` — the documented way to push the next charge out (a trial on the existing subscription; `billing_cycle_anchor` cannot take a date). Monthly: the billing day moves; annual: the renewal moves; a trial runs longer. The subscription reads `trialing` until then; Stripe issues a $0 invoice the moment the trial is added (the cycle resets to it — no money, `billing_reason` `subscription_update`, listed as "Trial start" in the admin Revenue panel); the next invoice is the plan's own price on the new date. The end it had before ANY hold stays in metadata `pipglyph_trial_end_before_comp`. The overlay (`comp_tier` / `comp_expires_at`) is written to the SAME instant (the billing page, the reworded trial reminder and the comp-ending reminders read it). | one allotment per 30 days of the grant, at the start of each (`grant:<id>:<k>`, reason `plan_grant`); the subscribers' sweep still grants the PAID time before the hold starts (an annual plan held 200 days before its renewal keeps its monthly allotments — `refillTierFor` `heldBeforeStart`) |
+| no live plan: free, lapsed, a cancelled plan still running (the days start when it ends), one past due (dunning keeps its own dates) (`overlay`) | the overlay alone, from the later of now and its current end; the overlay carries ONE tier — the higher of what it holds and what is granted — for the whole stretch | the same per-30-days allotments |
+| a grant BELOW the tier paid for (`below_plan`) | recorded, nothing changes | none |
+| `units` NULL — **staff only**: an account with NO Stripe subscription | the overlay with no expiry | every 30 days, open-ended |
 
-**A comp on a trialing or paying user needs an END DATE** (owner answer 2):
-`adminSetCompTierAction` refuses one without (`compEndDateError` — status
-`trialing`, `active` or `past_due`), and one more than 730 days out; the
-admin form marks the expiry required for such a user. "No expiry" stays for
-free users. **Clearing a comp after the trial's own end has passed** ends
-the trial now and charges (owner answer 3) — the user's notification then
-says only that the comp ended, never "your trial now runs until" today.
-
-Not moved: a comp below the plan paid for. The admin's toast says what
-happened in one line (`compStripeNote` / `compCreditNote`); the user's
-`comp_plan` notification adds "Your free trial now runs until …; nothing is
-charged before then." only when the comp HOLDS the trial. `trial_will_end`
-is once per subscription AND trial end, so a moved trial is reminded again
-before the charge that really happens. The handler re-reads the
-subscription (Stripe's CURRENT state, never the event's snapshot — the
-event copy only when the read fails): releasing a hold with `trial_end:
-"now"` fires `trial_will_end` whose `data.object` is the PRE-update copy
-(still trialing, the held end weeks out — seen in a sandbox run), so the
-live status and `trial_end` decide; a live trial ending within a minute of
-the event gets no reminder, and the live `trial_end` keys the dedupe, the
-payload and the email. A comp-held trial cancelled after the trial it would
-have had without the comp is not a lapsed trial (`isUnconvertedTrial` reads
-`pipglyph_trial_end_before_comp`): no `trial_lapsed` row, no win-back; and
-Checkout never applies the win-back coupon to a comp hold (its first
-invoice is the hold's $0). The billing page names a comp over a live
-subscription in one line (`liveCompChargeLine`: "nothing is charged before
-then" only when Stripe's trial really reaches the comp's end).
+- **Credits** (`lib/billing/free-days-credits.ts`, run by the daily refill
+  cron after the subscribers' sweep): a 30-day grant starting Nov 20 is 30
+  credits once — never a second on Dec 1 (the retired rule, "an unexpired
+  comp is owed its tier every calendar month", banked both). A comp
+  converted by 0176 counts from the first of the month after the
+  conversion. `grant_credits` dedupes on the key.
+- **Revoke** (`adminRevokeFreeDaysAction` → `revokeFreeDays`, the NEWEST
+  applied grant only; `planRevoke`): the overlay shrinks by the grant's days
+  (cleared when no other live grant remains — or when that end is now or
+  earlier), and a Stripe trial held at the overlay's end moves back the same
+  way, never before the end it had before any hold; "now" when that has
+  passed (the charge it would have made; the user's notice says only that
+  the access ended). Idempotency key `plan-grant-revoke:<id>`.
+- **Precision and copy**: the end is exact to the second; the billing page
+  prints it with its time in the viewer's zone (`<LocalDate format="stampYear">`:
+  "Your plan is paid through …. Your free days run from then until …, then
+  Plus continues at $6 / month on the card below"), the admin's toast and
+  list in UTC, labelled. Every surface says "free 30 days" / "free days" —
+  never "a free month". The user's `comp_plan` notification names the days
+  and their end, and on a hold the moved charge ("added to the time you've
+  paid for: your next charge moves to …").
+- **Admin UI** (`/admin/users` → a user → "Free days (comp)"): plan, length
+  (30 … 360 days in 30-day units, or "No end (staff)" when there is no live
+  plan), a note; the list of grants (newest first, what each did, by whom)
+  with Revoke on the newest applied one.
+- **Checkout while comped** is unchanged: a user with a running overlay who
+  subscribes is not charged before it ends (`compHoldsCheckoutUntil`:
+  `trial_end` at the overlay's end, metadata = the 7-day trial's end or the
+  checkout itself); revoking the grant behind it puts the trial back
+  (`planRevoke` reads the metadata). A cancel during free days is not a
+  lapsed trial (`isUnconvertedTrial`), and Checkout never applies the
+  win-back coupon to a hold.
+- **Sandbox proof**: `npm run stripe:sandbox-free-days-check` (test clocks:
+  the owner's example, a held trial, an annual hold, a revoke); the run is
+  recorded in the addendum at the end of this file.
 
 ### "Your complimentary plan ends soon" (owner 2026-11-02)
 
@@ -859,12 +871,11 @@ profile answers 500 (as `refill-credits` does), so it shows as failed.
     ending ••<last4> will be charged <price> then" + how to cancel before —
     or, with no payment method (`subscriptionHasPaymentMethod`), that the
     plan simply ends and nothing is charged;
-  - `paying` (an active plan — the credit — or a trial that runs on past the
-    comp): "your next invoice, on <date>, is charged as usual (<price>), less
-    any comp credit still on your balance" — a date only when the next
+  - `paying` (a plan the days could not be added to — past due, a hold that
+    failed — or a trial that runs on past the comp): "your next invoice, on
+    <date>, is charged as usual (<price>)" — a date only when the next
     charge falls AFTER the comp's end; otherwise "invoices after <comp end>
-    are charged as usual; any comp credit still on your balance comes off
-    first" (the credit may still be reducing an invoice inside the comp);
+    are charged as usual";
   - `plan_ending` (a cancelled plan that runs past the comp): it ends on its
     own date, nothing more is charged.
   The payload names BOTH plans: `tier` (the comp's — what ends) and
@@ -893,54 +904,72 @@ profile answers 500 (as `refill-credits` does), so it shows as failed.
   last four included) to the same user only, as it already does for
   `trial_ending`.
 
-### The balance credit on an active plan
+### The balance credit on an active plan — RETIRED (2026-11-05)
 
-One shared helper, `lib/billing/balance-credit.ts` (the referral programme's
-free month for a payer uses it too): a credit is a NEGATIVE customer-balance
-transaction, a claw-back a POSITIVE one.
+#688 credited a paying user's comp period to the Stripe customer balance;
+0176 replaced it with the hold above (no money moves). A credit posted
+before that date stays on the customer's balance and Stripe takes it off
+the next invoice as it always did; nothing claws it back.
 
-- **Amount** (`periodCreditCents`): `yearly price × (whole months ÷ 12 +
-  leftover days ÷ 365)`, rounded to the cent once. The yearly price is the
-  subscription's own: a monthly price × 12, an annual price as it is. The
-  period is counted in whole CALENDAR months from the grant's start (UTC),
-  a period ending within one day of a whole month counting as that month
-  (the admin's picker lands at midnight), then whole leftover days (nearest).
-  - Monthly $6 Plus, comp of one calendar month → `72 × 1/12` = **$6**.
-    Three months → **$18**. 30 days from Oct 29 (ends Nov 28, one day
-    short of a month) → `72 × 30/365` = **$5.92**.
-  - Annual $60 Plus, one calendar month → `60 × 1/12` = **$5**; 45 days
-    from Nov 1 (Dec 1 + 15 days) → `60 × (1/12 + 15/365)` = **$7.47**. The
-    credit sits on the balance until the next ANNUAL renewal takes it.
-- **One ledger key per grant.** A grant opens when a comp first holds an
-  active plan: the subscription's metadata `pipglyph_comp_credit` =
-  `<startSec>:<endSec>` is written BEFORE any money moves, and every balance
-  transaction carries `metadata.pipglyph_comp_grant` = `comp:<sub>:<startSec>`.
-  Each save reads the ledger (the customer's balance transactions under that
-  key, credits minus claw-backs) and posts only `target − posted`: a re-save
-  of the same comp posts nothing. The Stripe idempotency key is
-  `comp:<sub>:<start>:<posted>-><target>:credit|clawback`, so a retried
-  request or two admins saving at once post once. A grant whose end has
-  passed is finished; the next comp opens a new one.
-- **Extending** a running comp credits the difference (the grant's start
-  never moves; one grant covers at most 730 days from its start).
-- **Shortening / clearing / dropping below the plan:** the target becomes
-  the grant's start → the new end (shortened) or → NOW (cleared: the time
-  already lived through stays paid for). The difference is clawed back,
-  **capped at the customer's credit still unspent** (`-customer.balance`):
-  credit an invoice already used paid for time the user had and is never
-  turned into a debt. What the cap kept is named in the admin's toast. A
-  clearing never posts a fresh credit. On clearing, the grant's metadata is
-  removed.
-- The user's `comp_plan` notification names the amount credited ("We've put
-  $6 on your billing balance…"); the admin's toast names what was credited
-  or taken back (`compCreditNote`).
-- Not sandbox-verified either (no Stripe key in the session that built
-  it): the balance credit and claw-back — run them once on a test clock
-  with the trial move below.
+Proof: `tests/unit/billing/free-days.test.ts` (one scenario per rule — the
+owner's example first), `free-days-apply.test.ts`, `free-days-credits.test.ts`,
+`stripe-actions.test.ts` (Checkout while comped), `webhook-handlers.test.ts`
+(the reworded reminder), `tests/unit/db/plan-grants-migration.test.ts`.
 
-Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
-question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
-while comped), `webhook-handlers.test.ts` (the second reminder). Not
-sandbox-verified (no Stripe key in the session that built it): updating
-`trial_end` on a card-backed trialing subscription with
-`proration_behavior: none` — run it once on a test clock.
+
+## Addendum — sandbox test-clock run, free 30 days (2026-11-05, `npm run stripe:sandbox-free-days-check`)
+
+The four scenarios, through the SAME writer the admin's action calls
+(`grantFreeDays` / `revokeFreeDays`), each on its own test clock (deleted
+after). Prices are the sandbox catalog's. Read: the hold adds the days to the
+time paid for, nothing is charged on the old day, the full price lands on
+the moved date, a revoke puts the original day back; Stripe issues a $0
+invoice the moment a trial is added to a running subscription (the cycle
+resets to it — no money, the admin Revenue panel lists it as "Trial start").
+
+```
+sandbox catalog: pro_monthly $15.00, plus_monthly $6.00, plus_annual $60.00
+
+1. Monthly Pro paid on day 0; 30 free days on day 5 → charged on day 60, not day 30
+  ✓ active, period ends 2026-12-05T23:59:20.000Z
+  ⏩ clock → 2026-11-10T23:59:20.000Z (day 5)
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 5, 2026, 11:59 PM UTC to Jan 4, 2027, 11:59 PM UTC — the free days are added to the time they paid for.
+  ✓ Stripe: trialing until 2027-01-04T23:59:20.000Z = period end + 30 d
+  ✓ metadata keeps the pre-hold end
+  ✓ overlay written to the same instant
+  ✓ grant row applied as subscription_hold
+  ✓ one $0 invoice for the hold itself, still one paid ($15.00, $0.00)
+  ⏩ clock → 2026-12-06T23:59:20.000Z (day 31: the old billing day has passed)
+  ✓ still ONE paid invoice ($15.00, $0.00) — nothing charged on the old day
+  ⏩ clock → 2027-01-05T01:59:20.000Z (day 60 + 2 h: the free days are over)
+  ✓ second paid invoice: $15.00 paid on 2027-01-04T23:59:20.000Z
+  ✓ charged at the moved date (period end + 30 d)
+  ✓ then monthly from there: next period end 2027-02-04T23:59:20.000Z
+
+2. A 7-day card-backed trial; 30 free days on day 2 → charged on day 37
+  ⏩ clock → 2026-11-07T23:59:42.000Z (day 2)
+  ✓ grantFreeDays: Their Stripe trial now ends on Dec 12, 2026, 11:59 PM UTC instead of Nov 12, 2026, 11:59 PM UTC; the first charge lands then.
+  ✓ trial now ends 2026-12-12T23:59:42.000Z = its own end + 30 d
+  ⏩ clock → 2026-11-13T23:59:42.000Z (day 8: the old trial end has passed)
+  ✓ no charge on the old trial end (2 $0 invoice(s))
+  ⏩ clock → 2026-12-13T01:59:42.000Z (day 37 + 2 h)
+  ✓ first charge $6.00 on 2026-12-12T23:59:42.000Z
+
+3. An annual Plus plan; 30 free days → the renewal moves by 30 days (asserted on the subscription)
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Nov 6, 2027, 12:00 AM UTC to Dec 6, 2027, 12:00 AM UTC — the free days are added to the time they paid for.
+  ✓ renewal moved to 2027-12-06T00:00:06.000Z = year end + 30 d
+  ✓ nothing charged or credited ($0.00, $60.00; the $0 one is the hold's own)
+  ✓ a second grant would stack on the moved end
+
+4. Scenario 1 revoked on day 10 → charged on day 30 after all
+  ⏩ clock → 2026-11-11T00:00:11.000Z (day 5)
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 6, 2026, 12:00 AM UTC to Jan 5, 2027, 12:00 AM UTC — the free days are added to the time they paid for.
+  ⏩ clock → 2026-11-16T00:00:11.000Z (day 10)
+  ✓ revokeFreeDays: Their complimentary access is cleared. Their Stripe trial is moved back to Dec 6, 2026, 12:00 AM UTC.
+  ✓ trial back on 2026-12-06T00:00:11.000Z, metadata cleared
+  ✓ overlay cleared, row revoked
+  ⏩ clock → 2026-12-06T02:00:11.000Z (day 30 + 2 h)
+  ✓ charged $15.00 on the original day
+
+All free-days scenarios passed.
+```

@@ -24,6 +24,8 @@ export function PlanStatusLine({
   priceLine,
   hasPaymentMethod,
   compExpiresAt,
+  heldByComp = false,
+  heldFrom = null,
 }: {
   status: PlanStatus;
   /** The plan the viewer is on now ("Plus"). */
@@ -32,6 +34,13 @@ export function PlanStatusLine({
   priceLine: string;
   hasPaymentMethod: boolean;
   compExpiresAt?: string | null;
+  /** The trial Stripe reports is FREE DAYS added to the plan (a comp or a
+   *  referral reward, lib/billing/free-days.ts): the copy never calls it
+   *  "your free trial". */
+  heldByComp?: boolean;
+  /** When those free days START, when that is still ahead — the plan is
+   *  paid through then (a hold given mid-period); null once they run. */
+  heldFrom?: string | null;
 }) {
   switch (status.kind) {
     case "delinquent":
@@ -87,6 +96,29 @@ export function PlanStatusLine({
         </>
       );
     case "trial":
+      if (heldByComp) {
+        const after = hasPaymentMethod
+          ? `, then ${planName} continues at ${priceLine} on the card below.`
+          : ". Add a card in the portal before then to keep the plan — without one it simply ends.";
+        if (heldFrom) {
+          return (
+            <>
+              {"Your plan is paid through "}
+              <Strong><LocalDate iso={heldFrom} format="stampYear" /></Strong>
+              {". Your free days run from then until "}
+              <Strong><LocalDate iso={status.trialEnd} format="stampYear" /></Strong>
+              {after}
+            </>
+          );
+        }
+        return (
+          <>
+            {"Your free days run until "}
+            <Strong><LocalDate iso={status.trialEnd} format="stampYear" /></Strong>
+            {after}
+          </>
+        );
+      }
       return (
         <>
           {"Your free trial ends on "}

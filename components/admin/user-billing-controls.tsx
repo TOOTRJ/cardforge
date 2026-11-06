@@ -1,7 +1,7 @@
 "use client";
 
-// Admin user billing controls — grant credits, comp a plan, override the
-// saved-card cap. Each form calls its server action in a transition and
+// Admin user billing controls — grant credits, give free days (a comp),
+// override the saved-card cap. Each form calls its server action in a transition and
 // router.refresh()es so the server-rendered snapshot above reflects the
 // new values immediately.
 
@@ -10,14 +10,17 @@ import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { formatUtcDate } from "@/lib/format/dates";
+import { formatUtcDate, formatUtcDateTime } from "@/lib/format/dates";
+import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAY_UNITS } from "@/lib/billing/free-days";
+import type { PlanGrantRow } from "@/lib/billing/plan-grants";
 import { Button } from "@/components/ui/button";
 import {
   adminBillingHealthAction,
   adminGrantCreditsAction,
+  adminGrantFreeDaysAction,
   adminResyncSubscriptionAction,
+  adminRevokeFreeDaysAction,
   adminSetCardLimitAction,
-  adminSetCompTierAction,
   type BillingHealthIssue,
 } from "@/lib/admin/user-actions";
 
@@ -107,51 +110,42 @@ export function GrantCreditsForm({ userId }: { userId: string }) {
   );
 }
 
-export function CompTierForm({
+const TIER_NAME = { plus: "Plus", pro: "Pro" } as const;
+const STAFF = "staff";
+
+/**
+ * Free days (owner 2026-11-05): a tier, a length in 30-day units — or "No
+ * end" for a STAFF account with no Stripe plan — and a note. The action
+ * decides what the days do (lib/billing/free-days.ts) and the toast says it.
+ */
+export function FreeDaysForm({
   userId,
-  compTier,
-  compExpiresAt,
-  requiresExpiry = false,
+  hasLiveSubscription,
 }: {
   userId: string;
-  compTier: "plus" | "pro" | null;
-  compExpiresAt: string | null;
-  /** The user is trialing or paying on Stripe: a comp needs an end date
-   *  (owner 2026-10-30; the action refuses one without — this says so first). */
-  requiresExpiry?: boolean;
+  /** Trialing, active or past due on Stripe: "No end" is not offered. */
+  hasLiveSubscription: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [tier, setTier] = useState<"" | "plus" | "pro">(compTier ?? "");
-  // datetime-local wants "YYYY-MM-DDTHH:mm" in local time.
-  const [expiry, setExpiry] = useState(
-    compExpiresAt ? toLocalInputValue(compExpiresAt) : "",
-  );
+  const [tier, setTier] = useState<"plus" | "pro">("plus");
+  const [length, setLength] = useState<string>("1");
+  const [note, setNote] = useState("");
 
   function submit() {
-    const expiresAt = tier && expiry ? new Date(expiry).toISOString() : null;
-    if (tier && requiresExpiry && !expiresAt) {
-      toast.error(
-        "This user has a live Stripe subscription (trialing or paying): set an expiry date. A comp with no end date is for free users only.",
-      );
-      return;
-    }
+    const units = length === STAFF ? null : Number(length);
     startTransition(async () => {
-      const result = await adminSetCompTierAction({
-        userId,
-        tier: tier === "" ? null : tier,
-        expiresAt,
-      });
+      const result = await adminGrantFreeDaysAction({ userId, tier, units, note: note.trim() || null });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(
-        tier === ""
-          ? "Comp cleared."
-          : `Comped ${tier === "plus" ? "Plus" : "Pro"}${expiresAt ? " until the set expiry" : ", no expiry"}.`,
-        result.stripeNote ? { description: result.stripeNote } : undefined,
-      );
+      const what =
+        units == null
+          ? `${TIER_NAME[tier]} with no end date (staff).`
+          : `${units * FREE_DAYS_UNIT_DAYS} free days of ${TIER_NAME[tier]}${result.endsAt ? ` — until ${formatUtcDateTime(result.endsAt)}` : ""}.`;
+      toast.success(what, { description: [result.stripeNote, result.warning].filter(Boolean).join(" ") });
+      setNote("");
       router.refresh();
     });
   }
@@ -165,33 +159,115 @@ export function CompTierForm({
       }}
     >
       <label className="flex flex-col gap-1">
-        <FieldLabel>Comp tier</FieldLabel>
-        <select
-          value={tier}
-          onChange={(e) => setTier(e.target.value as "" | "plus" | "pro")}
-          className={`${inputClass} w-32`}
-        >
-          <option value="">None</option>
+        <FieldLabel>Plan</FieldLabel>
+        <select value={tier} onChange={(e) => setTier(e.target.value as "plus" | "pro")} className={`${inputClass} w-28`}>
           <option value="plus">Plus</option>
           <option value="pro">Pro</option>
         </select>
       </label>
       <label className="flex flex-col gap-1">
-        <FieldLabel>{requiresExpiry ? "Expires (required — live subscription)" : "Expires (optional)"}</FieldLabel>
+        <FieldLabel>Free days</FieldLabel>
+        <select value={length} onChange={(e) => setLength(e.target.value)} className={`${inputClass} w-44`}>
+          {Array.from({ length: MAX_FREE_DAY_UNITS }, (_, i) => i + 1).map((n) => (
+            <option key={n} value={String(n)}>
+              {n * FREE_DAYS_UNIT_DAYS} days{n > 1 ? ` (${n} × ${FREE_DAYS_UNIT_DAYS})` : ""}
+            </option>
+          ))}
+          {hasLiveSubscription ? null : <option value={STAFF}>No end (staff)</option>}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1">
+        <FieldLabel>Note (optional)</FieldLabel>
         <input
-          type="datetime-local"
-          value={expiry}
-          onChange={(e) => setExpiry(e.target.value)}
-          disabled={tier === ""}
-          required={requiresExpiry && tier !== ""}
-          className={`${inputClass} disabled:opacity-50`}
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+          className={`${inputClass} w-56`}
+          placeholder="Why — kept with the grant"
         />
       </label>
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-        Save comp
+        Give free days
       </Button>
     </form>
+  );
+}
+
+const APPLIED_AS_LABEL: Record<PlanGrantRow["appliedAs"], string> = {
+  overlay: "perks overlay",
+  subscription_hold: "next charge moved",
+  below_plan: "below their plan — no change",
+};
+
+const SOURCE_LABEL: Record<PlanGrantRow["source"], string> = {
+  comp: "comp",
+  referral_friend: "referral (friend)",
+  referral_referrer: "referral (referrer)",
+  promo: "promotion",
+};
+
+/** The user's free-days grants, newest first; the newest applied one can be
+ *  revoked (the ones under it are folded into the overlay's remaining time). */
+export function PlanGrantsList({ rows, loadError }: { rows: PlanGrantRow[]; loadError: boolean }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const newestApplied = rows.find((row) => row.status === "applied")?.id ?? null;
+
+  function revoke(grantId: string) {
+    if (!window.confirm("Revoke these free days? The overlay shrinks by them and a held Stripe trial moves back (it may end — and charge — now).")) return;
+    startTransition(async () => {
+      const result = await adminRevokeFreeDaysAction({ grantId });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Free days revoked.", { description: [result.note, result.warning].filter(Boolean).join(" ") });
+      router.refresh();
+    });
+  }
+
+  if (loadError) return <p className="text-sm text-danger">The grants couldn&apos;t be read (logged).</p>;
+  if (rows.length === 0) return <p className="text-sm text-subtle">No free days given yet.</p>;
+  return (
+    <ul className="flex flex-col divide-y divide-border/50 text-sm">
+      {rows.map((row) => (
+        <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-foreground">
+              {row.units == null ? `${TIER_NAME[row.tier]}, no end (staff)` : `${row.units * FREE_DAYS_UNIT_DAYS} days of ${TIER_NAME[row.tier]}`}
+              <span className="text-subtle"> · {SOURCE_LABEL[row.source]} · {APPLIED_AS_LABEL[row.appliedAs]}</span>
+            </span>
+            <span className="text-xs text-subtle">
+              {formatUtcDateTime(row.startsAt)}
+              {row.endsAt ? ` → ${formatUtcDateTime(row.endsAt)}` : ""}
+              {row.grantedBy?.username ? ` · by @${row.grantedBy.username}` : ""}
+              {row.note ? ` · ${row.note}` : ""}
+              {row.status === "failed" && row.stripeError ? ` · ${row.stripeError}` : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                row.status === "applied"
+                  ? "text-xs text-success"
+                  : row.status === "failed"
+                    ? "text-xs text-danger"
+                    : "text-xs text-subtle"
+              }
+            >
+              {row.status}
+            </span>
+            {row.id === newestApplied ? (
+              <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => revoke(row.id)}>
+                Revoke
+              </Button>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -267,13 +343,6 @@ export function CardLimitForm({
   );
 }
 
-/** ISO timestamp → "YYYY-MM-DDTHH:mm" in the viewer's local time. */
-function toLocalInputValue(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 // ---------------------------------------------------------------------------
 // Subscription resync — rewrite the profile from the customer's live Stripe

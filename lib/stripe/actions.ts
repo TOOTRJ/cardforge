@@ -500,7 +500,7 @@ export async function createCheckoutSessionAction(
           ? null
           : Math.max(compHold, withTrial ? trialDaysEnd : 0, carryTrialEnd ?? 0);
       // The trial end the subscription would have had WITHOUT the comp —
-      // what clearing or shortening the comp puts back (compTrialChangeFor
+      // what revoking the free days puts back (lib/billing/free-days.ts planRevoke
       // reads it): the 7-day trial's end, a carried trial's end, or — no
       // trial at all — the checkout itself (cleared → charged at once).
       // Also what tells a cancel during the hold from a lapsed trial

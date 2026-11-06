@@ -37,9 +37,14 @@ import {
 // refill. A new account gets SIGNUP_CREDITS once (the `profiles.credits`
 // default) and after that only a pack or a plan adds credits — the
 // out-of-credits moment is where the upgrade modal and packs sell. The daily
-// sweep still walks every profile (an unexpired admin comp on a free account
-// is owed its tier), but `refillTierFor` answers null for plain free
+// sweep walks every profile, but `refillTierFor` answers null for free
 // accounts and MONTHLY_CREDITS.free is 0, so nothing is granted to them.
+//
+// A COMP (the perks overlay, `profiles.comp_tier`) is NOT counted here since
+// migration 0176: its credits are the free-days grant's own — one allotment
+// per 30 days of the grant, by lib/billing/free-days-credits.ts (the cron
+// runs both sweeps). The old rule ("an unexpired comp is owed its tier every
+// calendar month") banked two months for a 30-day grant across a month end.
 //
 // WHO grants the base allotment (billing audit 2026-11-05, P2-1; migration
 // 0175 `profiles.billing_interval`): the calendar-month key handed out two
@@ -55,8 +60,8 @@ import {
 //   • an ANNUAL plan (one payment a year) is the cron's: every calendar
 //     month, plus the PREVIOUS month when it has no base row and the plan
 //     already ran then (a cron outage spanning a month used to lose it).
-//   • an unknown interval (a row synced before 0175, a comp on a free
-//     account) keeps the old rule: every calendar month — so a row synced
+//   • an unknown interval (a row synced before 0175) keeps the old rule:
+//     every calendar month — so a row synced
 //     before 0175 can still see the Jan 31 / Feb 1 early grant until its
 //     next Stripe event (accepted); a cron outage spanning TWO whole months
 //     loses an annual plan the earlier one (only the previous month is
@@ -100,11 +105,6 @@ export type RefillProfileRow = {
   id: string;
   subscription_tier: string | null;
   subscription_status: string | null;
-  /** Admin comp (lib/billing/entitlements.ts): an unexpired comp is owed its
-   *  tier's allotment like a paying subscriber — the pricing page promises
-   *  the credits with the plan, and a comp IS the plan. */
-  comp_tier?: string | null;
-  comp_expires_at?: string | null;
   is_admin: boolean | null;
   created_at: string | null;
   /** The live plan's interval (0175): "month" | "year"; null = unknown. */
@@ -124,24 +124,18 @@ export type RefillPlan = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * How the sweep grants this profile `tier` in `period`. A comp's allotment
- * (the owed tier comes from the comp, not the subscription) is the cron's
- * every month, whatever the subscription's interval.
- */
+/** How the sweep grants this profile `tier` in `period` (see the header). */
 export function refillPlanFor(
   profile: RefillProfileRow,
-  tier: PlanTier,
+  _tier: PlanTier,
   now: Date = new Date(),
 ): RefillPlan {
-  const comp = activeCompTier(profile, now);
   const subscribed: PlanTier | null =
-    profile.subscription_status === "active" &&
+    (profile.subscription_status === "active" || profile.subscription_status === "trialing") &&
     (profile.subscription_tier === "plus" || profile.subscription_tier === "pro")
       ? profile.subscription_tier
       : null;
-  const fromComp = comp != null && (!subscribed || TIER_RANK[comp] > TIER_RANK[subscribed]) && comp === tier;
-  if (fromComp || !subscribed) return { current: "always", backfillPrevious: false };
+  if (!subscribed) return { current: "always", backfillPrevious: false };
   if (profile.billing_interval === "month") return { current: "backstop", backfillPrevious: false };
   if (profile.billing_interval === "year") {
     // The previous month is owed only when the plan already ran then: its
@@ -154,43 +148,55 @@ export function refillPlanFor(
   return { current: "always", backfillPrevious: false };
 }
 
-const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
-
-function activeCompTier(profile: RefillProfileRow, now: Date): PlanTier | null {
-  const comp = profile.comp_tier;
-  if (comp !== "plus" && comp !== "pro") return null;
-  if (profile.comp_expires_at && new Date(profile.comp_expires_at) <= now) return null;
-  return comp;
-}
-
 /**
  * Which tier's allotment a profile is owed this period, or null when the
  * sweep should leave it alone:
  *   • admins — unlimited credits, a grant is ledger noise;
  *   • trialing — a trial's single grant lands on subscription.created
  *     (see subscription-sync.ts); refilling here let a no-card 7-day trial
- *     spanning a month boundary bank a second allotment without paying;
- *   • active plus/pro → that tier; an unexpired admin comp counts the same
- *     way (higher of the two);
- *   • everyone else (free, lapsed, canceled) → null: Free doesn't refill
- *     (SIGNUP_CREDITS once at signup, owner decision 2026-09-24).
+ *     spanning a month boundary bank a second allotment without paying —
+ *     and a plan HELD by free days reads trialing too: its grant's own
+ *     allotments cover the held days (lib/billing/free-days-credits.ts);
+ *   • active plus/pro → that tier;
+ *   • everyone else (free, lapsed, canceled, a comp overlay) → null: Free
+ *     doesn't refill (SIGNUP_CREDITS once at signup, owner decision
+ *     2026-09-24), and a comp's credits are its grant's.
  */
 export function refillTierFor(
   profile: RefillProfileRow,
   _period: string,
-  now: Date = new Date(),
+  opts: {
+    /** A free-days HOLD on this plan has not started yet (its `starts_at`
+     *  is ahead): Stripe reads `trialing` from the moment the hold is
+     *  written, but the time until the hold's start is PAID time — an
+     *  annual plan held 200 days before its renewal is still owed its
+     *  monthly allotments until then. */
+    heldBeforeStart?: boolean;
+  } = {},
 ): PlanTier | null {
   if (profile.is_admin) return null;
   const status = profile.subscription_status ?? null;
-  const comp = activeCompTier(profile, now);
-  if (status === "trialing" && !comp) return null;
+  const paying = status === "active" || (status === "trialing" && opts.heldBeforeStart === true);
+  if (!paying) return null;
   const tier = profile.subscription_tier ?? "free";
-  const subscribed: PlanTier | null =
-    status === "active" && (tier === "plus" || tier === "pro") ? tier : null;
-  // An unexpired comp can only ADD: the higher of comp and live subscription.
-  const owed =
-    comp && (!subscribed || TIER_RANK[comp] > TIER_RANK[subscribed]) ? comp : subscribed;
-  return owed ?? null;
+  return tier === "plus" || tier === "pro" ? tier : null;
+}
+
+/** The users whose applied free-days HOLD starts in the future (the paid
+ *  time before it — see refillTierFor). A failed read answers nobody: the
+ *  allotment waits a day, never doubles. */
+async function usersHeldBeforeStart(admin: CreditGrantClient, now: Date): Promise<Set<string>> {
+  const { data, error } = await admin
+    .from("plan_grants")
+    .select("user_id")
+    .eq("status", "applied")
+    .eq("applied_as", "subscription_hold")
+    .gt("starts_at", now.toISOString());
+  if (error) {
+    console.error(`[refill-credits] plan_grants hold read failed: ${error.message}`);
+    return new Set();
+  }
+  return new Set(((data ?? []) as Array<{ user_id: string }>).map((row) => row.user_id));
 }
 
 /**
@@ -207,16 +213,17 @@ export function refillTierFor(
 export async function refillActiveSubscribers(
   admin: CreditGrantClient,
   period: string,
-  opts: { onGrantFailed?: (userId: string, error: string) => void } = {},
+  opts: { onGrantFailed?: (userId: string, error: string) => void; now?: Date } = {},
 ): Promise<RefillSweepResult> {
   let processed = 0;
   let granted = 0;
   let failed = 0;
+  const heldBeforeStart = await usersHeldBeforeStart(admin, opts.now ?? new Date());
   for (let from = 0; ; from += REFILL_PAGE_SIZE) {
     const { data: page, error } = await admin
       .from("profiles")
       .select(
-        "id, subscription_tier, subscription_status, comp_tier, comp_expires_at, is_admin, created_at, billing_interval, current_period_end",
+        "id, subscription_tier, subscription_status, is_admin, created_at, billing_interval, current_period_end",
       )
       .order("id", { ascending: true })
       .range(from, from + REFILL_PAGE_SIZE - 1);
@@ -225,9 +232,9 @@ export async function refillActiveSubscribers(
       return { ok: false, error: error.message };
     }
     for (const profile of (page ?? []) as RefillProfileRow[]) {
-      const tier = refillTierFor(profile, period);
+      const tier = refillTierFor(profile, period, { heldBeforeStart: heldBeforeStart.has(profile.id) });
       if (!tier) continue;
-      const plan = refillPlanFor(profile, tier);
+      const plan = refillPlanFor(profile, tier, opts.now);
       const periods: Array<{ period: string; base: "always" | "backstop" }> = [
         ...(plan.backfillPrevious ? [{ period: previousCreditPeriod(), base: "always" as const }] : []),
         { period, base: plan.current },

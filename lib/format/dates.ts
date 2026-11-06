@@ -33,6 +33,9 @@ export const DATE_FORMATS = {
   short: { month: "short", day: "numeric", year: "numeric" },
   /** A log row's moment, "Nov 7, 6:31 PM" — the usage page's ledger. */
   stamp: { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
+  /** An instant exact to the minute with its year, "December 10, 2026 at
+   *  3:14 PM" — the end of free days (lib/billing/free-days.ts). */
+  stampYear: { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export type DateFormat = keyof typeof DATE_FORMATS;

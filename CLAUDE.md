@@ -1786,7 +1786,22 @@ Rules and gotchas:
   picture, env matrix, sandbox ids and the standards comparison:
   `docs/BILLING.md`. `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
-  them "Manage plan" opened a portal that doesn't exist (2026-09-22). One
+  them "Manage plan" opened a portal that doesn't exist (2026-09-22). A COMP
+  is FREE 30 DAYS (owner 2026-11-05, migration 0176 `plan_grants`): N units
+  of exactly 30 × 86 400 s of a tier with its normal credits — ONE decision,
+  `planFreeDays` (`lib/billing/free-days.ts`), ONE writer, `grantFreeDays`
+  (`free-days-apply.ts`; the referral reward will call it too). On a live,
+  renewing plan or trial the days are ADDED to the time paid for (`trial_end`
+  = period end + days, `proration_behavior: none` — never a balance credit or
+  a coupon: no money moves for free days); otherwise the perks overlay
+  (`comp_tier` / `comp_expires_at`) from the later of now and its end; a
+  grant below the plan paid for is recorded and changes nothing; "no end"
+  is staff only (no Stripe plan). Credits are the grant's own — one
+  allotment per 30 days (`grant:<id>:<k>`, `free-days-credits.ts`, run by
+  the refill cron), never the calendar month's. Every surface says "free
+  days", never "a free month"; the end is exact to the second, printed with
+  its time (`<LocalDate format="stampYear">`). Revoke = the newest grant
+  only (`planRevoke`). One
   trial per account, Plus or Pro: `createCheckoutSessionAction` grants
   `trial_period_days` only when the profile has never synced a subscription
   AND Stripe's history (status "all") is empty. The trial REQUIRES A CARD

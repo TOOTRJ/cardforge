@@ -99,23 +99,33 @@ export function describeNotification(
     case "comp_plan": {
       const tier = str(payload.tier);
       const expiresAt = str(payload.expiresAt);
-      const trialEnd = str(payload.trialEnd);
-      const creditCents = num(payload.creditCents);
+      const days = num(payload.days);
+      const holdEndsAt = str(payload.holdEndsAt);
+      const was = str(payload.was);
+      const revoked = num(payload.revoked) === 1;
+      const name = tier ? (TIER_LABEL[tier] ?? tier) : "";
+      // Free 30 days (0176): the days are ADDED to a live plan's paid time —
+      // the next charge moves; a trial runs longer. Never "your trial".
+      const held = holdEndsAt
+        ? was === "trialing"
+          ? ` Your free trial now runs until ${formatShortDate(holdEndsAt)}; nothing is charged before then.`
+          : ` They're added to the time you've paid for: your next charge moves to ${formatShortDate(holdEndsAt)}.`
+        : "";
+      let body: string;
+      if (!tier) body = "ended your complimentary plan access.";
+      else if (revoked) body = `shortened your complimentary ${name} access — it now ends ${expiresAt ? formatShortDate(expiresAt) : "soon"}.`;
+      else if (days != null && days > 0) {
+        body = `gave you ${days} free days of ${name}${expiresAt ? ` — until ${formatShortDate(expiresAt)}` : ""} — enjoy.${held}`;
+      } else {
+        // The legacy shape (a comp set before 0176), and an open-ended grant.
+        const trialEnd = str(payload.trialEnd);
+        body = `gave you ${name} plan access${expiresAt ? ` until ${formatShortDate(expiresAt)}` : ""} — enjoy.${
+          trialEnd ? ` Your free trial now runs until ${formatShortDate(trialEnd)}; nothing is charged before then.` : ""
+        }`;
+      }
       return {
         subject: "PipGlyph team",
-        body: tier
-          ? `gave you ${TIER_LABEL[tier] ?? tier} plan access${
-              expiresAt ? ` until ${formatShortDate(expiresAt)}` : ""
-            } — enjoy.${
-              // A comp holds a card-backed trial: the first charge moves too.
-              trialEnd ? ` Your free trial now runs until ${formatShortDate(trialEnd)}; nothing is charged before then.` : ""
-            }${
-              // A paying user's comp period, credited to their billing balance.
-              creditCents != null && creditCents > 0
-                ? ` We've put ${formatMoney(creditCents, str(payload.currency) ?? "usd")} on your billing balance, so the comp period costs you nothing.`
-                : ""
-            }`
-          : "ended your complimentary plan access.",
+        body,
         href: "/settings",
       };
     }
@@ -423,8 +433,8 @@ export function describeNotification(
       if (kind === "paying") {
         const next = str(payload.nextChargeAt);
         const charge = next
-          ? `your next invoice, on ${formatShortDate(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}, less any comp credit still on your balance.`
-          : `invoices after that are charged as usual${price && !goesBack ? ` (${price})` : ""}; any comp credit still on your balance comes off first.`;
+          ? `your next invoice, on ${formatShortDate(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}.`
+          : `invoices after that are charged as usual${price && !goesBack ? ` (${price})` : ""}.`;
         return {
           subject: `Your complimentary ${tier}`,
           body: `ends ${ends};${back} ${charge}`,

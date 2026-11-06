@@ -18,8 +18,9 @@ import { Button } from "@/components/ui/button";
 import {
   BillingHealthPanel,
   CardLimitForm,
-  CompTierForm,
+  FreeDaysForm,
   GrantCreditsForm,
+  PlanGrantsList,
   ResyncSubscriptionButton,
 } from "@/components/admin/user-billing-controls";
 import { RevenuePanel } from "@/components/admin/revenue-panel";
@@ -56,7 +57,7 @@ import { cn } from "@/lib/utils";
 import { isUuid } from "@/lib/ids";
 import { planEndingAdminLabel, planEndingOf } from "@/lib/billing/plan-ending";
 import { cancellationStats } from "@/lib/admin/user-cancellation";
-import { compNeedsEndDate } from "@/lib/billing/comp-stripe";
+import { listPlanGrants } from "@/lib/billing/plan-grants";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -396,7 +397,7 @@ function PlanBadges({ user }: { user: AdminUserRow }) {
 
 async function UserDetail({ userId, backHref }: { userId: string; backHref: string }) {
   const admin = createAdminClient();
-  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList] =
+  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList, grants] =
     await Promise.all([
       admin
         .from("profiles")
@@ -415,6 +416,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
         .order("created_at", { ascending: false })
         .limit(12),
       listThreadsForUser(userId),
+      listPlanGrants(admin, userId),
     ]);
 
   if (ledgerError) console.error("[admin/users] credit ledger read failed:", ledgerError.message);
@@ -561,15 +563,14 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             </section>
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle
-                title="Comp a plan"
-                hint="The higher of the comp and the Stripe tier applies while unexpired. None clears the comp and its expiry. On a live Stripe plan the comp needs an expiry: a trial is held until it ends, and an active plan gets the comp period's price on its Stripe balance (the unused part comes back if it is shortened or cleared)."
+                title="Free days (comp)"
+                hint="Whole 30-day units of a plan with its normal AI credits, exact to the second. On a live, renewing Stripe plan or trial the days are ADDED to the time paid for (the next charge moves out by them; nothing is credited or refunded). With no live plan they are a perks overlay from now (or from a cancelled plan's end). Below the plan they pay for: recorded, no change. 'No end' is for staff accounts with no Stripe plan. Revoke takes the newest grant back."
               />
-              <CompTierForm
+              <FreeDaysForm
                 userId={user.id}
-                compTier={compTier}
-                compExpiresAt={user.comp_expires_at}
-                requiresExpiry={compNeedsEndDate(user.subscription_status)}
+                hasLiveSubscription={["trialing", "active", "past_due", "unpaid"].includes(user.subscription_status ?? "")}
               />
+              <PlanGrantsList rows={grants.rows} loadError={grants.loadError} />
             </section>
             <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
               <SectionTitle

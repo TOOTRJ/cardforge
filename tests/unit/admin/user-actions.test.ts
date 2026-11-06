@@ -24,8 +24,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
-const compStripe = vi.hoisted(() => ({ applyCompToSubscription: vi.fn() }));
-vi.mock("@/lib/billing/comp-stripe-apply", () => compStripe);
+const freeDays = vi.hoisted(() => ({ grantFreeDays: vi.fn(), revokeFreeDays: vi.fn() }));
+vi.mock("@/lib/billing/free-days-apply", () => freeDays);
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: vi.fn(),
   grantCreditsForSync: vi.fn(),
@@ -36,12 +36,16 @@ vi.mock("@/lib/stripe/subscription-sync", () => ({
 
 import {
   adminGrantCreditsAction,
+  adminGrantFreeDaysAction,
+  adminRevokeFreeDaysAction,
   adminSetCardLimitAction,
-  adminSetCompTierAction,
 } from "@/lib/admin/user-actions";
 
-function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null } = {}) {
+function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null; grantUser?: string | null } = {}) {
   const stub = chainClient((table, calls): ChainAnswer => {
+    if (table === "plan_grants" && called(calls, "select")) {
+      return { data: opts.grantUser === undefined ? { user_id: TARGET } : opts.grantUser ? { user_id: opts.grantUser } : null };
+    }
     if (table === "profiles" && called(calls, "select")) {
       const id = calls.find((c) => c.method === "eq")?.args[1];
       return {
@@ -66,9 +70,20 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
-  compStripe.applyCompToSubscription
-    .mockReset()
-    .mockResolvedValue({ change: null, trialEnd: null, note: null, failed: false });
+  freeDays.grantFreeDays.mockReset().mockResolvedValue({
+    ok: true,
+    grantId: "g1",
+    plan: { kind: "overlay", why: "no_plan" },
+    endsAt: "2026-12-05T12:00:00.000Z",
+    holdEndsAt: null,
+    note: "Pro until Dec 5, 2026, 12:00 PM UTC (no Stripe subscription: a perks overlay).",
+  });
+  freeDays.revokeFreeDays.mockReset().mockResolvedValue({
+    ok: true,
+    overlay: { comp_tier: null, comp_expires_at: null },
+    chargesNow: false,
+    note: "Their complimentary access is cleared.",
+  });
 });
 
 describe("admin gate", () => {
@@ -141,109 +156,105 @@ describe("adminGrantCreditsAction", () => {
   });
 });
 
-describe("adminSetCompTierAction", () => {
-  it("writes the tier + expiry and tells the user", async () => {
+describe("adminGrantFreeDaysAction", () => {
+  it("grants through lib/billing/free-days-apply (source comp, the admin as granter) and tells the user the days and their end", async () => {
     const stub = db();
-    const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
-    expect(await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt })).toEqual({ ok: true, stripeNote: null });
-    const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
-    expect(payloadOf(update.calls, "update")).toEqual({ comp_tier: "pro", comp_expires_at: expiresAt });
-    expect(called(update.calls, "eq", "id")).toBe(true);
-    expect(notification(stub)).toEqual({
-      recipient_id: TARGET,
-      actor_id: ADMIN,
-      type: "comp_plan",
-      payload: { tier: "pro", expiresAt },
-    });
-    // The comp is applied to Stripe AFTER the row is written.
-    expect(compStripe.applyCompToSubscription).toHaveBeenCalledWith(stub.client, TARGET, { tier: "pro", expiresAt });
-  });
-  it("a comp that held the user's trial says so to the admin and names the trial's new end to the user", async () => {
-    const stub = db();
-    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
-    compStripe.applyCompToSubscription.mockResolvedValue({
-      change: { kind: "set_trial_end", trialEnd: 1, beforeComp: "0", reason: "comp_holds_trial" },
-      trialEnd: expiresAt,
-      note: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
-      failed: false,
-    });
-    expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).toEqual({
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "pro", units: 1, note: "  thanks for the bug report " })).toEqual({
       ok: true,
-      stripeNote: "Their Stripe trial now ends when the comp ends — the first charge lands then.",
+      endsAt: "2026-12-05T12:00:00.000Z",
+      stripeNote: "Pro until Dec 5, 2026, 12:00 PM UTC (no Stripe subscription: a perks overlay).",
     });
-    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, trialEnd: expiresAt } });
-  });
-  it("a comp RELEASED from a trial never names a trial end to the user (owner answer 3)", async () => {
-    const stub = db({ subscriptionStatus: "trialing" });
-    compStripe.applyCompToSubscription.mockResolvedValue({
-      change: { kind: "set_trial_end", trialEnd: "now", beforeComp: "", reason: "comp_released_trial" },
-      trialEnd: new Date().toISOString(),
-      note: "Their trial had already passed its own end, so it ends now and is charged.",
-      failed: false,
+    expect(freeDays.grantFreeDays).toHaveBeenCalledWith(stub.client, {
+      userId: TARGET,
+      tier: "pro",
+      units: 1,
+      source: "comp",
+      grantedBy: ADMIN,
+      note: "thanks for the bug report",
     });
-    await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null });
     expect(notification(stub)).toEqual({
       recipient_id: TARGET,
       actor_id: ADMIN,
       type: "comp_plan",
-      payload: { tier: null, expiresAt: null },
+      payload: { tier: "pro", days: 30, expiresAt: "2026-12-05T12:00:00.000Z" },
     });
   });
-  it("a paying user's comp credit is named to the user (amount + currency)", async () => {
-    const stub = db({ subscriptionStatus: "active" });
-    const expiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
-    compStripe.applyCompToSubscription.mockResolvedValue({
-      change: null,
-      trialEnd: null,
-      credit: { change: { kind: "settle" }, postedCents: 600, keptCents: 0, currency: "usd" },
-      note: "Credited $6 …",
-      failed: false,
+  it("a HOLD (the days added to a live plan) names the moved charge to the user — never a trial end for an active plan", async () => {
+    const stub = db();
+    freeDays.grantFreeDays.mockResolvedValue({
+      ok: true,
+      grantId: "g1",
+      plan: { kind: "hold", was: "active" },
+      endsAt: "2027-01-04T12:00:00.000Z",
+      holdEndsAt: "2027-01-04T12:00:00.000Z",
+      note: "Their Stripe plan's next charge moves …",
     });
-    await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt });
-    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt, creditCents: 600, currency: "usd" } });
+    const result = await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null });
+    expect(result).toMatchObject({ ok: true, stripeNote: "Their Stripe plan's next charge moves …" });
+    expect(notification(stub)).toMatchObject({
+      payload: { tier: "plus", days: 30, expiresAt: "2027-01-04T12:00:00.000Z", holdEndsAt: "2027-01-04T12:00:00.000Z", was: "active" },
+    });
   });
-  it.each(["trialing", "active", "past_due"])(
-    "a %s user's comp needs an end date (owner answer 2): refused, nothing written",
-    async (status) => {
-      const stub = db({ subscriptionStatus: status });
-      const result = await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt: null });
-      expect(result).toEqual({ ok: false, error: expect.stringMatching(/set an expiry date/) });
-      expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
-      expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
-      // …and not past 730 days either.
-      const far = new Date(Date.now() + 731 * 86_400_000).toISOString();
-      expect(await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt: far })).toEqual({
-        ok: false,
-        error: expect.stringMatching(/at most 730 days/),
-      });
-      // Clearing is always allowed.
-      expect((await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt: null })).ok).toBe(true);
-    },
-  );
-  it("a FREE user (or a cancelled-and-ended one) may still be comped with no expiry", async () => {
-    for (const status of [null, "canceled"]) {
-      db({ subscriptionStatus: status });
-      expect((await adminSetCompTierAction({ userId: TARGET, tier: "pro", expiresAt: null })).ok).toBe(true);
+  it("an open-ended (staff) grant sends no day count", async () => {
+    const stub = db();
+    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "overlay", why: "staff" }, endsAt: null, holdEndsAt: null, note: "Pro with no end date (staff)." });
+    await adminGrantFreeDaysAction({ userId: TARGET, tier: "pro", units: null, note: null });
+    expect(freeDays.grantFreeDays).toHaveBeenCalledWith(stub.client, expect.objectContaining({ units: null }));
+    expect(notification(stub)).toMatchObject({ payload: { tier: "pro", days: null, expiresAt: null } });
+  });
+  it("the writer's refusal is the admin's error, and the user is not told", async () => {
+    const stub = db();
+    freeDays.grantFreeDays.mockResolvedValue({ ok: false, error: "Open-ended (staff) access is for an account with no Stripe subscription. Give dated free days instead." });
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: null, note: null })).toEqual({
+      ok: false,
+      error: expect.stringMatching(/staff/),
+    });
+    expect(stub.forTable("notifications")).toHaveLength(0);
+  });
+  it("validates the units (1 … 12 whole units) and the note before touching anything", async () => {
+    db();
+    for (const units of [0, 13, 1.5]) {
+      expect((await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units, note: null })).ok).toBe(false);
     }
+    expect((await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: "x".repeat(501) })).ok).toBe(false);
+    expect(freeDays.grantFreeDays).not.toHaveBeenCalled();
   });
-  it("a failed profile write never touches Stripe", async () => {
-    db({ updateError: "nope" });
-    const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
-    expect((await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt })).ok).toBe(false);
-    expect(compStripe.applyCompToSubscription).not.toHaveBeenCalled();
+  it("a warning from the writer rides on the result", async () => {
+    db();
+    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "hold", was: "trialing" }, endsAt: "2026-12-12T00:00:00.000Z", holdEndsAt: "2026-12-12T00:00:00.000Z", note: "n", warning: "The profile's dates catch up with the next webhook (or press Resync)." });
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null })).toMatchObject({ ok: true, warning: expect.stringMatching(/Resync/) });
   });
-  it("clearing the tier always clears the expiry with it", async () => {
+});
+
+describe("adminRevokeFreeDaysAction", () => {
+  const GRANT = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  it("revokes through the writer and tells the user their access ended", async () => {
     const stub = db();
-    const expiresAt = new Date(Date.now() + 86_400_000).toISOString();
-    await adminSetCompTierAction({ userId: TARGET, tier: null, expiresAt });
-    const update = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
-    expect(payloadOf(update.calls, "update")).toEqual({ comp_tier: null, comp_expires_at: null });
+    expect(await adminRevokeFreeDaysAction({ grantId: GRANT })).toEqual({ ok: true, note: "Their complimentary access is cleared." });
+    expect(freeDays.revokeFreeDays).toHaveBeenCalledWith(stub.client, { grantId: GRANT, revokedBy: ADMIN });
+    expect(notification(stub)).toEqual({ recipient_id: TARGET, actor_id: ADMIN, type: "comp_plan", payload: { tier: null } });
   });
-  it("rejects an expiry in the past", async () => {
+  it("a revoke that leaves other free days says the access was shortened, with its new end", async () => {
     const stub = db();
-    const result = await adminSetCompTierAction({ userId: TARGET, tier: "plus", expiresAt: "2020-01-01T00:00:00Z" });
-    expect(result).toEqual({ ok: false, error: "Expiry must be in the future." });
-    expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
+    freeDays.revokeFreeDays.mockResolvedValue({
+      ok: true,
+      overlay: { comp_tier: "plus", comp_expires_at: "2026-12-20T00:00:00.000Z" },
+      chargesNow: false,
+      note: "Their complimentary Plus now ends on Dec 20, 2026, 12:00 AM UTC.",
+    });
+    await adminRevokeFreeDaysAction({ grantId: GRANT });
+    expect(notification(stub)).toMatchObject({ payload: { tier: "plus", expiresAt: "2026-12-20T00:00:00.000Z", revoked: 1 } });
+  });
+  it("the writer's refusal is the admin's error; nobody is told", async () => {
+    const stub = db();
+    freeDays.revokeFreeDays.mockResolvedValue({ ok: false, error: "Only the newest grant can be revoked. Revoke the later ones first." });
+    expect(await adminRevokeFreeDaysAction({ grantId: GRANT })).toEqual({ ok: false, error: expect.stringMatching(/newest/) });
+    expect(stub.forTable("notifications")).toHaveLength(0);
+  });
+  it("rejects a non-uuid grant id before anything", async () => {
+    db();
+    expect((await adminRevokeFreeDaysAction({ grantId: "nope" })).ok).toBe(false);
+    expect(freeDays.revokeFreeDays).not.toHaveBeenCalled();
   });
 });
 

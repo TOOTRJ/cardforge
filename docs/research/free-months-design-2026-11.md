@@ -213,3 +213,15 @@ simply runs 30 days longer).
 time: `trial_end` = (current period end, or the running trial's end) + 30 d;
 a user with no plan starts the overlay now. Design approved; precision exact
 to the second, shown with the time in the viewer's zone.
+
+### 6.5 Shipped (PR D, 2026-11-05)
+
+`plan_grants` (migration 0176), `lib/billing/free-days.ts` (the decision),
+`free-days-apply.ts` (the writer and the revoke), `free-days-credits.ts`
+(the per-30-days allotments, run by the refill cron), the admin form in
+30-day units with "No end (staff)", the copy. One departure from §2/§6:
+revoking is supported (the NEWEST applied grant), since the hand-typed comp
+could be cleared; and a staff (open-ended) grant still gets the tier's
+allotment every 30 days — removing credits from the accounts that have
+them today was not asked for. docs/BILLING.md "Free 30 days" is the
+reference now.

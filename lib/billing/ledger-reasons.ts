@@ -12,6 +12,8 @@ const LABELS: Record<string, string> = {
   admin_grant: "Credits added by the PipGlyph team",
   signup_grant: "Welcome credits",
   subscription_refill: "Monthly plan credits",
+  // A free-days grant's allotment (0176: comps, referral rewards).
+  plan_grant: "Complimentary plan credits",
   trial_grant: "Free-trial credits",
   pack_purchase: "Credit pack",
   refund: "Refund",
