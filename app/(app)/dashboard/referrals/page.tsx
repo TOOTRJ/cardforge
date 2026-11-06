@@ -102,9 +102,8 @@ export default async function ReferralsPage() {
                   PipGlyph account, then confirms their email.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">2. Your friend saves their first card</span> within{" "}
-                  {REFERRAL_ACTIVATION_WINDOW_DAYS} days of joining. That first saved card is what earns the reward — signing up
-                  alone doesn&apos;t.
+                  <span className="font-semibold text-foreground">2. Your friend saves their first card</span>
+                  {` within ${REFERRAL_ACTIVATION_WINDOW_DAYS} days of joining. That first saved card is what earns the reward — signing up alone doesn't.`}
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">3. You both get your reward</span>
