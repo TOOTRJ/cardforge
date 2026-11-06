@@ -146,7 +146,7 @@ export const AI_GENERATOR_FAQ: FaqEntry[] = [
   {
     id: "is-the-ai-generator-free",
     q: "Is the AI random card generator free?",
-    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account starts with 5 credits (one credit designs and illustrates one card, or buys a batch of three text-only ideas) and doesn't refill. Plus and Pro refill with 30 and 100 credits a month, and anyone can buy a top-up pack that never expires — Plus and Pro members pay 20% less for packs. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
+    a: "Yes. Every AI tool is available on the free plan — AI generation runs on credits, and a free account starts with 5 credits (one credit designs and illustrates one card, or buys a batch of three text-only ideas) — a start, not a monthly allowance. Plus comes with 60 credits and Pro with 120, once, with the first payment, and anyone can buy a top-up pack that never expires — Plus and Pro members pay 20% less for packs. The only Pro-exclusive AI features are the deck-aware ones: designing a card for a specific deck and theming ideas to a deck.",
   },
   {
     id: "ai-card-balance",
@@ -362,7 +362,7 @@ const CREDITS_FAQ: FaqEntry[] = [
   {
     id: "credit-balance",
     q: "Where do I see my credits, and do they expire?",
-    a: "When you're signed in, your balance shows in the site header (in the menu on a phone) and under Billing in Settings. Credits from a pack never expire and stack with any plan's credits. A free account's 5 starting credits don't refill; Plus adds 30 credits a month and Pro 100.",
+    a: "When you're signed in, your balance shows in the site header (in the menu on a phone) and under Billing in Settings. Credits from a pack never expire and stack with any plan's credits. A free account's 5 starting credits are a one-time start; Plus comes with 60 credits and Pro with 120, once, with the first payment.",
   },
 ];
 
@@ -397,7 +397,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   {
     id: "is-pipglyph-free",
     q: "Is PipGlyph free?",
-    a: `Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving up to ${cardCap("free")} cards, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). While a Plus or Pro plan is active your account has the plan's full card limit — Plus holds ${cardCap("plus")} saved cards, Pro holds them all; both add monthly credits, watermark-free hi-res downloads, print files (800 ppi, bleed, MakePlayingCards) and print-ready PDFs, and Pro adds deck-aware AI design, print sheets and whole-deck export. Nothing is ever deleted: when a plan ends your cards stay — viewable, editable, downloadable — and saving a new one needs room under your current plan's cap.`,
+    a: `Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving up to ${cardCap("free")} cards, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started. While a Plus or Pro plan is active your account has the plan's full card limit — Plus holds ${cardCap("plus")} saved cards, Pro holds them all; both bring a one-time stock of AI credits with the first payment (60 on Plus, 120 on Pro), watermark-free hi-res downloads, print files (800 ppi, bleed, MakePlayingCards) and print-ready PDFs, and Pro adds deck-aware AI design, print sheets and whole-deck export. Nothing is ever deleted: when a plan ends your cards stay — viewable, editable, downloadable — and saving a new one needs room under your current plan's cap.`,
   },
 ];
 

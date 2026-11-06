@@ -83,11 +83,8 @@ export function CreditMeter({ className }: { className?: string }) {
         "inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-elevated px-2.5 py-1 text-xs font-medium text-foreground",
         className,
       )}
-      title={
-        state.isPaid
-          ? "AI credits remaining — they refill monthly"
-          : "AI credits remaining"
-      }
+      title="AI credits remaining"
+
     >
       <Coins className="h-3.5 w-3.5 text-gold-strong" aria-hidden />
       {formatCredits(state.credits)}{" "}

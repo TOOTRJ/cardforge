@@ -53,7 +53,7 @@ export async function UsagePanel() {
   const aiOverDay = ai.today >= ai.limits.perDay;
   const aiOverMinute = ai.minute >= ai.limits.perMinute;
   const creditTierLabel = planForTier(credits.tier).name;
-  const lowCredits = isLowCredits(credits.balance, credits.monthlyAllotment);
+  const lowCredits = isLowCredits(credits.balance, credits.isPaid);
   const billingOn = isBillingEnabled();
 
   return (
@@ -104,16 +104,16 @@ export async function UsagePanel() {
           </div>
           <div className="flex flex-col gap-1 rounded-md border border-border/40 bg-background/40 px-3 py-2">
             <span className="text-[11px] uppercase tracking-wider text-subtle">
-              {credits.monthlyAllotment > 0 ? "Monthly allotment" : "Monthly refill"}
+              Plan credits
             </span>
             <span className="font-display text-xl font-semibold tracking-tight text-foreground">
-              {credits.monthlyAllotment > 0 ? credits.monthlyAllotment : "None"}
+              {credits.planCredits > 0 ? credits.planCredits : "None"}
             </span>
-            {credits.monthlyAllotment > 0 ? null : (
-              <span className="text-xs text-muted">
-                {SIGNUP_CREDITS} credits at sign-up; packs and plans add more.
-              </span>
-            )}
+            <span className="text-xs text-muted">
+              {credits.planCredits > 0
+                ? "One-time, with your first payment. Packs add more."
+                : `${SIGNUP_CREDITS} credits to start; packs and plans add more.`}
+            </span>
           </div>
         </div>
 

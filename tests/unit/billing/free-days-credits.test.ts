@@ -42,9 +42,9 @@ describe("freeDaysAllotmentsDue", () => {
     expect(freeDaysAllotmentsDue(two, at("2027-01-01T00:00:00Z"))).toEqual([0]);
   });
 
-  it("an open-ended (staff) grant: every 30 days since credits_from", () => {
+  it("an open-ended (staff) grant gets no automatic allotment (owner 2026-11-06: an admin grants by hand)", () => {
     const staff = { ...base, units: null, credits_from: "2026-11-01T00:00:00Z", ends_at: null };
-    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([0, 1, 2, 3]);
+    expect(freeDaysAllotmentsDue(staff, at("2026-11-01T00:00:00Z", 95))).toEqual([]);
   });
 
   it("pending, failed, revoked and below-plan grants owe nothing", () => {
@@ -109,7 +109,7 @@ describe("grantFreeDaysCredits — the sweep", () => {
   const plus = { id: "g1", user_id: "u1", tier: "plus", units: 2, credits_from: "2026-11-20T00:00:00Z", ends_at: "2027-01-19T00:00:00Z", applied_as: "overlay", status: "applied" };
   const pro = { id: "g2", user_id: "u2", tier: "pro", units: 1, credits_from: "2026-12-01T00:00:00Z", ends_at: "2026-12-31T00:00:00Z", applied_as: "subscription_hold", status: "applied" };
 
-  it("grants the missing allotments only (the ledger keys already held are skipped), the tier's monthly credits each", async () => {
+  it("grants the missing allotments only (the ledger keys already held are skipped), the legacy tier allotment each", async () => {
     const s = stub([plus, pro], { g1: ["grant:g1:0"] });
     const result = await grantFreeDaysCredits(s.client as never, { now });
     expect(result).toEqual({ ok: true, processed: 2, granted: 2, failed: 0 });

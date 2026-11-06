@@ -11,14 +11,17 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 
 ## Model at a glance
 
-| Tier | Price | AI credits/mo | Watermark | Export | Capacity |
+| Tier | Price | AI credits (one-time, 2026-11-06) | Watermark | Export | Capacity |
 |------|-------|---------------|-----------|--------|----------|
-| Free | $0 | 5 (monthly, like the paid tiers; the signup default covers the first month) | yes | low-res PNG only, capped 750px | 50 |
-| Plus | $6/mo · $60/yr | 30 | removed | + clean HD PNG, single PDF | 500 |
-| Pro | $15/mo · $150/yr | 100 | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
+| Free | $0 | 5 at signup | yes | low-res PNG only, capped 750px | 50 |
+| Plus | $6/mo · $60/yr | 60 with the first payment | removed | + clean HD PNG, single PDF | 500 |
+| Pro | $15/mo · $150/yr | 120 with the first payment | removed | + 3×3 sheets, whole-deck/set export + ZIP | unlimited |
+
+(+10 once when the first free period starts. Nothing recurs — `docs/BILLING.md`
+"AI credits are ONE-TIME".)
 
 - Prices and perks are defined ONCE in `lib/billing/plans.ts` (`PLANS`,
-  `MONTHLY_CREDITS`, `CREDIT_PACKS`) and enforced in
+  `PLAN_CREDITS_ONCE`, `CREDIT_PACKS`) and enforced in
   `lib/billing/entitlements.ts`. This table is a summary — the code wins.
 - **Every AI tool is open to every tier; credits are the limiter** (owner
   decision, 2026-07-28). Premium finishes are free too. The ONLY tier-gated
@@ -34,7 +37,7 @@ Checkout + Customer Portal + a thin webhook → Supabase + app-managed credits**
 - **Credit packs** (one-time, never expire): 30/$8 and 100/$24 — `CREDIT_PACKS`.
 - **Unit economics:** amounts are sized against a measured **~$0.11 per generation**
   so even a max-usage subscriber stays under ~40% AI COGS of net revenue (after
-  Stripe fees). Re-tune `MONTHLY_CREDITS` / `CREDIT_PACKS` / prices in
+  Stripe fees). Re-tune `PLAN_CREDITS_ONCE` / `CREDIT_PACKS` / prices in
   `lib/billing/plans.ts` if your provider cost changes.
 
 ## 1. Database

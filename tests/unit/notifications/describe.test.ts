@@ -218,7 +218,7 @@ describe("describeNotification — deck generated", () => {
     });
   });
 
-  it("payment received: renewals name the plan and the refill, first payments and plan changes say thanks", () => {
+  it("payment received: renewals name the plan and the charge (credits are one-time), first payments and plan changes say thanks", () => {
     const base = { actor: null, card: null, threadId: null, type: "payment_received" };
     const renewal = describeNotification(
       { ...base, payload: { invoiceId: "in_1", amountCents: 1500, currency: "usd", tier: "pro", billingReason: "subscription_cycle" } },
@@ -226,7 +226,7 @@ describe("describeNotification — deck generated", () => {
     );
     expect(renewal).toEqual({
       subject: "Your Pro plan",
-      body: "renewed — $15 charged; your monthly AI credits are refilled.",
+      body: "renewed — $15 charged.",
       href: "/dashboard/billing",
     });
     expect(
@@ -247,7 +247,7 @@ describe("describeNotification — deck generated", () => {
       describeNotification({ ...base, payload: { kind: "subscription", tier: "pro", trialEligible: true } }, { isAdmin: false }),
     ).toEqual({
       subject: "Your Pro checkout",
-      body: "wasn't finished — your 7-day free trial is still waiting; nothing is charged until it ends, cancel anytime.",
+      body: "wasn't finished — your banked free days are still waiting; nothing is charged until they end, cancel anytime.",
       href: "/dashboard/billing#plans",
     });
     expect(
@@ -347,7 +347,7 @@ describe("describeNotification — deck generated", () => {
       ),
     ).toEqual({
       subject: "Credit grant failed",
-      body: "on a paid invoice (in_1) — boom. The daily refill retries it; check the account's credits.",
+      body: "on a paid invoice (in_1) — boom. Plan credits are one-time: run scripts/grant-plan-credits-once.mjs (keyed — it grants nothing twice), never a hand grant, which the next paid invoice would double.",
       href: `/admin/users?u=${userId}`,
     });
     expect(

@@ -14,9 +14,10 @@ import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // CreditsSummaryCard — dashboard panel showing the user's AI credit balance,
-// how many they've used this calendar month, and their monthly allotment,
-// with a progress bar. Server component; RLS-scoped data. Gated behind the
-// billing flag (credits only exist when billing is on).
+// how many they've used this calendar month, and the plan's one-time credits
+// (owner 2026-11-06: no monthly allotment, no progress bar against one).
+// Server component; RLS-scoped data. Gated behind the billing flag (credits
+// only exist when billing is on).
 // ---------------------------------------------------------------------------
 
 export async function CreditsSummaryCard() {
@@ -28,14 +29,9 @@ export async function CreditsSummaryCard() {
     getEntitlements(),
   ]);
 
-  const { balance, monthlyAllotment, tier, isPaid } = snapshot;
+  const { balance, planCredits, tier, isPaid } = snapshot;
   const tierLabel = planForTier(tier).name;
-  const lowCredits = isLowCredits(balance, monthlyAllotment);
-  // Free doesn't refill (owner decision 2026-09-24): no allotment, no
-  // progress bar — the card says what the starter credits are and where
-  // more come from.
-  const refills = monthlyAllotment > 0;
-  const pct = refills ? Math.min(100, Math.round((used / monthlyAllotment) * 100)) : 0;
+  const lowCredits = isLowCredits(balance, isPaid);
 
   return (
     <SurfaceCard className="mt-6 flex flex-col gap-5 p-6">
@@ -71,41 +67,18 @@ export async function CreditsSummaryCard() {
           emphasis={lowCredits ? "danger" : "default"}
         />
         <Stat label="Used this month" value={used} unit="credits" />
-        {refills ? (
-          <Stat label="Monthly allotment" value={monthlyAllotment} unit="credits" />
+        {planCredits > 0 ? (
+          <Stat label="Plan credits" value={planCredits} unit="one-time" />
         ) : (
-          <Stat label="Monthly refill" value="None" unit={`${SIGNUP_CREDITS} at sign-up`} />
+          <Stat label="Plan credits" value="None" unit={`${SIGNUP_CREDITS} to start`} />
         )}
       </div>
 
-      {refills ? (
-        <div className="flex flex-col gap-1.5">
-          <div
-            className="h-2 w-full overflow-hidden rounded-full bg-background/60"
-            role="progressbar"
-            aria-valuenow={used}
-            aria-valuemin={0}
-            aria-valuemax={monthlyAllotment}
-            aria-label="Credits used this month"
-          >
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                lowCredits ? "bg-danger" : "bg-accent",
-              )}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <p className="text-xs text-subtle">
-            {used} of {monthlyAllotment} monthly credits used ({pct}%).
-          </p>
-        </div>
-      ) : (
-        <p className="text-xs leading-5 text-subtle">
-          Free accounts start with {SIGNUP_CREDITS} credits and don&apos;t refill — a credit pack tops you up
-          any time (they never expire), and Plus or Pro refill every month.
-        </p>
-      )}
+      <p className="text-xs leading-5 text-subtle">
+        {planCredits > 0
+          ? `Your plan brings ${planCredits} credits with its first payment, once — they never expire, and a credit pack adds more any time.`
+          : `Free accounts start with ${SIGNUP_CREDITS} credits. A credit pack tops you up any time (they never expire), and a plan brings its own stock with its first payment.`}
+      </p>
 
       <Link
         href={isPaid ? "/dashboard/billing" : "/pricing"}

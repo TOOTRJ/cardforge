@@ -56,8 +56,8 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/billing/credit-refill", () => ({
-  grantMonthlyCreditsForPeriod: async () => ({ ok: true }),
-  grantTrialCreditsForPeriod: async () => ({ ok: true }),
+  grantPlanCreditsOnce: async () => ({ ok: true, granted: 0 }),
+  grantFreePeriodCredits: async () => ({ ok: true, granted: 0 }),
 }));
 vi.mock("@/lib/stripe/config", () => ({
   tierForPrice: (price: { id?: string } | null) =>

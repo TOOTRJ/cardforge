@@ -33,7 +33,7 @@ vi.mock("@/lib/stripe/charge-events", () => ({
 }));
 
 import { handleStripeEvent } from "@/lib/stripe/webhook-handlers";
-import { MONTHLY_CREDITS, TRIAL_CREDITS, creditRefillKey, currentCreditPeriod } from "@/lib/billing/plans";
+import { FREE_PERIOD_CREDITS, PLAN_CREDITS_ONCE } from "@/lib/billing/plans";
 
 // Minimal admin-client stand-in that records the writes the handlers make, so
 // we can assert dispatch behavior without a real Supabase client.
@@ -43,15 +43,11 @@ import { MONTHLY_CREDITS, TRIAL_CREDITS, creditRefillKey, currentCreditPeriod } 
 function makeAdmin(
   opts: {
     customerLookupHit?: boolean;
-    /** The credit_ledger row under this month's base refill key — null (the
-     *  default) means the month hasn't granted yet (base-grant path). */
-    ledgerRow?: { delta: number } | null;
-    /** The user's newest refill row of any month (the backstop's read);
-     *  defaults to this month's row when one is given. */
-    newestRow?: { created_at: string; idempotency_key: string } | null;
+    /** The account's plan-once ledger rows (credit-refill.ts's LIKE read). */
+    planRows?: Array<{ delta: number; idempotency_key: string }>;
   } = {},
 ) {
-  const { customerLookupHit = true, ledgerRow = null, newestRow } = opts;
+  const { customerLookupHit = true, planRows = [] } = opts;
   const updates: Array<{
     table: string;
     values: Record<string, unknown>;
@@ -69,29 +65,15 @@ function makeAdmin(
             eq() {
               const chain = {
                 eq: () => chain,
+                in: () => chain,
                 limit: () => chain,
+                // The account's plan-once rows (credit-refill.ts's .eq(user).like read).
+                like: async () => ({ data: planRows, error: null }),
                 maybeSingle: async () => ({
                   data: customerLookupHit ? { id: "user-1" } : null,
                   error: null,
                 }),
-              };
-              return chain;
-            },
-            // The month's refill rows (credit-refill.ts reads them with one
-            // LIKE on the base key prefix); the backstop's newest-grant read
-            // is the same LIKE, filtered and ordered, answering the same row.
-            like: (_column: string, pattern: string) => {
-              const monthRow = ledgerRow
-                ? [{ ...ledgerRow, created_at: new Date().toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) }]
-                : [];
-              // The month's rows (a prefix ending in the period) vs the
-              // newest row of any month (the bare user prefix).
-              const isMonthRead = /\d{4}-\d{2}%$/.test(pattern);
-              const data = isMonthRead ? monthRow : newestRow === undefined ? monthRow : newestRow ? [newestRow] : [];
-              const chain = {
-                order: () => chain,
-                limit: () => chain,
-                then: (resolve: (v: unknown) => void) => resolve({ data, error: null }),
+                then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
               };
               return chain;
             },
@@ -141,7 +123,7 @@ afterEach(() => {
 });
 
 describe("handleStripeEvent", () => {
-  it("on subscription.created: writes tier/status and grants the first month", async () => {
+  it("on subscription.created (active): writes tier/status and grants NOTHING — the paid invoice grants the plan's credits", async () => {
     const { admin, updates, rpcs } = makeAdmin();
     await run(
       {
@@ -172,13 +154,7 @@ describe("handleStripeEvent", () => {
     });
     expect(typeof updates[0].values.current_period_end).toBe("string");
 
-    const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({
-      p_user_id: "user-1",
-      p_amount: MONTHLY_CREDITS.plus,
-      p_reason: "subscription_refill",
-    });
-    expect(String(grant?.args.p_idempotency_key)).toMatch(/^refill:user-1:\d{4}-\d{2}$/);
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
   it("falls back to subscription metadata when the customer id was never persisted, and backfills it", async () => {
@@ -222,14 +198,14 @@ describe("handleStripeEvent", () => {
       stripe_subscription_id: "sub_2",
     });
 
-    // A trial gets its tranche (not the full month) under the month's base key.
+    // A free period starting (created `trialing`) gets the free-period credits, once per account.
     const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({
+    expect(grant?.args).toEqual({
       p_user_id: "user-meta",
-      p_amount: TRIAL_CREDITS,
-      p_reason: "trial_grant",
+      p_amount: FREE_PERIOD_CREDITS,
+      p_reason: "free_period_bonus",
+      p_idempotency_key: "free-period:user-meta",
     });
-    expect(String(grant?.args.p_idempotency_key)).toMatch(/^refill:user-meta:\d{4}-\d{2}$/);
   });
 
   it("on subscription.updated while trialing: NO grant (one trial grant, at creation)", async () => {
@@ -264,9 +240,7 @@ describe("handleStripeEvent", () => {
     expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
-  it("on subscription.updated when a trial converts to active: grants the month", async () => {
-    // The first PAID month's allotment lands at conversion (trial grant was
-    // last month's key, so the base grant fires fresh here).
+  it("on subscription.updated when a trial converts to active: NO grant here — the paid invoice grants the plan's credits", async () => {
     const { admin, rpcs } = makeAdmin();
     await run(
       {
@@ -288,47 +262,11 @@ describe("handleStripeEvent", () => {
       },
       admin,
     );
-    const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({
-      p_user_id: "user-1",
-      p_amount: MONTHLY_CREDITS.plus,
-    });
-    expect(String(grant?.args.p_idempotency_key)).toMatch(
-      /^refill:user-1:\d{4}-\d{2}$/,
-    );
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
-  it("a trial converting in the SAME month it started tops the tranche up to the full allotment", async () => {
-    // The tranche (25) sits under the base key; the first payment's grant
-    // sees it and adds the shortfall under the tier's upgrade key.
-    const { admin, rpcs } = makeAdmin({ ledgerRow: { delta: TRIAL_CREDITS } });
-    await run(
-      {
-        id: "evt_trial_convert_same_month",
-        type: "customer.subscription.updated",
-        data: {
-          object: {
-            id: "sub_1",
-            customer: "cus_1",
-            status: "active",
-            cancel_at_period_end: false,
-            items: { data: [{ price: { id: "price_pro" }, current_period_end: 1893456000 }] },
-          },
-        },
-      },
-      admin,
-    );
-    const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro - TRIAL_CREDITS });
-    expect(String(grant?.args.p_idempotency_key)).toMatch(/:upgrade:pro$/);
-  });
-
-  it("on subscription.updated (mid-month upgrade): tops up the tier delta", async () => {
-    // Regression: the month's refill key was already consumed by the Plus
-    // grant, so upgrading to Pro used to grant NOTHING until the next month.
-    const { admin, rpcs } = makeAdmin({
-      ledgerRow: { delta: MONTHLY_CREDITS.plus },
-    });
+  it("on subscription.updated (an upgrade): NO grant from the event — the upgrade's paid invoice grants Pro's difference", async () => {
+    const { admin, rpcs } = makeAdmin({ planRows: [{ delta: 60, idempotency_key: "plan-once:user-1:plus" }] });
     await run(
       {
         id: "evt_upgrade",
@@ -350,18 +288,10 @@ describe("handleStripeEvent", () => {
       admin,
     );
 
-    const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({
-      p_user_id: "user-1",
-      p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus,
-      p_reason: "subscription_refill",
-    });
-    expect(String(grant?.args.p_idempotency_key)).toMatch(
-      /^refill:user-1:\d{4}-\d{2}:upgrade:pro$/,
-    );
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
-  it("on subscription.updated that does NOT pay (a cancel click) on a MONTHLY plan: no base grant — the invoice's job (0175)", async () => {
+  it("on subscription.updated that does NOT pay (a cancel click): no grant, whatever the ledger holds", async () => {
     const cancelClick = {
       id: "evt_cancel_click",
       type: "customer.subscription.updated",
@@ -376,31 +306,16 @@ describe("handleStripeEvent", () => {
         previous_attributes: { cancel_at_period_end: false },
       },
     };
-    // Paid 4 days ago under LAST month's key; this month has no row yet (the
-    // Jan 31 / Feb 2 shape): the old code granted this month on the click.
-    const lastMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1) - 1);
-    const recent = makeAdmin({
-      ledgerRow: null,
-      newestRow: { created_at: new Date(Date.now() - 4 * 86_400_000).toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod(lastMonth)) },
-    });
+    const recent = makeAdmin();
     await run(cancelClick, recent.admin);
     expect(recent.rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
-
-    // The mirror: the newest grant is 36 days old — a renewal's webhook was
-    // missed — so the click's sync backstops the MISSED month.
-    const missed = makeAdmin({
-      ledgerRow: null,
-      newestRow: { created_at: new Date(Date.now() - 36 * 86_400_000).toISOString(), idempotency_key: creditRefillKey("user-1", currentCreditPeriod(lastMonth)) },
-    });
-    await run(cancelClick, missed.admin);
-    const grant = missed.rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro, p_idempotency_key: creditRefillKey("user-1", currentCreditPeriod()) });
+    const granted = makeAdmin({ planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
+    await run(cancelClick, granted.admin);
+    expect(granted.rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
   });
 
-  it("on subscription.updated (same tier, month already granted): no extra grant", async () => {
-    const { admin, rpcs } = makeAdmin({
-      ledgerRow: { delta: MONTHLY_CREDITS.plus },
-    });
+  it("on subscription.updated (same tier): no grant", async () => {
+    const { admin, rpcs } = makeAdmin({ planRows: [{ delta: 60, idempotency_key: "plan-once:user-1:plus" }] });
     await run(
       {
         id: "evt_same_tier",
@@ -428,7 +343,7 @@ describe("handleStripeEvent", () => {
     // The portal's cancel writes cancel_at_period_end=true on an ACTIVE
     // subscription: perks stay until the period ends; only the deleted
     // event that Stripe sends at period end demotes the profile.
-    const { admin, updates, rpcs } = makeAdmin({ ledgerRow: { delta: MONTHLY_CREDITS.pro } });
+    const { admin, updates, rpcs } = makeAdmin({ planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
     const sub = {
       id: "sub_1",
       customer: "cus_1",
@@ -657,9 +572,7 @@ function makeStripeWithSubs(subs: unknown[]) {
 
 describe("handleStripeEvent — price/tier resolution + multi-subscription safety", () => {
   it("REGRESSION 2026-09-14: portal upgrade to an unlisted Pro price does NOT write tier=free", async () => {
-    const { admin, updates, rpcs } = makeAdmin({
-      ledgerRow: { delta: MONTHLY_CREDITS.plus },
-    });
+    const { admin, updates, rpcs } = makeAdmin({ planRows: [{ delta: 60, idempotency_key: "plan-once:user-1:plus" }] });
     // The subscription now carries a $15/mo price that isn't in the env.
     const object = {
       id: "sub_1",
@@ -683,9 +596,8 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
     );
     const state = updates.find((u) => "subscription_tier" in u.values);
     expect(state?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
-    // …and the mid-month Pro top-up lands.
-    const grant = rpcs.find((r) => r.fn === "grant_credits");
-    expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
+    // …and no credits from the event itself (the upgrade's paid invoice grants Pro's difference).
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
   });
 
   it("a cancellation's `updated` event delivered after the resume leaves the profile renewing (docs.stripe.com/webhooks#event-ordering)", async () => {
@@ -1301,7 +1213,7 @@ describe("handleStripeEvent — invoice.paid", () => {
     retrieve.mockReset().mockResolvedValue(sub);
   });
 
-  it("writes the revenue row (upsert by invoice id), resyncs + grants, and notifies ONCE with money taken", async () => {
+  it("writes the revenue row (upsert by invoice id), resyncs + grants the plan's ONE-TIME credits, and notifies ONCE with money taken", async () => {
     const { admin, inserts, upserts, updates, rpcs } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
     expect(upserts).toEqual([
@@ -1329,11 +1241,12 @@ describe("handleStripeEvent — invoice.paid", () => {
     ]);
     expect(retrieve).toHaveBeenCalledWith("sub_1");
     expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_tier: "pro", subscription_status: "active" });
-    // The invoice is FOR the month its line's period starts in (0175), never "now".
-    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({
+    // Money taken on a subscription invoice: the tier's one-time stock, once per account.
+    expect(rpcs.find((r) => r.fn === "grant_credits")?.args).toEqual({
       p_user_id: "user-1",
-      p_amount: MONTHLY_CREDITS.pro,
-      p_idempotency_key: creditRefillKey("user-1", currentCreditPeriod(new Date(1790130400 * 1000))),
+      p_amount: PLAN_CREDITS_ONCE.pro,
+      p_reason: "plan_credits_once",
+      p_idempotency_key: "plan-once:user-1:pro",
     });
     expect(funnel(inserts)).toEqual([
       { event: "payment_received", user_id: "user-1", props: { amountCents: 1500, tier: "pro", interval: "month", billingReason: "subscription_cycle" }, source: "server" },
@@ -1400,6 +1313,27 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(gone.upserts.map((u) => [("payment_intent_id" in u.row), u.row.user_id])).toEqual([[true, "user-1"], [false, "user-1"], [false, null]]);
   });
 
+  it("a $0 invoice (a trial start, a 100 %-off coupon) grants no plan credits; a paid upgrade invoice (subscription_update) grants Pro's difference over Plus", async () => {
+    const zero = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice({ amount_paid: 0, billing_reason: "subscription_create" })), { admin: zero.admin, stripe: invoiceStripe });
+    expect(zero.rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+    const upgrade = makeChainAdmin({
+      profiles: [profile],
+      notifications: [],
+      credit_ledger: [{ delta: 60, idempotency_key: "plan-once:user-1:plus", user_id: "user-1" }],
+    });
+    await handleStripeEvent(event(invoice({ amount_paid: 900, billing_reason: "subscription_update" })), { admin: upgrade.admin, stripe: invoiceStripe });
+    expect(upgrade.rpcs.find((r) => r.fn === "grant_credits")?.args).toMatchObject({ p_amount: 60, p_idempotency_key: "plan-once:user-1:pro" });
+    // A second paid invoice on Pro: nothing more.
+    const again = makeChainAdmin({
+      profiles: [profile],
+      notifications: [],
+      credit_ledger: [{ delta: 120, idempotency_key: "plan-once:user-1:pro", user_id: "user-1" }],
+    });
+    await handleStripeEvent(event(invoice()), { admin: again.admin, stripe: invoiceStripe });
+    expect(again.rpcs.some((r) => r.fn === "grant_credits")).toBe(false);
+  });
+
   it("logs the payment unlinked when the buyer's account is gone (FK 23503), never 500s on every retry", async () => {
     // The profile is gone, so the id comes from the subscription's metadata.
     const { admin, inserts, upserts } = makeChainAdmin(
@@ -1455,6 +1389,36 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: null });
   });
 
+  it("a skipped resync on a PAID invoice alerts the admins too — the plan credits never ran and no cron catches them up (independent check 2026-11-06)", async () => {
+    retrieve.mockRejectedValue(new Error("stripe down"));
+    const { admin, inserts, rpcs } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await expect(handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe })).resolves.toBeUndefined();
+    expect(rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
+    const alert = inserts
+      .filter((i) => i.table === "notifications" && Array.isArray(i.row))
+      .flatMap((i) => i.row as unknown as Array<Record<string, unknown>>)
+      .filter((row) => row.type === "credit_refill_failed");
+    expect(alert).toHaveLength(1);
+    expect(alert[0].payload).toMatchObject({
+      source: "invoice",
+      invoiceId: "in_1",
+      userId: "user-1",
+      error: expect.stringMatching(/could not be read or synced, so the plan credits were not granted — stripe down/),
+    });
+  });
+
+  it("a skipped resync on a $0 invoice (a trial start) alerts nobody — nothing was owed", async () => {
+    retrieve.mockRejectedValue(new Error("stripe down"));
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice({ amount_paid: 0, billing_reason: "subscription_create" })), { admin, stripe: invoiceStripe });
+    expect(
+      inserts
+        .filter((i) => i.table === "notifications" && Array.isArray(i.row))
+        .flatMap((i) => i.row as unknown as Array<Record<string, unknown>>)
+        .filter((row) => row.type === "credit_refill_failed"),
+    ).toEqual([]);
+  });
+
   // Loud grant failures (2026-10-18). The chain stub ignores filters, so the
   // admin lookup answers the `profiles` rows: here user-1 stands in as the
   // one admin.
@@ -1474,7 +1438,7 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(rpcs.filter((r) => r.fn === "grant_credits")).toHaveLength(1); // tried once, as before
     expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: "pro" });
     expect(errorLog).toHaveBeenCalledWith(
-      "[stripe] invoice.paid credit grant failed for in_1 (user user-1): Credit grant failed for user-1: permission denied for function grant_credits",
+      "[stripe] invoice.paid credit grant failed for in_1 (user user-1): Plan credit grant failed for user-1: permission denied for function grant_credits",
     );
     expect(alerts(inserts)).toEqual([
       {
@@ -1486,7 +1450,7 @@ describe("handleStripeEvent — invoice.paid", () => {
           dedupeKey: "invoice:in_1",
           invoiceId: "in_1",
           userId: "user-1",
-          error: "Credit grant failed for user-1: permission denied for function grant_credits",
+          error: "Plan credit grant failed for user-1: permission denied for function grant_credits",
         },
       },
     ]);

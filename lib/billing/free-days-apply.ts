@@ -300,7 +300,7 @@ export async function grantFreeDays(
     if (credits.ok) creditsGranted = credits.granted;
     else {
       console.error(`grantFreeDays(${input.userId}): first credits failed`, credits.error);
-      warnings.push("The free days are on, but their first credits couldn't be granted yet — the daily refill run grants them.");
+      warnings.push("The free days are on, but their first credits couldn't be granted yet — the daily refill run grants a legacy allotment that is still due.");
     }
   }
 

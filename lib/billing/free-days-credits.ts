@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
-import { MONTHLY_CREDITS, type PaidTier } from "@/lib/billing/plans";
+import type { PaidTier } from "@/lib/billing/plans";
 import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +35,14 @@ import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 // ---------------------------------------------------------------------------
 
 export type CreditGrantClient = ReturnType<typeof createAdminClient>;
+
+/** The allotment a DATED free-days grant made before 2026-11-06 keeps
+ *  receiving per 30-day unit until it runs out (the monthly numbers of the
+ *  time). Plan credits themselves are one-time now (lib/billing/plans.ts
+ *  PLAN_CREDITS_ONCE); nothing new is granted on this table — an admin
+ *  comp is banked days with no credits, and STAFF "no end" access gets no
+ *  automatic credits (owner 2026-11-06: an admin grants by hand). */
+export const LEGACY_FREE_DAYS_ALLOTMENT: Record<PaidTier, number> = { plus: 30, pro: 100 };
 
 /** The columns the sweep reads. */
 export type PlanGrantCreditRow = {
@@ -72,6 +80,8 @@ export function freeDaysAllotmentsDue(
 ): number[] {
   if (grant.status !== "applied") return [];
   if (grant.grants_credits === false) return [];
+  // Open-ended (staff) access: nothing automatic (owner 2026-11-06).
+  if (grant.units == null) return [];
   if (grant.applied_as !== "overlay" && grant.applied_as !== "subscription_hold") return [];
   const from = Date.parse(grant.credits_from);
   if (!Number.isFinite(from)) return [];
@@ -175,11 +185,11 @@ export function overlayAllotmentOver(
   grantTier: PaidTier,
   profile: OverlayPlanState,
 ): number {
-  const own = MONTHLY_CREDITS[grantTier] ?? 0;
+  const own = LEGACY_FREE_DAYS_ALLOTMENT[grantTier] ?? 0;
   if (profile?.subscription_status !== "active") return own;
   const paid = profile.subscription_tier === "plus" || profile.subscription_tier === "pro" ? profile.subscription_tier : null;
   if (!paid) return own;
-  return Math.max(0, own - (MONTHLY_CREDITS[paid] ?? 0));
+  return Math.max(0, own - (LEGACY_FREE_DAYS_ALLOTMENT[paid] ?? 0));
 }
 
 async function grantDueAllotments(
@@ -188,7 +198,7 @@ async function grantDueAllotments(
   due: number[],
   planState?: OverlayPlanState,
 ): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
-  let amount = MONTHLY_CREDITS[grant.tier as PaidTier] ?? 0;
+  let amount = LEGACY_FREE_DAYS_ALLOTMENT[grant.tier as PaidTier] ?? 0;
   if (amount > 0 && grant.applied_as === "overlay") {
     let state: OverlayPlanState = planState ?? null;
     if (planState === undefined) {

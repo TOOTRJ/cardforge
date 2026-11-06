@@ -169,9 +169,9 @@ export default async function HomePage() {
             <p className="mx-auto max-w-2xl text-base leading-7 text-muted">
               {capacityHoldsLine()}{" "}The card maker is free forever — every
               frame, every card type, every AI tool, with 5 AI credits to
-              start. Plans add room for more saved cards, monthly credits,
-              watermark-free hi-res downloads, and Pro&apos;s deck-aware AI
-              design.
+              start. Plans add room for more saved cards, a one-time stock of
+              AI credits, watermark-free hi-res downloads, and Pro&apos;s
+              deck-aware AI design.
             </p>
           </div>
           <div className="grid w-full gap-4 sm:grid-cols-3">

@@ -30,6 +30,8 @@ import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { getRevenueSummary } from "@/lib/admin/revenue-queries";
 import { FunnelPanel } from "@/components/admin/funnel-panel";
 import { getFunnelSummary } from "@/lib/admin/funnel-queries";
+import { CreditGrantsPanel } from "@/components/admin/credit-grants-panel";
+import { getCreditGrantStats } from "@/lib/admin/credit-grant-stats";
 import { ReferralPanel } from "@/components/admin/referral-panel";
 import { getReferralStats } from "@/lib/admin/referral-queries";
 import { readReferralSettings } from "@/lib/referrals/settings-server";
@@ -103,12 +105,13 @@ export default async function AdminUsersPage({
     );
   }
 
-  const [page, revenue, funnel, referrals, referralSettings] = await Promise.all([
+  const [page, revenue, funnel, referrals, referralSettings, creditGrants] = await Promise.all([
     listAdminUsers(params),
     getRevenueSummary(),
     getFunnelSummary(),
     getReferralStats(),
     readReferralSettings(createAdminClient()),
+    getCreditGrantStats(),
   ]);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
@@ -133,6 +136,12 @@ export default async function AdminUsersPage({
       {referrals ? (
         <div className="mt-6">
           <ReferralPanel summary={referrals} settings={referralSettings} />
+        </div>
+      ) : null}
+
+      {creditGrants ? (
+        <div className="mt-6">
+          <CreditGrantsPanel stats={creditGrants} />
         </div>
       ) : null}
 
@@ -564,7 +573,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <section className="flex flex-col gap-3">
               <SectionTitle
                 title="Subscription"
-                hint="Rewrites tier/status/period from the customer's live Stripe subscriptions (the webhook's own sync) and grants any monthly credits the tier is owed. Use it when Stripe and the profile disagree."
+                hint="Rewrites tier/status/period from the customer's live Stripe subscriptions (the webhook's own sync) (plan credits are one-time: a resync grants none — the paid invoice does). Use it when Stripe and the profile disagree."
               />
               <div>
                 <ResyncSubscriptionButton
@@ -592,7 +601,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
               <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
                 <SectionTitle
                   title="Staff access (no end)"
-                  hint="The one comp that is not banked days: a plan with no end and no Stripe account, for staff. Its credits refill every 30 days. Revoke it below."
+                  hint="The one comp that is not banked days: a plan with no end and no Stripe account, for staff. It brings no automatic credits (grant those above). Revoke it below."
                 />
                 <StaffAccessForm userId={user.id} />
               </section>

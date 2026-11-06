@@ -225,7 +225,7 @@ export function trialEndingEmail(
     : `Your PipGlyph ${input.plan} trial ends ${date} — add a card to keep it`;
   const paragraphs = input.hasPaymentMethod
     ? [
-        `Your free ${plan} trial ends on <strong>${date}</strong>${at}. From then on your card is charged ${price ?? "the plan price"} and everything stays exactly as it is: your credits refill every month, downloads stay clean and hi-res, and your cards stay where they are.`,
+        `Your free ${plan} trial ends on <strong>${date}</strong>${at}. From then on your card is charged ${price ?? "the plan price"} and everything stays exactly as it is: your plan's credits land with that first payment, downloads stay clean and hi-res, and your cards stay where they are.`,
         "Want to change plans or cancel first? Both take one click on the billing page — cancel any time before the date and you won't be charged.",
       ]
     : [
@@ -532,8 +532,8 @@ export function checkoutReminderEmail(
   const paragraphs = [
     `You started upgrading to <strong>${plan}</strong>${price ? ` (${price})` : ""} but the checkout wasn't completed, so nothing was charged.`,
     input.trialEligible
-      ? `Your <strong>7-day free trial</strong> is still waiting — nothing is charged until it ends, and you can cancel in one click before then. ${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards.`
-      : `${plan} means more monthly AI credits, clean hi-res downloads and more room for your cards — and you can cancel any time.`,
+      ? `Your <strong>banked free days</strong> are still waiting — nothing is charged until they end, and you can cancel in one click before then. ${plan} means a stock of AI credits with your first payment, clean hi-res downloads and more room for your cards.`
+      : `${plan} means a stock of AI credits with your first payment, clean hi-res downloads and more room for your cards — and you can cancel any time.`,
     `Something go wrong at checkout? ${help} covers plans and credits, and you can message us from your dashboard.`,
   ];
   return {
@@ -602,7 +602,7 @@ export function trialWinbackEmail(
       ? `Your ${plan} plan has ended. Every card you made is still yours, and you're back on the free plan.`
       : `Your free ${plan} trial has ended and nothing was charged. Every card you made is still yours, and you're back on the free plan.`,
     `If ${plan} wasn't quite right ${cancelled ? "this time" : "yet"}, here's ${offer} on the monthly plan. It's applied automatically when you subscribe before <strong>${date}</strong> — no code to enter.`,
-    `${plan} means monthly AI credits, clean hi-res downloads and print-ready PDFs — and you can cancel any time.`,
+    `${plan} means a stock of AI credits with your first payment, clean hi-res downloads and print-ready PDFs — and you can cancel any time.`,
   ];
   return {
     to: recipient.email,

@@ -152,7 +152,7 @@ test.describe("billing page", () => {
     // stay in the HTML) carries a "Free plan" line too.
     await expect(page.getByRole("main").getByText("Free plan", { exact: true })).toBeVisible();
     // Free doesn't refill (2026-09-24): the plan card states the one-time starter credits.
-    await expect(page.getByText("5 at sign-up", { exact: true })).toBeVisible();
+    await expect(page.getByText("5 to start", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 10 credits/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /buy 30 credits/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /start plus with your free days/i })).toBeVisible();

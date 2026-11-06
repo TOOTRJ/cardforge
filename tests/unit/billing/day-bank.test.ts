@@ -286,7 +286,10 @@ describe("applyBankToPlan — the user's own click", () => {
     const stub = db([banked(5), banked(7)]);
     freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g_1", holdEndsAt: "2026-12-17T00:00:00Z", note: "moved", plan: { kind: "hold" }, endsAt: null, creditsGranted: 0 });
     const out = await applyBankToPlan(stub.client as never, { userId: USER, tier: "plus" }, { now: NOW });
-    expect(out).toEqual({ ok: true, days: 12, holdEndsAt: "2026-12-17T00:00:00Z", note: "moved" });
+    // The hold itself carries no credits; the account's first free period
+    // brings the one-time free-period credits (owner 2026-11-06).
+    expect(out).toEqual({ ok: true, days: 12, holdEndsAt: "2026-12-17T00:00:00Z", note: "moved", creditsGranted: 10 });
+    expect(stub.rpc).toHaveBeenCalledWith("grant_credits", expect.objectContaining({ p_amount: 10, p_reason: "free_period_bonus", p_idempotency_key: `free-period:${USER}` }));
     const [, input] = freeDays.grantFreeDays.mock.calls[0];
     expect(input).toMatchObject({ userId: USER, tier: "plus", units: null, days: 12, grantsCredits: false, holdOnly: true, source: "day_bank" });
     expect(input.reference).toMatch(/^day-bank:[0-9a-f-]{36}$/);

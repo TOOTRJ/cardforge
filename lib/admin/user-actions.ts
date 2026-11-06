@@ -430,8 +430,8 @@ export async function adminSetCardLimitAction(input: {
 // customer's CURRENT Stripe state through the same sync the webhook runs
 // (lib/stripe/subscription-sync.ts). The tool for "Stripe says Pro, the
 // profile says free": a missed webhook, an unmapped price, or two
-// subscriptions racing. Also grants any monthly credits the synced tier is
-// owed (idempotent — a resync can never double-grant).
+// subscriptions racing. Grants no credits (plan credits are one-time, with
+// the first paid invoice — a resync can never grant).
 // ---------------------------------------------------------------------------
 
 const resyncSchema = z.object({ userId: z.string().uuid("Invalid user id.") });

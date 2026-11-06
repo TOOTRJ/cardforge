@@ -23,7 +23,8 @@ import {
   PLANS,
   PRINT_PERK_COPY,
   SIGNUP_CREDITS,
-  TRIAL_CREDITS,
+  FREE_PERIOD_CREDITS,
+  PLAN_CREDITS_ONCE,
   SIGNUP_BANK_DAYS,
   capacityHoldsLine,
   type PaidTier,
@@ -51,7 +52,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     // the free-account wording, also the fallback before the viewer loads.
     credits: {
       title: "You're out of AI credits",
-      description: `Free accounts get ${SIGNUP_CREDITS} credits to start and don't refill. A pack tops you up any time, or a plan refills every month. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`,
+      description: `Free accounts get ${SIGNUP_CREDITS} credits to start. A pack tops you up any time, and a plan brings ${PLAN_CREDITS_ONCE.plus} (Plus) or ${PLAN_CREDITS_ONCE.pro} (Pro) credits with its first payment. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`,
     },
     premium_frame: {
       title: "That's a premium frame",
@@ -118,7 +119,7 @@ const REASON_COPY: Record<UpgradeReason, { title: string; description: string }>
     },
     generic: {
       title: "Go premium",
-      description: "More AI credits every month and clean hi-res exports.",
+      description: "A stock of AI credits, clean hi-res exports and more room for your cards.",
     },
   };
 
@@ -190,15 +191,15 @@ type UpgradeModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/** Out of credits, for a subscriber: their plan refills — a pack is a top-up.
- *  The discount is promised only when it will actually apply (ACTIVE plan);
- *  a trial hears that it starts once the trial converts. */
+/** Out of credits, for a subscriber: a pack is the top-up (plan credits are
+ *  one-time). The discount is promised only when it will actually apply
+ *  (ACTIVE plan); a trial hears that it starts once the trial converts. */
 function creditsDescription(subscriber: boolean, packDiscount: boolean): string {
   if (!subscriber) return REASON_COPY.credits.description;
   const discount = packDiscount
     ? `${PACK_SUBSCRIBER_DISCOUNT_PCT}% off for subscribers`
     : `the ${PACK_SUBSCRIBER_DISCOUNT_PCT}% subscriber discount starts once your trial converts`;
-  return `Your plan refills every month — top up any time with a pack, ${discount}. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`;
+  return `Top up any time with a pack, ${discount} — purchased credits never expire. Credits power AI card, idea and art generation — everything you've made stays exactly as it is.`;
 }
 
 export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) {
@@ -284,7 +285,7 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
               days are the bank's (0179): the signup days, plus any earned. */}
           {!viewer.hasSubscribed ? (
             <p className="text-xs leading-5 text-gold-strong">
-              {`Your banked free days are your plan's free time — ${SIGNUP_BANK_DAYS} to start, more from referrals — with ${TRIAL_CREDITS} AI credits to try. Nothing is charged until the days end, and you can cancel anytime before then.`}
+              {`Your banked free days are your plan's free time — ${SIGNUP_BANK_DAYS} to start, more from referrals — with ${FREE_PERIOD_CREDITS} AI credits to try. Nothing is charged until the days end, and you can cancel anytime before then; your plan's credits land with the first payment.`}
             </p>
           ) : null}
 

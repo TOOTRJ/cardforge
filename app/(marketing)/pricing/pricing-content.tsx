@@ -4,7 +4,7 @@ import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { PricingPlans } from "@/components/billing/pricing-plans";
 import { CreditPackGrid } from "@/components/billing/credit-pack-grid";
 import { siteConfig } from "@/lib/site-config";
-import { SIGNUP_BANK_DAYS, TRIAL_CREDITS } from "@/lib/billing/plans";
+import { FREE_PERIOD_CREDITS, PLAN_CREDITS_ONCE, SIGNUP_BANK_DAYS, SIGNUP_CREDITS } from "@/lib/billing/plans";
 import type { BillingViewer } from "@/lib/billing/viewer";
 import { CARDS_ARE_SAFE, capacityFactsLine, capacityHoldsLine, planForTier } from "@/lib/billing/plans";
 import { capacityTone, capacityUpgradeLink, type CardCapacity } from "@/lib/billing/capacity-copy";
@@ -60,15 +60,11 @@ export function PricingContent({
         </p>
         <PricingCapacityMeter capacity={capacity} />
         <p className="text-base leading-7 text-muted">
-          {CARDS_ARE_SAFE}{" "}The card maker is free forever: every frame, every
-          finish, every card type, and every AI tool, with 5 AI credits to get
-          you started (Free doesn&apos;t refill). Plans add their card limit,
-          monthly credits, watermark-free hi-res downloads, and Pro&apos;s
-          deck-aware AI. You only ever pay for our technology, never for
-          MTG-style rendering.
+          {CARDS_ARE_SAFE}{" "}
+          {`The card maker is free forever: every frame, every finish, every card type, and every AI tool, with ${SIGNUP_CREDITS} AI credits to get you started. Plans add their card limit, a one-time stock of AI credits, watermark-free hi-res downloads, and Pro's deck-aware AI; credit packs top you up any time and never expire. You only ever pay for our technology, never for MTG-style rendering.`}
         </p>
         <p className="text-sm font-medium text-gold-strong">
-          {`Every new account starts with ${SIGNUP_BANK_DAYS} free days in the bank — start any plan with them, with ${TRIAL_CREDITS} AI credits to play with. Nothing is charged until the days end, cancel anytime before then, and your plan's full monthly credits arrive with your first payment. Refer a friend to bank more.`}
+          {`Every new account starts with ${SIGNUP_BANK_DAYS} free days in the bank — start any plan with them, with ${FREE_PERIOD_CREDITS} AI credits to play with. Nothing is charged until the days end, cancel anytime before then, and your plan's credits (${PLAN_CREDITS_ONCE.plus} on Plus, ${PLAN_CREDITS_ONCE.pro} on Pro) land with your first payment. Refer a friend to bank more.`}
         </p>
       </div>
 

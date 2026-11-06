@@ -124,10 +124,11 @@ export const SIGNUP_BANK_DAYS = 7;
 /** The legacy name of the same number (the "7-day trial" before the bank). */
 export const TRIAL_DAYS = SIGNUP_BANK_DAYS;
 
-/** Credits granted when a trial STARTS — a taste, not the full allotment.
- *  The plan's full monthly credits land with the first payment (the
- *  month-wide shortfall logic in credit-refill.ts tops this up). */
-export const TRIAL_CREDITS = 25;
+/** The credits a FREE PERIOD brings, once per account (owner 2026-11-06):
+ *  the first checkout's banked days, or the first "Apply banked days"
+ *  (lib/billing/credit-refill.ts `grantFreePeriodCredits`). The old trial
+ *  tranche was 25. */
+export const FREE_PERIOD_CREDITS = 10;
 
 /** A trial that ends without converting gets one win-back offer: this much
  *  off the first month, applied automatically by the checkout action within
@@ -138,21 +139,22 @@ export const TRIAL_WINBACK_DISCOUNT_PCT = 20;
 export const TRIAL_WINBACK_COUPON_ID = "TRIAL_WINBACK_20";
 export const TRIAL_WINBACK_WINDOW_DAYS = 30;
 
-// Monthly credit allotment per tier. Plus/Pro refill monthly (the daily cron
-// + the subscription webhook). FREE DOES NOT REFILL (owner decision
-// 2026-09-24, reversing 2026-09-15): a new account gets SIGNUP_CREDITS once,
-// via the profiles.credits default, and after that only a pack or a plan adds
-// credits — the out-of-credits moment is where the upgrade modal and packs
-// sell, and with a monthly free refill it almost never happened (one account
-// ever ran dry). Every surface that used to say "5 a month" now says "5 to
-// start"; keep them in step with this table.
-// Sized so even a max-usage subscriber keeps AI cost (~$0.11 per generation,
-// measured) under ~40% of net revenue. Tune in tandem with prices below.
-export const MONTHLY_CREDITS: Record<PlanTier, number> = {
-  free: 0,
-  plus: 30,
-  pro: 100,
+// PLAN CREDITS ARE ONE-TIME (owner decision 2026-11-06, replacing the monthly
+// allotment of 30 / 100): a tier's stock lands ONCE per account with the
+// FIRST PAID invoice of a plan on that tier (lib/billing/credit-refill.ts
+// `grantPlanCreditsOnce`; Pro after Plus grants the difference). Nothing
+// refills — not monthly, not yearly; packs are the way to more. FREE gets
+// SIGNUP_CREDITS once (the profiles.credits default). Every surface says
+// "with your first payment" / "to start", never "a month".
+export const PLAN_CREDITS_ONCE: Record<PaidTier, number> = {
+  plus: 60,
+  pro: 120,
 };
+
+/** The one-time plan credits of a tier, 0 for free. */
+export function planCreditsOnceFor(tier: PlanTier): number {
+  return tier === "plus" || tier === "pro" ? PLAN_CREDITS_ONCE[tier] : 0;
+}
 
 /** Credits every new account starts with — the `profiles.credits` column
  *  default (migration 0027; the signup trigger writes the matching ledger
@@ -160,7 +162,7 @@ export const MONTHLY_CREDITS: Record<PlanTier, number> = {
 export const SIGNUP_CREDITS = 5;
 
 // Consumable top-up packs (one-time Stripe `payment` checkout). Purchased
-// credits never expire (unlike a plan's monthly allotment). Keys double as
+// credits never expire. Keys double as
 // Stripe lookup keys (`pack_<key>`, lib/stripe/prices.ts) and product
 // metadata (`pack: <key>`) on BOTH the live and sandbox catalogs.
 export const CREDIT_PACKS: Record<
@@ -304,7 +306,7 @@ export const PLANS: PlanDisplay[] = [
     // people pay for, and plan-capacity-headline.test.ts holds the order.
     features: [
       savedCardsLine("free"),
-      "5 AI credits at sign-up (no monthly refill — packs and plans add more)",
+      `${SIGNUP_CREDITS} AI credits to start — packs add more, and never expire`,
       "Every MTG-style frame currently available on PipGlyph",
       "Low-res PNG export (watermarked)",
       UNLIMITED_DECKS_LINE,
@@ -320,7 +322,7 @@ export const PLANS: PlanDisplay[] = [
     featured: true,
     features: [
       savedCardsLine("plus"),
-      "30 AI credits every month",
+      `${PLAN_CREDITS_ONCE.plus} AI credits with your first payment`,
       ...PLUS_PRINT_PERKS,
       "Everything in Free",
     ],
@@ -340,7 +342,7 @@ export const PLANS: PlanDisplay[] = [
     // tagline and the credits line no longer sell a whole AI deck.
     features: [
       savedCardsLine("pro"),
-      "100 AI credits every month",
+      `${PLAN_CREDITS_ONCE.pro} AI credits with your first payment`,
       "AI cards & ideas designed for a specific deck",
       ...PRO_PRINT_PERKS,
       "Everything in Plus",
@@ -355,14 +357,14 @@ export function planForTier(tier: PlanTier): PlanDisplay {
 
 /** True for the "unlimited" sentinel that admin/billing-off entitlements
  *  carry (Number.MAX_SAFE_INTEGER). */
-/** "Running low" = at or under a fifth of the plan's monthly allotment (min 1):
- *  Free (no refill) → ≤1, Plus 30 → ≤6, Pro 100 → ≤20. The old flat `≤ 5`
- *  equalled Free's then-monthly refill, so every free user saw the red
- *  warning permanently. */
-const LOW_CREDIT_FRACTION = 0.2;
-export function isLowCredits(balance: number, monthlyAllotment: number): boolean {
+/** "Running low": ≤ LOW_CREDITS_PAID on a paid plan, ≤ LOW_CREDITS_FREE on
+ *  free (a free account's 5 starter credits would read "low" from the start
+ *  at 3). Fixed numbers since credits are one-time (owner 2026-11-06). */
+export const LOW_CREDITS_PAID = 3;
+export const LOW_CREDITS_FREE = 1;
+export function isLowCredits(balance: number, isPaid: boolean): boolean {
   if (isUnlimitedCredits(balance)) return false;
-  return balance <= Math.max(1, Math.floor(monthlyAllotment * LOW_CREDIT_FRACTION));
+  return balance <= (isPaid ? LOW_CREDITS_PAID : LOW_CREDITS_FREE);
 }
 
 /** The "unlimited" sentinel admin / billing-off entitlements carry
@@ -378,9 +380,10 @@ export function formatCredits(credits: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Monthly credit refills (cron-driven, so monthly AND annual plans both get a
-// monthly allotment). Refills are idempotent per user per calendar month via a
-// synthetic key stored in credit_ledger.idempotency_key.
+// The calendar month, kept for the refill cron's run label and alert payload
+// (`app/api/cron/refill-credits`). The monthly refill it once keyed
+// (`refill:<user>:<period>`) ended 2026-11-06 — plan credits are one-time
+// (lib/billing/credit-refill.ts); the ledger's older `refill:` rows stay.
 // ---------------------------------------------------------------------------
 
 /** Calendar-month key, e.g. "2026-06" (UTC). */
@@ -388,27 +391,4 @@ export function currentCreditPeriod(now: Date = new Date()): string {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
-}
-
-/** The calendar month before `now`'s, e.g. "2026-05" for a June date (UTC) —
- *  what the cron backfills for an annual plan it missed. */
-export function previousCreditPeriod(now: Date = new Date()): string {
-  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  return currentCreditPeriod(new Date(first.getTime() - 1));
-}
-
-/** Idempotency key for a user's monthly subscription refill. */
-export function creditRefillKey(userId: string, period: string): string {
-  return `refill:${userId}:${period}`;
-}
-
-/** Idempotency key for the mid-month top-up when a user upgrades tiers after
- *  this month's refill already granted. Keyed per TIER so a re-upgrade in the
- *  same month (plus → pro → plus → pro) can never double-grant the delta. */
-export function creditUpgradeKey(
-  userId: string,
-  period: string,
-  tier: PlanTier,
-): string {
-  return `refill:${userId}:${period}:upgrade:${tier}`;
 }

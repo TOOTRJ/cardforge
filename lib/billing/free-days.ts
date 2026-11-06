@@ -7,9 +7,10 @@ import { formatUtcDateTime } from "@/lib/format/dates";
 // reward (owner decisions 2026-11-05; docs/research/free-months-design-2026-11.md
 // §6, docs/BILLING.md "Free 30 days").
 //
-// A grant is N UNITS of exactly 30 × 86 400 seconds of a paid tier, with that
-// tier's normal AI credits (lib/billing/free-days-credits.ts) and nothing
-// else. The pure decision here (`planFreeDays`) reads the user's profile and
+// A grant is N UNITS of exactly 30 × 86 400 seconds of a paid tier and
+// nothing else (the per-30-days credits of the grants made before 2026-11-06
+// still run out through lib/billing/free-days-credits.ts; a new grant carries
+// none — plan credits are one-time, lib/billing/credit-refill.ts). The pure decision here (`planFreeDays`) reads the user's profile and
 // their CURRENT Stripe subscription and says how the days apply:
 //
 //   hold        a live, RENEWING plan or trial (the tier granted at or above

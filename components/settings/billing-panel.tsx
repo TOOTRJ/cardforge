@@ -8,8 +8,8 @@ import { planEndingText, type PlanEnding } from "@/lib/billing/plan-ending";
 import {
   formatCredits,
   planForTier,
+  planCreditsOnceFor,
   savedCardsLine,
-  MONTHLY_CREDITS,
   type PlanTier,
 } from "@/lib/billing/plans";
 
@@ -130,7 +130,7 @@ export function BillingPanel({
               {formatCredits(credits)}
             </span>
             <span className="text-xs text-muted">
-              · {MONTHLY_CREDITS[tier]}/mo on {plan.name}
+              {planCreditsOnceFor(tier) > 0 ? `· ${planCreditsOnceFor(tier)} one-time on ${plan.name}` : `· ${plan.name}`}
             </span>
           </span>
         </div>
