@@ -51,7 +51,11 @@ export type BillingPeriod = "monthly" | "annual";
 // networks' notice. Card-required trials convert at 2–3× the no-card rate and
 // stop throwaway accounts burning AI credits. Legacy no-card trials that
 // still exist keep their own terms (cancel at day 7 without a card).
-export const TRIAL_DAYS = 7;
+/** The days every new account banks at signup (migration 0179,
+ *  lib/billing/day-bank.ts): the first checkout's free period. Client-safe. */
+export const SIGNUP_BANK_DAYS = 7;
+/** The legacy name of the same number (the "7-day trial" before the bank). */
+export const TRIAL_DAYS = SIGNUP_BANK_DAYS;
 
 /** Credits granted when a trial STARTS — a taste, not the full allotment.
  *  The plan's full monthly credits land with the first payment (the
