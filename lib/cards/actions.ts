@@ -17,6 +17,8 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { qualifyReferral } from "@/lib/referrals/server";
+import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { readVisibilityPreflight, storedArtMissing, storedLanguageBlocks } from "@/lib/cards/visibility-preflight";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { after } from "next/server";
@@ -705,7 +707,7 @@ export async function createCardAction(
   // activation milestone). Best effort; never touches the save. An admin's
   // frame preview is tooling, not product activity.
   if (isAdminConfigured() && !framePreview) {
-    await recordActivity(createAdminClient(), {
+    const firstCard = await recordActivity(createAdminClient(), {
       userId: user.id,
       kind: "card_saved",
       props: {
@@ -714,6 +716,22 @@ export async function createCardAction(
         ...(options.guestDraft === true ? { guestDraft: true } : {}),
       },
     });
+    // The first saved card is the referral program's activation: a friend
+    // who joined through a link earns both sides a free month
+    // (lib/referrals/server.ts). After the response — Stripe calls never
+    // hold up a save — and never able to fail it.
+    if (firstCard) {
+      const refereeId = user.id;
+      after(async () => {
+        try {
+          await qualifyReferral(createAdminClient(), refereeId, {
+            stripe: isStripeConfigured() ? getStripe() : null,
+          });
+        } catch (error) {
+          console.error(`[referrals] qualify failed for ${refereeId}:`, error);
+        }
+      });
+    }
   }
 
   // Bake the public PNG AFTER the response is sent (next/server `after`) so

@@ -106,7 +106,7 @@ const PROP_KEYS = new Set([
   "signedIn", "mode", "interval", "amountCents", "credits", "billingReason",
   "cancelReason", "cancelFeedback", "attempt", "fromTier", "toTier",
   "scheduled", "sessionId", "subscriptionId",
-  "referrer", "utmSource", "utmMedium", "utmCampaign",
+  "referrer", "utmSource", "utmMedium", "utmCampaign", "referred",
   "visibility", "format", "layout", "preset", "clean", "corners", "face",
   "item", "bucket",
   // TODO HM3: the signup row and card_saved when a guest's card came along.

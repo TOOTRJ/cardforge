@@ -531,6 +531,73 @@ export type Database = {
           },
         ];
       };
+      // Migration 0164 — referrals.
+      referral_codes: {
+        Row: { user_id: string; code: string; created_at: string };
+        Insert: { user_id: string; code: string; created_at?: string };
+        Update: { user_id?: string; code?: string; created_at?: string };
+        Relationships: [];
+      };
+      referral_email_fingerprints: {
+        Row: { fingerprint: string; referral_id: string | null; first_seen_at: string };
+        Insert: { fingerprint: string; referral_id?: string | null; first_seen_at?: string };
+        Update: { fingerprint?: string; referral_id?: string | null; first_seen_at?: string };
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referrer_id: string;
+          referee_id: string | null;
+          code: string;
+          status: string;
+          block_reason: string | null;
+          signed_up_at: string;
+          first_card_at: string | null;
+          rewarded_at: string | null;
+          referrer_reward: string | null;
+          referee_reward: string | null;
+          referrer_reward_detail: Json;
+          referee_reward_detail: Json;
+          grant_attempts: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          referrer_id: string;
+          referee_id?: string | null;
+          code: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          grant_attempts?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          referrer_id?: string;
+          referee_id?: string | null;
+          code?: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          grant_attempts?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       comment_reports: {
         Row: {
           comment_id: string;

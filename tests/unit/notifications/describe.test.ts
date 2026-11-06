@@ -59,6 +59,31 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     }
   });
 
+  it("referral_signup and referral_reward: who, what month, where it links", () => {
+    const d = (type: string, payload: Record<string, unknown>) =>
+      describeNotification({ type, actor, card: null, threadId: null, payload }, { isAdmin: false });
+    // referral_signup is sent ONLY when a qualified friend earned the
+    // referrer no month — never a fraud reason, never a promise.
+    expect(d("referral_signup", { referralId: "r1", outcome: "not_eligible" })).toMatchObject({
+      body: "joined PipGlyph with your referral link and saved their first card. This referral isn't eligible for a reward.",
+      href: "/dashboard/referrals",
+    });
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_month" }).body).toBe(
+      "joined PipGlyph with your referral link and saved their first card. You've reached this month's referral limit, so this one doesn't add a free month for you — they still get theirs.",
+    );
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_lifetime" }).body).toContain("every free month the program gives");
+    expect(d("referral_reward", { side: "referrer", reward: "plus_month", tier: "plus", until: "2026-12-01T12:00:00Z", credits: 30 }).body).toBe(
+      "saved their first card — you've earned a free month of Plus (until Dec 1, 2026) with 30 AI credits. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referrer", reward: "balance_credit", amountCents: 1500, currency: "usd" }).body).toBe(
+      "saved their first card — you've earned a free month — $15 off your next bill. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referee", reward: "plus_month", tier: "plus", until: "2026-12-01T12:00:00Z", credits: 30 })).toMatchObject({
+      body: "invited you to PipGlyph — you've earned a free month of Plus (until Dec 1, 2026) with 30 AI credits for saving your first card.",
+      href: "/dashboard/billing",
+    });
+  });
+
   it("describes card limit overrides and resets", () => {
     expect(
       describeNotification({ type: "card_limit", actor, card: null, threadId: null, payload: { limit: 2500 } }, { isAdmin: false }).body,

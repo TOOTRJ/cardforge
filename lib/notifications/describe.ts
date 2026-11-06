@@ -152,6 +152,50 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "referral_signup": {
+      // A friend who joined through the recipient's link saved their first
+      // card with a confirmed email but earned the recipient NO month — sent
+      // only then (0164; the rewarded case is the referral_reward row).
+      // Never a fraud reason.
+      const outcome = str(payload.outcome);
+      const why =
+        outcome === "capped_month"
+          ? "You've reached this month's referral limit, so this one doesn't add a free month for you — they still get theirs."
+          : outcome === "capped_lifetime"
+            ? "You've earned every free month the program gives, so this one doesn't add one for you — they still get theirs."
+            : "This referral isn't eligible for a reward.";
+      return {
+        subject: actorName,
+        body: `joined PipGlyph with your referral link and saved their first card. ${why}`,
+        href: "/dashboard/referrals",
+      };
+    }
+    case "referral_reward": {
+      // One free month, either side of a referral (lib/referrals/server.ts):
+      // a month of Plus with its AI credits, or a month off a paid plan.
+      const side = str(payload.side);
+      const reward = str(payload.reward);
+      const until = str(payload.until);
+      const credits = num(payload.credits);
+      const amountCents = num(payload.amountCents);
+      const currency = str(payload.currency) ?? "usd";
+      const withCredits = credits != null && credits > 0 ? ` with ${credits} AI credits` : "";
+      const month =
+        reward === "balance_credit" && amountCents != null
+          ? `a free month — ${formatMoney(amountCents, currency)} off your next bill`
+          : `a free month of Plus${until ? ` (until ${formatShortDate(until)})` : ""}${withCredits}`;
+      return side === "referee"
+        ? {
+            subject: actorName,
+            body: `invited you to PipGlyph — you've earned ${month} for saving your first card.`,
+            href: "/dashboard/billing",
+          }
+        : {
+            subject: actorName,
+            body: `saved their first card — you've earned ${month}. Thanks for spreading the word!`,
+            href: "/dashboard/referrals",
+          };
+    }
     case "deck_like": {
       // Someone liked your PUBLIC deck — once per liker and deck (0149).
       const title = str(payload.title);

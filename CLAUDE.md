@@ -1631,6 +1631,38 @@ Rules and gotchas:
   because deck covers and card set icons live there. A card's printed set
   symbol (`set_icon_url` / `set_icon_code`, the Set icon step) is a rendering
   feature and stays.
+- Referrals (migration 0164, `docs/BILLING.md` "Referrals"): ONE code per
+  user (`my_referral_code()`), the link `/?ref=<code>` rides the first-touch
+  attribution (sessionStorage → hidden `attr_ref` → `signupAction`; a Google
+  sign-up through onboarding's finish) — never a cookie. The reward waits
+  for the FIRST saved card (`recordActivity` → `qualifyReferral` in
+  `after()`), rewarded AT ONCE once both emails are CONFIRMED (no hold; the
+  hourly `/api/cron/referral-rewards` sweep retries what waits or failed —
+  every write once per referral and side). Fraud rules in
+  `lib/referrals/fraud.ts`. ONE email, ONE referral month ever (owner
+  2026-11-02): ONE normalization, `normalizeReferralEmail` (SQL twin
+  `normalize_referral_email()`, both held to
+  `tests/unit/referrals/email-normalization-cases.json`), and what is kept is
+  a KEYED hash (HMAC-SHA256 under the server-only `REFERRAL_EMAIL_HASH_KEY`,
+  `lib/referrals/email-fingerprint.ts`) in `referral_email_fingerprints`
+  (no user id, outlives every account, service role only) — never the
+  address, never an unkeyed hash; another live account's address or an
+  earlier referral's fingerprint → `email_reused`, nobody rewarded, the
+  friend never told why; no key → fail closed (nothing granted, logged).
+  Never rotate the key casually. Caps ONLY through `claim_referral_reward()`
+  (atomic; the numbers are `lib/referrals/rules.ts`; `referee_id` is SET
+  NULL on delete so the cap keeps its evidence), each side's month from
+  `planReferralMonth`: a month of PLUS in its own column
+  (`profiles.referral_plus_until`, through `grant_referral_plus_month()` —
+  atomic, with ONE Plus allotment of credits; NEVER the admin comp's
+  columns, and the monthly refill never reads it) or, for a renewing plan,
+  a balance credit through `creditCustomerBalance` / `oneMonthCents`. The
+  plan readers that take it as Plus: `effectiveTierForProfile`,
+  `card_capacity_for()`, `owner_export_stamp()` — a new reader of "the
+  tier" reads it too. Nothing runs with billing off. Advisory locks use
+  the NAMED namespace `hashtext('pipglyph.referrals')`, never a migration
+  number. Users read their rows through a COLUMN grant (no fraud reason, no
+  Stripe detail); writes are the service role's.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
