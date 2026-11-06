@@ -4466,7 +4466,7 @@ another.
   reward depend on their plan: free → 30 days of Plus (as now); paying → N AI
   credits (or days ADDED to the paid plan, the mechanism supports both), chosen
   in the admin Referrals settings per tier.
-- [ ] **SG4 [P2 · M · ASK FIRST] Milestone tiers with a progress bar** — "1 of 3
+- [x] (done 2026-11-06 — #775 merged: the ladder itself shipped with referrals v2 (#770); this added `LadderProgressBar` on Refer a friend and the same sentence in the share dialog, `/api/referrals/share` answering `ladder`) **SG4 [P2 · M · ASK FIRST] Milestone tiers with a progress bar** — "1 of 3
   friends — next: +50 credits" on Refer a friend and in the share prompt;
   `referral_tiers` in the settings; thresholds from a month of data (Harry's
   median referrer brought 5).
@@ -4474,6 +4474,26 @@ another.
   faces as an `og:image` gallery (needs a `face=back` on the OG route); later a
   100-line bot answering a PipGlyph link or `[[name]]` with the card and "Make
   your own".
+  **Researched 2026-11-06, parked by the owner ("not ready to start") —
+  `docs/research/discord-sg5-2026-11.md`.** The report's plan, each phase its
+  own approval: **phase 1, the unfurl, no bot** — an Embed Debugger pass
+  (nobody has seen a live render; the card page already serves the large
+  layout, a versioned share image and an oEmbed author line), `face=back` on
+  `/api/cards/[id]/og` (404 without a back, carried through the 308), the
+  two-faced card page as a two-image gallery OR one side-by-side composite
+  (decided by screenshots — the gallery's layout is undocumented), a deck
+  `og:image` gallery (cover + up to three featured thumbs with dimensions), a
+  deck oEmbed + `theme-color`, tests for the silent no-preview limits (title
+  70 bytes, alt 4,096, URL 2,048); **phase 2 — an HTTP-only bot as ONE Next.js
+  route** (Ed25519-verified interactions endpoint; `/card` with autocomplete
+  resolving by card id so same-titled cards are never guessed, a right-click
+  "Find PipGlyph cards in this message" command — message content needs no
+  intent there —, `/random`, `/deck`, `/pipglyph`; user- and guild-installable;
+  `via=discord-bot`, no referral `ref`; the owner reads Discord's Developer
+  Policy first — unreachable to the research); **phase 3 — a Gateway process
+  for `{{name}}` in chat** ($2–5 / month + uptime, the intent self-serve under
+  10,000 users since 2026-06-10) only once phase 2 shows installs. Never a DM,
+  a broadcast, in-Discord rendering or Discord-side monetisation.
 - [ ] **SG6 [P3 · M · ASK FIRST] A monthly prompt event with sharing built in**
   ("Pipglyph-tober": each entry has Share with the ref; the digest lists the
   theme) — on the challenges system.
