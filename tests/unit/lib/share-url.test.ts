@@ -22,8 +22,8 @@ describe("shareUrlFor", () => {
     expect(cleanShareUrl("https://pipglyph.com/card/a/b")).toBe("https://pipglyph.com/card/a/b");
   });
   it("the referral line names what the friend gets, in the settings' words", () => {
-    expect(referralShareLine("30 free days of Plus")).toBe(
-      "Join with my link and you get 30 free days of Plus when you save your first card.",
+    expect(referralShareLine("7 free days")).toBe(
+      "Join with my link and you get 7 free days toward a plan once you've saved your first cards.",
     );
   });
 });

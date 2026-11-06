@@ -618,6 +618,9 @@ export type Database = {
           block_reason: string | null;
           signed_up_at: string;
           first_card_at: string | null;
+          cards_saved_at: string | null;
+          card_on_file_at: string | null;
+          ladder_step: number | null;
           rewarded_at: string | null;
           referrer_reward: string | null;
           referee_reward: string | null;
@@ -635,6 +638,9 @@ export type Database = {
           block_reason?: string | null;
           signed_up_at?: string;
           first_card_at?: string | null;
+          cards_saved_at?: string | null;
+          card_on_file_at?: string | null;
+          ladder_step?: number | null;
           rewarded_at?: string | null;
           referrer_reward?: string | null;
           referee_reward?: string | null;
@@ -652,6 +658,9 @@ export type Database = {
           block_reason?: string | null;
           signed_up_at?: string;
           first_card_at?: string | null;
+          cards_saved_at?: string | null;
+          card_on_file_at?: string | null;
+          ladder_step?: number | null;
           rewarded_at?: string | null;
           referrer_reward?: string | null;
           referee_reward?: string | null;
@@ -3257,6 +3266,11 @@ export type Database = {
         Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null; p_block_reason?: string | null };
         /** 'rewarded' | 'capped_month' | 'capped_lifetime' | 'capped_friends' | 'blocked', or null. */
         Returns: string | null;
+      };
+      claim_referral_reward_v2: {
+        Args: { p_referral_id: string; p_friends_cap?: number | null; p_block_reason?: string | null };
+        /** One row — 'rewarded' (with the referrer's ladder step), 'capped_friends' or 'blocked' — or none. */
+        Returns: Array<{ outcome: string; step: number | null }>;
       };
       normalize_referral_email: {
         Args: { p_email: string | null };

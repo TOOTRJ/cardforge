@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // GET /api/referrals/share — the program switch, the friend's reward words,
-// and the viewer's code (null for a visitor). Never cached.
+// the activation bar (0180), and the viewer's code (null for a visitor).
+// Never cached.
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
   sessionCookie: false,
   user: null as null | { id: string },
-  settings: { enabled: true, friend: { kind: "free_days", tier: "plus", units: 1 } } as Record<string, unknown>,
+  settings: { enabled: true, friend: { days: 7 } } as Record<string, unknown>,
   code: "ab12cd34" as unknown,
   billing: true,
 }));
@@ -23,9 +24,11 @@ vi.mock("@/lib/supabase/public", () => ({ createPublicClient: () => ({ from: () 
 vi.mock("@/lib/referrals/settings-server", () => ({
   readReferralSettings: async () => ({
     enabled: s.settings.enabled,
+    activation: { cardsRequired: 5, windowDays: 30 },
     friend: s.settings.friend,
-    referrer: { kind: "free_days", tier: "own", units: 1 },
-    caps: { perMonth: 3, lifetime: 12, friendsPerMonth: 5 },
+    ladder: [{ kind: "days", days: 7 }],
+    tail: { kind: "days", days: 7 },
+    caps: { friendsPerMonth: 5 },
   }),
 }));
 vi.mock("@/lib/supabase/server", () => ({
@@ -38,7 +41,7 @@ import { GET } from "@/app/api/referrals/share/route";
 beforeEach(() => {
   s.sessionCookie = false;
   s.user = null;
-  s.settings = { enabled: true, friend: { kind: "free_days", tier: "plus", units: 1 } };
+  s.settings = { enabled: true, friend: { days: 7 } };
   s.code = "ab12cd34";
   s.billing = true;
 });
@@ -47,13 +50,13 @@ describe("GET /api/referrals/share", () => {
   it("a visitor: the program and the friend's words, no code", async () => {
     const res = await GET();
     expect(res.headers.get("cache-control")).toBe("private, no-store");
-    expect(await res.json()).toEqual({ enabled: true, friendGets: "30 free days of Plus", code: null });
+    expect(await res.json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: null });
   });
   it("a signed-in viewer: their code, normalised", async () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.code = "AB12CD34";
-    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "30 free days of Plus", code: "ab12cd34" });
+    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: "ab12cd34" });
   });
   it("a malformed code is no code", async () => {
     s.sessionCookie = true;
@@ -65,13 +68,14 @@ describe("GET /api/referrals/share", () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.settings = { ...s.settings, enabled: false };
-    expect(await (await GET()).json()).toEqual({ enabled: false, friendGets: null, code: null });
+    const off = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null };
+    expect(await (await GET()).json()).toEqual(off);
     s.settings = { ...s.settings, enabled: true };
     s.billing = false;
-    expect(await (await GET()).json()).toEqual({ enabled: false, friendGets: null, code: null });
+    expect(await (await GET()).json()).toEqual(off);
   });
-  it("a credits reward reads in its own words", async () => {
-    s.settings = { enabled: true, friend: { kind: "credits", amount: 20 } };
-    expect((await (await GET()).json()).friendGets).toBe("20 AI credits");
+  it("a friend reward of 0 days reads 'nothing'", async () => {
+    s.settings = { enabled: true, friend: { days: 0 } };
+    expect((await (await GET()).json()).friendGets).toBe("nothing");
   });
 });

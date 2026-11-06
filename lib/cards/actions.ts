@@ -707,7 +707,7 @@ export async function createCardAction(
   // activation milestone). Best effort; never touches the save. An admin's
   // frame preview is tooling, not product activity.
   if (isAdminConfigured() && !framePreview) {
-    const firstCard = await recordActivity(createAdminClient(), {
+    await recordActivity(createAdminClient(), {
       userId: user.id,
       kind: "card_saved",
       props: {
@@ -716,11 +716,11 @@ export async function createCardAction(
         ...(options.guestDraft === true ? { guestDraft: true } : {}),
       },
     });
-    // The first saved card is the referral program's activation: a friend
-    // who joined through a link earns both sides a reward
-    // (lib/referrals/server.ts). After the response — Stripe calls never
-    // hold up a save — and never able to fail it.
-    if (firstCard) {
+    // EVERY save may be the one that qualifies a referral (0180: the friend's
+    // N-th card, the settings' bar — lib/referrals/server.ts; one indexed
+    // read when there is no open referral). After the response — Stripe
+    // calls never hold up a save — and never able to fail it.
+    {
       const refereeId = user.id;
       after(async () => {
         try {

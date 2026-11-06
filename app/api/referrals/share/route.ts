@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { readReferralSettings } from "@/lib/referrals/settings-server";
-import { rewardPhrase } from "@/lib/referrals/settings";
+import { friendRewardPhrase } from "@/lib/referrals/settings";
 import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { isBillingEnabled } from "@/lib/billing/flags";
 
@@ -22,14 +22,17 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 
 export type ReferralShareInfo = {
   enabled: boolean;
-  /** "30 free days of Plus" — null while the program is off. */
+  /** "7 free days" — null while the program is off. */
   friendGets: string | null;
+  /** The activation bar (0180): cards to save, within how many days of signing up. */
+  cardsRequired: number | null;
+  windowDays: number | null;
   /** The viewer's referral code; null for a visitor or with the program off. */
   code: string | null;
 };
 
 const NO_STORE = { "cache-control": "private, no-store" };
-const OFF: ReferralShareInfo = { enabled: false, friendGets: null, code: null };
+const OFF: ReferralShareInfo = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null };
 
 export async function GET() {
   if (!isSupabaseConfigured() || !isBillingEnabled()) {
@@ -37,19 +40,24 @@ export async function GET() {
   }
   const settings = await readReferralSettings(createPublicClient());
   if (!settings.enabled) return NextResponse.json(OFF, { headers: NO_STORE });
-  const friendGets = rewardPhrase(settings.friend);
+  const on = {
+    enabled: true,
+    friendGets: friendRewardPhrase(settings),
+    cardsRequired: settings.activation.cardsRequired,
+    windowDays: settings.activation.windowDays,
+  };
 
   const store = await cookies();
   const hasSessionCookie = store.getAll().some(({ name }) => isSupabaseAuthCookieName(name));
   if (!hasSessionCookie) {
-    return NextResponse.json({ enabled: true, friendGets, code: null } satisfies ReferralShareInfo, { headers: NO_STORE });
+    return NextResponse.json({ ...on, code: null } satisfies ReferralShareInfo, { headers: NO_STORE });
   }
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ enabled: true, friendGets, code: null } satisfies ReferralShareInfo, { headers: NO_STORE });
+    return NextResponse.json({ ...on, code: null } satisfies ReferralShareInfo, { headers: NO_STORE });
   }
   const supabase = await createClient();
   const { data } = await supabase.rpc("my_referral_code");
   const code = normalizeReferralCode(data);
-  return NextResponse.json({ enabled: true, friendGets, code } satisfies ReferralShareInfo, { headers: NO_STORE });
+  return NextResponse.json({ ...on, code } satisfies ReferralShareInfo, { headers: NO_STORE });
 }

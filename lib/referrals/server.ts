@@ -2,7 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
-import type { Database } from "@/types/supabase";
+import type { Database, Json } from "@/types/supabase";
 import {
   REFERRAL_CLAIM_WINDOW_DAYS,
   REFERRAL_CONFIRM_WINDOW_DAYS,
@@ -788,7 +788,7 @@ async function notify(
     recipient_id: input.recipientId,
     actor_id: input.actorId,
     type: input.type,
-    payload: input.payload,
+    payload: input.payload as Json,
   });
   if (error) console.warn(`[referrals] ${input.type} notification for ${input.recipientId} failed:`, error.message);
 }

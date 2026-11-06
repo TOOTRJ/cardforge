@@ -1,30 +1,38 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { chainClient, called, payloadOf, type ChainAnswer, type ChainCall } from "@/tests/stubs/supabase-chain";
-// The free-days writer (lib/billing/free-days-apply.ts) is the one
-// mechanism; here it is a fake that records what it was asked and answers
-// what the world says (its own behaviour is free-days-apply.test.ts).
-const freeDays = vi.hoisted(() => ({ grantFreeDays: vi.fn() }));
-vi.mock("@/lib/billing/free-days-apply", () => freeDays);
+// The days bank (lib/billing/day-bank.ts) is where every "days" reward
+// lands; here it is a fake that records what it was asked (its own
+// behaviour is day-bank.test.ts). The settings come from a fake read.
+const bank = vi.hoisted(() => ({ bankDays: vi.fn(), releaseStaleReservations: vi.fn(async () => 0) }));
+vi.mock("@/lib/billing/day-bank", () => bank);
 const settingsServer = vi.hoisted(() => ({ readReferralSettings: vi.fn() }));
 vi.mock("@/lib/referrals/settings-server", () => settingsServer);
 
-import { qualifyReferral, recordReferralSignup, rewardReferral, sweepReferralRewards } from "@/lib/referrals/server";
+import {
+  advanceReferral,
+  preBankFriendDays,
+  qualifyReferral,
+  recordReferralSignup,
+  rewardReferral,
+  sweepReferralRewards,
+} from "@/lib/referrals/server";
 import { REFERRAL_GRANT_MAX_ATTEMPTS } from "@/lib/referrals/rules";
 import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
-// The referral flow on the service role (owner decisions 2026-11-02 and
-// 2026-11-05): a signup through a link records ONE row (at onboarding, the
-// email confirmed) and keeps the email's keyed fingerprint (nobody is
-// told); the FIRST saved card moves it once and runs the reward step AT
-// ONCE — the program on, both emails confirmed, the key present (fail
-// closed), the fraud rules, one email = one reward ever, the caps
-// (claim_referral_reward; the settings' numbers), then each side's reward
-// through the free-days writer (30 free days of Plus for the friend, the
-// referrer's own tier for them) under the reference `referral:<id>:<side>`
-// — or credits, per the settings — and one notification. A failed grant is
-// left owed for the sweep.
+// The referral flow on the service role, v2 (owner 2026-11-06; migration
+// 0180): a signup through a link records ONE row (at onboarding, the email
+// confirmed) and keeps the email's keyed fingerprint (nobody is told); the
+// row QUALIFIES when the friend has saved the settings' cards within the
+// window AND started a plan with a card on file — judged on every save and
+// on the subscription's creation (advanceReferral) — and the reward step
+// runs AT ONCE: the program on, both emails confirmed, the key present
+// (fail closed), the fraud rules, one email = one reward ever, the claim
+// (claim_referral_reward_v2: the friends cap, the referrer's LADDER STEP),
+// then each side's reward — DAYS INTO THE BANK under the reference
+// `referral:<id>:referee` / `referral-step:<referrer>:<step>`, or credits —
+// and one notification each. A failed grant is left owed for the sweep.
 // ---------------------------------------------------------------------------
 
 const REFERRER = "11111111-1111-4111-8111-111111111111";
@@ -38,41 +46,49 @@ const at = (days: number) => new Date(NOW.getTime() + days * DAY).toISOString();
 const TEST_KEY = "test-only-fixture-key-not-a-secret-0123456789";
 const hmac = (normalized: string) => createHmac("sha256", TEST_KEY).update(normalized).digest("hex");
 
+type Row = Record<string, unknown>;
 type World = {
   codeOwner: string | null;
   refereeCreatedAt: string;
   refereeStatus: string | null;
   refereeCards: number;
+  /** The friend's subscription as the profile stores it (a card on file). */
+  refereeSub: { id: string | null; status: string | null };
   insertError: { message: string; code?: string } | null;
-  moved: Array<Record<string, unknown>>;
-  profiles: Array<Record<string, unknown>>;
+  /** The friend's own open row (signed_up / cards_saved); null = none. */
+  open: Row | null;
+  profiles: Row[];
   users: Record<string, { email: string | null; confirmed: boolean }>;
-  claim: string | null;
+  claim: { outcome: string; step: number | null } | null;
   inUse: boolean;
   seen: { referral_id: string | null } | null;
-  pending: Array<Record<string, unknown>>;
-  owed: Array<Record<string, unknown>>;
-  stranded: Array<Record<string, unknown>>;
-  /** What grantFreeDays answers: ok, a refusal (error), or an in-flight / duplicate code. */
-  grant: { kind: "ok" } | { kind: "error"; error: string; code?: "in_flight" | "duplicate_reference" };
-  existingGrant: Record<string, unknown> | null;
+  pending: Row[];
+  owed: Row[];
+  stranded: Row[];
+  /** What bankDays answers: ok, or a throw. */
+  bank: { kind: "ok" } | { kind: "throw"; error: string };
   settings: ReferralSettings;
 };
 let world: World;
 
-const ENDS = new Date(NOW.getTime() + 30 * DAY).toISOString();
-/** The reward the fake writer gives: 30 days of `tier` as an overlay from NOW. */
-const freeDaysDetail = (tier: "plus" | "pro" = "plus") => ({
-  kind: "free_days",
-  tier,
-  days: 30,
-  endsAt: ENDS,
-  holdEndsAt: null,
-  appliedAs: "overlay",
-  grantId: `g-${tier}`,
+const openRow = (over: Row = {}): Row => ({
+  id: REFERRAL,
+  referrer_id: REFERRER,
+  referee_id: REFEREE,
+  status: "signed_up",
+  block_reason: null,
+  first_card_at: null,
+  cards_saved_at: null,
+  card_on_file_at: null,
+  ladder_step: null,
+  referrer_reward: null,
+  referee_reward: null,
+  grant_attempts: 0,
+  signed_up_at: at(-2),
+  ...over,
 });
-const grantCalls = (stub?: unknown) =>
-  (void stub, freeDays.grantFreeDays.mock.calls.map((c) => (c as unknown[])[1] as Record<string, unknown>));
+
+const bankCalls = () => bank.bankDays.mock.calls.map((c) => (c as unknown[])[1] as Record<string, unknown>);
 
 function db() {
   const stub = chainClient((table: string, calls: ChainCall[]): ChainAnswer => {
@@ -84,6 +100,9 @@ function db() {
       if (columns.startsWith("created_at")) {
         return { data: { created_at: world.refereeCreatedAt, subscription_status: world.refereeStatus } };
       }
+      if (columns.startsWith("stripe_subscription_id")) {
+        return { data: { stripe_subscription_id: world.refereeSub.id, subscription_status: world.refereeSub.status } };
+      }
       return { data: world.profiles.find((p) => p.id === id) ?? null };
     }
     if (table === "cards") return { count: world.refereeCards };
@@ -93,21 +112,21 @@ function db() {
     }
     if (table === "referrals" && called(calls, "update") && !called(calls, "select")) return { data: null };
     if (table === "referrals" && called(calls, "update") && called(calls, "select")) {
-      // The first-card move (status = signed_up) or a settle (status = first_card).
-      const status = calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1];
-      if (status === "signed_up") return { data: world.moved };
+      // The cards move (status = signed_up), the card-on-file stamp
+      // (card_on_file_at IS NULL) or a settle (status IN qualified).
+      if (called(calls, "eq", "status")) return { data: world.open?.status === "signed_up" ? [{ id: REFERRAL }] : [] };
+      if (called(calls, "is", "card_on_file_at")) return { data: world.open?.card_on_file_at ? [] : [{ id: REFERRAL }] };
       return { data: [{ id: REFERRAL }] };
     }
     if (table === "referrals" && called(calls, "select")) {
-      const status = calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1];
-      if (status === "signed_up") return { data: world.stranded };
+      if (called(calls, "eq", "referee_id")) return { data: world.open };
+      if (called(calls, "eq", "status")) return { data: world.stranded };
       return { data: called(calls, "or") ? world.owed : world.pending };
     }
-    if (table === "plan_grants") return { data: world.existingGrant };
     return {};
   });
   stub.rpc.mockImplementation((async (name: string) => {
-    if (name === "claim_referral_reward") return { data: world.claim, error: null };
+    if (name === "claim_referral_reward_v2") return { data: world.claim ? [world.claim] : [], error: null };
     if (name === "referral_email_in_use") return { data: world.inUse, error: null };
     return { data: null, error: null };
   }) as never);
@@ -140,21 +159,10 @@ function freshWorld(): World {
     codeOwner: REFERRER,
     refereeCreatedAt: at(-0.01),
     refereeStatus: null,
-    refereeCards: 0,
+    refereeCards: 5,
+    refereeSub: { id: "sub_friend", status: "trialing" },
     insertError: null,
-    moved: [
-      {
-        id: REFERRAL,
-        referrer_id: REFERRER,
-        referee_id: REFEREE,
-        status: "first_card",
-        first_card_at: NOW.toISOString(),
-        referrer_reward: null,
-        referee_reward: null,
-        grant_attempts: 0,
-        signed_up_at: at(-2),
-      },
-    ],
+    open: openRow(),
     profiles: [
       { id: REFERRER, subscription_tier: "free" },
       { id: REFEREE, subscription_tier: "free" },
@@ -163,29 +171,29 @@ function freshWorld(): World {
       [REFERRER]: { email: "ref@gmail.com", confirmed: true },
       [REFEREE]: { email: "friend@outlook.com", confirmed: true },
     },
-    claim: "rewarded",
+    claim: { outcome: "rewarded", step: 1 },
     inUse: false,
     seen: null,
-    stranded: [],
-    grant: { kind: "ok" },
-    existingGrant: null,
-    settings: DEFAULT_REFERRAL_SETTINGS,
     pending: [],
     owed: [],
+    stranded: [],
+    bank: { kind: "ok" },
+    settings: DEFAULT_REFERRAL_SETTINGS,
   };
 }
 
 const deps = { now: NOW, billingEnabled: true } as const;
+const FRIEND_REF = `referral:${REFERRAL}:referee`;
+const stepRef = (n: number) => `referral-step:${REFERRER}:${n}`;
 
 beforeEach(() => {
   world = freshWorld();
   vi.stubEnv("REFERRAL_EMAIL_HASH_KEY", TEST_KEY);
   settingsServer.readReferralSettings.mockReset().mockImplementation(async () => world.settings);
-  // The fake writer: what the world says, for the tier asked.
-  freeDays.grantFreeDays.mockReset().mockImplementation(async (_admin: unknown, input: { tier: "plus" | "pro" }) => {
-    if (world.grant.kind === "error") return { ok: false, error: world.grant.error, ...(world.grant.code ? { code: world.grant.code } : {}) };
-    const d = freeDaysDetail(input.tier);
-    return { ok: true, grantId: d.grantId, plan: { kind: "overlay", why: "no_plan" }, endsAt: d.endsAt, holdEndsAt: null, note: "" };
+  bank.releaseStaleReservations.mockClear();
+  bank.bankDays.mockReset().mockImplementation(async (_admin: unknown, input: { days: number; reference: string }) => {
+    if (world.bank.kind === "throw") throw new Error(world.bank.error);
+    return { ok: true, entryId: `e-${input.reference}`, created: true, days: input.days };
   });
 });
 afterEach(() => {
@@ -195,6 +203,7 @@ afterEach(() => {
 describe("recordReferralSignup", () => {
   it("a new account through a valid link: one row, its email's keyed fingerprint kept, and nobody is told", async () => {
     world.users[REFEREE] = { email: "Friend.Name+promo@GoogleMail.com", confirmed: false };
+    world.refereeCards = 0;
     const stub = db();
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "D0000003", now: NOW })).toEqual({
       ok: true,
@@ -212,6 +221,7 @@ describe("recordReferralSignup", () => {
 
   it("without the hash key the signup still lands; no fingerprint, never an unkeyed hash", async () => {
     vi.stubEnv("REFERRAL_EMAIL_HASH_KEY", "");
+    world.refereeCards = 0;
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const stub = db();
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toMatchObject({ ok: true });
@@ -221,6 +231,7 @@ describe("recordReferralSignup", () => {
   });
 
   it("refuses a bad or unknown code, your own code, and an account that isn't new", async () => {
+    world.refereeCards = 0;
     expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "<script>", now: NOW })).toEqual({ ok: false, reason: "bad_code" });
     world.codeOwner = null;
     expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "unknown_code" });
@@ -232,6 +243,7 @@ describe("recordReferralSignup", () => {
       () => (world.refereeCards = 1),
     ]) {
       world = freshWorld();
+      world.refereeCards = 0;
       change();
       const stub = db();
       expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "not_new" });
@@ -240,6 +252,7 @@ describe("recordReferralSignup", () => {
   });
 
   it("first claim wins: a second claim for the same account is 'exists'", async () => {
+    world.refereeCards = 0;
     world.insertError = { message: "duplicate", code: "23505" };
     const stub = db();
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "exists" });
@@ -247,59 +260,113 @@ describe("recordReferralSignup", () => {
   });
 });
 
-describe("qualifyReferral (the first saved card) — rewarded at once", () => {
-  it("both free and confirmed: each side gets 30 free days of Plus through the free-days writer under its own reference; one notification each", async () => {
+describe("advanceReferral — the two bars, then the reward at once", () => {
+  it("the cards saved AND a card on file, both confirmed: the row moves and is stamped, the claim takes step 1, each side's days go into the bank under its own reference, one notification each", async () => {
     const stub = db();
     const result = await qualifyReferral(stub.client as never, REFEREE, deps);
-    expect(result).toEqual({ status: "rewarded", referrer: freeDaysDetail(), referee: freeDaysDetail() });
-    expect(stub.rpc).toHaveBeenCalledWith("claim_referral_reward", {
+    expect(result).toEqual({
+      status: "rewarded",
+      referrer: { kind: "banked_days", days: 7, entryId: `e-${stepRef(1)}`, step: 1 },
+      referee: { kind: "banked_days", days: 7, entryId: `e-${FRIEND_REF}` },
+      step: 1,
+    });
+    expect(stub.rpc).toHaveBeenCalledWith("claim_referral_reward_v2", {
       p_referral_id: REFERRAL,
-      p_monthly_cap: DEFAULT_REFERRAL_SETTINGS.caps.perMonth,
-      p_lifetime_cap: DEFAULT_REFERRAL_SETTINGS.caps.lifetime,
       p_friends_cap: DEFAULT_REFERRAL_SETTINGS.caps.friendsPerMonth,
     });
-    expect(grantCalls()).toEqual([
-      { userId: REFEREE, tier: "plus", units: 1, source: "referral_friend", grantedBy: null, note: null, reference: `referral:${REFERRAL}:referee` },
-      { userId: REFERRER, tier: "plus", units: 1, source: "referral_referrer", grantedBy: null, note: null, reference: `referral:${REFERRAL}:referrer` },
+    expect(bankCalls()).toEqual([
+      { userId: REFEREE, days: 7, source: "referral_friend", reference: FRIEND_REF },
+      { userId: REFERRER, days: 7, source: "referral_step", reference: stepRef(1) },
     ]);
-    // Never the comp's columns from here (the writer owns them), never credits by hand.
+    // Never the comp's columns from here, never credits by hand for a days step.
     expect(stub.forTable("profiles").filter((e) => called(e.calls, "update"))).toEqual([]);
     expect(rpcNames(stub)).not.toContain("grant_credits");
-    expect(notifications(stub).map((n) => [n.recipient_id, n.type, (n.payload as Record<string, unknown>).side, (n.payload as Record<string, unknown>).days])).toEqual([
-      [REFEREE, "referral_reward", "referee", 30],
-      [REFERRER, "referral_reward", "referrer", 30],
+    expect(notifications(stub).map((n) => [n.recipient_id, n.type, n.payload])).toEqual([
+      [REFEREE, "referral_reward", { referralId: REFERRAL, side: "referee", reward: "banked_days", days: 7 }],
+      [REFERRER, "referral_reward", { referralId: REFERRAL, side: "referrer", reward: "banked_days", days: 7, step: 1 }],
     ]);
     // Each side's outcome is recorded only while still owed.
-    const record = stub.forTable("referrals").find((e) => (payloadOf(e.calls, "update") as Record<string, unknown> | undefined)?.referee_reward === "free_days")!;
+    const record = stub.forTable("referrals").find((e) => (payloadOf(e.calls, "update") as Record<string, unknown> | undefined)?.referee_reward === "banked_days")!;
     expect(record.calls.find((c) => c.method === "is")?.args).toEqual(["referee_reward", null]);
-    // The move to first_card is ONE conditional update (status = signed_up).
-    const moved = stub.forTable("referrals")[0];
-    expect(moved.calls.filter((c) => c.method === "eq").map((c) => c.args)).toEqual([
-      ["referee_id", REFEREE],
-      ["status", "signed_up"],
-    ]);
+    // The cards move is ONE conditional update (status = signed_up) with both stamps.
+    const moved = stub.forTable("referrals").find((e) => called(e.calls, "update") && called(e.calls, "eq", "status"))!;
+    expect(payloadOf(moved.calls, "update")).toEqual({ status: "cards_saved", cards_saved_at: NOW.toISOString(), first_card_at: NOW.toISOString() });
+    // The card-on-file stamp is written once (card_on_file_at IS NULL).
+    const stamped = stub.forTable("referrals").find((e) => called(e.calls, "update") && called(e.calls, "is", "card_on_file_at"))!;
+    expect(payloadOf(stamped.calls, "update")).toEqual({ card_on_file_at: NOW.toISOString() });
     // The email check ran before the claim, on the normalized address.
     expect(stub.rpc).toHaveBeenCalledWith("referral_email_in_use", { p_user_id: REFEREE, p_normalized: "friend@outlook.com" });
     const names = rpcNames(stub);
-    expect(names.indexOf("referral_email_in_use")).toBeLessThan(names.indexOf("claim_referral_reward"));
+    expect(names.indexOf("referral_email_in_use")).toBeLessThan(names.indexOf("claim_referral_reward_v2"));
   });
 
-  it("a second save (or a retry) finds nothing to move and grants nothing", async () => {
-    world.moved = [];
+  it("no open row (a second run, or no referral): nothing", async () => {
+    world.open = null;
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "none" });
     expect(stub.rpc).not.toHaveBeenCalled();
   });
 
-  it("past the 30-day window: expired, nobody rewarded", async () => {
-    world.moved[0].signed_up_at = at(-31);
+  it("fewer cards than the bar: waiting, nothing stamped, no claim", async () => {
+    world.refereeCards = 4;
+    const stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    expect(referralUpdates(stub).some((u) => "cards_saved_at" in u)).toBe(false);
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
+    expect(bankCalls()).toEqual([]);
+  });
+
+  it("the cards but NO card on file: the cards are stamped (once) and the row waits for the plan", async () => {
+    world.refereeSub = { id: null, status: null };
+    const stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    expect(referralUpdates(stub)).toEqual([{ status: "cards_saved", cards_saved_at: NOW.toISOString(), first_card_at: NOW.toISOString() }]);
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
+    // A plan without a card (a legacy no-card trial reads trialing too — the
+    // status is Stripe's; a profile with no subscription id never counts).
+    world = freshWorld();
+    world.refereeSub = { id: "sub_x", status: "canceled" };
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+  });
+
+  it("the cards saved past the window: expired, nobody rewarded", async () => {
+    world.open = openRow({ signed_up_at: at(-31) });
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "expired" });
     expect(referralUpdates(stub).at(-1)).toEqual({ status: "expired", referrer_reward: "none", referee_reward: "none" });
     expect(stub.rpc).not.toHaveBeenCalled();
   });
 
-  it("an UNCONFIRMED email (either side) waits — no claim, no month, no notification — and expires 30 days after the card", async () => {
+  it("the ladder: step 2 is AI credits (grant_credits under the step's key), step 11 is the tail", async () => {
+    world.claim = { outcome: "rewarded", step: 2 };
+    let stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({
+      status: "rewarded",
+      referrer: { kind: "credits", credits: 5, step: 2 },
+      referee: { kind: "banked_days", days: 7 },
+      step: 2,
+    });
+    expect(stub.rpc).toHaveBeenCalledWith("grant_credits", {
+      p_user_id: REFERRER,
+      p_amount: 5,
+      p_reason: "referral_credits",
+      p_idempotency_key: stepRef(2),
+    });
+    expect(bankCalls().map((c) => c.source)).toEqual(["referral_friend"]);
+    expect(notifications(stub).map((n) => n.payload)).toContainEqual({ referralId: REFERRAL, side: "referrer", reward: "credits", credits: 5, step: 2 });
+
+    world = freshWorld();
+    world.claim = { outcome: "rewarded", step: 11 };
+    stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ referrer: { kind: "banked_days", days: 7, step: 11 } });
+    expect(bankCalls().at(-1)).toEqual({ userId: REFERRER, days: 7, source: "referral_step", reference: stepRef(11) });
+    // Step 10 is the ladder's last: 30 days.
+    world = freshWorld();
+    world.claim = { outcome: "rewarded", step: 10 };
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ referrer: { kind: "banked_days", days: 30, step: 10 } });
+  });
+
+  it("an UNCONFIRMED email (either side) waits — no claim, no bank, no notification — and expires 30 days after the cards", async () => {
     for (const who of [REFEREE, REFERRER]) {
       world = freshWorld();
       world.users[who].confirmed = false;
@@ -307,10 +374,11 @@ describe("qualifyReferral (the first saved card) — rewarded at once", () => {
       expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "email_unconfirmed" });
       expect(stub.rpc).not.toHaveBeenCalled();
       expect(notifications(stub)).toEqual([]);
+      expect(bankCalls()).toEqual([]);
     }
     world = freshWorld();
     world.users[REFEREE].confirmed = false;
-    const late = { ...world.moved[0], first_card_at: at(-31) };
+    const late = openRow({ status: "cards_saved", cards_saved_at: at(-31), card_on_file_at: at(-1) });
     const stub = db();
     expect(await rewardReferral(stub.client as never, late as never, deps)).toEqual({ status: "expired" });
     expect(stub.rpc).not.toHaveBeenCalled();
@@ -323,42 +391,41 @@ describe("qualifyReferral (the first saved card) — rewarded at once", () => {
     expect(notifications(stub)).toEqual([]);
   });
 
-  it("no hash key: FAIL CLOSED — no email check, no claim, no month", async () => {
+  it("no hash key: FAIL CLOSED — no email check, no claim, nothing banked", async () => {
     vi.stubEnv("REFERRAL_EMAIL_HASH_KEY", "too-short");
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "hash_key_missing" });
     expect(stub.rpc).not.toHaveBeenCalled();
+    expect(bankCalls()).toEqual([]);
     error.mockRestore();
   });
 
-  it("one email, one month (a): another LIVE account has the friend's normalized address — nobody rewarded, the friend not told", async () => {
+  it("one email, one reward (a): another LIVE account has the friend's normalized address — nobody rewarded, the friend not told", async () => {
     world.users[REFEREE].email = "Jo.Smith+2@googlemail.com";
     world.inUse = true;
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "blocked", reason: "email_reused", referee: null });
     expect(stub.rpc).toHaveBeenCalledWith("referral_email_in_use", { p_user_id: REFEREE, p_normalized: "josmith@gmail.com" });
-    expect(rpcNames(stub)).not.toContain("claim_referral_reward");
-    expect(grantCalls()).toEqual([]);
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
+    expect(bankCalls()).toEqual([]);
     expect(referralUpdates(stub).at(-1)).toEqual({
       status: "blocked",
       block_reason: "email_reused",
       referrer_reward: "none",
       referee_reward: "none",
     });
-    // The referrer reads "not eligible" (no reason); the friend gets nothing.
     expect(notifications(stub)).toEqual([
       { recipient_id: REFERRER, actor_id: REFEREE, type: "referral_signup", payload: { referralId: REFERRAL, outcome: "not_eligible" } },
     ]);
   });
 
-  it("one email, one month (b): an EARLIER referral signup left the fingerprint (its account deleted since) — not eligible", async () => {
+  it("one email, one reward (b): an EARLIER referral signup left the fingerprint (its account deleted since) — not eligible", async () => {
     world.seen = { referral_id: OTHER_REFERRAL };
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "blocked", reason: "email_reused" });
     const read = stub.forTable("referral_email_fingerprints").find((e) => called(e.calls, "select"))!;
     expect(read.calls.find((c) => c.method === "eq")?.args).toEqual(["fingerprint", hmac("friend@outlook.com")]);
-    // An earlier referral whose row is gone (referral_id null) counts too.
     world = freshWorld();
     world.seen = { referral_id: null };
     expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "blocked", reason: "email_reused" });
@@ -380,13 +447,13 @@ describe("qualifyReferral (the first saved card) — rewarded at once", () => {
       name === "referral_email_in_use" ? { data: null, error: { message: "down" } } : { data: null, error: null }) as never);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "check_failed" });
-    expect(rpcNames(stub)).not.toContain("claim_referral_reward");
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
     warn.mockRestore();
   });
 
   it("a friend whose account was deleted before the reward step: blocked, nobody rewarded", async () => {
     const stub = db();
-    const row = { ...world.moved[0], referee_id: null };
+    const row = openRow({ status: "cards_saved", cards_saved_at: at(-1), card_on_file_at: at(-1), referee_id: null });
     expect(await rewardReferral(stub.client as never, row as never, deps)).toEqual({ status: "blocked", reason: "account_deleted", referee: null });
     expect(referralUpdates(stub)).toEqual([
       { status: "blocked", block_reason: "account_deleted", referrer_reward: "none", referee_reward: "none" },
@@ -394,23 +461,11 @@ describe("qualifyReferral (the first saved card) — rewarded at once", () => {
     expect(stub.rpc).not.toHaveBeenCalled();
   });
 
-  it("at the referrer's monthly cap: the friend still gets theirs; the referrer is told why there's no reward", async () => {
-    world.claim = "capped_month";
-    const stub = db();
-    const result = await qualifyReferral(stub.client as never, REFEREE, deps);
-    expect(result).toMatchObject({ status: "capped", referrer: null, referee: { kind: "free_days" } });
-    expect(grantCalls().map((c) => c.source)).toEqual(["referral_friend"]);
-    expect(notifications(stub).map((n) => [n.recipient_id, n.type, (n.payload as Record<string, unknown>).outcome ?? (n.payload as Record<string, unknown>).side])).toEqual([
-      [REFERRER, "referral_signup", "capped_month"],
-      [REFEREE, "referral_reward", "referee"],
-    ]);
-  });
-
   it("the same inbox: blocked, nobody rewarded, no cap consumed", async () => {
     world.users[REFEREE].email = "r.e.f+alt@gmail.com";
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "blocked", reason: "same_email", referee: null });
-    expect(rpcNames(stub)).not.toContain("claim_referral_reward");
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
     expect(referralUpdates(stub).at(-1)).toEqual({ status: "blocked", block_reason: "same_email", referrer_reward: "none", referee_reward: "none" });
   });
 
@@ -419,166 +474,125 @@ describe("qualifyReferral (the first saved card) — rewarded at once", () => {
       { id: REFERRER, subscription_tier: "free", stripe_customer_id: "cus_a" },
       { id: REFEREE, subscription_tier: "free", stripe_customer_id: "cus_b" },
     ];
-    const stripe = { customers: { listPaymentMethods: vi.fn(async () => ({ data: [{ card: { fingerprint: "fp_same" } }] })) } };
+    const stripe = { paymentMethods: { list: vi.fn(async () => ({ data: [{ card: { fingerprint: "fp_same" } }] })) } };
     expect(await qualifyReferral(db().client as never, REFEREE, { ...deps, stripe: stripe as never })).toMatchObject({ status: "blocked", reason: "same_card" });
   });
 
-  it("the same custom domain: the friend's reward only — through the claim, so it counts toward the friends cap", async () => {
+  it("the same custom domain: the friend's days only — through the claim, so it counts toward the friends cap", async () => {
     world.users = { [REFERRER]: { email: "a@smallshop.com", confirmed: true }, [REFEREE]: { email: "b@smallshop.com", confirmed: true } };
-    world.claim = "blocked";
+    world.claim = { outcome: "blocked", step: null };
     const stub = db();
-    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "blocked", reason: "same_domain", referee: { kind: "free_days" } });
-    expect(stub.rpc).toHaveBeenCalledWith("claim_referral_reward", expect.objectContaining({ p_block_reason: "same_domain" }));
-    expect(grantCalls().map((c) => c.source)).toEqual(["referral_friend"]);
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "blocked", reason: "same_domain", referee: { kind: "banked_days", days: 7 } });
+    expect(stub.rpc).toHaveBeenCalledWith("claim_referral_reward_v2", expect.objectContaining({ p_block_reason: "same_domain" }));
+    expect(bankCalls().map((c) => c.source)).toEqual(["referral_friend"]);
     // Twenty catch-all inboxes: the friends cap answers capped_friends and nobody is rewarded.
-    freeDays.grantFreeDays.mockClear();
+    bank.bankDays.mockClear();
     world = freshWorld();
     world.users = { [REFERRER]: { email: "a@smallshop.com", confirmed: true }, [REFEREE]: { email: "b@smallshop.com", confirmed: true } };
-    world.claim = "capped_friends";
-    const capped = db();
-    expect(await qualifyReferral(capped.client as never, REFEREE, deps)).toEqual({ status: "capped", referrer: null, referee: null });
-    expect(grantCalls()).toEqual([]);
+    world.claim = { outcome: "capped_friends", step: null };
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toEqual({ status: "capped", referrer: null, referee: null });
+    expect(bankCalls()).toEqual([]);
   });
 
   it("the friends cap (the settings' friendsPerMonth): NEITHER side is rewarded — N confirmable inboxes mint nothing", async () => {
-    world.claim = "capped_friends";
+    world.claim = { outcome: "capped_friends", step: null };
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "capped", referrer: null, referee: null });
-    expect(grantCalls()).toEqual([]);
+    expect(bankCalls()).toEqual([]);
     expect(notifications(stub)).toEqual([
       { recipient_id: REFERRER, actor_id: REFEREE, type: "referral_signup", payload: { referralId: REFERRAL, outcome: "capped_friends" } },
     ]);
   });
 
-  it("the program OFF (the admin switch) is a PAUSE: the row waits — nothing granted, nobody told, nothing settled", async () => {
+  it("a claim another run won (no row back): nothing", async () => {
+    world.claim = null;
+    const stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "none" });
+    expect(bankCalls()).toEqual([]);
+  });
+
+  it("the program OFF (the admin switch) is a PAUSE: the stamps are written, then the row waits — nothing banked, nobody told, nothing settled", async () => {
     world.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false };
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "program_off" });
-    // Only the move to first_card was written; no settle.
-    expect(referralUpdates(stub)).toEqual([{ status: "first_card", first_card_at: NOW.toISOString() }]);
-    expect(rpcNames(stub)).not.toContain("claim_referral_reward");
-    expect(grantCalls()).toEqual([]);
+    expect(referralUpdates(stub)).toEqual([
+      { status: "cards_saved", cards_saved_at: NOW.toISOString(), first_card_at: NOW.toISOString() },
+      { card_on_file_at: NOW.toISOString() },
+    ]);
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
+    expect(bankCalls()).toEqual([]);
     expect(notifications(stub)).toEqual([]);
     // …and a signup through a link records nothing either.
     world = freshWorld();
+    world.refereeCards = 0;
     world.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false };
     const signup = db();
     expect(await recordReferralSignup(signup.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "program_off" });
     expect(signup.forTable("referrals")).toEqual([]);
   });
 
-  it("a 'credits' reward (the settings changed): one grant_credits call under the referral's key, the writer untouched", async () => {
-    world.settings = { ...DEFAULT_REFERRAL_SETTINGS, friend: { kind: "credits", amount: 20 }, referrer: { kind: "none" } };
+  it("the friend's days set to 0: their side is 'none' (settings), the referrer still climbs", async () => {
+    world.settings = { ...DEFAULT_REFERRAL_SETTINGS, friend: { days: 0 } };
     const stub = db();
-    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({
       status: "rewarded",
-      referrer: { kind: "none", reason: "settings" },
-      referee: { kind: "credits", credits: 20 },
+      referrer: { kind: "banked_days", days: 7, step: 1 },
+      referee: { kind: "none", reason: "settings" },
     });
-    expect(stub.rpc).toHaveBeenCalledWith("grant_credits", {
-      p_user_id: REFEREE,
-      p_amount: 20,
-      p_reason: "referral_credits",
-      p_idempotency_key: `referral:${REFERRAL}:referee`,
-    });
-    expect(grantCalls()).toEqual([]);
-    expect(notifications(stub).map((n) => [n.recipient_id, (n.payload as Record<string, unknown>).credits])).toEqual([[REFEREE, 20]]);
+    expect(bankCalls().map((c) => c.source)).toEqual(["referral_step"]);
+    expect(notifications(stub).map((n) => n.recipient_id)).toEqual([REFERRER]);
   });
 
-  it("a paying referrer gets their OWN tier's free days (the writer adds them to the paid time); the free friend gets Plus", async () => {
+  it("an admin referrer gets nothing; the friend still does", async () => {
     world.profiles = [
-      { id: REFERRER, subscription_tier: "pro", subscription_status: "active", stripe_customer_id: "cus_a" },
+      { id: REFERRER, subscription_tier: "free", is_admin: true },
       { id: REFEREE, subscription_tier: "free" },
     ];
-    const stripe = { customers: { listPaymentMethods: vi.fn(async () => ({ data: [] })) } };
-    const stub = db();
-    const result = await qualifyReferral(stub.client as never, REFEREE, { ...deps, stripe: stripe as never });
-    expect(result).toMatchObject({ status: "rewarded", referrer: { kind: "free_days", tier: "pro" }, referee: { kind: "free_days", tier: "plus" } });
-    expect(grantCalls().map((c) => [c.source, c.tier])).toEqual([
-      ["referral_friend", "plus"],
-      ["referral_referrer", "pro"],
-    ]);
-    // The writer is handed the Stripe client it needs for a hold.
-    expect((freeDays.grantFreeDays.mock.calls[1] as unknown[])[2]).toMatchObject({ stripe });
-  });
-
-  it("a cancelled plan still running, or a lapsed one: Plus (the writer starts the days when the plan ends)", async () => {
-    world.profiles = [
-      { id: REFERRER, subscription_tier: "pro", subscription_status: "canceled" },
-      { id: REFEREE, subscription_tier: "free" },
-    ];
-    await qualifyReferral(db().client as never, REFEREE, deps);
-    expect(grantCalls().map((c) => [c.source, c.tier])).toEqual([
-      ["referral_friend", "plus"],
-      ["referral_referrer", "plus"],
-    ]);
-  });
-
-  it("a grant the writer already made (duplicate_reference — a retry after a lost record write) is read back, never granted twice; a pending or failed one is retried", async () => {
-    world.grant = { kind: "error", error: "This grant was already given.", code: "duplicate_reference" };
-    world.existingGrant = { id: "g-old", tier: "plus", units: 1, ends_at: ENDS, applied_as: "subscription_hold", status: "applied" };
-    const stub = db();
-    const result = await qualifyReferral(stub.client as never, REFEREE, deps);
-    // A hold's end is the moved charge: the notification says so.
-    expect(result).toMatchObject({ status: "rewarded", referee: { kind: "free_days", grantId: "g-old", endsAt: ENDS, holdEndsAt: ENDS, appliedAs: "subscription_hold" } });
-    expect(stub.forTable("plan_grants")[0].calls.find((c) => c.method === "eq")?.args).toEqual(["reference", `referral:${REFERRAL}:referee`]);
-    for (const status of ["pending", "failed"]) {
-      world = freshWorld();
-      world.grant = { kind: "error", error: "This grant was already given.", code: "duplicate_reference" };
-      world.existingGrant = { id: "g-old", tier: "plus", units: 1, ends_at: ENDS, applied_as: "overlay", status };
-      const error = vi.spyOn(console, "error").mockImplementation(() => {});
-      const s2 = db();
-      expect(await qualifyReferral(s2.client as never, REFEREE, deps)).toEqual({ status: "rewarded", referrer: null, referee: null });
-      expect(referralUpdates(s2)).toContainEqual({ grant_attempts: 1 });
-      error.mockRestore();
-    }
-  });
-
-  it("a plan under a scheduled change (a pending downgrade) is DEFERRED: owed, no attempt counted, the sweep tries again", async () => {
-    world.profiles = [
-      { id: REFERRER, subscription_tier: "pro", subscription_status: "active" },
-      { id: REFEREE, subscription_tier: "free" },
-    ];
-    freeDays.grantFreeDays.mockImplementation(async (_admin: unknown, input: { tier: string; source: string }) =>
-      input.source === "referral_referrer"
-        ? { ok: false, error: "Their plan has a scheduled change (a pending downgrade). Release it first — \"Keep plan\" on their billing page — then give the free days." }
-        : { ok: true, grantId: "g-f", plan: { kind: "overlay", why: "no_plan" }, endsAt: ENDS, holdEndsAt: null, note: "" },
-    );
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const stub = db();
-    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", referrer: null, referee: { kind: "free_days" } });
-    expect(referralUpdates(stub)).not.toContainEqual({ grant_attempts: 1 });
-    // The referrer's side stays owed (never recorded as none).
-    expect(referralUpdates(stub).some((u) => "referrer_reward" in u && !("status" in u))).toBe(false);
-    warn.mockRestore();
-  });
-
-  it("a refusal the writer makes for good (an admin) is recorded as none; one that can clear (in flight, renewing) is retried", async () => {
-    world.grant = { kind: "error", error: "An admin account already has every perk and unlimited credits." };
-    let stub = db();
-    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ referee: { kind: "none", reason: "admin" } });
-    world = freshWorld();
-    world.grant = { kind: "error", error: "Another grant for this user is being applied right now. Try again in a moment.", code: "in_flight" };
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    stub = db();
-    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "rewarded", referrer: null, referee: null });
-    expect(referralUpdates(stub)).toContainEqual({ grant_attempts: 1 });
-    error.mockRestore();
-  });
-
-  it("a failed grant is never a throw: the side stays OWED and an attempt is counted (the sweep retries)", async () => {
-    freeDays.grantFreeDays.mockImplementation(async () => {
-      throw new Error("deadlock");
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({
+      referrer: { kind: "none", reason: "admin" },
+      referee: { kind: "banked_days", days: 7 },
     });
+  });
+
+  it("a bank write that throws is never a throw here: the side stays OWED and an attempt is counted (the sweep retries)", async () => {
+    world.bank = { kind: "throw", error: "deadlock" };
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const stub = db();
     const result = await qualifyReferral(stub.client as never, REFEREE, deps);
-    expect(result).toEqual({ status: "rewarded", referrer: null, referee: null });
+    expect(result).toEqual({ status: "rewarded", referrer: null, referee: null, step: 1 });
     expect(referralUpdates(stub)).toContainEqual({ grant_attempts: 1 });
     // Nothing recorded for either side: both stay owed.
     expect(referralUpdates(stub).filter((u) => !("status" in u) && ("referee_reward" in u || "referrer_reward" in u))).toEqual([]);
     expect(notifications(stub)).toEqual([]);
     error.mockRestore();
+  });
+});
+
+describe("preBankFriendDays — the friend's checkout", () => {
+  it("a friend with the cards and no plan yet gets their days banked under the referral's reference, so this checkout applies them", async () => {
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    expect(await preBankFriendDays(db().client as never, REFEREE, deps)).toBe(true);
+    expect(bankCalls()).toEqual([{ userId: REFEREE, days: 7, source: "referral_friend", reference: FRIEND_REF }]);
+  });
+  it("nothing without the cards, with a card already on file, with the side already recorded, with the program off, or with billing off", async () => {
+    for (const change of [
+      () => (world.open = openRow()),
+      () => (world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1), card_on_file_at: at(-1) })),
+      () => (world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1), referee_reward: "none" })),
+      () => {
+        world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+        world.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false };
+      },
+      () => (world.open = null),
+    ]) {
+      world = freshWorld();
+      change();
+      expect(await preBankFriendDays(db().client as never, REFEREE, deps)).toBe(false);
+    }
+    world = freshWorld();
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    expect(await preBankFriendDays(db().client as never, REFEREE, { now: NOW, billingEnabled: false })).toBe(false);
+    expect(bankCalls()).toEqual([]);
   });
 });
 
@@ -589,55 +603,57 @@ describe("sweepReferralRewards (the cron's retry)", () => {
     expect(stub.log).toEqual([]);
   });
 
-  it("claims first_card rows that can now be rewarded and leaves the unconfirmed waiting", async () => {
-    world.pending = [{ ...world.moved[0] }];
+  it("advances cards_saved rows: one with a plan now is claimed, one without waits; the bank's stale reservations are released", async () => {
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    world.pending = [{ ...world.open }];
+    bank.releaseStaleReservations.mockResolvedValueOnce(2);
     const stub = db();
-    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 1, waiting: 0, retried: 0, failed: 0 });
-    expect(rpcNames(stub)).toContain("claim_referral_reward");
+    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 1, waiting: 0, retried: 0, failed: 0, released: 2 });
+    expect(rpcNames(stub)).toContain("claim_referral_reward_v2");
+    expect(bank.releaseStaleReservations).toHaveBeenCalledWith(stub.client, NOW);
 
     world = freshWorld();
-    world.pending = [{ ...world.moved[0] }];
-    world.users[REFEREE].confirmed = false;
-    expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 1, retried: 0, failed: 0 });
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    world.pending = [{ ...world.open }];
+    world.refereeSub = { id: null, status: null };
+    expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 1, retried: 0, failed: 0, released: 0 });
   });
 
   it("grants the sides still owed on claimed rows — and only those", async () => {
-    world.owed = [
-      { id: REFERRAL, referrer_id: REFERRER, referee_id: REFEREE, status: "rewarded", referrer_reward: "free_days", referee_reward: null, grant_attempts: 1 },
-    ];
+    world.owed = [openRow({ status: "rewarded", ladder_step: 3, referrer_reward: "banked_days", referee_reward: null, grant_attempts: 1 })];
     const stub = db();
-    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 0, retried: 1, failed: 0 });
-    expect(grantCalls().map((c) => c.source)).toEqual(["referral_friend"]);
-    expect(rpcNames(stub)).not.toContain("claim_referral_reward");
+    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 0, retried: 1, failed: 0, released: 0 });
+    expect(bankCalls().map((c) => c.source)).toEqual(["referral_friend"]);
+    expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
+    // The referrer's owed side uses the row's ladder step, never step 1 again.
+    bank.bankDays.mockClear();
+    world = freshWorld();
+    world.owed = [openRow({ status: "rewarded", ladder_step: 3, referrer_reward: null, referee_reward: "banked_days" })];
+    await sweepReferralRewards(db().client as never, deps);
+    expect(bankCalls()).toEqual([{ userId: REFERRER, days: 7, source: "referral_step", reference: stepRef(3) }]);
   });
 
-  it("a STRANDED signup (the first card's after() was lost): a signed_up row older than ten minutes whose friend has a card is qualified; signups past the activation window expire", async () => {
+  it("a STRANDED signup (a lost after()): a signed_up row older than ten minutes whose friend has the cards is advanced; signups past the window expire", async () => {
     world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
-    world.refereeCards = 1;
     const stub = db();
-    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 1, waiting: 0, retried: 0, failed: 0 });
-    expect(rpcNames(stub)).toContain("claim_referral_reward");
-    // The expiry: signed_up rows older than the activation window, both sides none.
+    expect(await sweepReferralRewards(stub.client as never, deps)).toEqual({ ok: true, claimed: 1, waiting: 0, retried: 0, failed: 0, released: 0 });
+    expect(rpcNames(stub)).toContain("claim_referral_reward_v2");
     const expiry = stub.forTable("referrals").find((e) => called(e.calls, "update") && called(e.calls, "eq", "status") && called(e.calls, "lt"))!;
     expect(payloadOf(expiry.calls, "update")).toEqual({ status: "expired", referrer_reward: "none", referee_reward: "none" });
     expect(expiry.calls.find((c) => c.method === "lt")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 30 * DAY).toISOString()]);
-    // The read: signed_up rows before now − 10 min and inside the window.
     const read = stub.forTable("referrals").find((e) => called(e.calls, "select") && called(e.calls, "eq", "status") && called(e.calls, "lt"))!;
     expect(read.calls.find((c) => c.method === "lt")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 10 * 60_000).toISOString()]);
     expect(read.calls.find((c) => c.method === "gte")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 30 * DAY).toISOString()]);
-    // No card yet: left alone.
+    // Not enough cards yet: left alone.
     world = freshWorld();
     world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
-    expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 0, retried: 0, failed: 0 });
+    world.refereeCards = 2;
+    expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 0, retried: 0, failed: 0, released: 0 });
   });
 
   it(`gives up after ${REFERRAL_GRANT_MAX_ATTEMPTS} attempts: the side is recorded as none (grant_failed) for an admin`, async () => {
-    freeDays.grantFreeDays.mockImplementation(async () => {
-      throw new Error("still failing");
-    });
-    world.owed = [
-      { id: REFERRAL, referrer_id: REFERRER, referee_id: REFEREE, status: "capped", referrer_reward: "none", referee_reward: null, grant_attempts: REFERRAL_GRANT_MAX_ATTEMPTS - 1 },
-    ];
+    world.bank = { kind: "throw", error: "still failing" };
+    world.owed = [openRow({ status: "capped", referrer_reward: "none", referee_reward: null, grant_attempts: REFERRAL_GRANT_MAX_ATTEMPTS - 1 })];
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const stub = db();
     await sweepReferralRewards(stub.client as never, deps);
@@ -647,12 +663,21 @@ describe("sweepReferralRewards (the cron's retry)", () => {
   });
 
   it("a deleted friend's owed side is closed as none", async () => {
-    world.owed = [
-      { id: REFERRAL, referrer_id: REFERRER, referee_id: null, status: "rewarded", referrer_reward: "free_days", referee_reward: null, grant_attempts: 0 },
-    ];
+    world.owed = [openRow({ status: "rewarded", referee_id: null, ladder_step: 1, referrer_reward: "banked_days", referee_reward: null })];
     const stub = db();
     await sweepReferralRewards(stub.client as never, deps);
     expect(referralUpdates(stub)).toContainEqual({ referee_reward: "none", referee_reward_detail: { kind: "none", reason: "account_deleted" } });
-    expect(grantCalls()).toEqual([]);
+    expect(bankCalls()).toEqual([]);
+  });
+});
+
+describe("advanceReferral is the one entry for both hooks", () => {
+  it("qualifyReferral (the card save) and advanceReferral (the subscription) are the same step", async () => {
+    world.refereeSub = { id: null, status: null };
+    const stub = db();
+    expect(await advanceReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    world = freshWorld();
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });
+    expect(await advanceReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
   });
 });

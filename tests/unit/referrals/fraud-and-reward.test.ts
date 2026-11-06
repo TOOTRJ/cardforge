@@ -5,8 +5,15 @@ import {
   normalizeReferralEmail,
   referralFraudVerdict,
 } from "@/lib/referrals/fraud";
-import { referralRewardFor } from "@/lib/referrals/reward";
-import { DEFAULT_REFERRAL_SETTINGS, parseReferralSettings, rewardPhrase } from "@/lib/referrals/settings";
+import { friendRewardFor, referrerRewardFor } from "@/lib/referrals/reward";
+import {
+  DEFAULT_REFERRAL_LADDER,
+  DEFAULT_REFERRAL_SETTINGS,
+  friendRewardPhrase,
+  ladderRewardFor,
+  parseReferralSettings,
+  rewardStepPhrase,
+} from "@/lib/referrals/settings";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -16,7 +23,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // The referral program's pure rules: codes and links, the fraud verdicts, and
-// how "one free month" reaches each kind of account.
+// how a reward (days into the bank, or credits) reaches each side (v2).
 // ---------------------------------------------------------------------------
 
 
@@ -91,39 +98,55 @@ describe("fraud rules", () => {
   });
 });
 
-describe("how a side's reward is decided (the settings made concrete — lib/referrals/reward.ts)", () => {
-  const friend = DEFAULT_REFERRAL_SETTINGS.friend;
-  const referrer = DEFAULT_REFERRAL_SETTINGS.referrer;
-
-  it("the friend: 30 free days of Plus whatever they are on (free, comped, paying — lib/billing/free-days.ts decides the shape)", () => {
-    expect(referralRewardFor(friend, { subscription_tier: "free" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
-    expect(referralRewardFor(friend, { subscription_tier: "pro", subscription_status: "active" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
+describe("how a side's reward is decided (the settings made concrete — lib/referrals/reward.ts, v2)", () => {
+  it("the friend: the settings' days, banked, whatever they are on; 0 days = nothing", () => {
+    expect(friendRewardFor(DEFAULT_REFERRAL_SETTINGS, { subscription_tier: "free" })).toEqual({ kind: "days", days: 7 });
+    expect(friendRewardFor(DEFAULT_REFERRAL_SETTINGS, { subscription_tier: "pro", subscription_status: "active" })).toEqual({ kind: "days", days: 7 });
+    expect(friendRewardFor({ friend: { days: 0 } }, { subscription_tier: "free" })).toEqual({ kind: "none", reason: "settings" });
   });
 
-  it("the referrer: their OWN paid tier while the plan is live, Plus otherwise (owner 2026-11-05)", () => {
-    expect(referralRewardFor(referrer, { subscription_tier: "free" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
-    for (const status of ["active", "trialing"]) {
-      expect(referralRewardFor(referrer, { subscription_tier: "pro", subscription_status: status })).toEqual({ kind: "free_days", tier: "pro", units: 1 });
+  it("the referrer: the LADDER by qualified-referral count (owner 2026-11-06), the tail past it", () => {
+    const expected: Array<[number, unknown]> = [
+      [1, { kind: "days", days: 7 }],
+      [2, { kind: "credits", amount: 5 }],
+      [3, { kind: "days", days: 7 }],
+      [4, { kind: "credits", amount: 10 }],
+      [5, { kind: "days", days: 14 }],
+      [6, { kind: "credits", amount: 20 }],
+      [7, { kind: "days", days: 21 }],
+      [8, { kind: "credits", amount: 50 }],
+      [9, { kind: "days", days: 21 }],
+      [10, { kind: "days", days: 30 }],
+      [11, { kind: "days", days: 7 }],
+      [40, { kind: "days", days: 7 }],
+    ];
+    for (const [step, reward] of expected) {
+      expect(referrerRewardFor(DEFAULT_REFERRAL_SETTINGS, step, { subscription_tier: "free" }), `step ${step}`).toEqual(reward);
     }
-    expect(referralRewardFor(referrer, { subscription_tier: "pro", subscription_status: "canceled" })).toEqual({ kind: "free_days", tier: "plus", units: 1 });
+    expect(DEFAULT_REFERRAL_LADDER).toHaveLength(10);
+    expect(ladderRewardFor(DEFAULT_REFERRAL_SETTINGS, 0)).toEqual({ kind: "none" });
+    expect(ladderRewardFor(DEFAULT_REFERRAL_SETTINGS, 1.5)).toEqual({ kind: "none" });
   });
 
-  it("an admin gets nothing; a 'credits' or 'none' setting is what it says", () => {
-    expect(referralRewardFor(friend, { is_admin: true })).toEqual({ kind: "none", reason: "admin" });
-    expect(referralRewardFor({ kind: "credits", amount: 20 }, { subscription_tier: "free" })).toEqual({ kind: "credits", amount: 20 });
-    expect(referralRewardFor({ kind: "none" }, { subscription_tier: "free" })).toEqual({ kind: "none", reason: "settings" });
+  it("an admin gets nothing on either side; a 'none' step is what it says", () => {
+    expect(friendRewardFor(DEFAULT_REFERRAL_SETTINGS, { is_admin: true })).toEqual({ kind: "none", reason: "admin" });
+    expect(referrerRewardFor(DEFAULT_REFERRAL_SETTINGS, 1, { is_admin: true })).toEqual({ kind: "none", reason: "admin" });
+    expect(referrerRewardFor({ ladder: [{ kind: "none" }], tail: { kind: "none" } }, 1, { subscription_tier: "free" })).toEqual({ kind: "none", reason: "settings" });
   });
 
-  it("the settings parse with defaults for anything missing or malformed, and phrase themselves", () => {
+  it("the settings parse with defaults for anything missing or malformed — a v1 row keeps its switch and friends cap — and phrase themselves", () => {
     expect(parseReferralSettings(null)).toEqual(DEFAULT_REFERRAL_SETTINGS);
-    expect(parseReferralSettings({ enabled: false, friend: { kind: "credits", amount: 20 }, caps: { perMonth: 99 } })).toEqual({
-      ...DEFAULT_REFERRAL_SETTINGS,
-      enabled: false,
-      friend: { kind: "credits", amount: 20 },
-    });
-    expect(rewardPhrase({ kind: "free_days", tier: "plus", units: 1 })).toBe("30 free days of Plus");
-    expect(rewardPhrase({ kind: "free_days", tier: "own", units: 2 })).toBe("60 free days of your plan");
-    expect(rewardPhrase({ kind: "credits", amount: 1 })).toBe("1 AI credit");
-    expect(rewardPhrase({ kind: "none" })).toBe("nothing");
+    expect(
+      parseReferralSettings({ enabled: false, friend: { kind: "credits", amount: 20 }, referrer: { kind: "free_days", tier: "own", units: 1 }, caps: { perMonth: 99, lifetime: 5, friendsPerMonth: 9 } }),
+    ).toEqual({ ...DEFAULT_REFERRAL_SETTINGS, enabled: false, caps: { friendsPerMonth: 9 } });
+    expect(parseReferralSettings({ ...DEFAULT_REFERRAL_SETTINGS, ladder: [{ kind: "days", days: 0 }] }).ladder).toEqual(DEFAULT_REFERRAL_LADDER);
+    expect(rewardStepPhrase({ kind: "days", days: 1 })).toBe("1 free day");
+    expect(rewardStepPhrase({ kind: "days", days: 30 })).toBe("30 free days");
+    expect(rewardStepPhrase({ kind: "credits", amount: 1 })).toBe("1 AI credit");
+    expect(rewardStepPhrase({ kind: "none" })).toBe("nothing");
+    expect(friendRewardPhrase(DEFAULT_REFERRAL_SETTINGS)).toBe("7 free days");
+    expect(friendRewardPhrase({ friend: { days: 0 } })).toBe("nothing");
+    // Never "a free month" anywhere in the words.
+    expect(JSON.stringify([rewardStepPhrase({ kind: "days", days: 30 }), friendRewardPhrase(DEFAULT_REFERRAL_SETTINGS)])).not.toMatch(/month/);
   });
 });

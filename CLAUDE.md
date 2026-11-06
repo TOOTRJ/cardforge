@@ -1631,44 +1631,41 @@ Rules and gotchas:
   because deck covers and card set icons live there. A card's printed set
   symbol (`set_icon_url` / `set_icon_code`, the Set icon step) is a rendering
   feature and stays.
-- Referrals (migration 0177, `docs/BILLING.md` "Referrals"): ONE code per
-  user (`my_referral_code()`), the link `/?ref=<code>` rides the first-touch
-  attribution (sessionStorage → hidden `attr_ref` → the signup's user
-  metadata `referral_code`; a Google sign-up's from the tab at onboarding)
-  — never a cookie — and the referral row is written at ONBOARDING, the
-  first step with a CONFIRMED email (never at signup: GoTrue hands an
-  unconfirmed address the same user id, so a row then let anyone claim a
-  referral on an inbox they don't own). The reward waits for the FIRST
-  saved card (`recordActivity` → `qualifyReferral` in `after()`; the hourly
-  `/api/cron/referral-rewards` sweep retries what waits or failed, and
-  qualifies a signed_up row whose first card the `after()` lost). WHAT each
-  side gets is a SETTING (`site_settings` key `referrals`,
-  `lib/referrals/settings.ts`: the admin switch, `friend` / `referrer`
-  reward `{kind: free_days | credits | none}`, the caps; edited on
-  `/admin/users`, read at grant time — never a deploy): free 30 days through
-  `grantFreeDays` — the comp mechanism (0176: added to a paying plan's time,
-  the perks overlay otherwise, nothing below the plan paid for, the grant's
-  own credits) under the reference `referral:<id>:<side>` (unique: a retry
-  finds its grant) — or `grant_credits` under the same key. A payer's days
-  are their OWN tier's, a free account's Plus. No money moves, ever. Every
-  surface says "free days", never "a free month". Fraud rules in
-  `lib/referrals/fraud.ts`; ONE email, ONE referral reward ever: ONE
-  normalization, `normalizeReferralEmail` (SQL twin
-  `normalize_referral_email()`, both held to
-  `tests/unit/referrals/email-normalization-cases.json`), and what is kept
-  is a KEYED hash (HMAC-SHA256 under the server-only
-  `REFERRAL_EMAIL_HASH_KEY`, `lib/referrals/email-fingerprint.ts`) in
-  `referral_email_fingerprints` (no user id, outlives every account, service
-  role only) — never the address, never an unkeyed hash; another live
-  account's address or an earlier referral's fingerprint → `email_reused`,
-  nobody rewarded, the friend never told why; no key → fail closed. Caps
-  ONLY through `claim_referral_reward()` (atomic; the settings' numbers; the
-  friends cap caps the FRIEND's reward too — N inboxes mint nothing;
-  `referee_id` is SET NULL on delete so the cap keeps its evidence). Nothing
-  runs with billing off. Advisory locks use the NAMED namespace
-  `hashtext('pipglyph.referrals')`, never a migration number. Users read
-  their rows through a COLUMN grant (no fraud reason, no Stripe detail);
-  writes are the service role's.
+- Referrals (migrations 0177 + 0180, `docs/BILLING.md` "Referrals v2"): ONE
+  code per user (`my_referral_code()`), the link `/?ref=<code>` rides the
+  first-touch attribution (sessionStorage → hidden `attr_ref` → the signup's
+  `app_metadata.referral_code`; a Google sign-up's from the tab at
+  onboarding) — never a cookie — and the referral row is written at
+  ONBOARDING, the first step with a CONFIRMED email (never at signup: GoTrue
+  hands an unconfirmed address the same user id). A referral QUALIFIES on
+  TWO bars (owner 2026-11-06): the friend saves `activation.cardsRequired`
+  cards (5) within `activation.windowDays` (30) — EVERY save runs
+  `advanceReferral` in `after()` (`lib/cards/actions.ts`; `cards_saved_at`,
+  status `cards_saved` = 0177's `first_card`) — AND starts a plan with a
+  CARD ON FILE (`customer.subscription.created` runs it too,
+  `card_on_file_at`). Then the reward at once: both emails confirmed, the
+  fraud rules, one email one reward ever (`lib/referrals/fraud.ts`, the
+  keyed fingerprint under `REFERRAL_EMAIL_HASH_KEY`, fail closed), the
+  claim `claim_referral_reward_v2` (the friends cap ONLY — referrals are
+  unlimited — and the referrer's LADDER STEP under the named lock
+  `hashtext('pipglyph.referrals')`). Rewards are DAYS INTO THE BANK
+  (`bankDays`: the friend `friend.days` under `referral:<id>:referee`, the
+  referrer the ladder's step N under `referral-step:<referrer>:<step>` —
+  1: 7d, 2: 5 credits, 3: 7d, 4: 10cr, 5: 14d, 6: 20cr, 7: 21d, 8: 50cr,
+  9: 21d, 10: 30d, then the tail 7d each; credits through `grant_credits`
+  under the same key) — never a tier, never credits with days, no money
+  ever. The friend's qualifying checkout banks their days FIRST
+  (`preBankFriendDays` before `prepareCheckoutBank`) so that checkout
+  applies them; later days wait for the user's own Apply. WHAT each side
+  gets is a SETTING (`site_settings` key `referrals`, v2 shape:
+  `activation`, `friend {days}`, `ladder[]`, `tail`, `caps
+  {friendsPerMonth}`; edited on `/admin/users`, read at grant time).
+  Every surface says "free days", never "a free month". Users read their
+  rows through a COLUMN grant (the two stamps and the step; no fraud
+  reason, no Stripe detail); writes are the service role's. The admin
+  panel ("Referrals and the days bank", `admin_referral_stats` v2) shows
+  the chain, per-day counts, the ladder's distribution and the bank's
+  ledger. Nothing runs with billing off.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`

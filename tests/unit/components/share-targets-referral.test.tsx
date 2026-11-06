@@ -15,7 +15,7 @@ import { ShareTargets } from "@/components/cards/share-targets";
 // ---------------------------------------------------------------------------
 
 const URL_ = "https://pipglyph.com/card/dev_free/hedge-witchs-familiar";
-const ON = { enabled: true, friendGets: "30 free days of Plus", code: "ab12cd34" };
+const ON = { enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: "ab12cd34" };
 
 afterEach(() => cleanup());
 
@@ -37,14 +37,14 @@ describe("ShareTargets with the viewer's referral", () => {
     expect(xUrl.searchParams.get("via")).toBe("x");
     expect(xUrl.searchParams.get("ref")).toBe("ab12cd34");
     expect(x.searchParams.get("text")).toBe(
-      "Hedge Witch's Familiar — a custom Magic card I forged on PipGlyph\nJoin with my link and you get 30 free days of Plus when you save your first card.",
+      "Hedge Witch's Familiar — a custom Magic card I forged on PipGlyph\nJoin with my link and you get 7 free days toward a plan once you've saved your first cards.",
     );
     const reddit = new URL(new URL(h.Reddit).searchParams.get("url") ?? "");
     expect(reddit.searchParams.get("ref")).toBe("ab12cd34");
     expect(reddit.searchParams.get("via")).toBe("reddit");
     const wa = new URL(h.WhatsApp).searchParams.get("text") ?? "";
     expect(wa).toContain("ref=ab12cd34");
-    expect(wa).toContain("30 free days of Plus");
+    expect(wa).toContain("7 free days");
     // The dialog says what the links carry.
     expect(screen.getByText(/These links carry your referral link/)).toBeTruthy();
     // Copy link: the row shows the CLEAN address and says the link is the viewer's.
@@ -71,7 +71,7 @@ describe("ShareTargets with the viewer's referral", () => {
 
   it("the program OFF (or a code-less answer) is a plain share even for a signed-in viewer", () => {
     render(
-      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, code: null }} />,
+      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null }} />,
     );
     expect(new URL(new URL(hrefs().X).searchParams.get("url") ?? "").searchParams.has("ref")).toBe(false);
   });
