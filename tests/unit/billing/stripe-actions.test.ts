@@ -291,7 +291,8 @@ describe("createCheckoutSessionAction", () => {
     // The card networks' trial terms, under Checkout's button (BA6): the end
     // date, what is charged from then, how to cancel.
     expect(params.custom_text).toEqual({
-      submit: { message: expect.stringMatching(/^Your free trial ends on [A-Z][a-z]+ \d{1,2}, \d{4} \(UTC\)\. From then, Pro is \$15 a month, charged to this card until you cancel\. Cancel any time before then on your billing page and nothing is charged\.$/) },
+      // The LENGTH, never a date: Checkout's summary prints the date in the buyer's zone.
+      submit: { message: "Your free trial lasts 7 days and ends on the date in the order summary. From then, Pro is $15 a month, charged to this card until you cancel. Cancel any time before then on your billing page and nothing is charged." },
     });
     // One trial per EMAIL: every Stripe customer under the address was asked.
     expect(s.customersSearch).toHaveBeenCalledWith({ query: 'email:"x@example.test"', limit: 20 });
@@ -456,11 +457,11 @@ describe("createCheckoutSessionAction", () => {
   it("the terms line says 'complimentary period' only when the COMP sets the end — a comp shorter than the 7-day trial leaves a plain trial (check P3-2)", async () => {
     s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 2 * 86_400_000).toISOString() };
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
-    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your free trial ends on/);
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your free trial lasts 7 days and ends on the date in the order summary\./);
     s.checkoutCreate.mockClear();
     s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 40 * 86_400_000).toISOString() };
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
-    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your complimentary period ends on/);
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your complimentary period lasts 40 days and ends on the date in the order summary\./);
   });
 
   it("a comp that ends BEFORE the 7-day trial: the trial's end wins (Math.max)", async () => {

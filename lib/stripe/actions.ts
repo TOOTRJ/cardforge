@@ -572,7 +572,7 @@ export async function createCheckoutSessionAction(
       const trialTerms =
         freeUntil == null
           ? null
-          : trialTermsLine(input.tier, input.period ?? "monthly", freeUntil, heldTrialEnd != null && heldTrialEnd === compHold);
+          : trialTermsLine(input.tier, input.period ?? "monthly", freeUntil - checkoutSec, heldTrialEnd != null && heldTrialEnd === compHold);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",

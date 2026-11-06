@@ -346,11 +346,15 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
 
 - **The trial terms on Checkout** (`trialTermsLine`, `custom_text.submit`):
   every session that starts a free period — the 7-day trial, a comp hold, a
-  carried trial — says under its button when it ends (UTC), what is charged
+  carried trial — says under its button how LONG it lasts ("Your free trial
+  lasts 7 days and ends on the date in the order summary"), what is charged
   from then ("Plus is $6 a month, charged to this card until you cancel")
   and that cancelling before then on the billing page charges nothing. The
-  card networks' required notice; Stripe's own trial-ending email (an owner
-  Dashboard setting) is the other half.
+  length, never a date of ours: Checkout's order summary prints the first
+  charge's date in the buyer's time zone, and a UTC date beside it read as
+  the next day on an evening checkout. The card networks' required notice;
+  Stripe's own trial-ending email (an owner Dashboard setting) is the other
+  half.
 - **One trial per EMAIL** (`isTrialEligible`): besides the customer's own
   history, every Stripe customer under the account's email is asked (a
   deleted account's customer is never deleted and keeps its history), so
