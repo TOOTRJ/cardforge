@@ -11,6 +11,7 @@ import { enabledOAuthProviders } from "@/lib/auth/oauth-providers";
 import { signupAction } from "@/app/(auth)/actions";
 import { GuestDraftField } from "@/components/analytics/guest-draft-field";
 import { AttributionFields } from "@/components/analytics/attribution-fields";
+import { ReferralJoinNote } from "@/components/referrals/referral-join-note";
 import type { SignupInput } from "@/lib/auth/schemas";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default async function SignupPage({
           anytime in settings.
         </p>
       </div>
+      <ReferralJoinNote where="signup" />
 
       {!configured ? (
         <div

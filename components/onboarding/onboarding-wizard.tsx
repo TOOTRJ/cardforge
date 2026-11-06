@@ -18,7 +18,8 @@ import {
   type UsernameCheck,
 } from "@/lib/onboarding/actions";
 import { isGeneratedUsername } from "@/lib/auth/usernames";
-import { ATTRIBUTION_STORAGE_KEY, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { storedReferralCode } from "@/lib/analytics/attribution-client";
+import { ReferralJoinNote } from "@/components/referrals/referral-join-note";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -148,6 +149,7 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
   return (
     <div className="flex flex-col gap-8">
       <Stepper steps={STEPS} current={step} onStepSelect={setStep} />
+      <ReferralJoinNote where="onboarding" />
 
       {error ? (
         <div
@@ -398,13 +400,3 @@ function Field({
   );
 }
 
-/** The tab's first-touch referral code (AttributionCapture), if any. */
-function storedReferralCode(): string | undefined {
-  try {
-    const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
-    if (!raw) return undefined;
-    return sanitizeAttribution(JSON.parse(raw) as Record<string, unknown>).ref;
-  } catch {
-    return undefined;
-  }
-}
