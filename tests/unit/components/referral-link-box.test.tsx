@@ -49,4 +49,21 @@ describe("ReferralLinkBox", () => {
     expect(href.startsWith("mailto:?subject=")).toBe(true);
     expect(decodeURIComponent(href)).toContain(LINK);
   });
+
+  it("Copy the message puts the SAME text as the email draft on the clipboard, with the link, and says where to paste it (a browser with no mail handler does nothing on mailto:)", async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<ReferralLinkBox link={LINK} friendGets="30 free days of Plus" />);
+    const href = screen.getByRole("link", { name: "Email a friend" }).getAttribute("href") ?? "";
+    const body = decodeURIComponent(href.slice(href.indexOf("&body=") + "&body=".length));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy the message" }));
+    });
+    expect(writeText).toHaveBeenCalledWith(body);
+    expect(body).toContain("30 free days of Plus");
+    expect(body.endsWith(LINK)).toBe(true);
+    expect(toast.success).toHaveBeenCalledWith("The message and your link are copied — paste them into any email or chat.");
+    expect(screen.getByRole("button", { name: "Message copied" })).toBeTruthy();
+    expect(screen.getByText(/If nothing opens, Copy the message/)).toBeTruthy();
+  });
 });
