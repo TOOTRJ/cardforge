@@ -104,8 +104,8 @@ export default async function ReferralsPage() {
                   <span className="font-semibold text-foreground">2. They save their first card</span> within {REFERRAL_ACTIVATION_WINDOW_DAYS} days.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">3. You both get your reward</span> as soon as you&apos;ve both
-                  confirmed your email: {friendGets} for them, {youGet} for you.
+                  <span className="font-semibold text-foreground">3. You both get your reward</span>
+                  {` as soon as you've both confirmed your email: ${friendGets} for them, ${youGet} for you.`}
                 </li>
               </ol>
               <p className="text-xs leading-5 text-subtle">
