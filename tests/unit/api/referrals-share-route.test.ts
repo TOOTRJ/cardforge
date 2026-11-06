@@ -50,13 +50,13 @@ describe("GET /api/referrals/share", () => {
   it("a visitor: the program and the friend's words, no code", async () => {
     const res = await GET();
     expect(res.headers.get("cache-control")).toBe("private, no-store");
-    expect(await res.json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: null });
+    expect(await res.json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: null });
   });
   it("a signed-in viewer: their code, normalised", async () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.code = "AB12CD34";
-    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: "ab12cd34" });
+    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34" });
   });
   it("a malformed code is no code", async () => {
     s.sessionCookie = true;
@@ -68,7 +68,7 @@ describe("GET /api/referrals/share", () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.settings = { ...s.settings, enabled: false };
-    const off = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null };
+    const off = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null };
     expect(await (await GET()).json()).toEqual(off);
     s.settings = { ...s.settings, enabled: true };
     s.billing = false;

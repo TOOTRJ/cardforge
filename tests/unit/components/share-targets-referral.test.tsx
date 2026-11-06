@@ -15,7 +15,7 @@ import { ShareTargets } from "@/components/cards/share-targets";
 // ---------------------------------------------------------------------------
 
 const URL_ = "https://pipglyph.com/card/dev_free/hedge-witchs-familiar";
-const ON = { enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, code: "ab12cd34" };
+const ON = { enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34" };
 
 afterEach(() => cleanup());
 
@@ -71,7 +71,7 @@ describe("ShareTargets with the viewer's referral", () => {
 
   it("the program OFF (or a code-less answer) is a plain share even for a signed-in viewer", () => {
     render(
-      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null }} />,
+      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null }} />,
     );
     expect(new URL(new URL(hrefs().X).searchParams.get("url") ?? "").searchParams.has("ref")).toBe(false);
   });

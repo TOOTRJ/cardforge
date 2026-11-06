@@ -8,6 +8,7 @@ import { readReferralSettings } from "@/lib/referrals/settings-server";
 import { friendRewardPhrase } from "@/lib/referrals/settings";
 import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { isBillingEnabled } from "@/lib/billing/flags";
+import { SIGNUP_BANK_DAYS } from "@/lib/billing/day-bank";
 
 // ---------------------------------------------------------------------------
 // GET /api/referrals/share — what a share surface needs to carry the viewer's
@@ -27,12 +28,14 @@ export type ReferralShareInfo = {
   /** The activation bar (0180): cards to save, within how many days of signing up. */
   cardsRequired: number | null;
   windowDays: number | null;
+  /** The days every new account banks at signup (0179) — the sign-up note's number. */
+  signupDays: number | null;
   /** The viewer's referral code; null for a visitor or with the program off. */
   code: string | null;
 };
 
 const NO_STORE = { "cache-control": "private, no-store" };
-const OFF: ReferralShareInfo = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, code: null };
+const OFF: ReferralShareInfo = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null };
 
 export async function GET() {
   if (!isSupabaseConfigured() || !isBillingEnabled()) {
@@ -45,6 +48,7 @@ export async function GET() {
     friendGets: friendRewardPhrase(settings),
     cardsRequired: settings.activation.cardsRequired,
     windowDays: settings.activation.windowDays,
+    signupDays: SIGNUP_BANK_DAYS,
   };
 
   const store = await cookies();
