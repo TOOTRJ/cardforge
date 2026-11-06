@@ -19,8 +19,6 @@ import {
 // how "one free month" reaches each kind of account.
 // ---------------------------------------------------------------------------
 
-const NOW = new Date("2026-11-01T12:00:00Z");
-const DAY = 86_400_000;
 
 describe("codes and links", () => {
   it("a code is 8 lowercase hex characters; anything else is no code", () => {
