@@ -144,11 +144,16 @@ export async function grantCreditsForGrant(
   admin: CreditGrantClient,
   grant: PlanGrantCreditRow,
   now: Date = new Date(),
+  /** The plan state the WRITER just read from Stripe (status + tier): the
+   *  overlay's allotment reads it instead of the profile row, which a
+   *  webhook may not have synced yet (an `active` copy of a plan Stripe
+   *  already holds past due would have docked the allotment). */
+  planState?: OverlayPlanState,
 ): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
   const due = freeDaysAllotmentsDue(grant, now);
   if (due.length === 0) return { ok: true, granted: 0 };
   try {
-    return await grantDueAllotments(admin, grant, due);
+    return await grantDueAllotments(admin, grant, due, planState);
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -161,9 +166,11 @@ export async function grantCreditsForGrant(
  *  higher of the two"). A comp converted by 0176 on a paying plan, or a
  *  past-due plan that recovers, lands here; a hold never does (its plan
  *  reads `trialing`). */
+export type OverlayPlanState = { subscription_status?: string | null; subscription_tier?: string | null } | null;
+
 export function overlayAllotmentOver(
   grantTier: PaidTier,
-  profile: { subscription_status?: string | null; subscription_tier?: string | null } | null,
+  profile: OverlayPlanState,
 ): number {
   const own = MONTHLY_CREDITS[grantTier] ?? 0;
   if (profile?.subscription_status !== "active") return own;
@@ -176,16 +183,21 @@ async function grantDueAllotments(
   admin: CreditGrantClient,
   grant: PlanGrantCreditRow,
   due: number[],
+  planState?: OverlayPlanState,
 ): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
   let amount = MONTHLY_CREDITS[grant.tier as PaidTier] ?? 0;
   if (amount > 0 && grant.applied_as === "overlay") {
-    const { data: profile, error } = await admin
-      .from("profiles")
-      .select("subscription_status, subscription_tier")
-      .eq("id", grant.user_id)
-      .maybeSingle();
-    if (error) return { ok: false, error: error.message };
-    amount = overlayAllotmentOver(grant.tier as PaidTier, profile as { subscription_status?: string | null; subscription_tier?: string | null } | null);
+    let state: OverlayPlanState = planState ?? null;
+    if (planState === undefined) {
+      const { data: profile, error } = await admin
+        .from("profiles")
+        .select("subscription_status, subscription_tier")
+        .eq("id", grant.user_id)
+        .maybeSingle();
+      if (error) return { ok: false, error: error.message };
+      state = profile as OverlayPlanState;
+    }
+    amount = overlayAllotmentOver(grant.tier as PaidTier, state);
   }
   if (amount <= 0) return { ok: true, granted: 0 };
   // One read of what the ledger already holds for this grant; a failed read

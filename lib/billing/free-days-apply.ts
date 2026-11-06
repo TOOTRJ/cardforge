@@ -278,6 +278,8 @@ export async function grantFreeDays(
         status: "applied",
       },
       deps.now,
+      // Stripe's own answer, not the profile's copy (a webhook may lag it).
+      { subscription_status: sub?.status ?? null, subscription_tier: subscribedTier },
     );
     if (credits.ok) creditsGranted = credits.granted;
     else {
