@@ -2,7 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { buildFunnel, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
+import { buildFunnel, groupCancelReasons, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
+
+describe("groupCancelReasons", () => {
+  it("groups ended plans by the portal's feedback, else Stripe's reason, biggest first — in the customer's words", () => {
+    const rows = [
+      { props: { cancelReason: "cancellation_requested", cancelFeedback: "too_expensive" } },
+      { props: { cancelReason: "cancellation_requested", cancelFeedback: "too_expensive" } },
+      { props: { cancelReason: "cancellation_requested", cancelFeedback: "unused" } },
+      { props: { cancelReason: "cancellation_requested" } },
+      { props: { cancelReason: "payment_disputed" } },
+      { props: {} },
+      { props: null },
+      { props: { cancelFeedback: "something_new" } },
+    ];
+    expect(groupCancelReasons(rows)).toEqual([
+      // Ties alphabetical: "none" before "too_expensive".
+      { reason: "none", label: "No reason recorded", n: 2 },
+      { reason: "too_expensive", label: "Too expensive", n: 2 },
+      { reason: "cancellation_requested", label: "Cancelled, no reason given", n: 1 },
+      { reason: "payment_disputed", label: "Payment disputed", n: 1 },
+      { reason: "something_new", label: "something_new", n: 1 },
+      { reason: "unused", label: "Didn't use it enough", n: 1 },
+    ]);
+    expect(groupCancelReasons(rows, 2)).toHaveLength(2);
+    expect(groupCancelReasons([])).toEqual([]);
+  });
+});
 
 describe("buildFunnel", () => {
   it("chains rates inside the storefront, trial and out-of-credits sections and leaves counts elsewhere", () => {

@@ -31,6 +31,13 @@ import { DECK_HISTORY_MAX_ROWS, DECK_HISTORY_PLUS_DAYS, DECK_HISTORY_PRO_GRACE_D
 // billing is on (off, everyone is unlocked: only the orphans and the cap
 // go). The History view also never reads past the plan's window, so a row
 // a week from its prune is never shown.
+//
+// …and the webhook's idempotency claims (stripe_events, migrations 0027 /
+// 0099) past STRIPE_EVENTS_RETENTION_DAYS: a claim is only ever consulted by
+// a redelivery of the SAME event, and Stripe stops retrying after 3 days —
+// the rows after that were an ever-growing table nothing read (audit
+// 2026-11-05, nice-to-have). Processed and stale-unprocessed alike; a claim
+// younger than the window is never touched.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -41,6 +48,7 @@ export const FUNNEL_RETENTION_DAYS = 180;
 export const DECK_VIEW_RETENTION_DAYS = 400;
 export const CARD_VIEW_RETENTION_DAYS = 400;
 export const AI_RECEIPT_RETENTION_DAYS = 90;
+export const STRIPE_EVENTS_RETENTION_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -66,6 +74,9 @@ export async function GET(request: Request) {
   const cardSalts = await admin.from("card_view_salts").delete({ count: "exact" }).lt("day", today);
   const receiptCutoff = new Date(Date.now() - AI_RECEIPT_RETENTION_DAYS * DAY_MS).toISOString();
   const receipts = await admin.from("card_ai_receipts").delete({ count: "exact" }).lt("created_at", receiptCutoff);
+  // claimed_at is set on every row (0099's default), processed or not.
+  const stripeEventsCutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_DAYS * DAY_MS).toISOString();
+  const stripeEvents = await admin.from("stripe_events").delete({ count: "exact" }).lt("claimed_at", stripeEventsCutoff);
 
   const history = await admin.rpc("prune_deck_entry_changes", {
     p_keep_days: DECK_HISTORY_PLUS_DAYS,
@@ -79,7 +90,7 @@ export async function GET(request: Request) {
   const historyError =
     history.error && !["PGRST202", "42883"].includes(history.error.code ?? "") ? history.error : null;
 
-  const failed = [error, views.error, salts.error, cardViews.error, cardSalts.error, receipts.error, historyError].find(Boolean);
+  const failed = [error, views.error, salts.error, cardViews.error, cardSalts.error, receipts.error, stripeEvents.error, historyError].find(Boolean);
   if (failed) return NextResponse.json({ ok: false, error: failed.message }, { status: 500 });
   return NextResponse.json({
     ok: true,
@@ -89,6 +100,7 @@ export async function GET(request: Request) {
     deckViewCutoff: viewCutoff,
     cardViewsDeleted: cardViews.count ?? 0,
     aiReceiptsDeleted: receipts.count ?? 0,
+    stripeEventsDeleted: stripeEvents.count ?? 0,
     deckHistoryDeleted: history.data ?? 0,
   });
 }
