@@ -107,7 +107,7 @@ export async function CardsSummaryCard() {
             />
           </div>
           <p className="text-xs text-subtle">
-            {used} of {cap} card slots used ({pct}%).
+            {used} of {cap} cards saved ({pct}%).
           </p>
         </div>
       )}
