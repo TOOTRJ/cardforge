@@ -90,3 +90,27 @@ comment on column public.plan_grants.days is
   'An exact length in days (a bank application) — beside units (30-day comps); never both.';
 comment on column public.plan_grants.grants_credits is
   'False: the grant carries no credit allotments (lib/billing/free-days-credits.ts skips it).';
+
+-- ---------------------------------------------------------------------------
+-- The `banked_days` notification: an admin banked free days for the user
+-- (the comp since owner 2026-11-06), or took banked days back. The kinds
+-- 0177 added are kept (tests/unit/db/referrals-migration.test.ts).
+-- ---------------------------------------------------------------------------
+alter table public.notifications
+  drop constraint if exists notifications_type_check;
+alter table public.notifications
+  add constraint notifications_type_check
+  check (
+    type in (
+      'like', 'comment', 'remix', 'follow', 'feedback', 'moderation', 'message',
+      'credit_grant', 'comp_plan', 'card_limit', 'render_update', 'site_update',
+      'deck_generated', 'trial_ending', 'payment_received', 'checkout_reminder',
+      'trial_lapsed', 'render_sweep_paused', 'credit_refill_failed',
+      'deck_like', 'deck_card_added', 'moderation_unhidden', 'comp_ending',
+      'deck_cloned', 'challenge_winner',
+      'payment_failed', 'billing_alert',
+      'referral_signup', 'referral_reward',
+      -- THE DAYS BANK
+      'banked_days'
+    )
+  );

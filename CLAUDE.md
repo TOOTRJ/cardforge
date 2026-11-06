@@ -1825,7 +1825,13 @@ Rules and gotchas:
   `docs/BILLING.md`. `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). A COMP
-  is FREE 30 DAYS (owner 2026-11-05, migration 0176 `plan_grants`): N units
+  IS BANKED DAYS (owner 2026-11-06, 0179): `adminBankDaysAction` → `bankDays`
+  (source `admin`, 2 … 730 days, no tier, no credits, the `banked_days`
+  notification; revoke only what is still banked) — the dated 30-day grant
+  is REFUSED to admins (`units: null`, staff "no end" access, is the one
+  comp left on `grantFreeDays`), and the overlay comps given before that
+  date run out on their dates (no conversion). The FREE-DAYS mechanism
+  underneath (owner 2026-11-05, migration 0176 `plan_grants`): N units
   of exactly 30 × 86 400 s of a tier with its normal credits — ONE decision,
   `planFreeDays` (`lib/billing/free-days.ts`), ONE writer, `grantFreeDays`
   (`free-days-apply.ts`; the referral reward will call it too). On a live,

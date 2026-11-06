@@ -42,6 +42,19 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     expect(comp({ tier: null })).toBe("ended your complimentary plan access.");
   });
 
+  it("banked days (0179): the admin's comp lands in the bank — the user applies them; a revoke says so", () => {
+    const d = (payload: Record<string, unknown>) => describeNotification({ type: "banked_days", actor, card: null, threadId: null, payload }, { isAdmin: false });
+    expect(d({ days: 14, note: "thanks for the report" })).toEqual({
+      subject: "PipGlyph team",
+      body: "banked 14 free days for you (thanks for the report) — start a plan and they're its free period, or apply them to the plan you have, any time from your billing page.",
+      href: "/dashboard/billing#banked-days",
+    });
+    expect(d({ days: 1 }).body).toMatch(/^banked 1 free day for you — /);
+    expect(d({ days: 7, revoked: 1, note: "given by mistake" }).body).toBe("took back 7 free days from your bank (given by mistake).");
+    expect(d({ days: 7, revoked: 1 }).body).toBe("took back 7 free days from your bank.");
+    expect(d({ days: 30 }).body).not.toMatch(/month/);
+  });
+
   it("free 30 days (0176): the days and their end; a hold on a plan names the moved charge, on a trial the longer trial", () => {
     const comp = (payload: Record<string, unknown>) =>
       describeNotification({ type: "comp_plan", actor, card: null, threadId: null, payload }, { isAdmin: false }).body;

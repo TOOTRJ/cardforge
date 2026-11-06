@@ -129,6 +129,20 @@ export function describeNotification(
         href: "/settings",
       };
     }
+    case "banked_days": {
+      // The admin's comp since 0179: days in the bank, the user applies them.
+      const days = num(payload.days) ?? 0;
+      const note = str(payload.note);
+      const revoked = num(payload.revoked) === 1;
+      const d = `${days} free day${days === 1 ? "" : "s"}`;
+      return {
+        subject: "PipGlyph team",
+        body: revoked
+          ? `took back ${d} from your bank${note ? ` (${note})` : ""}.`
+          : `banked ${d} for you${note ? ` (${note})` : ""} — start a plan and they're its free period, or apply them to the plan you have, any time from your billing page.`,
+        href: "/dashboard/billing#banked-days",
+      };
+    }
     case "render_update": {
       const count = num(payload.count);
       return {

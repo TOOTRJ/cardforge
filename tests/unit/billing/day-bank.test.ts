@@ -25,6 +25,10 @@ import {
   signupBankReference,
   reclaimOpenCheckouts,
   stampBankBatchSession,
+  MIN_ADMIN_BANK_DAYS,
+  adminBankReference,
+  listBankEntriesForAdmin,
+  revokeBankedEntry,
 } from "@/lib/billing/day-bank";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -207,6 +211,51 @@ describe("an abandoned Checkout's days (check P1-2)", () => {
       return { data: [{ days: 7 }] };
     });
     expect(await reclaimOpenCheckouts(stub.client as never, stripe as never, USER, NOW)).toBe(1);
+  });
+});
+
+describe("the admin's comp (owner 2026-11-06): banked days", () => {
+  it("MIN_ADMIN_BANK_DAYS is Stripe's 48 h; the reference is the form's request id", () => {
+    expect(MIN_ADMIN_BANK_DAYS).toBe(2);
+    expect(adminBankReference("req_1")).toBe("admin:req_1");
+  });
+
+  it("listBankEntriesForAdmin reads every column, newest first; an unreadable bank is said", async () => {
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (table !== "day_bank_entries" || !called(calls, "select")) return {};
+      return {
+        data: [
+          { id: "e1", days: 7, source: "admin", status: "banked", created_at: "2026-11-06T00:00:00Z", applied_at: null, reference: "admin:r1", note: "thanks (by a1)", applied_via: null, applied_ref: null, revoked_at: null, revoke_reason: null },
+          { id: "e2", days: 7, source: "signup", status: "applied", created_at: "2026-11-01T00:00:00Z", applied_at: "2026-11-05T00:00:00Z", reference: `signup:${USER}`, note: null, applied_via: "checkout", applied_ref: "cs_1", revoked_at: null, revoke_reason: null },
+        ],
+      };
+    });
+    const out = await listBankEntriesForAdmin(stub.client as never, USER);
+    expect(out.loadError).toBe(false);
+    expect(out.rows).toEqual([
+      expect.objectContaining({ id: "e1", days: 7, source: "admin", status: "banked", note: "thanks (by a1)", reference: "admin:r1", appliedVia: null }),
+      expect.objectContaining({ id: "e2", status: "applied", appliedVia: "checkout", appliedRef: "cs_1", appliedAt: "2026-11-05T00:00:00Z" }),
+    ]);
+    const calls = stub.forTable("day_bank_entries")[0].calls;
+    expect(calls.find((c) => c.method === "eq")?.args).toEqual(["user_id", USER]);
+    expect(calls.find((c) => c.method === "order")?.args).toEqual(["created_at", { ascending: false }]);
+    const broken = chainClient(() => ({ error: { message: "down" } }));
+    expect(await listBankEntriesForAdmin(broken.client as never, USER)).toEqual({ rows: [], loadError: true });
+  });
+
+  it("revokeBankedEntry takes a BANKED entry back (its reason cut to 200) and refuses one already applied, reserved or revoked", async () => {
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (table !== "day_bank_entries" || !called(calls, "update")) return {};
+      const id = calls.find((c) => c.method === "eq" && c.args[0] === "id")?.args[1];
+      return { data: id === "e_banked" ? { days: 7, user_id: USER } : null };
+    });
+    expect(await revokeBankedEntry(stub.client as never, "e_banked", "x".repeat(300), NOW)).toEqual({ ok: true, days: 7, userId: USER });
+    const write = stub.forTable("day_bank_entries")[0];
+    expect(payloadOf(write.calls, "update")).toEqual({ status: "revoked", revoked_at: NOW.toISOString(), revoke_reason: "x".repeat(200) });
+    expect(write.calls.find((c) => c.method === "eq" && c.args[0] === "status")?.args[1]).toBe("banked");
+    expect(await revokeBankedEntry(stub.client as never, "e_applied", "late", NOW)).toMatchObject({ ok: false, error: expect.stringMatching(/aren't banked any more/) });
+    const broken = chainClient(() => ({ error: { message: "down" } }));
+    expect(await revokeBankedEntry(broken.client as never, "e_banked", "r", NOW)).toMatchObject({ ok: false, error: expect.stringMatching(/down/) });
   });
 });
 

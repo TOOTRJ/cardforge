@@ -14,13 +14,15 @@ import {
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
 import { grantFreeDays, revokeFreeDays } from "@/lib/billing/free-days-apply";
-import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAY_UNITS } from "@/lib/billing/free-days";
+import { MAX_BANK_DAYS_APPLIED, MIN_ADMIN_BANK_DAYS, adminBankReference, bankDays, revokeBankedEntry } from "@/lib/billing/day-bank";
 
-// Admin user tools — grant credits, give free days (a comp), raise the
-// saved-card cap. Every write goes through the service-role client because
-// the target columns (credits via grant_credits, comp_tier/comp_expires_at/
-// card_limit_override, plan_grants) are pinned by the protect_billing_columns
-// trigger (migration 0060) or service-role only (0176).
+// Admin user tools — grant credits, bank free days (a comp, owner
+// 2026-11-06: banked days the user applies with a card on file), staff
+// access with no end, raise the saved-card cap. Every write goes through the
+// service-role client because the target columns (credits via
+// grant_credits, comp_tier/comp_expires_at/card_limit_override, plan_grants,
+// day_bank_entries) are pinned by the protect_billing_columns trigger
+// (migration 0060) or service-role only (0176, 0179).
 
 type ActionError = { ok: false; error: string };
 
@@ -49,7 +51,7 @@ async function notifyUser(
   input: {
     recipientId: string;
     actorId: string;
-    type: "credit_grant" | "comp_plan" | "card_limit";
+    type: "credit_grant" | "comp_plan" | "card_limit" | "banked_days";
     payload: Record<string, string | number | null>;
   },
 ): Promise<void> {
@@ -156,15 +158,88 @@ export async function adminGrantCreditsAction(input: {
 const grantFreeDaysSchema = z.object({
   userId: z.string().uuid("Invalid user id."),
   tier: z.enum(["plus", "pro"]),
-  /** 30-day units; null = no end (staff accounts only). */
-  units: z
-    .number()
-    .int("Free days come in 30-day units.")
-    .min(1, "At least one 30-day unit.")
-    .max(MAX_FREE_DAY_UNITS, `At most ${MAX_FREE_DAY_UNITS} units (${MAX_FREE_DAY_UNITS * FREE_DAYS_UNIT_DAYS} days).`)
-    .nullable(),
+  /** Null only: no end (staff accounts). A DATED comp is banked days now
+   *  (owner 2026-11-06, adminBankDaysAction) — the old 30-day units are
+   *  refused here, never silently converted. */
+  units: z.null({ message: "Dated comps are banked days now — use Bank free days." }),
   note: z.string().trim().max(500, "Keep the note under 500 characters.").nullable(),
 });
+
+const bankDaysSchema = z.object({
+  userId: z.string().uuid("Invalid user id."),
+  days: z
+    .number()
+    .int("Whole days.")
+    .min(MIN_ADMIN_BANK_DAYS, `At least ${MIN_ADMIN_BANK_DAYS} days (Stripe's 48-hour minimum for a free period).`)
+    .max(MAX_BANK_DAYS_APPLIED, `At most ${MAX_BANK_DAYS_APPLIED} days.`),
+  note: z.string().trim().max(500, "Keep the note under 500 characters.").nullable(),
+  /** The form's one id per fill-in: a double submit banks once. */
+  requestId: z.string().uuid("Invalid request id."),
+});
+
+export type AdminBankDaysResult = { ok: true; days: number; created: boolean } | ActionError;
+
+/**
+ * Bank free days for a user — the comp since owner 2026-11-06 (the dated
+ * free-days grant and its perks overlay are retired for admins; "no end"
+ * staff access stays). The days are TIER-LESS and carry no credits: the
+ * user's first checkout applies the whole bank as its free period, later
+ * ones wait for "Apply banked days" on a live plan — a card on file either
+ * way (lib/billing/day-bank.ts). The user is told.
+ */
+export async function adminBankDaysAction(input: {
+  userId: string;
+  days: number;
+  note: string | null;
+  requestId: string;
+}): Promise<AdminBankDaysResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  const parsed = bankDaysSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  const { userId, days, note, requestId } = parsed.data;
+  const { admin } = gate;
+  if (!(await targetExists(admin, userId))) return { ok: false, error: "No user with that id." };
+
+  const banked = await bankDays(admin, {
+    userId,
+    days,
+    source: "admin",
+    reference: adminBankReference(requestId),
+    note: note ? `${note} (by ${gate.adminId})` : `by ${gate.adminId}`,
+  });
+  if (!banked.ok) return { ok: false, error: banked.error };
+  if (banked.created) {
+    await notifyUser(admin, {
+      recipientId: userId,
+      actorId: gate.adminId,
+      type: "banked_days",
+      payload: { days, note: note || null },
+    });
+  }
+  return { ok: true, days, created: banked.created };
+}
+
+export type AdminRevokeBankedDaysResult = { ok: true; days: number } | ActionError;
+
+/** Take BANKED days back (an entry not yet applied). The user is told. */
+export async function adminRevokeBankedDaysAction(input: { entryId: string; reason: string | null }): Promise<AdminRevokeBankedDaysResult> {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+  const parsed = z
+    .object({ entryId: z.string().uuid("Invalid entry id."), reason: z.string().trim().max(200).nullable() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  const result = await revokeBankedEntry(gate.admin, parsed.data.entryId, parsed.data.reason || `revoked by ${gate.adminId}`);
+  if (!result.ok) return result;
+  await notifyUser(gate.admin, {
+    recipientId: result.userId,
+    actorId: gate.adminId,
+    type: "banked_days",
+    payload: { days: result.days, revoked: 1, note: parsed.data.reason || null },
+  });
+  return { ok: true, days: result.days };
+}
 
 export type AdminGrantFreeDaysResult =
   | {
@@ -178,11 +253,11 @@ export type AdminGrantFreeDaysResult =
   | ActionError;
 
 /**
- * Give a user `units` × 30 free days of `tier` (owner 2026-11-05: comps are
- * free 30 days, added to the time paid for on a live plan). The grant is a
- * `plan_grants` row; lib/billing/free-days-apply.ts decides and writes
- * (Stripe `trial_end` on a live, renewing plan; the perks overlay otherwise).
- * The user is told; the toast carries the Stripe line.
+ * STAFF access with no end (owner 2026-11-06: the one comp that is not
+ * banked days — an account with no Stripe plan, `units` null). A dated comp
+ * is adminBankDaysAction. The grant is a `plan_grants` row;
+ * lib/billing/free-days-apply.ts writes the open-ended perks overlay. The
+ * user is told; the toast carries the writer's line.
  */
 export async function adminGrantFreeDaysAction(input: {
   userId: string;
@@ -218,7 +293,7 @@ export async function adminGrantFreeDaysAction(input: {
     type: "comp_plan",
     payload: {
       tier,
-      days: units == null ? null : units * FREE_DAYS_UNIT_DAYS,
+      days: null,
       expiresAt: result.endsAt,
       // A hold: the next charge moved — the copy says the days are added to
       // the time paid for (never "your trial").

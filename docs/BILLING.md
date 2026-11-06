@@ -903,6 +903,13 @@ out on or already has.
   created returns it at once; a reservation nothing settled is released
   after 25 h (`releaseStaleReservations`: the daily refill cron, and the
   hourly referral sweep once PR 2 lands).
+- **An admin's comp is banked days** (owner 2026-11-06): `/admin/users` →
+  "Bank free days" (`adminBankDaysAction`: 2 … 730 whole days, a note the
+  user sees, source `admin`, reference `admin:<request id>` so a double
+  submit banks once; the `banked_days` notification), and "Revoke" on an
+  entry still banked (`adminRevokeBankedDaysAction` → `revokeBankedEntry`;
+  the user is told). No tier, no credits (credits are the separate grant).
+  The old dated comp is refused; staff "no end" access stays.
 - **Days earned later wait in the bank** and the user applies them by hand
   (the billing page's "Apply N banked days", `applyBankedDaysAction` →
   `applyBankToPlan`): on a LIVE plan — a free period or paid time — the days
@@ -923,6 +930,23 @@ out on or already has.
   free period ends unconverted.
 
 ## Free 30 days — comps on one mechanism (owner 2026-11-05, migration 0176)
+
+> **Superseded for admins on 2026-11-06 (migration 0179, "The days bank"
+> above): a comp is BANKED DAYS now.** The admin's "Bank free days" form
+> (`adminBankDaysAction` → `bankDays`, source `admin`, keyed by the form's
+> request id; at least `MIN_ADMIN_BANK_DAYS` = 2, Stripe's 48 h) puts
+> tier-less days with no credits in the user's bank, and tells them
+> (`banked_days`); the user's first checkout applies the whole bank as its
+> free period (card required, billed when the days end unless they cancel),
+> later ones wait for their own "Apply banked days" on a live plan. An admin
+> takes back days still banked (`adminRevokeBankedDaysAction`), never ones
+> applied. The dated 30-day grant below is REFUSED to admins
+> (`adminGrantFreeDaysAction` accepts `units: null` only); the overlay comps
+> given before that date run out on their own dates (owner: no migration,
+> no conversion), and "no end" STAFF access — an account with no Stripe
+> plan — stays as the one comp that is not banked days. `grantFreeDays`
+> itself stays: the bank's application is a hold through it, and the
+> referral ladder banks days too (PR 2).
 
 A comp is **N units of exactly 30 days** (30 × 86 400 s, exact to the second)
 of a paid tier with that tier's normal monthly AI credits and nothing else —

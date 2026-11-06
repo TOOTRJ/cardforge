@@ -26,6 +26,14 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
 const freeDays = vi.hoisted(() => ({ grantFreeDays: vi.fn(), revokeFreeDays: vi.fn() }));
 vi.mock("@/lib/billing/free-days-apply", () => freeDays);
+const bank = vi.hoisted(() => ({ bankDays: vi.fn(), revokeBankedEntry: vi.fn() }));
+vi.mock("@/lib/billing/day-bank", () => ({
+  MAX_BANK_DAYS_APPLIED: 730,
+  MIN_ADMIN_BANK_DAYS: 2,
+  adminBankReference: (id: string) => `admin:${id}`,
+  bankDays: (...args: unknown[]) => bank.bankDays(...args),
+  revokeBankedEntry: (...args: unknown[]) => bank.revokeBankedEntry(...args),
+}));
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: vi.fn(),
   grantCreditsForSync: vi.fn(),
@@ -35,8 +43,10 @@ vi.mock("@/lib/stripe/subscription-sync", () => ({
 }));
 
 import {
+  adminBankDaysAction,
   adminGrantCreditsAction,
   adminGrantFreeDaysAction,
+  adminRevokeBankedDaysAction,
   adminRevokeFreeDaysAction,
   adminSetCardLimitAction,
 } from "@/lib/admin/user-actions";
@@ -70,6 +80,8 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
+  bank.bankDays.mockReset().mockResolvedValue({ ok: true, entryId: "e1", created: true });
+  bank.revokeBankedEntry.mockReset().mockResolvedValue({ ok: true, days: 7, userId: TARGET });
   freeDays.grantFreeDays.mockReset().mockResolvedValue({
     ok: true,
     grantId: "g1",
@@ -156,49 +168,76 @@ describe("adminGrantCreditsAction", () => {
   });
 });
 
-describe("adminGrantFreeDaysAction", () => {
-  it("grants through lib/billing/free-days-apply (source comp, the admin as granter) and tells the user the days and their end", async () => {
+describe("adminBankDaysAction — the comp since owner 2026-11-06", () => {
+  it("banks the days under the form's request id (source admin, the admin named in the note) and tells the user", async () => {
     const stub = db();
-    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "pro", units: 1, note: "  thanks for the bug report " })).toEqual({
-      ok: true,
-      endsAt: "2026-12-05T12:00:00.000Z",
-      stripeNote: "Pro until Dec 5, 2026, 12:00 PM UTC (no Stripe subscription: a perks overlay).",
-    });
-    expect(freeDays.grantFreeDays).toHaveBeenCalledWith(stub.client, {
+    expect(await adminBankDaysAction({ userId: TARGET, days: 14, note: "  thanks for the bug report ", requestId: REQUEST })).toEqual({ ok: true, days: 14, created: true });
+    expect(bank.bankDays).toHaveBeenCalledWith(stub.client, {
       userId: TARGET,
-      tier: "pro",
-      units: 1,
-      source: "comp",
-      grantedBy: ADMIN,
-      note: "thanks for the bug report",
+      days: 14,
+      source: "admin",
+      reference: `admin:${REQUEST}`,
+      note: `thanks for the bug report (by ${ADMIN})`,
     });
     expect(notification(stub)).toEqual({
       recipient_id: TARGET,
       actor_id: ADMIN,
-      type: "comp_plan",
-      payload: { tier: "pro", days: 30, expiresAt: "2026-12-05T12:00:00.000Z" },
+      type: "banked_days",
+      payload: { days: 14, note: "thanks for the bug report" },
     });
   });
-  it("a HOLD (the days added to a live plan) names the moved charge to the user — never a trial end for an active plan", async () => {
+  it("a double submit finds the entry it made and tells the user nothing twice", async () => {
     const stub = db();
-    freeDays.grantFreeDays.mockResolvedValue({
-      ok: true,
-      grantId: "g1",
-      plan: { kind: "hold", was: "active" },
-      endsAt: "2027-01-04T12:00:00.000Z",
-      holdEndsAt: "2027-01-04T12:00:00.000Z",
-      note: "Their Stripe plan's next charge moves …",
-    });
-    const result = await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null });
-    expect(result).toMatchObject({ ok: true, stripeNote: "Their Stripe plan's next charge moves …" });
-    expect(notification(stub)).toMatchObject({
-      payload: { tier: "plus", days: 30, expiresAt: "2027-01-04T12:00:00.000Z", holdEndsAt: "2027-01-04T12:00:00.000Z", was: "active" },
+    bank.bankDays.mockResolvedValue({ ok: true, entryId: "e1", created: false });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toEqual({ ok: true, days: 7, created: false });
+    expect(stub.forTable("notifications")).toHaveLength(0);
+  });
+  it("validates the days (2 … 730 whole days — Stripe's 48 h minimum), the note and the request id before touching anything", async () => {
+    db();
+    for (const days of [0, 1, 731, 2.5]) {
+      expect((await adminBankDaysAction({ userId: TARGET, days, note: null, requestId: REQUEST })).ok).toBe(false);
+    }
+    expect((await adminBankDaysAction({ userId: TARGET, days: 7, note: "x".repeat(501), requestId: REQUEST })).ok).toBe(false);
+    expect((await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: "nope" })).ok).toBe(false);
+    expect(bank.bankDays).not.toHaveBeenCalled();
+  });
+  it("refuses a user that doesn't exist, and passes the bank's refusal through", async () => {
+    db({ targetExists: false });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toEqual({ ok: false, error: "No user with that id." });
+    db();
+    bank.bankDays.mockResolvedValue({ ok: false, error: "Couldn't bank the days." });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toEqual({ ok: false, error: "Couldn't bank the days." });
+  });
+});
+
+describe("adminRevokeBankedDaysAction", () => {
+  it("takes a banked entry back and tells the user, with the reason", async () => {
+    const stub = db();
+    expect(await adminRevokeBankedDaysAction({ entryId: REQUEST, reason: " given by mistake " })).toEqual({ ok: true, days: 7 });
+    expect(bank.revokeBankedEntry).toHaveBeenCalledWith(stub.client, REQUEST, "given by mistake");
+    expect(notification(stub)).toEqual({
+      recipient_id: TARGET,
+      actor_id: ADMIN,
+      type: "banked_days",
+      payload: { days: 7, revoked: 1, note: "given by mistake" },
     });
   });
-  it("a grant BELOW the plan they pay for is recorded and tells the user nothing (it changed nothing)", async () => {
+  it("an entry no longer banked is refused and the user is not told", async () => {
     const stub = db();
-    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "below_plan", tier: "plus", subscribedTier: "pro" }, endsAt: "2026-12-05T12:00:00.000Z", holdEndsAt: null, note: "Plus is below the Pro they pay for: recorded, but it changes nothing and grants no credits." });
-    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null })).toMatchObject({ ok: true, stripeNote: expect.stringMatching(/below the Pro/) });
+    bank.revokeBankedEntry.mockResolvedValue({ ok: false, error: "Those days aren't banked any more (applied, being applied, or already revoked)." });
+    expect(await adminRevokeBankedDaysAction({ entryId: REQUEST, reason: null })).toMatchObject({ ok: false, error: expect.stringMatching(/aren't banked/) });
+    expect(stub.forTable("notifications")).toHaveLength(0);
+  });
+});
+
+describe("adminGrantFreeDaysAction — staff access only since 2026-11-06", () => {
+  it("REFUSES a dated comp (30-day units): those are banked days now, never silently converted", async () => {
+    const stub = db();
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "pro", units: 1, note: null })).toEqual({
+      ok: false,
+      error: "Dated comps are banked days now — use Bank free days.",
+    });
+    expect(freeDays.grantFreeDays).not.toHaveBeenCalled();
     expect(stub.forTable("notifications")).toHaveLength(0);
   });
 
@@ -218,18 +257,15 @@ describe("adminGrantFreeDaysAction", () => {
     });
     expect(stub.forTable("notifications")).toHaveLength(0);
   });
-  it("validates the units (1 … 12 whole units) and the note before touching anything", async () => {
+  it("validates the note before touching anything", async () => {
     db();
-    for (const units of [0, 13, 1.5]) {
-      expect((await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units, note: null })).ok).toBe(false);
-    }
-    expect((await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: "x".repeat(501) })).ok).toBe(false);
+    expect((await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: null, note: "x".repeat(501) })).ok).toBe(false);
     expect(freeDays.grantFreeDays).not.toHaveBeenCalled();
   });
   it("a warning from the writer rides on the result", async () => {
     db();
-    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "hold", was: "trialing" }, endsAt: "2026-12-12T00:00:00.000Z", holdEndsAt: "2026-12-12T00:00:00.000Z", note: "n", warning: "The profile's dates catch up with the next webhook (or press Resync)." });
-    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null })).toMatchObject({ ok: true, warning: expect.stringMatching(/Resync/) });
+    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "overlay", why: "staff" }, endsAt: null, holdEndsAt: null, note: "n", warning: "The profile's dates catch up with the next webhook (or press Resync)." });
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: null, note: null })).toMatchObject({ ok: true, warning: expect.stringMatching(/Resync/) });
   });
 });
 

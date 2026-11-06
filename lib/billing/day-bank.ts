@@ -80,6 +80,84 @@ export function signupBankReference(userId: string): string {
   return `signup:${userId}`;
 }
 
+/** An admin's comp is banked days (owner 2026-11-06): at least two (Stripe's
+ *  48 h minimum for a free period on a plan), at most the bank's 730. */
+export const MIN_ADMIN_BANK_DAYS = 2;
+
+/** The admin's bank entry for a user, keyed by the form's request id (a
+ *  double submit finds the entry it made). */
+export function adminBankReference(requestId: string): string {
+  return `admin:${requestId}`;
+}
+
+/** The admin's read of one user's bank — every column (the note, the
+ *  reference, how and when an entry was applied or revoked). Service role. */
+export type BankEntryDetail = BankEntry & {
+  reference: string | null;
+  note: string | null;
+  appliedVia: "checkout" | "plan_hold" | null;
+  appliedRef: string | null;
+  revokedAt: string | null;
+  revokeReason: string | null;
+};
+
+export async function listBankEntriesForAdmin(
+  admin: AdminClient,
+  userId: string,
+): Promise<{ rows: BankEntryDetail[]; loadError: boolean }> {
+  const { data, error } = await admin
+    .from("day_bank_entries")
+    .select("id, days, source, status, created_at, applied_at, reference, note, applied_via, applied_ref, revoked_at, revoke_reason")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) {
+    console.error(`[day-bank] admin read for ${userId} failed:`, error.message);
+    return { rows: [], loadError: true };
+  }
+  type Row = EntryRow & {
+    reference: string | null;
+    note: string | null;
+    applied_via: string | null;
+    applied_ref: string | null;
+    revoked_at: string | null;
+    revoke_reason: string | null;
+  };
+  return {
+    rows: ((data ?? []) as Row[]).map((row) => ({
+      ...toEntry(row),
+      reference: row.reference,
+      note: row.note,
+      appliedVia: row.applied_via === "checkout" || row.applied_via === "plan_hold" ? row.applied_via : null,
+      appliedRef: row.applied_ref,
+      revokedAt: row.revoked_at,
+      revokeReason: row.revoke_reason,
+    })),
+    loadError: false,
+  };
+}
+
+/** Take a BANKED entry back (an admin's revoke). An entry already reserved,
+ *  applied or revoked is left alone and named. */
+export async function revokeBankedEntry(
+  admin: AdminClient,
+  entryId: string,
+  reason: string,
+  now: Date = new Date(),
+): Promise<{ ok: true; days: number; userId: string } | { ok: false; error: string }> {
+  const { data, error } = await admin
+    .from("day_bank_entries")
+    .update({ status: "revoked", revoked_at: now.toISOString(), revoke_reason: reason.slice(0, 200) })
+    .eq("id", entryId)
+    .eq("status", "banked")
+    .select("days, user_id")
+    .maybeSingle();
+  if (error) return { ok: false, error: `Couldn't revoke the days: ${error.message}` };
+  if (!data) return { ok: false, error: "Those days aren't banked any more (applied, being applied, or already revoked)." };
+  const row = data as { days: number; user_id: string };
+  return { ok: true, days: row.days, userId: row.user_id };
+}
+
 const ENTRY_COLUMNS = "id, days, source, status, created_at, applied_at";
 
 type EntryRow = { id: string; days: number; source: string; status: string; created_at: string; applied_at: string | null };
