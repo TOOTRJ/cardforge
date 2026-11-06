@@ -1158,7 +1158,16 @@ describe("handleStripeEvent — trial_will_end", () => {
 type Rows = Record<string, Array<Record<string, unknown>>>;
 function makeChainAdmin(
   rows: Rows,
-  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string; noPaymentIntentColumn?: boolean } = {},
+  opts: {
+    insertError?: string;
+    /** A per-table insert error with a code (a FK refusal: 23503). */
+    insertErrorFor?: Record<string, { code: string; message: string }>;
+    upsertError?: string;
+    missingUser?: string;
+    rpcError?: string;
+    updateError?: string;
+    noPaymentIntentColumn?: boolean;
+  } = {},
 ) {
   const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
   const upserts: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
@@ -1188,7 +1197,9 @@ function makeChainAdmin(
           inserts.push({ table, row });
           return chain(table, () => ({
             data: table === "funnel_events" ? { id: "fe_1" } : null,
-            error: opts.insertError && table !== "funnel_events" ? { message: opts.insertError } : null,
+            error:
+              opts.insertErrorFor?.[table] ??
+              (opts.insertError && table !== "funnel_events" ? { message: opts.insertError } : null),
           }));
         },
         upsert: (row: Record<string, unknown>, o: unknown) => {
@@ -1652,6 +1663,34 @@ describe("handleStripeEvent — trial win-back", () => {
     await handleStripeEvent(event(deleted({ trial_end: null })), { admin: never.admin, stripe: noApiStripe });
     expect(notes(never.inserts)).toHaveLength(1);
     expect(notes(never.inserts)[0].row).toMatchObject({ payload: { reason: "cancelled" } });
+  });
+
+  it("no offer when Stripe ended the plan over a dispute or failed payments, when the app ended it for an account deletion, or when it never paid (a cancel inside a comp hold) — the funnel row is kept (check P2-2, P2-3, P3-1)", async () => {
+    const cases: Array<[string, Record<string, unknown>]> = [
+      ["dispute", { trial_end: null, cancellation_details: { reason: "payment_disputed" } }],
+      ["payment failed", { trial_end: null, cancellation_details: { reason: "payment_failed" } }],
+      ["account deleted", { trial_end: null, cancellation_details: { reason: "cancellation_requested", comment: "pipglyph:account_deleted" } }],
+      // Cancelled 10 s before the (comp-moved) trial end, with the pre-comp trial long past: never paid.
+      ["comp hold", { trial_end: 1_793_400_000, ended_at: 1_793_399_990, metadata: { pipglyph_trial_end_before_comp: "1_790_000_000".replace(/_/g, "") } }],
+    ];
+    for (const [name, extra] of cases) {
+      const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [] });
+      await handleStripeEvent(event(deleted({ ended_at: 1_793_400_000, ...extra })), { admin, stripe: noApiStripe });
+      expect(notes(inserts), name).toEqual([]);
+      expect(funnel(inserts).map((f) => f.event), name).toEqual(["subscription_cancelled"]);
+    }
+    expect(email.send).not.toHaveBeenCalled();
+    // A plain customer cancellation (the portal's) still earns it.
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [] });
+    await handleStripeEvent(event(deleted({ trial_end: null, ended_at: 1_793_400_000, cancellation_details: { reason: "cancellation_requested", comment: "too pricey" } })), { admin, stripe: noApiStripe });
+    expect(notes(inserts)).toHaveLength(1);
+  });
+
+  it("a late event for a DELETED account (the notifications FK refuses the recipient) is swallowed, never thrown back to Stripe", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [] }, { insertErrorFor: { notifications: { code: "23503", message: "fk" } } });
+    await expect(handleStripeEvent(event(deleted({ trial_end: null, ended_at: 1_793_400_000 })), { admin, stripe: noApiStripe })).resolves.not.toThrow();
+    expect(email.send).not.toHaveBeenCalled();
+    expect(funnel(inserts).map((f) => f.event)).toEqual(["subscription_cancelled"]);
   });
 
   it("ONE win-back per ACCOUNT ever: a trial_lapsed row for the user — whatever subscription it names — means no second offer (a monthly cancel-and-return loop never buys at a discount twice)", async () => {

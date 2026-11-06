@@ -17,6 +17,7 @@ import {
   planForTier,
 } from "@/lib/billing/plans";
 import { formatMoney } from "@/lib/format/money";
+import { trialTermsLine } from "@/lib/billing/trial-terms";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
@@ -65,12 +66,19 @@ async function isTrialEligible(
     // variant of the address is a different customer here; the card the
     // trial requires is the other guard.
     if (email) {
-      const others = await stripe.customers.search({ query: `email:'${email.replace(/'/g, "\\'")}'`, limit: 20 });
-      for (const other of others.data) {
-        if (other.id === customerId) continue;
-        const history = await stripe.subscriptions.list({ customer: other.id, status: "all", limit: 1 });
-        if (history.data.length > 0) return false;
-      }
+      const wanted = email.trim().toLowerCase();
+      const others = await stripe.customers.search({ query: `email:"${wanted.replace(/"/g, '\\"')}"`, limit: 20 });
+      // Stripe's exact match on a string field is a WORD match ("all the
+      // words, in order"): `email:"joe@mail.com"` also returns
+      // a.joe@mail.com — only a customer whose address IS the account's
+      // counts (independent check P2-1).
+      const same = others.data.filter(
+        (other) => other.id !== customerId && !other.deleted && (other.email ?? "").trim().toLowerCase() === wanted,
+      );
+      const histories = await Promise.all(
+        same.map((other) => stripe.subscriptions.list({ customer: other.id, status: "all", limit: 1 })),
+      );
+      if (histories.some((history) => history.data.length > 0)) return false;
     }
     return true;
   } catch (error) {
@@ -185,19 +193,6 @@ async function ensureStripeCustomer(): Promise<
     return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp, email: user.email ?? null };
   }
   return { ok: false, error: "Couldn't link your billing account. Try again." };
-}
-
-/**
- * The trial terms Checkout shows under its button (`custom_text.submit`):
- * when the free period ends, what is charged then, how to cancel — the
- * card networks' required notice (docs/BILLING.md §9). UTC date, labelled.
- */
-export function trialTermsLine(tier: PaidTier, period: BillingPeriod, endsAtSec: number, complimentary: boolean): string {
-  const plan = planForTier(tier);
-  const price = period === "annual" ? `$${plan.annualUsd ?? plan.priceUsd * 12} a year` : `$${plan.priceUsd} a month`;
-  const ends = new Date(endsAtSec * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
-  const what = complimentary ? "Your complimentary period" : "Your free trial";
-  return `${what} ends on ${ends} (UTC). From then, ${plan.name} is ${price}, charged to this card until you cancel. Cancel any time before then on your billing page and nothing is charged.`;
 }
 
 /** Stripe only accepts a Checkout `trial_end` at least 48 hours out; below
@@ -572,8 +567,12 @@ export async function createCheckoutSessionAction(
       // The card networks' trial terms, on the Checkout page itself: when
       // the free period ends, what is charged then, how to cancel.
       const freeUntil = heldTrialEnd ?? (withTrial ? trialDaysEnd : carryTrialEnd);
+      // "Complimentary" only when the comp is what sets the end — a comp
+      // shorter than the 7-day trial leaves a plain trial.
       const trialTerms =
-        freeUntil == null ? null : trialTermsLine(input.tier, input.period ?? "monthly", freeUntil, heldTrialEnd != null);
+        freeUntil == null
+          ? null
+          : trialTermsLine(input.tier, input.period ?? "monthly", freeUntil, heldTrialEnd != null && heldTrialEnd === compHold);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",

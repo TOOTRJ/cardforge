@@ -368,7 +368,18 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
   back by … for 20 % off your first month back") and the reworded email.
   ONE win-back per ACCOUNT, ever (a `trial_lapsed` row for the user, any
   subscription, any time, means no second offer): a payer cancelling every
-  month cannot buy every month at a discount.
+  month cannot buy every month at a discount. NOT every ending earns it
+  (`winbackForCancelledPayer`): a plan Stripe ended over a dispute or
+  exhausted payment retries (`cancellation_details.reason`), one the app
+  ended for an account deletion (`cancellation_details.comment` =
+  `pipglyph:account_deleted`, `lib/stripe/cancel-comment.ts` — and a late
+  event for a deleted account's FK refusal is swallowed, never thrown back
+  to Stripe), or one that never paid (cancelled inside a comp hold's free
+  time: the comp overlay runs on). The per-email trial check narrows
+  Stripe's search to the EXACT address: `customers.search`'s "exact" match
+  on a string field is a word match (`email:"joe@mail.com"` also returns
+  `a.joe@mail.com`), so only a customer whose own email equals the
+  account's, lowercased, counts.
 
 ## 10. Funnel instrumentation (2026-09-24)
 

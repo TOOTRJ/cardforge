@@ -79,8 +79,10 @@ vi.mock("@/lib/stripe/client", () => ({
   getStripe: () => ({
     subscriptions: {
       list: async () => ({ data: s.subs }),
-      cancel: async (id: string) => {
+      cancel: async (id: string, params?: { cancellation_details?: { comment?: string } }) => {
         if (s.cancelThrows) throw new Error("stripe down");
+        // The webhook reads this comment to skip the "come back" offer.
+        expect(params?.cancellation_details?.comment).toBe("pipglyph:account_deleted");
         s.cancelled.push(id);
       },
     },

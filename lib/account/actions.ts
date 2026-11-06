@@ -7,6 +7,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
+import { ACCOUNT_DELETED_CANCEL_COMMENT } from "@/lib/stripe/cancel-comment";
 import { purgeHiddenCards } from "@/lib/cards/revalidate";
 import { lookupUsername } from "@/lib/profile/username";
 
@@ -56,7 +57,11 @@ async function cancelStripeSubscriptions(
     });
     for (const sub of subs.data) {
       if (sub.status === "canceled" || sub.status === "incomplete_expired") continue;
-      await stripe.subscriptions.cancel(sub.id, { prorate: false });
+      await stripe.subscriptions.cancel(sub.id, {
+        prorate: false,
+        // Read by the webhook: no "come back" offer for an account on its way out.
+        cancellation_details: { comment: ACCOUNT_DELETED_CANCEL_COMMENT },
+      });
     }
     return true;
   } catch (error) {

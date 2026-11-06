@@ -294,7 +294,7 @@ describe("createCheckoutSessionAction", () => {
       submit: { message: expect.stringMatching(/^Your free trial ends on [A-Z][a-z]+ \d{1,2}, \d{4} \(UTC\)\. From then, Pro is \$15 a month, charged to this card until you cancel\. Cancel any time before then on your billing page and nothing is charged\.$/) },
     });
     // One trial per EMAIL: every Stripe customer under the address was asked.
-    expect(s.customersSearch).toHaveBeenCalledWith({ query: "email:'x@example.test'", limit: 20 });
+    expect(s.customersSearch).toHaveBeenCalledWith({ query: 'email:"x@example.test"', limit: 20 });
     // Funnel: the click became a checkout_started row, and its id rides in the
     // session metadata so the webhook can tie completion back to it.
     expect(s.funnelInserts).toEqual([
@@ -314,22 +314,41 @@ describe("createCheckoutSessionAction", () => {
     expect(params).not.toHaveProperty("custom_text");
   });
 
-  it("one trial per EMAIL (audit 2026-11-05 P3): a deleted account's old Stripe customer under the same address denies the trial; the quote in an address is escaped", async () => {
-    s.customersSearch.mockResolvedValue({ data: [{ id: "cus_old" }, { id: "cus_1" }] });
+  it("one trial per EMAIL (audit 2026-11-05 P3): a deleted account's old Stripe customer under the same address denies the trial; Stripe's word match is narrowed to the exact address", async () => {
+    s.customersSearch.mockResolvedValue({
+      data: [
+        { id: "cus_old", email: "X@example.test" },
+        { id: "cus_1", email: "x@example.test" },
+        // Stripe's exact match is a WORD match: these come back too and must not count.
+        { id: "cus_near", email: "a.x@example.test" },
+        { id: "cus_gone", email: "x@example.test", deleted: true },
+      ],
+    });
     s.otherHistory = [{ id: "sub_from_deleted_account", status: "canceled" }];
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
     expect(checkoutParams().subscription_data).not.toHaveProperty("trial_period_days");
     expect(checkoutParams()).not.toHaveProperty("custom_text");
-    expect(s.subscriptionsList).toHaveBeenCalledWith(expect.objectContaining({ customer: "cus_old", status: "all" }));
-    // The customer's own id is skipped (already asked), and a search failure fails toward no trial.
-    expect(s.subscriptionsList.mock.calls.filter((c) => c[0]?.customer === "cus_1")).toHaveLength(1);
+    const asked = s.subscriptionsList.mock.calls.map((c) => c[0]?.customer);
+    expect(asked).toContain("cus_old");
+    expect(asked).not.toContain("cus_near");
+    expect(asked).not.toContain("cus_gone");
+    // The customer's own id is asked once (the first read), never again from the search.
+    expect(asked.filter((c) => c === "cus_1")).toHaveLength(1);
 
+    // A near-miss alone (a.x@…) denies nothing — the first-timer keeps the trial.
     s.checkoutCreate.mockClear();
     s.subscriptionsList.mockClear();
-    s.otherHistory = [];
-    s.user = { id: USER, email: "o'brien@example.test" };
+    s.customersSearch.mockResolvedValue({ data: [{ id: "cus_near", email: "a.x@example.test" }] });
     await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
-    expect(s.customersSearch).toHaveBeenLastCalledWith({ query: "email:'o\\'brien@example.test'", limit: 20 });
+    expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
+    expect(s.subscriptionsList.mock.calls.map((c) => c[0]?.customer)).toEqual(["cus_1"]);
+
+    // The address is lowercased and a double quote escaped in Stripe's documented shape.
+    s.checkoutCreate.mockClear();
+    s.customersSearch.mockResolvedValue({ data: [] });
+    s.user = { id: USER, email: 'O"Brien@Example.test' };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(s.customersSearch).toHaveBeenLastCalledWith({ query: 'email:"o\\"brien@example.test"', limit: 20 });
     expect(checkoutParams().subscription_data).toMatchObject({ trial_period_days: TRIAL_DAYS });
 
     s.checkoutCreate.mockClear();
@@ -432,6 +451,16 @@ describe("createCheckoutSessionAction", () => {
     s.profile = { stripe_customer_id: "cus_1" };
     await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
     expect((checkoutParams().subscription_data as { metadata: Record<string, string> }).metadata).toEqual({ supabase_user_id: USER });
+  });
+
+  it("the terms line says 'complimentary period' only when the COMP sets the end — a comp shorter than the 7-day trial leaves a plain trial (check P3-2)", async () => {
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 2 * 86_400_000).toISOString() };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your free trial ends on/);
+    s.checkoutCreate.mockClear();
+    s.profile = { stripe_customer_id: "cus_1", comp_tier: "pro", comp_expires_at: new Date(Date.now() + 40 * 86_400_000).toISOString() };
+    await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect((checkoutParams().custom_text as { submit: { message: string } }).submit.message).toMatch(/^Your complimentary period ends on/);
   });
 
   it("a comp that ends BEFORE the 7-day trial: the trial's end wins (Math.max)", async () => {

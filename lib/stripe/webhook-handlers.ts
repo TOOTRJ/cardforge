@@ -14,6 +14,7 @@ import {
   syncSubscriptionForUser,
   type SubscriptionSyncResult,
 } from "./subscription-sync";
+import { ACCOUNT_DELETED_CANCEL_COMMENT } from "./cancel-comment";
 import { tierForPrice } from "./config";
 import { checkoutReminderEmail, paymentFailedEmail, trialEndingEmail, trialWinbackEmail } from "@/lib/email/messages";
 import { dunningGraceUntil } from "@/lib/billing/dunning";
@@ -155,7 +156,7 @@ async function handleSubscriptionEvent(
     // one win-back offer; so does a PAYER whose plan ended (owner 2026-11-05,
     // BA6), once per account ever.
     const lapsedTrial = isUnconvertedTrial(sub);
-    if (result.tier === "free") {
+    if (result.tier === "free" && (lapsedTrial || winbackForCancelledPayer(sub))) {
       await handleTrialLapsed(sub, userId, deps, lapsedTrial ? "trial" : "cancelled");
     }
     await recordFunnelEvent(admin, {
@@ -379,6 +380,24 @@ async function handleTrialWillEnd(
 // time — means no second offer (a payer cancelling every month must not
 // buy every month at a discount). The insert is durable (throws → Stripe
 // retries), the email best effort.
+/**
+ * Whether a NON-trial deletion earns the cancelled payer's win-back
+ * (BA6). Not when Stripe ended it over a dispute or exhausted payment
+ * retries (the offer would go to the disputer and spend the account's one
+ * win-back), not when the app ended it for an account deletion
+ * (`cancellation_details.comment`, lib/account/actions.ts — the user is on
+ * their way out; a late event would also hit the notifications FK), and
+ * not for a subscription that never paid at all (cancelled inside a comp
+ * hold's free time — the comp overlay runs on, nothing "ended").
+ */
+export function winbackForCancelledPayer(sub: Pick<Stripe.Subscription, "cancellation_details" | "trial_end" | "ended_at">): boolean {
+  const reason = sub.cancellation_details?.reason;
+  if (reason === "payment_disputed" || reason === "payment_failed") return false;
+  if (sub.cancellation_details?.comment === ACCOUNT_DELETED_CANCEL_COMMENT) return false;
+  if (typeof sub.trial_end === "number" && typeof sub.ended_at === "number" && sub.ended_at <= sub.trial_end + 60) return false;
+  return true;
+}
+
 async function handleTrialLapsed(
   sub: Stripe.Subscription,
   userId: string,
@@ -403,6 +422,10 @@ async function handleTrialLapsed(
     payload: { subscriptionId: sub.id, tier, discountPct: TRIAL_WINBACK_DISCOUNT_PCT, expiresAt, reason },
   });
   if (error) {
+    // 23503 = the recipient is gone (the account was deleted and the event
+    // came late): nobody to offer anything to, and a throw would only make
+    // Stripe retry the same failure for days.
+    if (error.code === "23503") return;
     throw new Error(`trial_lapsed notification failed for ${userId}: ${error.message}`);
   }
 
