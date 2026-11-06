@@ -1394,7 +1394,7 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
     const alert = inserts
       .filter((i) => i.table === "notifications" && Array.isArray(i.row))
-      .flatMap((i) => i.row as Array<Record<string, unknown>>)
+      .flatMap((i) => i.row as unknown as Array<Record<string, unknown>>)
       .filter((row) => row.type === "credit_refill_failed");
     expect(alert).toHaveLength(1);
     expect(alert[0].payload).toMatchObject({
@@ -1412,7 +1412,7 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(
       inserts
         .filter((i) => i.table === "notifications" && Array.isArray(i.row))
-        .flatMap((i) => i.row as Array<Record<string, unknown>>)
+        .flatMap((i) => i.row as unknown as Array<Record<string, unknown>>)
         .filter((row) => row.type === "credit_refill_failed"),
     ).toEqual([]);
   });
