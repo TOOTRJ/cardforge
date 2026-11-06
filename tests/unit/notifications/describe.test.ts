@@ -59,6 +59,35 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     }
   });
 
+  it("referral_signup and referral_reward: who, what reward, where it links — never 'a free month'", () => {
+    const d = (type: string, payload: Record<string, unknown>) =>
+      describeNotification({ type, actor, card: null, threadId: null, payload }, { isAdmin: false });
+    // referral_signup is sent ONLY when a qualified friend earned the
+    // referrer no reward — never a fraud reason, never a promise.
+    expect(d("referral_signup", { referralId: "r1", outcome: "not_eligible" })).toMatchObject({
+      body: "joined PipGlyph with your referral link and saved their first card. This referral isn't eligible for a reward.",
+      href: "/dashboard/referrals",
+    });
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_month" }).body).toBe(
+      "joined PipGlyph with your referral link and saved their first card. You've reached this month's referral limit, so this one adds no reward for you — they still get theirs.",
+    );
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_lifetime" }).body).toContain("every reward the program gives");
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_friends" }).body).toContain("no reward on either side");
+    expect(d("referral_reward", { side: "referrer", reward: "free_days", tier: "pro", days: 30, until: "2027-01-04T09:00:00Z", holdEndsAt: "2027-01-04T09:00:00Z" }).body).toBe(
+      "saved their first card — you've earned 30 free days of Pro (until Jan 4, 2027) — added to the time you've paid for. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referrer", reward: "credits", credits: 20 }).body).toBe(
+      "saved their first card — you've earned 20 AI credits. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referee", reward: "free_days", tier: "plus", days: 30, until: "2026-12-01T12:00:00Z" })).toMatchObject({
+      body: "invited you to PipGlyph — you've earned 30 free days of Plus (until Dec 1, 2026) for saving your first card.",
+      href: "/dashboard/billing",
+    });
+    for (const body of [d("referral_signup", { outcome: "capped_month" }).body, d("referral_reward", { side: "referee", reward: "free_days", days: 30 }).body]) {
+      expect(body).not.toMatch(/free month/);
+    }
+  });
+
   it("describes card limit overrides and resets", () => {
     expect(
       describeNotification({ type: "card_limit", actor, card: null, threadId: null, payload: { limit: 2500 } }, { isAdmin: false }).body,

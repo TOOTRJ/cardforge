@@ -28,6 +28,9 @@ import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { getRevenueSummary } from "@/lib/admin/revenue-queries";
 import { FunnelPanel } from "@/components/admin/funnel-panel";
 import { getFunnelSummary } from "@/lib/admin/funnel-queries";
+import { ReferralPanel } from "@/components/admin/referral-panel";
+import { getReferralStats } from "@/lib/admin/referral-queries";
+import { readReferralSettings } from "@/lib/referrals/settings-server";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
@@ -97,7 +100,13 @@ export default async function AdminUsersPage({
     );
   }
 
-  const [page, revenue, funnel] = await Promise.all([listAdminUsers(params), getRevenueSummary(), getFunnelSummary()]);
+  const [page, revenue, funnel, referrals, referralSettings] = await Promise.all([
+    listAdminUsers(params),
+    getRevenueSummary(),
+    getFunnelSummary(),
+    getReferralStats(),
+    readReferralSettings(createAdminClient()),
+  ]);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
 
@@ -115,6 +124,12 @@ export default async function AdminUsersPage({
       {funnel ? (
         <div className="mt-6">
           <FunnelPanel summary={funnel} />
+        </div>
+      ) : null}
+
+      {referrals ? (
+        <div className="mt-6">
+          <ReferralPanel summary={referrals} settings={referralSettings} />
         </div>
       ) : null}
 

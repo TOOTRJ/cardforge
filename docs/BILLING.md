@@ -1010,3 +1010,205 @@ sandbox catalog: pro_monthly $15.00, plus_monthly $6.00, plus_annual $60.00
 
 All free-days scenarios passed.
 ```
+Proof: `tests/unit/billing/plans-comps-audit.test.ts` (one scenario per
+question), `comp-stripe-apply.test.ts`, `stripe-actions.test.ts` (Checkout
+while comped), `webhook-handlers.test.ts` (the second reminder). Not
+sandbox-verified (no Stripe key in the session that built it): updating
+`trial_end` on a card-backed trialing subscription with
+`proration_behavior: none` — run it once on a test clock.
+
+## Referrals (2026-10-30, reworked 2026-11-02 and 2026-11-06; migration `0177_referrals.sql`)
+
+Research and the numbers behind each rule: `docs/research/conversion-2026-10.md`
+§3 and §8. Code: `lib/referrals/` (rules, settings, fraud, reward, server).
+Owner decisions of 2026-11-02 and 2026-11-05 are marked **(owner)**. Since
+2026-11-06 the reward is the FREE-DAYS mechanism comps use (the section
+"Free 30 days" above) — "free 30 days", never "a free month" **(owner)** —
+and what each side gets is a SETTING an admin changes without a deploy.
+
+**The settings** (`site_settings` key `referrals`, `lib/referrals/settings.ts`;
+0177 seeds the defaults; the form sits in the admin Referrals panel on
+`/admin/users`, saved whole through `adminSaveReferralSettingsAction` with a
+confirm step): `enabled` (OFF = a PAUSE: the page says so and hides the
+link, a signup through a link records nothing, a friend's first card is
+left WAITING — rewarded once the program is on again, expired after the
+30-day confirm window like any waiting row; rewards already given stay), `friend` and `referrer` reward specs — `free_days`
+(a tier — `own` = the referrer's own paid tier while their plan is live,
+Plus otherwise **(owner)** — and 30-day units), `credits` (an amount), or
+`none` — and the caps: `perMonth` (3) and `lifetime` (12) referrer rewards,
+and `friendsPerMonth` (5) friends a referrer can bring a reward to in a
+UTC month, past which the FRIEND gets nothing either (`capped_friends`: N
+confirmable inboxes mint nothing — the independent check's P2; a
+referrer-only block such as `same_domain` goes through the claim too, so
+those friends count). A cap of 0 pauses that side. The
+settings are read at grant time; `parseReferralSettings` fills defaults for
+anything missing, so a hand-edited row never breaks the program.
+
+**The code and the link.** Every user has ONE code (`referral_codes`), minted
+the FIRST time it is asked for — `my_referral_code()` (security definer, the
+caller's own session) returns the stored code or inserts 8 lowercase hex
+characters cut from `gen_random_uuid()` (retried on the unique index). In the
+app that first ask is opening `/dashboard/referrals` (#691), which shows the
+link `<site>/?ref=<code>` with a Copy button. Nothing mints a code at signup.
+The code rides the existing first-touch attribution — `AttributionCapture`
+(sessionStorage, no cookie; a `ref` the tab doesn't hold yet is added to the
+first touch, the FIRST code wins) → `AttributionFields` (hidden `attr_ref`) →
+`signupAction`, which puts the code on the account's `app_metadata`
+(`referral_code` — the server's; never `user_metadata`, which GoTrue merges
+for an existing unconfirmed address and the user can edit) for a REAL new
+user only, beside the `signup` event (whose props say only
+`referred: true`, never the code) and writes NO row: the `referrals` row is
+written at ONBOARDING — the first step an account takes with a CONFIRMED
+email (`completeOnboardingAction`, first finish only; the metadata's code,
+else the tab's for a Google sign-up, which posts no signup form). Never at
+signup: GoTrue hands an existing unconfirmed address the same user id, so a
+row written then let anyone claim a referral on an inbox they don't own
+(the independent check's P1). Either way the account must be NEW — under
+`REFERRAL_CLAIM_WINDOW_DAYS` (7) old, never subscribed, no saved card — and
+the first claim wins (`referee_id` is unique). Nobody is notified at signup:
+nothing is earned yet.
+
+**Activation = the first saved card, with confirmed emails.**
+`createCardAction` → `recordActivity` answers true when it wrote
+`first_card_saved`, and then (in `after()`, never holding up or failing the
+save) `qualifyReferral`: signed_up → first_card in ONE conditional update (a
+second save or a retry finds nothing), the window (first card within
+`REFERRAL_ACTIVATION_WINDOW_DAYS`, 30, of the signup — else `expired`), and
+the reward step AT ONCE (`rewardReferral`; **(owner)** no hold — a 72-hour
+hold was specified and then dropped before it shipped; nothing of it is in
+the code):
+
+1. **(owner)** both accounts' emails CONFIRMED (`auth.users.email_confirmed_at`)
+   before either side is rewarded. Unconfirmed → the row waits in
+   `first_card` and the sweep looks again; still unconfirmed
+   `REFERRAL_CONFIRM_WINDOW_DAYS` (30) after the first card → `expired`.
+   With confirmations OFF (the local stack's `enable_confirmations = false`)
+   GoTrue confirms every address at signup, so the rule holds and passes —
+   nothing is special-cased;
+2. a friend whose account was DELETED → `blocked` (`account_deleted`);
+3. fraud (`lib/referrals/fraud.ts`) — **nobody rewarded**: the same inbox
+   (case, `+tag`, Gmail dots), a card fingerprint on both Stripe customers,
+   a throwaway domain (`DISPOSABLE_EMAIL_DOMAINS`); **the friend only**: the
+   same CUSTOM domain (free mail — gmail, outlook, … — and reserved TLDs like
+   `.test` never match). Self-referral by id is a table CHECK;
+3a. **(owner)** one email, one referral reward — ever (below): the friend's
+   normalized email matching ANY OTHER live account (the referrer's
+   included), or a fingerprint an EARLIER referral signup left → `blocked`
+   (`email_reused`), **nobody rewarded**, the friend never told why;
+4. caps — `claim_referral_reward()` (service role, a per-referrer advisory
+   lock in the NAMED namespace `hashtext('pipglyph.referrals')`):
+   `REFERRAL_MONTHLY_CAP` (3 a UTC month) and `REFERRAL_LIFETIME_CAP` (12)
+   rewarded referrals; past either the row is `capped` and the FRIEND still
+   gets their reward. The count reads every rewarded row of the referrer —
+   `referee_id` is `ON DELETE SET NULL`, so deleting a rewarded friend
+   never frees a slot;
+5. each side's reward (`grantOwedSides`) and its `referral_reward`
+   notification (0164's unique index: once per referral and side). When the
+   friend qualified but the REFERRER earns nothing (a cap, not eligible), the
+   referrer gets ONE `referral_signup` notification that says so — never a
+   fraud reason, and never a promise.
+
+Nothing runs while billing is off (`NEXT_PUBLIC_BILLING_ENABLED`): the
+rows wait in `first_card` (the dashboard page is a 404 then).
+
+**One email, one referral reward (owner 2026-11-02).** Deleting an account
+and signing up again with the same inbox must not earn a second reward.
+
+- ONE normalization, `normalizeReferralEmail` (`lib/referrals/fraud.ts`):
+  trim, lowercase, everything from the first `+` to the `@` dropped (every
+  domain), and on gmail.com / googlemail.com the dots dropped and
+  googlemail.com read as gmail.com. Its SQL twin is
+  `normalize_referral_email()` (0164, service role only); ONE case table,
+  `tests/unit/referrals/email-normalization-cases.json`, holds both (the unit
+  test and `tests/e2e/referral-email-normalization.spec.ts`).
+- What is KEPT is a keyed hash, never the address: HMAC-SHA256 of the
+  normalized email under the server-only secret `REFERRAL_EMAIL_HASH_KEY`
+  (`lib/referrals/email-fingerprint.ts`), in `referral_email_fingerprints`
+  (fingerprint + the FIRST referral that saw it; no user id; `ON DELETE SET
+  NULL` from that referral, so no account deletion removes it; RLS with no
+  policy, revoke-first, the service role only). Written when a referral
+  signup is recorded and again at the reward step if the email changed.
+- The check, before any reward: (a) `referral_email_in_use(user, normalized)`
+  — ANY OTHER live account (`auth.users`, not deleted) with the same
+  normalized address, the referrer's included; (b) the fingerprint already
+  kept by an EARLIER referral. Either → `blocked` / `email_reused`, both sides
+  `none`; the account itself is created and works normally, and the friend
+  is never told why (anti-enumeration — the referrer reads "not eligible").
+- **No key → fail closed:** no reward is granted, the row waits in
+  `first_card` and an error is logged; the hourly sweep grants once the key
+  is set. Never an unkeyed hash. A key shorter than 32 characters counts as
+  missing.
+
+**Owner step:** set `REFERRAL_EMAIL_HASH_KEY` (a long random string, e.g.
+`openssl rand -hex 32`) in Vercel **Production** and **Preview /
+Development**, and in `.env.local`. Never rotate it casually — fingerprints
+kept under the old key stop matching, so an inbox could earn a month again.
+
+**What a side gets** (`referralRewardFor`, `lib/referrals/reward.ts`: the
+settings' spec made concrete; `grantSide` in `lib/referrals/server.ts`
+writes it):
+
+| The setting says | What happens |
+|---|---|
+| `free_days` (the default: 30 days of Plus for the friend, 30 days of their own tier for the referrer) | `grantFreeDays` (`lib/billing/free-days-apply.ts`, source `referral_friend` / `referral_referrer`, reference `referral:<id>:<side>`): on a live, renewing plan or trial the days are ADDED to the paid time (Stripe `trial_end` moved, nothing charged); otherwise the perks overlay from the later of now and its end; a grant below the plan paid for is recorded and changes nothing. The grant's own credits — one allotment per 30 days (`lib/billing/free-days-credits.ts`), never a calendar month's |
+| `credits` | ONE `grant_credits` call, reason `referral_credits`, key `referral:<id>:<side>` |
+| `none` | the side records `none` (`settings`) |
+| the user is an admin | `none` (`admin`) |
+
+No money moves, ever: the balance credit the first design posted on a
+paying referrer is gone. The reference is UNIQUE on `plan_grants` (0177):
+a reward retried after a lost record write finds its grant
+(`duplicate_reference`) and records it instead of adding the days twice.
+A refusal the writer makes for good (an admin) is recorded as `none`; one
+that can clear ("try again", a renewal in flight) is left owed for the
+sweep. The referral never touches `comp_tier` / `comp_expires_at` itself —
+the writer owns the overlay (the old separate `referral_plus_until` column
+and its readers are gone).
+
+**Retries.** A grant that fails leaves the side NULL and counts an attempt
+(`grant_attempts`); a free-days grant refused for a plan under a SCHEDULED
+change (a pending downgrade) is DEFERRED — owed, no attempt counted — until
+the change lands. A free-days row that failed before anything was granted
+frees its `reference`, so the retry can grant under the same key (a stale
+pending row keeps it: Stripe may have been written — an admin's to look at
+after the attempts run out). `/api/cron/referral-rewards` (hourly,
+`vercel.json`, `cronRouteGuard`) runs `sweepReferralRewards`: `signed_up`
+rows past the 30-day activation window are expired; `signed_up` rows older
+than ten minutes whose friend already has a card (a first-card `after()`
+the response outran) are qualified; `first_card` rows not claimed yet (an
+email confirmed since, the program on again) and claimed rows with a side
+still NULL are retried. Every write is once per referral and side, so the sweep
+can run any number of times. After `REFERRAL_GRANT_MAX_ATTEMPTS` (5) a side
+is recorded as `none` with `grant_failed` for an admin (the admin panel's
+`grantsOwed` / reasons).
+
+**Who sees what.** A user reads their own rows as referrer or referee
+through a COLUMN grant (status and dates — never `block_reason` or the
+reward details): a blocked referral reads "Not eligible". Admins read
+everything (RLS `viewer_is_admin()`), and `admin_referral_stats(since)` is
+the admin panel's one read. Writes: the service role only.
+
+**Notification kinds.** `referral_signup` and `referral_reward` — 0177's
+`notifications_type_check` is 0174's list plus those two (the "REFERRAL
+KINDS" block). A migration merged after it that redefines the check takes
+the union. Both are notifications only (no email); the weekly digest lists
+them like every other kind.
+
+**Where it shows.** `/dashboard/referrals` ("Refer a friend" in the
+dashboard rail; a line under the plan card on `/dashboard/billing`): the
+link with Copy / the platform's Share sheet / an email draft (naming what
+the FRIEND gets, in the settings' words), how it works, the caps, four
+numbers (`buildReferralSummary`: joined, first card, rewards earned of the
+lifetime cap, this UTC month of the monthly cap) and the friends with their
+status (`getMyReferralDashboard`, the viewer's own session and column
+grant; the settings ride along). Paused: one sentence, no link. The admin
+**Referrals** panel sits under Funnel on `/admin/users` (`getReferralStats`
+→ `admin_referral_stats` for 30 days and all time): signups → first card →
+rewarded, capped, blocked (by reason), expired, rewards granted on both
+sides, the rows waiting and the grants still owed, the top referrers linked
+to their admin page — and the settings form.
+
+**Not built (owner decisions, PR body):** a click window longer than the tab
+(sessionStorage dies with it — a localStorage entry would be a new storage
+decision), IP / velocity review queues, a hold after qualifying (dropped
+2026-11-02).

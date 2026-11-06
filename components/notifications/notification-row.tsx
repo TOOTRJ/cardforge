@@ -8,6 +8,7 @@ import {
   Copy,
   CreditCard,
   Crown,
+  Gift,
   Heart,
   Layers,
   MailWarning,
@@ -52,6 +53,8 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   deck_cloned: Copy,
   challenge_winner: Trophy,
   moderation_unhidden: ShieldCheck,
+  referral_signup: UserPlus,
+  referral_reward: Gift,
 };
 
 export function NotificationRow({

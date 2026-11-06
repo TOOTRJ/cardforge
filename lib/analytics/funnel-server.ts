@@ -55,12 +55,12 @@ export async function recordFunnelEvent(
  * time this user does it, the matching once-per-user milestone
  * (first_card_saved / …). The milestone is what the Activation section and
  * time-to-value read; the activity rows feed trial engagement. Best effort,
- * like every funnel write.
+ * like every funnel write. Answers true when THIS call wrote the milestone.
  */
 export async function recordActivity(
   admin: AdminClient,
   input: { userId: string; kind: ActivityKind; props?: FunnelProps | Record<string, unknown> },
-): Promise<void> {
+): Promise<boolean> {
   await recordFunnelEvent(admin, { event: input.kind, userId: input.userId, props: input.props });
   const first = FIRST_EVENT[input.kind];
   try {
@@ -71,10 +71,13 @@ export async function recordActivity(
       .eq("event", first)
       .limit(1)
       .maybeSingle();
-    if (data) return;
+    if (data) return false;
   } catch {
-    return;
+    return false;
   }
   await recordFunnelEvent(admin, { event: first, userId: input.userId, props: input.props });
+  // The milestone (first_card_saved, …) was written by this call — what the
+  // referral program waits for (lib/referrals/server.ts qualifyReferral).
+  return true;
 }
 

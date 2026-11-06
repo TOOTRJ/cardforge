@@ -465,6 +465,7 @@ export type Database = {
           applied_as: string;
           stripe_subscription_id: string | null;
           held_from: string | null;
+          reference: string | null;
           starts_at: string;
           ends_at: string | null;
           credits_from: string;
@@ -485,6 +486,7 @@ export type Database = {
           applied_as: string;
           stripe_subscription_id?: string | null;
           held_from?: string | null;
+          reference?: string | null;
           starts_at: string;
           ends_at?: string | null;
           credits_from: string;
@@ -505,6 +507,7 @@ export type Database = {
           applied_as?: string;
           stripe_subscription_id?: string | null;
           held_from?: string | null;
+          reference?: string | null;
           starts_at?: string;
           ends_at?: string | null;
           credits_from?: string;
@@ -530,6 +533,73 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      // Migration 0177 — referrals.
+      referral_codes: {
+        Row: { user_id: string; code: string; created_at: string };
+        Insert: { user_id: string; code: string; created_at?: string };
+        Update: { user_id?: string; code?: string; created_at?: string };
+        Relationships: [];
+      };
+      referral_email_fingerprints: {
+        Row: { fingerprint: string; referral_id: string | null; first_seen_at: string };
+        Insert: { fingerprint: string; referral_id?: string | null; first_seen_at?: string };
+        Update: { fingerprint?: string; referral_id?: string | null; first_seen_at?: string };
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referrer_id: string;
+          referee_id: string | null;
+          code: string;
+          status: string;
+          block_reason: string | null;
+          signed_up_at: string;
+          first_card_at: string | null;
+          rewarded_at: string | null;
+          referrer_reward: string | null;
+          referee_reward: string | null;
+          referrer_reward_detail: Json;
+          referee_reward_detail: Json;
+          grant_attempts: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          referrer_id: string;
+          referee_id?: string | null;
+          code: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          grant_attempts?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          referrer_id?: string;
+          referee_id?: string | null;
+          code?: string;
+          status?: string;
+          block_reason?: string | null;
+          signed_up_at?: string;
+          first_card_at?: string | null;
+          rewarded_at?: string | null;
+          referrer_reward?: string | null;
+          referee_reward?: string | null;
+          referrer_reward_detail?: Json;
+          referee_reward_detail?: Json;
+          grant_attempts?: number;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       comment_reports: {
         Row: {
@@ -3117,6 +3187,28 @@ export type Database = {
         Returns: boolean;
       };
       // Migration 0074 — private billing columns.
+      // Migration 0177 — referrals.
+      my_referral_code: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      claim_referral_reward: {
+        Args: { p_referral_id: string; p_monthly_cap: number; p_lifetime_cap: number; p_friends_cap?: number | null; p_block_reason?: string | null };
+        /** 'rewarded' | 'capped_month' | 'capped_lifetime' | 'capped_friends' | 'blocked', or null. */
+        Returns: string | null;
+      };
+      normalize_referral_email: {
+        Args: { p_email: string | null };
+        Returns: string | null;
+      };
+      referral_email_in_use: {
+        Args: { p_user_id: string; p_normalized: string };
+        Returns: boolean;
+      };
+      admin_referral_stats: {
+        Args: { p_since: string };
+        Returns: Json;
+      };
       get_my_billing: {
         Args: Record<string, never>;
         Returns: {

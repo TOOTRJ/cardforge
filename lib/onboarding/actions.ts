@@ -6,6 +6,8 @@ import { z } from "zod";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { usernameSchema } from "@/lib/auth/schemas";
+import { recordReferralSignup } from "@/lib/referrals/server";
+import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { welcomeEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
@@ -111,6 +113,9 @@ const completeSchema = z.object({
       newsletter: z.boolean(),
     })
     .optional(),
+  /** The tab's first-touch referral code (a Google sign-up never posts the
+   *  signup form's hidden fields — this is its one chance). */
+  referralCode: z.string().max(16).optional(),
 });
 
 export type CompleteResult = { ok: true } | { ok: false; error: string };
@@ -119,6 +124,7 @@ export type CompleteResult = { ok: true } | { ok: false; error: string };
  *  row's defaults stand, which never include the newsletter. */
 export async function completeOnboardingAction(input: {
   preferences?: { account: boolean; activity: boolean; newsletter: boolean };
+  referralCode?: string;
 }): Promise<CompleteResult> {
   const parsed = completeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid preferences." };
@@ -139,6 +145,19 @@ export async function completeOnboardingAction(input: {
       console.warn("completeOnboardingAction: preferences", error.message);
       return { ok: false, error: "Couldn't save your email preferences. Please try again." };
     }
+  }
+
+  // The referral the account arrived with is claimed HERE — the first step
+  // an account takes with a confirmed email (a session needs one) — from
+  // the code the signup put on the account's app_metadata (the server's),
+  // else the tab's first touch (a Google sign-up posts no signup form).
+  // Before onboarded_at, so a transient failure can be retried on the next
+  // finish; recordReferralSignup checks the account is new, the program is
+  // on, and keeps the first claim (a repeat is "exists", harmless).
+  const metadataCode = normalizeReferralCode((user.app_metadata as { referral_code?: unknown } | null)?.referral_code);
+  const referralCode = metadataCode ?? parsed.data.referralCode;
+  if (referralCode && isAdminConfigured()) {
+    await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: referralCode });
   }
 
   // `is null` makes a double submit (or a second tab) a no-op, so the welcome

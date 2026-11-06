@@ -61,6 +61,10 @@ export type GrantFreeDaysInput = {
   source: GrantSource;
   grantedBy: string | null;
   note: string | null;
+  /** A caller's own key for the grant (`referral:<id>:<side>`): unique
+   *  among grants (0177's partial index), so a retried call after a crash
+   *  finds `duplicate_reference` instead of granting twice. */
+  reference?: string | null;
 };
 
 export type GrantFreeDaysResult =
@@ -77,7 +81,14 @@ export type GrantFreeDaysResult =
       /** Something after the Stripe write did not land (logged). */
       warning?: string;
     }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** `in_flight`: another grant for the user is being applied (try
+       *  again); `duplicate_reference`: this `reference` was granted before
+       *  (read the existing row). */
+      code?: "in_flight" | "duplicate_reference";
+    };
 
 async function readState(
   admin: AdminClient,
@@ -174,6 +185,7 @@ export async function grantFreeDays(
       applied_as: plan.kind === "hold" ? "subscription_hold" : plan.kind === "below_plan" ? "below_plan" : "overlay",
       stripe_subscription_id: plan.kind === "hold" ? plan.subscriptionId : null,
       held_from: plan.kind === "hold" ? plan.was : null,
+      reference: input.reference ?? null,
       starts_at: isoOf(startsAt),
       ends_at: endsAt == null ? null : isoOf(endsAt),
       credits_from: isoOf(startsAt),
@@ -184,7 +196,10 @@ export async function grantFreeDays(
   const grantId = (inserted as { id?: string } | null)?.id;
   if (insertError || !grantId) {
     if (insertError?.code === "23505") {
-      return { ok: false, error: "Another grant for this user is being applied right now. Try again in a moment." };
+      if (/plan_grants_reference_idx/.test(insertError.message ?? "")) {
+        return { ok: false, error: "This grant was already given.", code: "duplicate_reference" };
+      }
+      return { ok: false, error: "Another grant for this user is being applied right now. Try again in a moment.", code: "in_flight" };
     }
     console.warn(`grantFreeDays(${input.userId}): insert failed`, insertError?.message);
     return { ok: false, error: "Couldn't record the grant. Nothing was granted." };
@@ -209,7 +224,10 @@ export async function grantFreeDays(
       );
     } catch (error) {
       console.warn(`grantFreeDays(${input.userId}): stripe update failed`, cut(error));
-      await admin.from("plan_grants").update({ status: "failed", stripe_error: cut(error) }).eq("id", grantId);
+      // Nothing was granted: the row's reference is freed so a retry (a
+      // referral's sweep) can grant under the same key. A STALE pending row
+      // keeps its reference — Stripe may have been written.
+      await admin.from("plan_grants").update({ status: "failed", stripe_error: cut(error), reference: null }).eq("id", grantId);
       return {
         ok: false,
         error: "Stripe couldn't be updated — nothing was granted (the attempt is listed as failed). Try again.",
@@ -225,7 +243,10 @@ export async function grantFreeDays(
     if (error) {
       console.error(`grantFreeDays(${input.userId}): overlay write failed`, error.message);
       if (plan.kind === "overlay") {
-        await admin.from("plan_grants").update({ status: "failed", stripe_error: `overlay: ${error.message}` }).eq("id", grantId);
+        await admin
+          .from("plan_grants")
+          .update({ status: "failed", stripe_error: `overlay: ${error.message}`, reference: null })
+          .eq("id", grantId);
         return { ok: false, error: "Couldn't write the complimentary access. Nothing was granted." };
       }
       warnings.push("Stripe was updated, but the profile's complimentary columns couldn't be written — save the grant's overlay by hand or tell the dev.");

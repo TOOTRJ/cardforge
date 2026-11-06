@@ -152,6 +152,55 @@ export function describeNotification(
         href: link && (link.startsWith("/") || link.startsWith("https://")) ? link : "/news",
       };
     }
+    case "referral_signup": {
+      // A friend who joined through the recipient's link saved their first
+      // card with a confirmed email but earned the recipient NO reward — sent
+      // only then (0177; the rewarded case is the referral_reward row).
+      // Never a fraud reason.
+      const outcome = str(payload.outcome);
+      const why =
+        outcome === "capped_month"
+          ? "You've reached this month's referral limit, so this one adds no reward for you — they still get theirs."
+          : outcome === "capped_lifetime"
+            ? "You've earned every reward the program gives, so this one adds none for you — they still get theirs."
+            : outcome === "capped_friends"
+              ? "You've reached this month's limit of rewarded friends, so this one earns no reward on either side."
+              : "This referral isn't eligible for a reward.";
+      return {
+        subject: actorName,
+        body: `joined PipGlyph with your referral link and saved their first card. ${why}`,
+        href: "/dashboard/referrals",
+      };
+    }
+    case "referral_reward": {
+      // One reward, either side of a referral (lib/referrals/server.ts):
+      // free days of a tier (lib/billing/free-days.ts — added to a paying
+      // plan's time, else the perks overlay) or AI credits.
+      const side = str(payload.side);
+      const reward = str(payload.reward);
+      const until = str(payload.until);
+      const holdEndsAt = str(payload.holdEndsAt);
+      const days = num(payload.days);
+      const credits = num(payload.credits);
+      const tierName = TIER_LABEL[str(payload.tier) ?? ""] ?? "Plus";
+      const what =
+        reward === "credits" && credits != null
+          ? `${credits} AI credit${credits === 1 ? "" : "s"}`
+          : `${days ?? 30} free days of ${tierName}${until ? ` (until ${formatShortDate(until)})` : ""}${
+              holdEndsAt ? " — added to the time you've paid for" : ""
+            }`;
+      return side === "referee"
+        ? {
+            subject: actorName,
+            body: `invited you to PipGlyph — you've earned ${what} for saving your first card.`,
+            href: "/dashboard/billing",
+          }
+        : {
+            subject: actorName,
+            body: `saved their first card — you've earned ${what}. Thanks for spreading the word!`,
+            href: "/dashboard/referrals",
+          };
+    }
     case "deck_like": {
       // Someone liked your PUBLIC deck — once per liker and deck (0149).
       const title = str(payload.title);

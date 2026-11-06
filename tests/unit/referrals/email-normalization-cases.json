@@ -1,0 +1,21 @@
+[
+  ["jo.smith@gmail.com", "josmith@gmail.com"],
+  ["Jo.Smith+promo@GoogleMail.com", "josmith@gmail.com"],
+  ["j.o.s.m.i.t.h@googlemail.com", "josmith@gmail.com"],
+  ["  JoSmith@Gmail.COM \n", "josmith@gmail.com"],
+  ["jo.smith@outlook.com", "jo.smith@outlook.com"],
+  ["jo.smith+news@outlook.com", "jo.smith@outlook.com"],
+  ["jo+a+b@example.org", "jo@example.org"],
+  ["Jo+Tag@Sub.Example.ORG", "jo@sub.example.org"],
+  ["jo.smith@gmail.co.uk", "jo.smith@gmail.co.uk"],
+  ["jo.smith@mail.gmail.com", "jo.smith@mail.gmail.com"],
+  ["\"odd@local\"@example.com", "\"odd@local\"@example.com"],
+  ["+onlytag@example.com", null],
+  ["+tag@gmail.com", null],
+  ["...@gmail.com", null],
+  ["@example.com", null],
+  ["no-at-sign", null],
+  ["", null],
+  ["   ", null],
+  [null, null]
+]

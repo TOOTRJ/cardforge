@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   // A free-days grant's allotment (0176: comps, referral rewards).
   plan_grant: "Complimentary plan credits",
   trial_grant: "Free-trial credits",
+  referral_credits: "Referral reward credits",
   pack_purchase: "Credit pack",
   refund: "Refund",
   // A refunded / disputed pack's credits follow the money (0174).

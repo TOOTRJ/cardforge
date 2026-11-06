@@ -108,6 +108,7 @@ describe("grantFreeDays — a live plan (the hold)", () => {
       applied_as: "subscription_hold",
       stripe_subscription_id: "sub_1",
       held_from: "active",
+      reference: null,
       starts_at: iso(DEC_5),
       ends_at: iso(JAN_4),
       credits_from: iso(DEC_5),
@@ -154,8 +155,9 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     const s = stripe(activeSub, { updateError: "No such subscription: sub_1" });
     const result = await grantFreeDays(stub.client as never, input, { stripe: s as never, now: NOW });
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/nothing was granted/) });
+    // The reference is freed: nothing was granted, a retry may grant under the same key.
     const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && !called(e.calls, "lt"))!;
-    expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "No such subscription: sub_1" });
+    expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "No such subscription: sub_1", reference: null });
     expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
     expect(sync.syncSubscriptionForUser).not.toHaveBeenCalled();
   });
@@ -203,7 +205,7 @@ describe("grantFreeDays — no live plan (the overlay)", () => {
     const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never, now: NOW });
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/Nothing was granted/) });
     const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && !called(e.calls, "lt"))!;
-    expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "overlay: permission denied" });
+    expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "overlay: permission denied", reference: null });
   });
 
   it("a second grant for the same user while one is in flight (0176's one-pending index, 23505): refused, try again", async () => {
@@ -211,7 +213,16 @@ describe("grantFreeDays — no live plan (the overlay)", () => {
     expect(await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never })).toEqual({
       ok: false,
       error: expect.stringMatching(/being applied right now/),
+      code: "in_flight",
     });
+    // The reference index (a referral retried after a lost record write): duplicate_reference.
+    const dup = db({ insertError: 'duplicate key value violates unique constraint "plan_grants_reference_idx"', insertCode: "23505" });
+    expect(await grantFreeDays(dup.client as never, { userId: USER, tier: "plus", units: 1, source: "referral_friend", grantedBy: null, note: null, reference: "referral:r1:referee" }, { stripe: stripe(null) as never })).toMatchObject({
+      ok: false,
+      code: "duplicate_reference",
+    });
+    const insert = dup.forTable("plan_grants").find((e) => called(e.calls, "insert"))!;
+    expect(payloadOf(insert.calls, "insert")).toMatchObject({ reference: "referral:r1:referee", source: "referral_friend" });
     expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
   });
 
