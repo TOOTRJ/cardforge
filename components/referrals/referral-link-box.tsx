@@ -2,13 +2,21 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { Check, Copy, Mail, Share2 } from "lucide-react";
+import { Check, ClipboardCopy, Copy, Mail, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field-classes";
 
 // The viewer's referral link with Copy, the platform's own Share sheet
-// (where there is one) and an email draft. The message says what the friend
-// gets — the reason they'll click — and nothing about the referrer's month.
+// (where there is one), an email draft and the message itself to copy. The
+// message says what the friend gets — the reason they'll click — and nothing
+// about the referrer's days.
+//
+// "Email a friend" is a mailto: link: it opens whatever the browser hands
+// such links to, and a browser with NO mail handler (Chrome on a Mac with
+// Mail not set up, Gmail not registered) does nothing on the click and says
+// nothing (owner 2026-11-06). The page can't tell. So the same message is
+// also one click away as text — "Copy the message" — with a line under the
+// buttons saying so.
 
 /** The share text names what the FRIEND gets (the settings' words). */
 const shareText = (friendGets: string) =>
@@ -19,6 +27,7 @@ const noop = () => () => {};
 export function ReferralLinkBox({ link, friendGets = "30 free days of Plus" }: { link: string; friendGets?: string }) {
   const SHARE_TEXT = shareText(friendGets);
   const [copied, setCopied] = useState(false);
+  const [messageCopied, setMessageCopied] = useState(false);
   // navigator.share exists only in the browser (and not in every one): read
   // it after hydration so the server render and the first client render agree.
   const canShare = useSyncExternalStore(
@@ -46,9 +55,21 @@ export function ReferralLinkBox({ link, friendGets = "30 free days of Plus" }: {
     }
   }
 
+  const message = `${SHARE_TEXT}\n\n${link}`;
   const mailto = `mailto:?subject=${encodeURIComponent(`${friendGets.charAt(0).toUpperCase()}${friendGets.slice(1)} on PipGlyph`)}&body=${encodeURIComponent(
-    `${SHARE_TEXT}\n\n${link}`,
+    message,
   )}`;
+
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(message);
+      setMessageCopied(true);
+      toast.success("The message and your link are copied — paste them into any email or chat.");
+      window.setTimeout(() => setMessageCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't access the clipboard — select the link and copy it.");
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -78,7 +99,15 @@ export function ReferralLinkBox({ link, friendGets = "30 free days of Plus" }: {
             Email a friend
           </a>
         </Button>
+        <Button type="button" variant="outline" onClick={copyMessage}>
+          {messageCopied ? <Check aria-hidden /> : <ClipboardCopy aria-hidden />}
+          {messageCopied ? "Message copied" : "Copy the message"}
+        </Button>
       </div>
+      <p className="text-xs text-muted">
+        Email a friend opens your mail app with the message written. If nothing opens, Copy the message and paste it into
+        any email or chat.
+      </p>
     </div>
   );
 }
