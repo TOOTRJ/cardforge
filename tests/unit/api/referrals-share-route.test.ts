@@ -12,6 +12,8 @@ const s = vi.hoisted(() => ({
   settings: { enabled: true, friend: { days: 7 } } as Record<string, unknown>,
   code: "ab12cd34" as unknown,
   billing: true,
+  /** The viewer's referral rows (status only); null = the read failed. */
+  referralRows: [] as Array<{ id: string; status: string }> | null,
 }));
 
 vi.mock("next/headers", () => ({
@@ -33,7 +35,10 @@ vi.mock("@/lib/referrals/settings-server", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => s.user,
-  createClient: async () => ({ rpc: async () => ({ data: s.code, error: null }) }),
+  createClient: async () => ({
+    rpc: async () => ({ data: s.code, error: null }),
+    from: () => ({ select: () => ({ eq: () => ({ limit: async () => ({ data: s.referralRows, error: s.referralRows ? null : { message: "down" } }) }) }) }),
+  }),
 }));
 
 import { GET } from "@/app/api/referrals/share/route";
@@ -44,19 +49,36 @@ beforeEach(() => {
   s.settings = { enabled: true, friend: { days: 7 } };
   s.code = "ab12cd34";
   s.billing = true;
+  s.referralRows = [];
 });
+
+const FIRST_RUNG = { rewardsEarned: 0, ladderLength: 1, nextRewardPhrase: "7 free days", pastLadder: false };
 
 describe("GET /api/referrals/share", () => {
   it("a visitor: the program and the friend's words, no code", async () => {
     const res = await GET();
     expect(res.headers.get("cache-control")).toBe("private, no-store");
-    expect(await res.json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: null });
+    expect(await res.json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: null, ladder: null });
   });
   it("a signed-in viewer: their code, normalised", async () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.code = "AB12CD34";
-    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34" });
+    expect(await (await GET()).json()).toEqual({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34", ladder: FIRST_RUNG });
+  });
+  it("a signed-in viewer's ladder (SG4): rewarded rows are the rung, the next reward is the ladder's or the tail; an unreadable read is no ladder, never an error", async () => {
+    s.sessionCookie = true;
+    s.user = { id: "u1" };
+    s.referralRows = [
+      { id: "r1", status: "rewarded" },
+      { id: "r2", status: "signed_up" },
+      { id: "r3", status: "capped" },
+    ];
+    expect((await (await GET()).json()).ladder).toEqual({ rewardsEarned: 1, ladderLength: 1, nextRewardPhrase: "7 free days", pastLadder: true });
+    s.referralRows = null;
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect((await res.json()).ladder).toBeNull();
   });
   it("a malformed code is no code", async () => {
     s.sessionCookie = true;
@@ -68,7 +90,7 @@ describe("GET /api/referrals/share", () => {
     s.sessionCookie = true;
     s.user = { id: "u1" };
     s.settings = { ...s.settings, enabled: false };
-    const off = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null };
+    const off = { enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null, ladder: null };
     expect(await (await GET()).json()).toEqual(off);
     s.settings = { ...s.settings, enabled: true };
     s.billing = false;

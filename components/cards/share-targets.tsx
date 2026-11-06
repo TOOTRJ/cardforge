@@ -61,6 +61,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { cleanShareUrl, referralShareLine, shareUrlFor } from "@/lib/sharing/share-url";
+import { ladderProgressLine } from "@/lib/referrals/ladder-progress";
 import { readReferralShareInfo, type ReferralShareInfo } from "@/lib/sharing/referral-share-client";
 
 type ShareTargetsProps = {
@@ -220,6 +221,8 @@ export function ShareTargets({
                 {" "}
                 These links carry your referral link: a friend who joins through one gets {friendGets} toward a plan once
                 they save their first cards and start one — and so do you.
+                {/* SG4: the viewer's rung and what the next referral earns. */}
+                {referral?.ladder ? ` ${ladderProgressLine(referral.ladder)}` : null}
               </>
             ) : null}
           </DialogDescription>
