@@ -250,7 +250,17 @@ describe("describeNotification — deck generated", () => {
     );
     expect(d).toEqual({
       subject: "Your Pro trial",
-      body: "ended — come back by Oct 24, 2026 for 20% off your first month; the discount is applied automatically at checkout.",
+      body: "ended — come back by Oct 24, 2026 for 20% off your first month on a monthly plan; the discount is applied automatically at checkout.",
+      href: "/dashboard/billing#plans",
+    });
+    // A payer whose plan ended (BA6): the same offer in its own words.
+    const c = describeNotification(
+      { actor: null, card: null, threadId: null, type: "trial_lapsed", payload: { subscriptionId: "sub_1", tier: "plus", discountPct: 20, expiresAt: "2026-10-24T12:00:00Z", reason: "cancelled" } },
+      { isAdmin: false },
+    );
+    expect(c).toEqual({
+      subject: "Your Plus plan",
+      body: "ended — come back by Oct 24, 2026 for 20% off your first month back on a monthly plan; the discount is applied automatically at checkout.",
       href: "/dashboard/billing#plans",
     });
   });

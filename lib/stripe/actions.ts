@@ -17,6 +17,7 @@ import {
   planForTier,
 } from "@/lib/billing/plans";
 import { formatMoney } from "@/lib/format/money";
+import { trialTermsLine } from "@/lib/billing/trial-terms";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
@@ -49,6 +50,7 @@ import type Stripe from "stripe";
 async function isTrialEligible(
   stripe: Stripe,
   customerId: string,
+  email?: string | null,
 ): Promise<boolean> {
   try {
     const subs = await stripe.subscriptions.list({
@@ -56,7 +58,29 @@ async function isTrialEligible(
       status: "all",
       limit: 1,
     });
-    return subs.data.length === 0;
+    if (subs.data.length > 0) return false;
+    // One trial per EMAIL, not per account (audit 2026-11-05 P3): deleting
+    // the account and signing up again with the same address used to mint a
+    // fresh trial — the old Stripe customer (never deleted) still carries
+    // its history, so every customer under the address is asked. A "+tag"
+    // variant of the address is a different customer here; the card the
+    // trial requires is the other guard.
+    if (email) {
+      const wanted = email.trim().toLowerCase();
+      const others = await stripe.customers.search({ query: `email:"${wanted.replace(/"/g, '\\"')}"`, limit: 20 });
+      // Stripe's exact match on a string field is a WORD match ("all the
+      // words, in order"): `email:"joe@mail.com"` also returns
+      // a.joe@mail.com — only a customer whose address IS the account's
+      // counts (independent check P2-1).
+      const same = others.data.filter(
+        (other) => other.id !== customerId && !other.deleted && (other.email ?? "").trim().toLowerCase() === wanted,
+      );
+      const histories = await Promise.all(
+        same.map((other) => stripe.subscriptions.list({ customer: other.id, status: "all", limit: 1 })),
+      );
+      if (histories.some((history) => history.data.length > 0)) return false;
+    }
+    return true;
   } catch (error) {
     console.error(
       "[stripe] Trial eligibility check failed (denying the trial):",
@@ -93,6 +117,8 @@ async function ensureStripeCustomer(): Promise<
       hasSubscribedBefore: boolean;
       /** The profile's admin comp (lib/billing/comp-stripe.ts). */
       comp: CompFacts;
+      /** The account's email — the one-trial-per-email check asks Stripe by it. */
+      email: string | null;
     }
   | { ok: false; error: string }
 > {
@@ -112,6 +138,7 @@ async function ensureStripeCustomer(): Promise<
       userId: user.id,
       hasSubscribedBefore,
       comp,
+      email: user.email ?? null,
     };
   }
 
@@ -140,7 +167,7 @@ async function ensureStripeCustomer(): Promise<
     .select("stripe_customer_id")
     .maybeSingle();
   if (!error && data?.stripe_customer_id === customer.id) {
-    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
+    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp, email: user.email ?? null };
   }
   // Nothing landed: another request linked a customer first (use theirs),
   // or the write was reverted / failed (refuse — a trigger revert reports
@@ -160,10 +187,10 @@ async function ensureStripeCustomer(): Promise<
         deleteError instanceof Error ? deleteError.message : deleteError,
       );
     }
-    return { ok: true, customerId: linked, userId: user.id, hasSubscribedBefore, comp };
+    return { ok: true, customerId: linked, userId: user.id, hasSubscribedBefore, comp, email: user.email ?? null };
   }
   if (linked === customer.id) {
-    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp };
+    return { ok: true, customerId: customer.id, userId: user.id, hasSubscribedBefore, comp, email: user.email ?? null };
   }
   return { ok: false, error: "Couldn't link your billing account. Try again." };
 }
@@ -205,6 +232,9 @@ async function hasRecentLapsedTrial(
       ? (payload as { subscriptionId: string }).subscriptionId
       : null;
   if (!subscriptionId) return false;
+  // Spent: the webhook stamps the row when a checkout paid with the coupon
+  // (audit 2026-11-05 P3: cancel + resubscribe inside the window used it twice).
+  if (payload && typeof payload === "object" && (payload as { redeemedAt?: unknown }).redeemedAt) return false;
   try {
     const sub = await stripe.subscriptions.retrieve(subscriptionId);
     return customerIdOf(sub.customer) === customerId;
@@ -502,7 +532,7 @@ export async function createCheckoutSessionAction(
       const withTrial =
         !live &&
         !customer.hasSubscribedBefore &&
-        (await isTrialEligible(stripe, customer.customerId));
+        (await isTrialEligible(stripe, customer.customerId, customer.email));
       // A comp of this plan (or a higher one) that is still running: nothing
       // is charged before it ends, then the plan bills normally (owner rule
       // 2026-10-30, lib/billing/comp-stripe.ts). The trial, if any, keeps
@@ -526,11 +556,23 @@ export async function createCheckoutSessionAction(
       // buys its first month at a discount — applied here, never as a code.
       // Never on a comp hold: the first invoice is the hold's $0 one, and a
       // once-off coupon would be spent on it.
+      // The coupon is `duration: once`: on an ANNUAL price it took 20 % off
+      // the whole year while the offer said "first month" — monthly only.
       const winback =
         !live &&
         !withTrial &&
         heldTrialEnd == null &&
+        (input.period ?? "monthly") !== "annual" &&
         (await hasRecentLapsedTrial(stripe, customer.userId, customer.customerId));
+      // The card networks' trial terms, on the Checkout page itself: when
+      // the free period ends, what is charged then, how to cancel.
+      const freeUntil = heldTrialEnd ?? (withTrial ? trialDaysEnd : carryTrialEnd);
+      // "Complimentary" only when the comp is what sets the end — a comp
+      // shorter than the 7-day trial leaves a plain trial.
+      const trialTerms =
+        freeUntil == null
+          ? null
+          : trialTermsLine(input.tier, input.period ?? "monthly", freeUntil - checkoutSec, heldTrialEnd != null && heldTrialEnd === compHold);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
@@ -584,6 +626,7 @@ export async function createCheckoutSessionAction(
         // Land new subscribers on the dashboard (the "go make something"
         // surface, with the credits card front and center) rather than
         // settings; BillingReturnToast is mounted there to greet them.
+        ...(trialTerms ? { custom_text: { submit: { message: trialTerms } } } : {}),
         success_url: `${base}/dashboard?billing=success`,
         cancel_url: `${base}/pricing?billing=cancel`,
       };
