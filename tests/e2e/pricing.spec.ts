@@ -77,7 +77,7 @@ test.describe("pricing page — signed in", () => {
     expect(html).not.toContain("Get started free");
 
     await page.goto("/pricing");
-    await expect(page.getByText("Your current plan")).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /try pro free for 7 days/i })).toBeVisible();
     // No Stripe customer → nothing to manage: the portal button must not
@@ -129,7 +129,7 @@ test.describe("pricing page — signed in", () => {
     await expect(page.getByRole("banner").getByRole("link", { name: /^pricing$/i })).toHaveCount(0);
     // The plan grid is here instead — Pro is the current plan, and the
     // account is never offered a portal it doesn't have.
-    await expect(page.getByText("Your current plan")).toBeVisible();
+    await expect(page.getByText("Your current plan", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /manage plan/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /try plus free for 7 days/i })).toBeVisible();
   });
