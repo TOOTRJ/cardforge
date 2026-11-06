@@ -24,6 +24,8 @@ const chargeEvents = vi.hoisted(() => ({
   dispute: vi.fn(),
   fraud: vi.fn(),
 }));
+// The referral program's card-on-file hook (0180) — its own tests.
+vi.mock("@/lib/referrals/server", () => ({ advanceReferral: async () => ({ status: "none" }) }));
 vi.mock("@/lib/stripe/charge-events", () => ({
   handleChargeRefunded: (...args: unknown[]) => chargeEvents.refunded(...args),
   handleDispute: (...args: unknown[]) => chargeEvents.dispute(...args),

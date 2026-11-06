@@ -1188,7 +1188,88 @@ sandbox-verified (no Stripe key in the session that built it): updating
 `trial_end` on a card-backed trialing subscription with
 `proration_behavior: none` — run it once on a test clock.
 
-## Referrals (2026-10-30, reworked 2026-11-02 and 2026-11-06; migration `0177_referrals.sql`)
+## Referrals v2 — the ladder and the days bank (owner 2026-11-06; migration `0180_referrals_v2.sql`)
+
+Supersedes the section below (0177, kept for the rules that still hold:
+the code and the link, the signup at onboarding, the fraud rules, one
+email = one reward ever, the confirm window, the sweep). Code:
+`lib/referrals/` (rules, settings v2, reward v2, server v2, summary,
+queries); the admin panel `components/admin/referral-panel.tsx` +
+`lib/admin/referral-queries.ts`; the settings form
+`components/admin/referral-settings-form.tsx`.
+
+**What qualifies a referral (the two bars).** The friend must (1) save
+`activation.cardsRequired` cards (5) within `activation.windowDays` (30) of
+signing up — EVERY save runs `advanceReferral` (`lib/cards/actions.ts`, in
+`after()`), which counts the friend's cards, stamps `cards_saved_at` once
+(status `cards_saved`; 0177's `first_card` reads the same) or expires a
+row past the window — AND (2) start a plan with a CARD ON FILE: a Stripe
+subscription the profile points at (`trialing` / `active` / past due) —
+`customer.subscription.created` runs `advanceReferral` too
+(`lib/stripe/webhook-handlers.ts`), stamping `card_on_file_at` once. Both
+stamps standing, `rewardReferral` runs at once: the program ON (else the
+row waits), both emails confirmed, the key present, the fraud rules, one
+email one reward, then the claim.
+
+**The claim (`claim_referral_reward_v2`)**: the friends cap only
+(`caps.friendsPerMonth`, 5: rewarded, capped and referrer-blocked rows
+this UTC month — each rewarded the friend — past which NEITHER side is
+rewarded) and a referrer-only block reason (`same_domain`), under the
+referrer's named advisory lock; a rewarded claim returns the referrer's
+LADDER STEP — their rewarded count including this one — stored as
+`ladder_step`. Referrals are UNLIMITED (owner): 0177's monthly and
+lifetime caps are gone.
+
+**The rewards are DAYS INTO THE BANK** (`lib/billing/day-bank.ts`, tier-less,
+no credits) or AI credits:
+
+| Side | Gets | Reference (unique: a retry finds the entry) |
+|---|---|---|
+| the friend | `friend.days` (7) banked | `referral:<id>:referee` |
+| the referrer | the LADDER's step N for their N-th rewarded referral — 1: 7 days, 2: 5 credits, 3: 7 days, 4: 10 credits, 5: 14 days, 6: 20 credits, 7: 21 days, 8: 50 credits, 9: 21 days, 10: 30 days; past 10 the `tail` (7 days) each | `referral-step:<referrer>:<step>` (credits: the same key on `grant_credits`, reason `referral_credits`) |
+
+The friend's checkout is the qualifying moment, so their days are banked
+BEFORE the checkout reserves the bank (`preBankFriendDays`, called by
+`createCheckoutSessionAction` ahead of `prepareCheckoutBank`): that checkout
+applies them with the signup days — one free period, card on file,
+auto-billed after unless they cancel. The reward step later finds the entry
+under its reference and records the side. Days earned later (the referrer's
+steps, a friend who already had a plan) wait in the bank for the user's
+own "Apply banked days". An admin account gets nothing; `friend.days` 0
+reads "nothing". Notifications: `referral_reward` with `reward:
+"banked_days"` (`days`, the referrer's `step`) or `"credits"` —
+`lib/notifications/describe.ts` names the step ("referral #3").
+
+**The settings (v2 shape, `lib/referrals/settings.ts`)**: `enabled`,
+`activation {cardsRequired, windowDays}`, `friend {days}`, `ladder` (a
+list of steps: `days` / `credits` / `none`), `tail`, `caps {friendsPerMonth}`.
+0180 rewrites a v1 row keeping its switch and friends cap;
+`parseReferralSettings` maps a v1 row the same way. The admin form edits
+the ladder step by step (add / remove, the tail) with a confirm.
+
+**The pages.** `/dashboard/referrals`: the link box ("7 free days toward a
+plan…"), four steps (share → 5 cards in 30 days → a plan with a card on
+file → the rewards), the LADDER with the earned steps ticked and the next
+one marked, the two-bar counts, the friends-this-month count, the
+viewer's bank with a link to Apply, and the friends table (status, the
+reward and its step). The sign-up / onboarding note and every share
+surface carry the two bars (`/api/referrals/share` answers `cardsRequired`
+/ `windowDays` beside `friendGets`). `/admin/users` → "Referrals and the
+days bank": the chain (signed up → cards → plan → rewarded, capped, blocked,
+expired, waiting, grants owed, credits through the ladder) for 30 days and
+all time, the top referrers with their step, the last 30 days day by day,
+referrers by rewarded count, and the days bank's ledger (banked / reserved
+/ applied at checkout or to a plan / revoked, users with days waiting, the
+signup entries' fate, by source) — `admin_referral_stats` v2.
+
+**The sweep** (`/api/cron/referral-rewards`, hourly): advances every
+`cards_saved` row (the plan may have arrived while the program was off, an
+email got confirmed), expires signups past the window, catches a stranded
+signup whose friend has the cards, retries owed sides (the row's own
+ladder step, never step 1 again), and releases the bank's stale
+reservations.
+
+## Referrals v1 — superseded by v2 above (2026-10-30, reworked 2026-11-02 and 2026-11-06; migration `0177_referrals.sql`)
 
 Research and the numbers behind each rule: `docs/research/conversion-2026-10.md`
 §3 and §8. Code: `lib/referrals/` (rules, settings, fraud, reward, server).

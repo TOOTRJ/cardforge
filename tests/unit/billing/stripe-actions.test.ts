@@ -159,6 +159,9 @@ vi.mock("@/lib/stripe/client", () => ({
     billingPortal: { sessions: { create: s.portalCreate } },
   }),
 }));
+// The referred friend's days, banked before the checkout reserves the bank
+// (0180) — its own tests.
+vi.mock("@/lib/referrals/server", () => ({ preBankFriendDays: async () => false }));
 vi.mock("@/lib/stripe/config", () => ({
   priceIdForTier: (tier: string, period: string) => `price_${tier}_${period}`,
   priceIdForPack: (pack: string) => `price_pack_${pack}`,
