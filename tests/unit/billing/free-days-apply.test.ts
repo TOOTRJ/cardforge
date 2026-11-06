@@ -228,7 +228,7 @@ describe("grantFreeDays — no live plan (the overlay)", () => {
     const stub = db();
     stub.rpc.mockResolvedValueOnce({ data: null, error: { message: "grant_credits down" } } as never);
     const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never, now: NOW });
-    expect(result).toMatchObject({ ok: true, creditsGranted: 0, warning: expect.stringMatching(/first credits couldn't be granted yet — the daily refill run grants them/) });
+    expect(result).toMatchObject({ ok: true, creditsGranted: 0, warning: expect.stringMatching(/first credits couldn't be granted yet — the daily refill run grants a legacy allotment that is still due/) });
     const applied = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status?: string }).status === "applied");
     expect(applied).toBeTruthy();
   });

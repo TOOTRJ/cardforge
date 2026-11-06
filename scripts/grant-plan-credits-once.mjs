@@ -75,6 +75,7 @@ for (let from = 0; ; from += PAGE) {
     const { data: ledger, error: ledgerError } = await supabase
       .from("credit_ledger")
       .select("delta, idempotency_key")
+      .eq("user_id", row.id)
       .like("idempotency_key", `plan-once:${row.id}:%`);
     if (ledgerError) {
       failed += 1;

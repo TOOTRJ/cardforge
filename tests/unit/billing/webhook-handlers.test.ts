@@ -65,6 +65,8 @@ function makeAdmin(
                 eq: () => chain,
                 in: () => chain,
                 limit: () => chain,
+                // The account's plan-once rows (credit-refill.ts's .eq(user).like read).
+                like: async () => ({ data: planRows, error: null }),
                 maybeSingle: async () => ({
                   data: customerLookupHit ? { id: "user-1" } : null,
                   error: null,
@@ -73,8 +75,6 @@ function makeAdmin(
               };
               return chain;
             },
-            // The account's plan-once rows (credit-refill.ts's one LIKE).
-            like: async () => ({ data: planRows, error: null }),
           };
         },
         update(values: Record<string, unknown>) {
@@ -1385,6 +1385,36 @@ describe("handleStripeEvent — invoice.paid", () => {
     await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
     expect(updates.filter((u) => u.table === "profiles")).toEqual([]);
     expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: null });
+  });
+
+  it("a skipped resync on a PAID invoice alerts the admins too — the plan credits never ran and no cron catches them up (independent check 2026-11-06)", async () => {
+    retrieve.mockRejectedValue(new Error("stripe down"));
+    const { admin, inserts, rpcs } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await expect(handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe })).resolves.toBeUndefined();
+    expect(rpcs.filter((r) => r.fn === "grant_credits")).toEqual([]);
+    const alert = inserts
+      .filter((i) => i.table === "notifications" && Array.isArray(i.row))
+      .flatMap((i) => i.row as Array<Record<string, unknown>>)
+      .filter((row) => row.type === "credit_refill_failed");
+    expect(alert).toHaveLength(1);
+    expect(alert[0].payload).toMatchObject({
+      source: "invoice",
+      invoiceId: "in_1",
+      userId: "user-1",
+      error: expect.stringMatching(/could not be read or synced, so the plan credits were not granted — stripe down/),
+    });
+  });
+
+  it("a skipped resync on a $0 invoice (a trial start) alerts nobody — nothing was owed", async () => {
+    retrieve.mockRejectedValue(new Error("stripe down"));
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice({ amount_paid: 0, billing_reason: "subscription_create" })), { admin, stripe: invoiceStripe });
+    expect(
+      inserts
+        .filter((i) => i.table === "notifications" && Array.isArray(i.row))
+        .flatMap((i) => i.row as Array<Record<string, unknown>>)
+        .filter((row) => row.type === "credit_refill_failed"),
+    ).toEqual([]);
   });
 
   // Loud grant failures (2026-10-18). The chain stub ignores filters, so the

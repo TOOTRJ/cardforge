@@ -15,7 +15,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` (+ `lib/stripe/charge-events.ts`) | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`, and since 0174 `charge.refunded`, `charge.dispute.{created,closed}`, `radar.early_fraud_warning.created`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all **thirteen**. |
 | Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
-| Credits | `lib/billing/credit-refill.ts` (monthly refill, cron + webhook), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Refill is idempotent per user per month; upgrades top up the difference against everything the month already granted. Since 0175 the cron knows the plan's interval (`profiles.billing_interval`, written by the sync): a MONTHLY plan's base allotment is the paying invoice's — the cron, AND any non-paying webhook sync (a cancel click, a resume, a portal change: `grantCreditsForSync`'s `paid`), grant it only as a backstop (the newest base grant older than 35 days — a missed webhook — and then under the MISSED month's key), so a plan paid on the 31st never gets a second allotment from the cron on the 1st or from a click on the 2nd; a row synced before 0175 keeps the old rule until its next event, and a cron outage spanning two whole months loses an annual plan the earlier one (accepted); an ANNUAL plan is the cron's every calendar month, the previous month backfilled when the plan already ran then. `grant_credits` takes the user's row lock before its idempotency check (a webhook + cron race used to 23505 and page the admins). Checkout links a freshly minted Stripe customer only where none is linked (`… where stripe_customer_id is null`) and otherwise uses the one another request linked first. |
+| Credits | `lib/billing/credit-refill.ts` (the ONE-TIME grants — see "AI credits are ONE-TIME", 2026-11-06), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Plan credits land once per account and tier with the first PAID invoice (`plan-once:<user>:<tier>`), the free-period 10 once per account; nothing recurs. The paragraph that follows describes the MONTHLY rule that ran until 2026-11-06 and is kept for the ledger's older `refill:` rows: refill was idempotent per user per month; upgrades topped up the difference against everything the month already granted. Since 0175 the cron knows the plan's interval (`profiles.billing_interval`, written by the sync): a MONTHLY plan's base allotment is the paying invoice's — the cron, AND any non-paying webhook sync (a cancel click, a resume, a portal change: `grantCreditsForSync`'s `paid`), grant it only as a backstop (the newest base grant older than 35 days — a missed webhook — and then under the MISSED month's key), so a plan paid on the 31st never gets a second allotment from the cron on the 1st or from a click on the 2nd; a row synced before 0175 keeps the old rule until its next event, and a cron outage spanning two whole months loses an annual plan the earlier one (accepted); an ANNUAL plan is the cron's every calendar month, the previous month backfilled when the plan already ran then. `grant_credits` takes the user's row lock before its idempotency check (a webhook + cron race used to 23505 and page the admins). Checkout links a freshly minted Stripe customer only where none is linked (`… where stripe_customer_id is null`) and otherwise uses the one another request linked first. |
 
 Environment matrix (Vercel):
 
@@ -236,8 +236,8 @@ arrived" signal — does three things:
 3. **One "Payment received" notification** when money was actually taken
    (`amount_paid > 0` — a $0 trial invoice or a 100 %-off coupon says
    nothing), once per invoice (guarded on `payload.invoiceId`). Copy in
-   `describe.ts`: renewals read "Your Pro plan renewed — $15 charged; your
-   monthly AI credits are refilled", first payments and plan changes say
+   `describe.ts`: renewals read "Your Pro plan renewed — $15 charged." (the
+   "credits refilled" half went with the monthly rule, 2026-11-06), first payments and plan changes say
    thanks. No email from the app: Stripe's own receipt covers the inbox —
    **owner step: Dashboard → Settings → Business → Emails → "Successful
    payments" on** (not readable through the API).
@@ -970,9 +970,9 @@ out on or already has.
   With no live plan the page sends them to /pricing: the checkout applies
   the bank.
 - **No credits** come with banked days (the ladder's credits are their own);
-  the trial tranche (`TRIAL_CREDITS`, 25) is granted ONCE per account, on the
-  first free period only (`grantTrialCreditsForPeriod` reads the ledger for
-  an earlier `trial_grant`).
+  the first free period grants `FREE_PERIOD_CREDITS` (10) ONCE per account
+  (`grantFreePeriodCredits`; the 25-credit `trial_grant` tranche it replaced
+  counts as served — "AI credits are ONE-TIME").
 - **Existing users**: no backfill. The signup days are decided at the first
   checkout by the rule above; a running trial continues untouched; an
   account past its trial banks nothing and earns through referrals.
@@ -999,7 +999,9 @@ out on or already has.
 > referral ladder banks days too (PR 2).
 
 A comp is **N units of exactly 30 days** (30 × 86 400 s, exact to the second)
-of a paid tier with that tier's normal monthly AI credits and nothing else —
+of a paid tier with, until 2026-11-06, that tier's monthly AI credits
+(`LEGACY_FREE_DAYS_ALLOTMENT` for the grants made before that date; a new
+grant carries none — and since 0179 an admin comp is banked days) and nothing else —
 the same mechanism the referral reward (PR F) uses. It replaces the dated
 overlay the admin typed by hand, #688's balance credit and #726's coupon:
 **no money moves for free days, ever.** Design and the owner's answers:
@@ -1022,8 +1024,8 @@ overlay the admin typed by hand, #688's balance credit and #726's coupon:
 
 | The user has | N × 30 days become | Credits |
 |---|---|---|
-| a live, RENEWING plan or trial, the tier at or above the one paid for (`subscription_hold`) | **added to the time paid for**: `trial_end` = the current period's end (a trial: its own end) + N × 30 d, `proration_behavior: none` — the documented way to push the next charge out (a trial on the existing subscription; `billing_cycle_anchor` cannot take a date). Monthly: the billing day moves; annual: the renewal moves; a trial runs longer. The subscription reads `trialing` until then; Stripe issues a $0 invoice the moment the trial is added (the cycle resets to it — no money, `billing_reason` `subscription_update`, listed as "Trial start" in the admin Revenue panel); the next invoice is the plan's own price on the new date. The end it had before ANY hold stays in metadata `pipglyph_trial_end_before_comp`. The overlay (`comp_tier` / `comp_expires_at`) is written to the SAME instant (the billing page, the reworded trial reminder and the comp-ending reminders read it). | one allotment per 30 days of the grant, at the start of each (`grant:<id>:<k>`, reason `plan_grant`); the subscribers' sweep still grants the PAID time before the hold starts (an annual plan held 200 days before its renewal keeps its monthly allotments — `refillTierFor` `heldBeforeStart`) |
-| no live plan: free, lapsed, a cancelled plan still running (the days start when it ends), one past due (dunning keeps its own dates) (`overlay`) | the overlay alone, from the later of now and its current end; the overlay carries ONE tier — the higher of what it holds and what is granted — for the whole stretch | the same per-30-days allotments |
+| a live, RENEWING plan or trial, the tier at or above the one paid for (`subscription_hold`) | **added to the time paid for**: `trial_end` = the current period's end (a trial: its own end) + N × 30 d, `proration_behavior: none` — the documented way to push the next charge out (a trial on the existing subscription; `billing_cycle_anchor` cannot take a date). Monthly: the billing day moves; annual: the renewal moves; a trial runs longer. The subscription reads `trialing` until then; Stripe issues a $0 invoice the moment the trial is added (the cycle resets to it — no money, `billing_reason` `subscription_update`, listed as "Trial start" in the admin Revenue panel); the next invoice is the plan's own price on the new date. The end it had before ANY hold stays in metadata `pipglyph_trial_end_before_comp`. The overlay (`comp_tier` / `comp_expires_at`) is written to the SAME instant (the billing page, the reworded trial reminder and the comp-ending reminders read it). | grants made BEFORE 2026-11-06: one allotment per 30 days of the grant, at the start of each (`grant:<id>:<k>`, reason `plan_grant`, `LEGACY_FREE_DAYS_ALLOTMENT`); later grants carry no credits, and the paid time's credits are the one-time plan stock |
+| no live plan: free, lapsed, a cancelled plan still running (the days start when it ends), one past due (dunning keeps its own dates) (`overlay`) | the overlay alone, from the later of now and its current end; the overlay carries ONE tier — the higher of what it holds and what is granted — for the whole stretch | the same (legacy grants only) |
 | a grant BELOW the tier paid for (`below_plan`) | recorded, nothing changes | none |
 | `units` NULL — **staff only**: an account with NO Stripe subscription | the overlay with no expiry | every 30 days, open-ended |
 

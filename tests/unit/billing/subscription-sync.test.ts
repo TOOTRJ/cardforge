@@ -32,10 +32,10 @@ function makeAdmin(profile: Record<string, unknown> = {}) {
                 }),
                 // The free-period credits' once-per-account ledger read.
                 in: () => ({ limit: async () => ({ data: profile.__freePeriodEarlier ? [{ id: "l_1" }] : [], error: null }) }),
+                // The account's plan-once rows (credit-refill.ts's .eq(user).like read).
+                like: async () => ({ data: (profile.__planRows as unknown[] | undefined) ?? [], error: null }),
               };
             },
-            // The account's plan-once rows (credit-refill.ts's LIKE read).
-            like: async () => ({ data: (profile.__planRows as unknown[] | undefined) ?? [], error: null }),
           };
         },
         update(values: Record<string, unknown>) {

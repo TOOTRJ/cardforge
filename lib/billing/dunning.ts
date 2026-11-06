@@ -13,8 +13,8 @@
 // (`profiles.payment_failed_at`, written by the Stripe sync, migration 0174),
 // which covers Stripe's retry window. `unpaid` (the retries are exhausted)
 // and `incomplete` (never paid) get no grace. Credits are NOT granted during
-// the grace: the month's allotment lands with the invoice that finally pays
-// (invoice.paid → the idempotent refill), as before.
+// the grace: a first plan stock still owed lands with the invoice that finally
+// pays (invoice.paid → the keyed one-time grant), as before.
 //
 // ONE rule in two forms: this module (the app) and
 // public.subscription_perks_on() (0174: card_capacity_for, owner_export_stamp,

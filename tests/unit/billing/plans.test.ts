@@ -12,13 +12,12 @@ import {
   discountedPackPriceUsd,
   formatUsd,
   PLANS,
-  creditRefillKey,
   currentCreditPeriod,
   planForTier,
 } from "@/lib/billing/plans";
 
 describe("billing plan catalog", () => {
-  it("grants more monthly credits at higher tiers", () => {
+  it("grants more one-time credits at higher tiers", () => {
     expect(PLAN_CREDITS_ONCE.plus).toBeLessThan(PLAN_CREDITS_ONCE.pro);
   });
 
@@ -52,15 +51,11 @@ describe("billing plan catalog", () => {
   });
 });
 
-describe("credit refill keys", () => {
-  it("formats the calendar-month period as YYYY-MM (UTC)", () => {
+describe("credit periods and the one-time rule", () => {
+  it("formats the calendar-month period as YYYY-MM (UTC) — the cron's run label", () => {
     expect(currentCreditPeriod(new Date("2026-06-07T12:00:00Z"))).toBe("2026-06");
     expect(currentCreditPeriod(new Date("2026-12-31T23:59:59Z"))).toBe("2026-12");
     expect(currentCreditPeriod(new Date("2027-01-01T00:00:00Z"))).toBe("2027-01");
-  });
-
-  it("derives a stable per-user-per-month idempotency key", () => {
-    expect(creditRefillKey("user-123", "2026-06")).toBe("refill:user-123:2026-06");
   });
 
   it("Free gets 5 credits once at signup (the profiles.credits default); plan credits are one-time", () => {

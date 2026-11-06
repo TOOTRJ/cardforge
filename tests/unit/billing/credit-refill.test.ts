@@ -37,21 +37,22 @@ function stubAdmin(opts: {
   const admin = {
     from: () => ({
       select: () => ({
-        // The free-period once-per-account read: .eq(user).in(reason, …).limit(1)
-        eq: () => ({
-          in: (_column: string, reasons: string[]) => {
+        // Both reads start on the account: the free-period once-per-account
+        // read is .eq(user).in(reason, …).limit(1); the plan-once rows are
+        // .eq(user).like(prefix) (the user filter uses the ledger's index).
+        eq: (_column: string, user: string) => ({
+          in: (_column2: string, reasons: string[]) => {
             reads.push(`in:${reasons.join(",")}`);
             return { limit: async () => ({ data: opts.freePeriodEarlier ? [{ id: "l_1" }] : [], error: null }) };
           },
+          like: async (_column2: string, pattern: string) => {
+            reads.push(`like:${user}:${pattern}`);
+            return {
+              data: opts.readError ? null : (opts.planRows ?? []),
+              error: opts.readError ? { message: opts.readError } : null,
+            };
+          },
         }),
-        // The plan-once rows: one LIKE on the account's prefix.
-        like: async (_column: string, pattern: string) => {
-          reads.push(`like:${pattern}`);
-          return {
-            data: opts.readError ? null : (opts.planRows ?? []),
-            error: opts.readError ? { message: opts.readError } : null,
-          };
-        },
       }),
     }),
     rpc: async (_fn: string, args: GrantCall) => {
@@ -67,7 +68,7 @@ describe("grantPlanCreditsOnce", () => {
     const { admin, grants, reads } = stubAdmin({});
     expect(await grantPlanCreditsOnce(admin, USER, "pro")).toEqual({ ok: true, granted: PLAN_CREDITS_ONCE.pro });
     expect(grants).toEqual([{ p_user_id: USER, p_amount: 120, p_reason: PLAN_CREDITS_REASON, p_idempotency_key: planCreditsKey(USER, "pro") }]);
-    expect(reads).toEqual([`like:plan-once:${USER}:%`]);
+    expect(reads).toEqual([`like:${USER}:plan-once:${USER}:%`]);
     expect(PLAN_CREDITS_ONCE).toEqual({ plus: 60, pro: 120 });
   });
 

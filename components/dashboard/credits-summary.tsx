@@ -76,7 +76,7 @@ export async function CreditsSummaryCard() {
 
       <p className="text-xs leading-5 text-subtle">
         {planCredits > 0
-          ? `Your plan's ${planCredits} credits came with its first payment, once — they never expire, and a credit pack adds more any time.`
+          ? `Your plan brings ${planCredits} credits with its first payment, once — they never expire, and a credit pack adds more any time.`
           : `Free accounts start with ${SIGNUP_CREDITS} credits. A credit pack tops you up any time (they never expire), and a plan brings its own stock with its first payment.`}
       </p>
 

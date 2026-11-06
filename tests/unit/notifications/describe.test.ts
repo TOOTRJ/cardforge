@@ -341,7 +341,7 @@ describe("describeNotification — deck generated", () => {
       ),
     ).toEqual({
       subject: "Credit grant failed",
-      body: "on a paid invoice (in_1) — boom. Plan credits are one-time: check the account's ledger and grant by hand if they are missing.",
+      body: "on a paid invoice (in_1) — boom. Plan credits are one-time: run scripts/grant-plan-credits-once.mjs (keyed — it grants nothing twice), never a hand grant, which the next paid invoice would double.",
       href: `/admin/users?u=${userId}`,
     });
     expect(

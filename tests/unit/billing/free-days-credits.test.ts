@@ -109,7 +109,7 @@ describe("grantFreeDaysCredits — the sweep", () => {
   const plus = { id: "g1", user_id: "u1", tier: "plus", units: 2, credits_from: "2026-11-20T00:00:00Z", ends_at: "2027-01-19T00:00:00Z", applied_as: "overlay", status: "applied" };
   const pro = { id: "g2", user_id: "u2", tier: "pro", units: 1, credits_from: "2026-12-01T00:00:00Z", ends_at: "2026-12-31T00:00:00Z", applied_as: "subscription_hold", status: "applied" };
 
-  it("grants the missing allotments only (the ledger keys already held are skipped), the tier's monthly credits each", async () => {
+  it("grants the missing allotments only (the ledger keys already held are skipped), the legacy tier allotment each", async () => {
     const s = stub([plus, pro], { g1: ["grant:g1:0"] });
     const result = await grantFreeDaysCredits(s.client as never, { now });
     expect(result).toEqual({ ok: true, processed: 2, granted: 2, failed: 0 });

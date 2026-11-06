@@ -57,7 +57,11 @@ export function freePeriodCreditsKey(userId: string): string {
  * tier's stock and what the account's plan keys already granted (any tier).
  * `granted` is what this call asked for — an existing key no-ops inside the
  * RPC. An unreadable ledger is an error (never a guess: a Pro grant judged
- * without seeing Plus's would hand out 120 on top of 60).
+ * without seeing Plus's would hand out 120 on top of 60). The read and the
+ * grant are two statements: two DIFFERENT tiers' paid invoices handled in
+ * the same second (an upgrade seconds after the first payment, delivered
+ * concurrently) could each read an empty set — the one over-grant this
+ * design allows, judged not worth a SQL function (independent check).
  */
 export async function grantPlanCreditsOnce(
   admin: CreditGrantClient,
@@ -70,6 +74,7 @@ export async function grantPlanCreditsOnce(
   const { data, error } = await admin
     .from("credit_ledger")
     .select("delta, idempotency_key")
+    .eq("user_id", userId)
     .like("idempotency_key", `plan-once:${userId}:%`);
   if (error) return { ok: false, error: error.message };
   const rows = (data ?? []) as Array<{ delta: unknown; idempotency_key: string | null }>;

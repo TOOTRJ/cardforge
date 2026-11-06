@@ -1870,10 +1870,9 @@ Rules and gotchas:
   later are applied by the USER (`applyBankedDaysAction` → `applyBankToPlan`:
   a HOLD on a live plan only — `grantFreeDays` with `days`, `grantsCredits:
   false`, `holdOnly` — never an overlay; no live plan → /pricing). The bank
-  is TIER-LESS; banked days carry NO credits; `TRIAL_CREDITS` (25, reason
-  `trial_grant`, under the month's base refill key) is granted ONCE per
-  account at the first free period (`grantTrialCreditsForPeriod` reads the
-  ledger) and the full allotment on first payment; a
+  is TIER-LESS; banked days carry NO credits — the first free period's
+  `FREE_PERIOD_CREDITS` and the first paid invoice's `PLAN_CREDITS_ONCE` are
+  the one-time rules below (an old `trial_grant` row counts as served); a
   card-backed trial switches plans through the portal confirm flow, a legacy
   no-card one is superseded by a checkout that carries `trial_end` over
   (≥48 h left, Stripe's minimum). A trial that ends unconverted

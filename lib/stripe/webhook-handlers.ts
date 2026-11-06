@@ -52,14 +52,14 @@ import {
 // from the price/product (not only the env ids), and refuses to demote an
 // active subscriber whose price it cannot map.
 //
-// Credit refills are cron-driven (see app/api/cron/refill-credits) so monthly
-// AND annual plans both get a monthly allotment. We additionally grant the
-// FIRST month immediately on subscription create/update — deduped against the
-// cron via the same per-user-per-month key — so a new subscriber gets credits
-// without waiting for the next cron tick. Mid-month upgrades get the tier
-// delta topped up via lib/billing/credit-refill (shared with the cron).
-// Trials are the exception: one grant at creation, no refills until the
-// first payment (grantCreditsForSync — the cron skips trialing too).
+// Plan credits are ONE-TIME (owner 2026-11-06, lib/billing/credit-refill.ts):
+// the tier's stock lands with the FIRST PAID invoice (`invoice.paid` below,
+// money taken, keyed per account and tier — a retry or a later invoice
+// grants nothing twice), and the free-period 10 with the subscription the
+// checkout created `trialing` (grantCreditsForSync). No cron grants a
+// subscriber anything any more, so a paid invoice whose grant could not run
+// alerts the admins (`credit_refill_failed`): the next chance would be the
+// next paid invoice, a month or a year away.
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -501,6 +501,16 @@ async function handleInvoicePaid(
   let tier: PlanTier | null = null;
   let interval: string | null = null;
   let grantError: string | null = null;
+  // MONEY TAKEN on a subscription invoice (owner 2026-11-06): the plan's
+  // one-time credits land with the first paid invoice of a tier — a $0
+  // trial-start invoice or a 100 %-off coupon grants nothing; an upgrade's
+  // proration invoice (subscription_update) is a payment on the new tier
+  // and grants its difference.
+  const paid =
+    (invoice.amount_paid ?? 0) > 0 &&
+    (invoice.billing_reason === "subscription_cycle" ||
+      invoice.billing_reason === "subscription_create" ||
+      invoice.billing_reason === "subscription_update");
   if (subscriptionId) {
     let sub: Stripe.Subscription | null = null;
     try {
@@ -516,31 +526,21 @@ async function handleInvoicePaid(
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
       try {
-        // MONEY TAKEN on a subscription invoice (owner 2026-11-06): the
-        // plan's one-time credits land with the first paid invoice of a tier
-        // — a $0 trial-start invoice or a 100 %-off coupon grants nothing; an
-        // upgrade's proration invoice (subscription_update) is a payment on
-        // the new tier and grants its difference.
-        const paid =
-          (invoice.amount_paid ?? 0) > 0 &&
-          (invoice.billing_reason === "subscription_cycle" ||
-            invoice.billing_reason === "subscription_create" ||
-            invoice.billing_reason === "subscription_update");
         await grantCreditsForSync(result, admin, { isCreationEvent: false, paid });
       } catch (error) {
-        // Loud, never thrown (Stripe's retries stay as they were; the
-        // subscription events and the daily cron grant the month too): an
-        // error log, and the admins alerted once per invoice after the
-        // revenue row below.
+        // Loud, never thrown (Stripe's retries stay as they were): an error
+        // log, and the admins alerted once per invoice after the revenue row
+        // below — nothing else grants a plan's stock (independent check).
         grantError = error instanceof Error ? error.message : String(error);
         console.error(`[stripe] invoice.paid credit grant failed for ${invoice.id} (user ${userId}): ${grantError}`);
       }
     } catch (error) {
       // The subscription events carry the sync; the row still gets written.
-      console.warn(
-        `[stripe] invoice.paid resync skipped for ${subscriptionId}:`,
-        error instanceof Error ? error.message : error,
-      );
+      // On a PAID invoice the grant never ran either, and no cron would
+      // catch it up: the same alert (independent check 2026-11-06).
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[stripe] invoice.paid resync skipped for ${subscriptionId}:`, message);
+      if (paid) grantError = `the subscription could not be read or synced, so the plan credits were not granted — ${message}`;
     }
     // Synced to free (or the sync failed): the invoice's own price names
     // the tier it billed, if the subscription could be read.

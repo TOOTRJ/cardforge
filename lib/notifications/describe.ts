@@ -448,7 +448,7 @@ export function describeNotification(
         const invoiceId = str(payload.invoiceId);
         return {
           subject: "Credit grant failed",
-          body: `on a paid invoice${invoiceId ? ` (${invoiceId})` : ""}${error ? ` — ${error}` : ""}. Plan credits are one-time: check the account's ledger and grant by hand if they are missing.`,
+          body: `on a paid invoice${invoiceId ? ` (${invoiceId})` : ""}${error ? ` — ${error}` : ""}. Plan credits are one-time: run scripts/grant-plan-credits-once.mjs (keyed — it grants nothing twice), never a hand grant, which the next paid invoice would double.`,
           href: isUuid(userId) ? `/admin/users?u=${userId}` : "/admin/users",
         };
       }

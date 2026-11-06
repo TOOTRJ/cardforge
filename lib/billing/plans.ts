@@ -311,9 +311,10 @@ export function formatCredits(credits: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Monthly credit refills (cron-driven, so monthly AND annual plans both get a
-// monthly allotment). Refills are idempotent per user per calendar month via a
-// synthetic key stored in credit_ledger.idempotency_key.
+// The calendar month, kept for the refill cron's run label and alert payload
+// (`app/api/cron/refill-credits`). The monthly refill it once keyed
+// (`refill:<user>:<period>`) ended 2026-11-06 — plan credits are one-time
+// (lib/billing/credit-refill.ts); the ledger's older `refill:` rows stay.
 // ---------------------------------------------------------------------------
 
 /** Calendar-month key, e.g. "2026-06" (UTC). */
@@ -321,27 +322,4 @@ export function currentCreditPeriod(now: Date = new Date()): string {
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
-}
-
-/** The calendar month before `now`'s, e.g. "2026-05" for a June date (UTC) —
- *  what the cron backfills for an annual plan it missed. */
-export function previousCreditPeriod(now: Date = new Date()): string {
-  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  return currentCreditPeriod(new Date(first.getTime() - 1));
-}
-
-/** Idempotency key for a user's monthly subscription refill. */
-export function creditRefillKey(userId: string, period: string): string {
-  return `refill:${userId}:${period}`;
-}
-
-/** Idempotency key for the mid-month top-up when a user upgrades tiers after
- *  this month's refill already granted. Keyed per TIER so a re-upgrade in the
- *  same month (plus → pro → plus → pro) can never double-grant the delta. */
-export function creditUpgradeKey(
-  userId: string,
-  period: string,
-  tier: PlanTier,
-): string {
-  return `refill:${userId}:${period}:upgrade:${tier}`;
 }
