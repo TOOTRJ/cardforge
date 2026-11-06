@@ -70,7 +70,7 @@ const s = vi.hoisted(() => ({
   /** undefined = the default 7 signup days; null = nothing to apply. */
   bank: undefined as undefined | null | { batchId: string; days: number },
   bankEarned: null as null | { batchId: string; days: number },
-  bankSettled: vi.fn(async (_admin: unknown, _batchId: string, _outcome: unknown) => ({ ok: true, days: 0 })),
+  bankSettled: vi.fn(async (): Promise<{ ok: boolean; days: number }> => ({ ok: true, days: 0 })),
   /** Subscription history of OTHER Stripe customers under the same email. */
   otherHistory: [] as Array<{ id: string; status?: string }>,
   lapsedRedeemed: false,
