@@ -85,6 +85,7 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   | "subscription_ends_at"
   | "subscription_canceled_at"
   | "payment_failed_at"
+  | "subscription_held_from"
   | "credits"
   | "comp_tier"
   | "comp_expires_at"
@@ -100,6 +101,7 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   subscription_ends_at: null,
   subscription_canceled_at: null,
   payment_failed_at: null,
+  subscription_held_from: null,
   credits: 0,
   comp_tier: null,
   comp_expires_at: null,

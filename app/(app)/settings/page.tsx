@@ -303,7 +303,10 @@ export default async function SettingsPage({
             <BillingPanel
               tier={entitlements.tier}
               isPaid={entitlements.isPaid}
-              status={entitlements.status}
+              // A paying plan under a free-days hold reads `trialing` on
+              // Stripe (0181): the panel's words are a plan's — "Renews on",
+              // never "Your free trial ends on".
+              status={profile?.subscription_held_from === "active" ? "active" : entitlements.status}
               credits={entitlements.credits}
               renewLabel={renewLabel}
               cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}

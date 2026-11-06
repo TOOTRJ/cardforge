@@ -16,7 +16,7 @@
 // PRODUCTION it is asked for on the terminal only (promptHidden — never an
 // env var, never echoed). Idempotent: an account whose plan-once rows
 // already reach the tier's stock is skipped; a rerun grants nothing twice
-// (grant_credits dedupes on the key).
+// (the grant function dedupes on the key, under the account's row lock — 0181).
 // ---------------------------------------------------------------------------
 import { createClient } from "@supabase/supabase-js";
 import { promptHidden } from "./lib/hidden-prompt.mjs";
@@ -98,19 +98,44 @@ for (let from = 0; ; from += PAGE) {
       granted += 1;
       continue;
     }
-    const { error: grantError } = await supabase.rpc("grant_credits", {
+    // The grant itself is ONE statement under the account's row lock (0181's
+    // grant_plan_credits_once — the webhook's own path): it re-judges the
+    // key and the difference, so a concurrent invoice can't double up. The
+    // read above only decides what to print; the function's answer is what
+    // was granted. On a database 0181 has not reached (PGRST202) the
+    // two-step grant of #773 runs with the amount read above.
+    let given = amount;
+    const { data: answer, error: onceError } = await supabase.rpc("grant_plan_credits_once", {
       p_user_id: row.id,
-      p_amount: amount,
-      p_reason: REASON,
-      p_idempotency_key: key,
+      p_tier: tier,
+      p_target: target,
     });
-    if (grantError) {
+    if (onceError && onceError.code === "PGRST202") {
+      const { error: grantError } = await supabase.rpc("grant_credits", {
+        p_user_id: row.id,
+        p_amount: amount,
+        p_reason: REASON,
+        p_idempotency_key: key,
+      });
+      if (grantError) {
+        failed += 1;
+        console.error(`${row.username ?? row.id}: grant failed — ${grantError.message}`);
+        continue;
+      }
+    } else if (onceError) {
       failed += 1;
-      console.error(`${row.username ?? row.id}: grant failed — ${grantError.message}`);
+      console.error(`${row.username ?? row.id}: grant failed — ${onceError.message}`);
       continue;
+    } else {
+      given = typeof answer === "number" ? answer : 0;
+      if (given <= 0) {
+        skipped += 1;
+        console.log(`skipped ${row.username ?? row.id} (${tier}): granted meanwhile`);
+        continue;
+      }
     }
     granted += 1;
-    console.log(`granted ${amount} to ${row.username ?? row.id} (${tier})`);
+    console.log(`granted ${given} to ${row.username ?? row.id} (${tier})`);
   }
   if ((rows?.length ?? 0) < PAGE) break;
 }

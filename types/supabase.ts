@@ -1412,6 +1412,7 @@ export type Database = {
           billing_interval: string | null;
           // Migration 0174 — when the sync first saw the payment broken.
           payment_failed_at: string | null;
+          subscription_held_from: string | null;
           credits: number;
           is_admin: boolean;
           // Columns added by migration 0060 — folded in here until the
@@ -1453,6 +1454,7 @@ export type Database = {
           subscription_canceled_at?: string | null;
           billing_interval?: string | null;
           payment_failed_at?: string | null;
+          subscription_held_from?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -1491,6 +1493,7 @@ export type Database = {
           subscription_canceled_at?: string | null;
           billing_interval?: string | null;
           payment_failed_at?: string | null;
+          subscription_held_from?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -2746,6 +2749,14 @@ export type Database = {
         Args: { p_kind: string; p_old: string; p_new: string };
         Returns: boolean;
       };
+      grant_plan_credits_once: {
+        Args: { p_user_id: string; p_tier: string; p_target: number };
+        Returns: number;
+      };
+      admin_credit_grant_stats: {
+        Args: { p_since?: string | null };
+        Returns: { reason: string; credits: number; grants: number }[];
+      };
       grant_credits: {
         Args: {
           p_user_id: string;
@@ -3182,6 +3193,7 @@ export type Database = {
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
           payment_failed_at?: string | null;
+          subscription_held_from?: string | null;
         }[];
       };
       // Migration 0112 — funnel instrumentation.
@@ -3310,6 +3322,7 @@ export type Database = {
           subscription_ends_at?: string | null;
           subscription_canceled_at?: string | null;
           payment_failed_at?: string | null;
+          subscription_held_from?: string | null;
         }[];
       };
       owner_export_stamp: {

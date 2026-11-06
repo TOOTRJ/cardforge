@@ -9,7 +9,7 @@ import {
   revokeNote,
   type FreeDaysPlan,
 } from "@/lib/billing/free-days";
-import { MAX_TRIAL_SECONDS, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { MAX_TRIAL_SECONDS, HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 
 // ---------------------------------------------------------------------------
 // Free 30 days (owner 2026-11-05) — the pure decision, one scenario per
@@ -66,12 +66,18 @@ describe("the owner's example — a live, renewing plan: the days are ADDED to t
   it("two units add 60 days; a second grant stacks on the moved end (the metadata keeps the FIRST pre-hold end)", () => {
     const two = applied(planFreeDays({ profile, sub: activeSub(), subscribedTier: "pro", tier: "pro", units: 2, now: NOW }));
     expect(two.kind === "hold" && two.trialEnd).toBe(DEC_5 + 60 * DAY);
-    // After the first hold Stripe reads trialing to Jan 4, metadata = Dec 5.
-    const held = activeSub({ status: "trialing", trial_end: JAN_4, metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(DEC_5) } });
+    // After the first hold Stripe reads trialing to Jan 4, metadata = Dec 5
+    // and "held from active" — the second hold keeps BOTH (0181: the profile
+    // column copied from that key is what tells a held payer from a trial).
+    const held = activeSub({
+      status: "trialing",
+      trial_end: JAN_4,
+      metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(DEC_5), [HOLD_FROM_KEY]: "active" },
+    });
     const again = applied(
       planFreeDays({ profile: { ...profile, comp_tier: "pro", comp_expires_at: iso(JAN_4) }, sub: held, subscribedTier: "pro", tier: "pro", units: 1, now: NOW }),
     );
-    expect(again).toMatchObject({ kind: "hold", startsAt: JAN_4, trialEnd: JAN_4 + 30 * DAY, beforeComp: String(DEC_5), was: "trialing" });
+    expect(again).toMatchObject({ kind: "hold", startsAt: JAN_4, trialEnd: JAN_4 + 30 * DAY, beforeComp: String(DEC_5), was: "active" });
   });
 
   it("a card-backed 7-day trial: the trial end moves by the days; the pre-hold end is its own", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { groupCreditGrants } from "@/lib/admin/credit-grant-stats";
+import { groupCreditGrants, labelCreditGrants } from "@/lib/admin/credit-grant-stats";
 import { CreditGrantsPanel } from "@/components/admin/credit-grants-panel";
 
 describe("credits granted by reason (admin)", () => {
@@ -20,6 +20,20 @@ describe("credits granted by reason (admin)", () => {
       { reason: "pack_purchase", label: "Credit pack", credits: 30, grants: 1 },
       { reason: "admin_grant", label: "Credits added by the PipGlyph team", credits: 25, grants: 1 },
       { reason: "free_period_bonus", label: "Free-period credits", credits: 10, grants: 1 },
+    ]);
+  });
+
+  it("labels the SQL function's rows (0181: summed and sorted in the database) with the ledger's labels, skipping a bad row", () => {
+    expect(
+      labelCreditGrants([
+        { reason: "plan_credits_once", credits: 180, grants: 2 },
+        { reason: "admin_grant", credits: "25", grants: "1" },
+        { reason: null, credits: 1, grants: 1 },
+        { reason: "pack_purchase", credits: "many", grants: 1 },
+      ]),
+    ).toEqual([
+      { reason: "plan_credits_once", label: "Plan credits", credits: 180, grants: 2 },
+      { reason: "admin_grant", label: "Credits added by the PipGlyph team", credits: 25, grants: 1 },
     ]);
   });
 

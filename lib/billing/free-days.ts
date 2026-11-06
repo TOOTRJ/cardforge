@@ -1,5 +1,5 @@
 import { TIER_RANK, type PaidTier, type PlanTier } from "@/lib/billing/plans";
-import { MAX_TRIAL_SECONDS, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { HOLD_FROM_KEY, MAX_TRIAL_SECONDS, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import { formatUtcDateTime } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
@@ -311,7 +311,12 @@ export function planFreeDays(input: {
     trialEnd,
     beforeComp: String(before),
     overlay: { comp_tier: overlayTier, comp_expires_at: isoOf(overlayEnd) },
-    was: sub.status === "trialing" ? "trialing" : "active",
+    // What the hold is added to. A plan ALREADY under a hold reads `trialing`
+    // on Stripe, so a second hold (the ladder's next step, an admin's bank
+    // after a user's Apply) must keep the first's answer: a held PAYER stays
+    // 'active' (independent check of 0181). A real trial that converted reads
+    // `active` by itself, so the other direction needs no guard.
+    was: sub.metadata?.[HOLD_FROM_KEY] === "active" ? "active" : sub.status === "trialing" ? "trialing" : "active",
   };
 }
 

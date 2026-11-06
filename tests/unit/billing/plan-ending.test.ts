@@ -57,6 +57,18 @@ describe("planEndingOf — the state table", () => {
       row({ subscription_status: "trialing", subscription_ends_at: LATER }),
       { kind: "plan", endsAt: LATER, billedBeforeAt: PERIOD_END, canceledAt: null },
     ],
+    // 0181: a PAYING plan under a free-days hold reads `trialing` on Stripe
+    // until the days end — its cancellation is a plan's, never "a trial".
+    [
+      "a cancelled PAYING plan under a free-days hold (held from 'active') is a plan",
+      row({ subscription_status: "trialing", cancel_at_period_end: true, subscription_ends_at: PERIOD_END, subscription_held_from: "active" }),
+      { kind: "plan", endsAt: PERIOD_END, billedBeforeAt: null, canceledAt: null },
+    ],
+    [
+      "a cancelled trial the days were added to (held from 'trialing') is still a trial",
+      row({ subscription_status: "trialing", cancel_at_period_end: true, subscription_ends_at: PERIOD_END, subscription_held_from: "trialing" }),
+      { kind: "trial", endsAt: PERIOD_END, billedBeforeAt: null, canceledAt: null },
+    ],
     // Not "ending": already over, or payment broken (perks are paused; the
     // page says so instead).
     ["ended (status canceled) — never 'ending'", row({ subscription_status: "canceled", cancel_at_period_end: true, subscription_ends_at: PERIOD_END }), null],
@@ -94,6 +106,18 @@ describe("the copy — one wording family with the billing page", () => {
       "Your Pro plan is set to end on December 7, 2026. It is still billed as usual until then — next on October 23, 2026.",
     );
   });
+  it("a cancelled held payer reads as a cancelled plan on every profile-only surface (0181)", () => {
+    const held = planEndingOf(
+      row({ subscription_status: "trialing", cancel_at_period_end: true, subscription_ends_at: PERIOD_END, subscription_held_from: "active" }),
+    )!;
+    expect(planEndingSentence(held, "Plus")).toBe(
+      "Your Plus plan was cancelled and ends on October 23, 2026. You keep Plus until then.",
+    );
+    expect(planEndingSentence(held, "Plus")).not.toMatch(/trial|won't be charged/);
+    expect(planEndingShort(held)).toBe("ends Oct 23, 2026");
+    expect(planEndingAdminLabel(held)).toBe("cancelled, ends Oct 23, 2026 UTC");
+  });
+
   it("short and admin labels", () => {
     expect(planEndingShort(plan)).toBe("ends Oct 23, 2026");
     expect(planEndingShort(trial)).toBe("trial ends Oct 23, 2026");
