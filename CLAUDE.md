@@ -1825,7 +1825,13 @@ Rules and gotchas:
   `docs/BILLING.md`. `isPaid` is NOT "has a subscription" —
   admins and comped accounts are paid with no Stripe customer, and offering
   them "Manage plan" opened a portal that doesn't exist (2026-09-22). A COMP
-  is FREE 30 DAYS (owner 2026-11-05, migration 0176 `plan_grants`): N units
+  IS BANKED DAYS (owner 2026-11-06, 0179): `adminBankDaysAction` → `bankDays`
+  (source `admin`, 2 … 730 days, no tier, no credits, the `banked_days`
+  notification; revoke only what is still banked) — the dated 30-day grant
+  is REFUSED to admins (`units: null`, staff "no end" access, is the one
+  comp left on `grantFreeDays`), and the overlay comps given before that
+  date run out on their dates (no conversion). The FREE-DAYS mechanism
+  underneath (owner 2026-11-05, migration 0176 `plan_grants`): N units
   of exactly 30 × 86 400 s of a tier with its normal credits — ONE decision,
   `planFreeDays` (`lib/billing/free-days.ts`), ONE writer, `grantFreeDays`
   (`free-days-apply.ts`; the referral reward will call it too). On a live,
@@ -1839,13 +1845,35 @@ Rules and gotchas:
   the refill cron), never the calendar month's. Every surface says "free
   days", never "a free month"; the end is exact to the second, printed with
   its time (`<LocalDate format="stampYear">`). Revoke = the newest grant
-  only (`planRevoke`). One
-  trial per account, Plus or Pro: `createCheckoutSessionAction` grants
-  `trial_period_days` only when the profile has never synced a subscription
-  AND Stripe's history (status "all") is empty. The trial REQUIRES A CARD
-  (2026-09-24; never reintroduce `payment_method_collection: if_required`),
-  grants `TRIAL_CREDITS` (25, reason `trial_grant`, under the month's base
-  refill key) at creation and the full allotment on first payment; a
+  only (`planRevoke`). THE
+  DAYS BANK is the free period (owner 2026-11-06, migration 0179,
+  `lib/billing/day-bank.ts`, `docs/BILLING.md` "The days bank"): every new
+  account gets 7 SIGNUP days in `day_bank_entries` (written at onboarding,
+  or lazily at the first checkout), the referral program banks more, and a
+  fresh subscription's Checkout applies the WHOLE bank as `trial_end` —
+  CARD REQUIRED (2026-09-24; never reintroduce `payment_method_collection:
+  if_required`) — after `prepareCheckoutBank` has judged the signup days
+  owed by the one-free-period rule (never subscribed on this account AND
+  no Stripe history under the email, `isTrialEligible`; not owed → the
+  entry is revoked) and RESERVED every banked day under a batch
+  (`bank_batch` in the session metadata: `checkout.session.completed`
+  spends it, `.expired` returns it, a session that can't be created returns
+  it at once, an abandoned OPEN session is expired and reclaimed by the next
+  checkout — `reclaimOpenCheckouts`, the session stamped on the batch — and
+  a stale reservation is released after 25 h by the refill cron, its batch
+  kept for a late completed event). `isTrialEligible` is TRI-STATE: an
+  unreadable Stripe history REFUSES the checkout, never revokes the signup
+  days. The bank goes to Stripe as `trial_period_days` (whole days from
+  completion; one banked day checks out, `MIN_BANK_DAYS_AT_CHECKOUT` = 1),
+  and a comp that holds the first charge past the bank's end leaves the days
+  banked (`skipIfEndsBefore`). Days earned
+  later are applied by the USER (`applyBankedDaysAction` → `applyBankToPlan`:
+  a HOLD on a live plan only — `grantFreeDays` with `days`, `grantsCredits:
+  false`, `holdOnly` — never an overlay; no live plan → /pricing). The bank
+  is TIER-LESS; banked days carry NO credits; `TRIAL_CREDITS` (25, reason
+  `trial_grant`, under the month's base refill key) is granted ONCE per
+  account at the first free period (`grantTrialCreditsForPeriod` reads the
+  ledger) and the full allotment on first payment; a
   card-backed trial switches plans through the portal confirm flow, a legacy
   no-card one is superseded by a checkout that carries `trial_end` over
   (≥48 h left, Stripe's minimum). A trial that ends unconverted

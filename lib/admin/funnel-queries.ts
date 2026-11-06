@@ -77,6 +77,7 @@ const LABEL: Record<FunnelEvent, string> = {
   subscription_changed: "Plan changes",
   subscription_cancelled: "Cancellations (plan ended)",
   subscription_resumed: "Cancellations undone (resumed)",
+  bank_days_applied: "Banked days applied",
   payment_received: "Payments received",
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",

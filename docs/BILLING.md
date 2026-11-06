@@ -866,7 +866,87 @@ subscription"),
 and a Plus → Pro switch is a $9 prorated charge — the copy on the billing
 page says exactly that.
 
+## The days bank — the free period (owner 2026-11-06, migration 0179)
+
+A free trial is no longer a thing of its own. **Every new account gets 7
+SIGNUP days in a bank** (`day_bank_entries`, `lib/billing/day-bank.ts`); the
+referral program banks more (the ladder, docs below once PR 2 lands). The
+bank is TIER-LESS: banked days are days of whatever plan the user checks
+out on or already has.
+
+- **The first checkout applies the whole bank** as the free period before
+  the first charge — card required (Checkout collects it), Stripe
+  `trial_period_days` = the days (whole days from the moment the checkout
+  completes — never a `trial_end` instant a slow checkout eats into),
+  `missing_payment_method: cancel`; the plan bills by itself when the days
+  end. `createCheckoutSessionAction` → `prepareCheckoutBank`: the signup
+  entry is made (or REVOKED) under the rule the trial had — never
+  subscribed on this account, no Stripe history under the email
+  (`isTrialEligible`, now TRI-STATE: a Stripe read that fails answers
+  "unknown" and the checkout REFUSES with "Couldn't check your free days…"
+  — never a verdict, since a revoked signup entry is for good) — then every
+  banked day is RESERVED under a batch (`bank_batch` in the session
+  metadata; the session id is stamped on the batch's rows once Stripe made
+  it, `stampBankBatchSession`). An account that trialled before and EARNED
+  days checks them out as a free period all the same. A comp that already
+  holds the first charge PAST the bank's end leaves the days banked
+  (`skipIfEndsBefore`: the user applies them on top later); one that ends
+  inside the bank holds nothing (the bank is the free period). A single
+  banked day checks out (`MIN_BANK_DAYS_AT_CHECKOUT` = 1: `trial_period_days`
+  has no 48 h floor). Before reserving, `reclaimOpenCheckouts` expires every
+  OPEN Checkout session the user backed out of and returns its days (an
+  abandoned session held them up to 24 h and the next click sold without
+  the free period). `checkout.session.completed` spends the batch
+  (`applied`, via `checkout`; it also takes rows the sweep put back to
+  `banked` with their batch kept — Stripe retries an event for days),
+  `checkout.session.expired` returns it; a session that could not be
+  created returns it at once; a reservation nothing settled is released
+  after 25 h (`releaseStaleReservations`: the daily refill cron, and the
+  hourly referral sweep once PR 2 lands).
+- **An admin's comp is banked days** (owner 2026-11-06): `/admin/users` →
+  "Bank free days" (`adminBankDaysAction`: 2 … 730 whole days, a note the
+  user sees, source `admin`, reference `admin:<request id>` so a double
+  submit banks once; the `banked_days` notification), and "Revoke" on an
+  entry still banked (`adminRevokeBankedDaysAction` → `revokeBankedEntry`;
+  the user is told). No tier, no credits (credits are the separate grant).
+  The old dated comp is refused; staff "no end" access stays.
+- **Days earned later wait in the bank** and the user applies them by hand
+  (the billing page's "Apply N banked days", `applyBankedDaysAction` →
+  `applyBankToPlan`): on a LIVE plan — a free period or paid time — the days
+  are added to its time through the free-days mechanism as a HOLD only
+  (`holdOnly`: never a perks overlay, the days must end in a charge; a
+  cancelled or past-due plan is refused with the reason), a `plan_grants`
+  row of source `day_bank` with an exact `days` and `grants_credits` false.
+  With no live plan the page sends them to /pricing: the checkout applies
+  the bank.
+- **No credits** come with banked days (the ladder's credits are their own);
+  the trial tranche (`TRIAL_CREDITS`, 25) is granted ONCE per account, on the
+  first free period only (`grantTrialCreditsForPeriod` reads the ledger for
+  an earlier `trial_grant`).
+- **Existing users**: no backfill. The signup days are decided at the first
+  checkout by the rule above; a running trial continues untouched; an
+  account past its trial banks nothing and earns through referrals.
+- The win-back offer and the "trial ended" notice keep working on whatever
+  free period ends unconverted.
+
 ## Free 30 days — comps on one mechanism (owner 2026-11-05, migration 0176)
+
+> **Superseded for admins on 2026-11-06 (migration 0179, "The days bank"
+> above): a comp is BANKED DAYS now.** The admin's "Bank free days" form
+> (`adminBankDaysAction` → `bankDays`, source `admin`, keyed by the form's
+> request id; at least `MIN_ADMIN_BANK_DAYS` = 2, the owner's floor — not a Stripe limit; the bank is held under 730 days, Stripe's most at once, and `reserveBank` applies oldest-first up to it, the rest staying banked) puts
+> tier-less days with no credits in the user's bank, and tells them
+> (`banked_days`); the user's first checkout applies the whole bank as its
+> free period (card required, billed when the days end unless they cancel),
+> later ones wait for their own "Apply banked days" on a live plan. An admin
+> takes back days still banked (`adminRevokeBankedDaysAction`), never ones
+> applied. The dated 30-day grant below is REFUSED to admins
+> (`adminGrantFreeDaysAction` accepts `units: null` only); the overlay comps
+> given before that date run out on their own dates (owner: no migration,
+> no conversion), and "no end" STAFF access — an account with no Stripe
+> plan — stays as the one comp that is not banked days. `grantFreeDays`
+> itself stays: the bank's application is a hold through it, and the
+> referral ladder banks days too (PR 2).
 
 A comp is **N units of exactly 30 days** (30 × 86 400 s, exact to the second)
 of a paid tier with that tier's normal monthly AI credits and nothing else —
@@ -884,7 +964,11 @@ overlay the admin typed by hand, #688's balance credit and #726's coupon:
   from the profile and Stripe's CURRENT subscription) and **the writer**
   (`lib/billing/free-days-apply.ts` `grantFreeDays`: the row first, then
   Stripe under the idempotency key `plan-grant:<id>`, then the overlay, then
-  `applied`; a Stripe failure leaves a `failed` row and nothing else):
+  `applied`, then the FIRST credit allotment at once — `grantCreditsForGrant`,
+  so a referral's free days never read "Plus plan · Remaining 4" until the
+  06:00 UTC cron (owner, production 2026-11-06); a refused first allotment
+  is a warning the cron catches up; a Stripe failure leaves a `failed` row
+  and nothing else):
 
 | The user has | N × 30 days become | Credits |
 |---|---|---|

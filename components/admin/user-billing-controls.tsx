@@ -1,7 +1,8 @@
 "use client";
 
-// Admin user billing controls — grant credits, give free days (a comp),
-// override the saved-card cap. Each form calls its server action in a transition and
+// Admin user billing controls — grant credits, bank free days (the comp
+// since owner 2026-11-06), staff access with no end, override the
+// saved-card cap. Each form calls its server action in a transition and
 // router.refresh()es so the server-rendered snapshot above reflects the
 // new values immediately.
 
@@ -11,14 +12,17 @@ import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { formatUtcDate, formatUtcDateTime } from "@/lib/format/dates";
-import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAY_UNITS } from "@/lib/billing/free-days";
+import { FREE_DAYS_UNIT_DAYS, MAX_FREE_DAYS_EXACT, MIN_ADMIN_BANK_DAYS } from "@/lib/billing/free-days";
+import type { BankEntryDetail } from "@/lib/billing/day-bank";
 import type { PlanGrantRow } from "@/lib/billing/plan-grants";
 import { Button } from "@/components/ui/button";
 import {
+  adminBankDaysAction,
   adminBillingHealthAction,
   adminGrantCreditsAction,
   adminGrantFreeDaysAction,
   adminResyncSubscriptionAction,
+  adminRevokeBankedDaysAction,
   adminRevokeFreeDaysAction,
   adminSetCardLimitAction,
   type BillingHealthIssue,
@@ -111,40 +115,168 @@ export function GrantCreditsForm({ userId }: { userId: string }) {
 }
 
 const TIER_NAME = { plus: "Plus", pro: "Pro" } as const;
-const STAFF = "staff";
 
 /**
- * Free days (owner 2026-11-05): a tier, a length in 30-day units — or "No
- * end" for a STAFF account with no Stripe plan — and a note. The action
- * decides what the days do (lib/billing/free-days.ts) and the toast says it.
+ * Bank free days (owner 2026-11-06: the comp): a whole number of days, at
+ * least MIN_ADMIN_BANK_DAYS, and a note. Tier-less, no credits — the user's
+ * first checkout applies the bank as its free period, later ones wait for
+ * their "Apply banked days" (a card on file either way).
  */
-export function FreeDaysForm({
-  userId,
-  hasLiveSubscription,
-}: {
-  userId: string;
-  /** Trialing, active or past due on Stripe: "No end" is not offered. */
-  hasLiveSubscription: boolean;
-}) {
+export function BankDaysForm({ userId }: { userId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [tier, setTier] = useState<"plus" | "pro">("plus");
-  const [length, setLength] = useState<string>("1");
+  const [days, setDays] = useState("7");
   const [note, setNote] = useState("");
+  // One idempotency id per fill-in — a double submit banks once.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   function submit() {
-    const units = length === STAFF ? null : Number(length);
+    const parsed = Number(days);
+    if (!Number.isInteger(parsed) || parsed < MIN_ADMIN_BANK_DAYS || parsed > MAX_FREE_DAYS_EXACT) {
+      toast.error(`Enter a whole number of days from ${MIN_ADMIN_BANK_DAYS} to ${MAX_FREE_DAYS_EXACT}.`);
+      return;
+    }
     startTransition(async () => {
-      const result = await adminGrantFreeDaysAction({ userId, tier, units, note: note.trim() || null });
+      const result = await adminBankDaysAction({ userId, days: parsed, note: note.trim() || null, requestId });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      const what =
-        units == null
-          ? `${TIER_NAME[tier]} with no end date (staff).`
-          : `${units * FREE_DAYS_UNIT_DAYS} free days of ${TIER_NAME[tier]}${result.endsAt ? ` — until ${formatUtcDateTime(result.endsAt)}` : ""}.`;
-      toast.success(what, { description: [result.stripeNote, result.warning].filter(Boolean).join(" ") });
+      toast.success(result.created ? `${result.days} free days banked.` : `Already banked (${result.days} days) — nothing added twice.`, {
+        description: "They apply at the user's next checkout, or when they press Apply on their billing page.",
+      });
+      setNote("");
+      setRequestId(crypto.randomUUID());
+      router.refresh();
+    });
+  }
+
+  return (
+    <form
+      className="flex flex-wrap items-end gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <label className="flex flex-col gap-1">
+        <FieldLabel>Free days</FieldLabel>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={MIN_ADMIN_BANK_DAYS}
+          max={MAX_FREE_DAYS_EXACT}
+          step={1}
+          value={days}
+          onChange={(e) => setDays(e.target.value)}
+          className={`${inputClass} w-28`}
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <FieldLabel>Note (optional)</FieldLabel>
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+          className={`${inputClass} w-56`}
+          placeholder="Why — the user sees it"
+        />
+      </label>
+      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+        {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+        Bank free days
+      </Button>
+    </form>
+  );
+}
+
+const BANK_SOURCE_LABEL: Record<BankEntryDetail["source"], string> = {
+  signup: "signup",
+  referral_friend: "referral (friend)",
+  referral_step: "referral (ladder)",
+  admin: "admin",
+  promo: "promotion",
+};
+const BANK_STATUS_LABEL: Record<BankEntryDetail["status"], string> = {
+  banked: "banked",
+  reserved: "reserved (a checkout or an application in flight)",
+  applied: "applied",
+  revoked: "revoked",
+};
+
+/** The user's bank, newest first; a BANKED entry can be taken back. */
+export function BankEntriesList({ rows, loadError }: { rows: BankEntryDetail[]; loadError: boolean }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function revoke(entryId: string, days: number) {
+    const reason = window.prompt(`Take back these ${days} banked days? Add a short reason the user will see (optional).`, "");
+    if (reason === null) return;
+    startTransition(async () => {
+      const result = await adminRevokeBankedDaysAction({ entryId, reason: reason.trim() || null });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`${result.days} banked days revoked.`);
+      router.refresh();
+    });
+  }
+
+  if (loadError) return <p className="text-sm text-danger">The bank couldn&apos;t be read (logged).</p>;
+  if (rows.length === 0) return <p className="text-sm text-subtle">Nothing banked yet.</p>;
+  const banked = rows.filter((r) => r.status === "banked").reduce((sum, r) => sum + r.days, 0);
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-foreground">
+        <span className="tabular-nums">{banked}</span> day{banked === 1 ? "" : "s"} banked
+      </p>
+      <ul className="flex flex-col divide-y divide-border/50 text-sm">
+        {rows.map((row) => (
+          <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-foreground">
+                {row.days} day{row.days === 1 ? "" : "s"}
+                <span className="text-subtle"> · {BANK_SOURCE_LABEL[row.source] ?? row.source} · {BANK_STATUS_LABEL[row.status] ?? row.status}</span>
+              </span>
+              <span className="text-xs text-subtle">
+                {formatUtcDateTime(row.createdAt)}
+                {row.appliedAt ? ` → applied ${formatUtcDateTime(row.appliedAt)}${row.appliedVia === "checkout" ? " at checkout" : row.appliedVia === "plan_hold" ? " to their plan" : ""}` : ""}
+                {row.revokedAt ? ` → revoked ${formatUtcDateTime(row.revokedAt)}${row.revokeReason ? ` (${row.revokeReason})` : ""}` : ""}
+                {row.note ? ` · ${row.note}` : ""}
+              </span>
+            </div>
+            {row.status === "banked" ? (
+              <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => revoke(row.id, row.days)}>
+                Revoke
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Staff access with no end (owner 2026-11-06: the one comp that is not
+ * banked days) — an account with no Stripe plan.
+ */
+export function StaffAccessForm({ userId }: { userId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [tier, setTier] = useState<"plus" | "pro">("plus");
+  const [note, setNote] = useState("");
+
+  function submit() {
+    startTransition(async () => {
+      const result = await adminGrantFreeDaysAction({ userId, tier, units: null, note: note.trim() || null });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`${TIER_NAME[tier]} with no end date (staff).`, { description: [result.stripeNote, result.warning].filter(Boolean).join(" ") });
       setNote("");
       router.refresh();
     });
@@ -166,17 +298,6 @@ export function FreeDaysForm({
         </select>
       </label>
       <label className="flex flex-col gap-1">
-        <FieldLabel>Free days</FieldLabel>
-        <select value={length} onChange={(e) => setLength(e.target.value)} className={`${inputClass} w-44`}>
-          {Array.from({ length: MAX_FREE_DAY_UNITS }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={String(n)}>
-              {n * FREE_DAYS_UNIT_DAYS} days{n > 1 ? ` (${n} × ${FREE_DAYS_UNIT_DAYS})` : ""}
-            </option>
-          ))}
-          {hasLiveSubscription ? null : <option value={STAFF}>No end (staff)</option>}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1">
         <FieldLabel>Note (optional)</FieldLabel>
         <input
           type="text"
@@ -189,7 +310,7 @@ export function FreeDaysForm({
       </label>
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-        Give free days
+        Give staff access (no end)
       </Button>
     </form>
   );
@@ -206,6 +327,7 @@ const SOURCE_LABEL: Record<PlanGrantRow["source"], string> = {
   referral_friend: "referral (friend)",
   referral_referrer: "referral (referrer)",
   promo: "promotion",
+  day_bank: "banked days applied",
 };
 
 /** The user's free-days grants, newest first; the newest applied one can be
@@ -216,7 +338,7 @@ export function PlanGrantsList({ rows, loadError }: { rows: PlanGrantRow[]; load
   const newestApplied = rows.find((row) => row.status === "applied")?.id ?? null;
 
   function revoke(grantId: string) {
-    if (!window.confirm("Revoke these free days? The overlay shrinks by them and a held Stripe trial moves back (it may end — and charge — now).")) return;
+    if (!window.confirm("Revoke these free days? The overlay shrinks by them and a held Stripe trial moves back (it may end — and charge — now). Applied banked days are not returned to the bank.")) return;
     startTransition(async () => {
       const result = await adminRevokeFreeDaysAction({ grantId });
       if (!result.ok) {
@@ -236,7 +358,11 @@ export function PlanGrantsList({ rows, loadError }: { rows: PlanGrantRow[]; load
         <li key={row.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-foreground">
-              {row.units == null ? `${TIER_NAME[row.tier]}, no end (staff)` : `${row.units * FREE_DAYS_UNIT_DAYS} days of ${TIER_NAME[row.tier]}`}
+              {row.days != null
+                ? `${row.days} day${row.days === 1 ? "" : "s"} of ${TIER_NAME[row.tier]} (banked days)`
+                : row.units == null
+                  ? `${TIER_NAME[row.tier]}, no end (staff)`
+                  : `${row.units * FREE_DAYS_UNIT_DAYS} days of ${TIER_NAME[row.tier]}`}
               <span className="text-subtle"> · {SOURCE_LABEL[row.source]} · {APPLIED_AS_LABEL[row.appliedAs]}</span>
             </span>
             <span className="text-xs text-subtle">

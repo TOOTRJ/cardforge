@@ -8,7 +8,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import {
   CREDIT_PACKS,
   PACK_SUBSCRIBER_COUPON_ID,
-  TRIAL_DAYS,
+
   TRIAL_WINBACK_COUPON_ID,
   TRIAL_WINBACK_WINDOW_DAYS,
   type BillingPeriod,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/billing/plans";
 import { formatMoney } from "@/lib/format/money";
 import { trialTermsLine } from "@/lib/billing/trial-terms";
+import { prepareCheckoutBank, reclaimOpenCheckouts, settleBankBatch, stampBankBatchSession } from "@/lib/billing/day-bank";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
@@ -47,18 +48,24 @@ import type Stripe from "stripe";
 // than a repeat customer minting free weeks). The profile's webhook-written
 // subscription_status is the second, independent record (see
 // createCheckoutSessionAction) — both must say "never" for a trial.
+/** The one-free-period rule: "eligible" (no history anywhere), "ineligible"
+ *  (an affirmative history), or "unknown" (Stripe could not be read — the
+ *  checkout refuses and tries again later; never a verdict on a hiccup,
+ *  independent check P1-1). */
+export type TrialEligibility = "eligible" | "ineligible" | "unknown";
+
 async function isTrialEligible(
   stripe: Stripe,
   customerId: string,
   email?: string | null,
-): Promise<boolean> {
+): Promise<TrialEligibility> {
   try {
     const subs = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
       limit: 1,
     });
-    if (subs.data.length > 0) return false;
+    if (subs.data.length > 0) return "ineligible";
     // One trial per EMAIL, not per account (audit 2026-11-05 P3): deleting
     // the account and signing up again with the same address used to mint a
     // fresh trial — the old Stripe customer (never deleted) still carries
@@ -78,15 +85,15 @@ async function isTrialEligible(
       const histories = await Promise.all(
         same.map((other) => stripe.subscriptions.list({ customer: other.id, status: "all", limit: 1 })),
       );
-      if (histories.some((history) => history.data.length > 0)) return false;
+      if (histories.some((history) => history.data.length > 0)) return "ineligible";
     }
-    return true;
+    return "eligible";
   } catch (error) {
     console.error(
-      "[stripe] Trial eligibility check failed (denying the trial):",
+      "[stripe] Trial eligibility check failed (the checkout waits):",
       error instanceof Error ? error.message : error,
     );
-    return false;
+    return "unknown";
   }
 }
 
@@ -522,36 +529,59 @@ export async function createCheckoutSessionAction(
         }
       }
 
-      // First subscription ever → 7-day free trial, CARD REQUIRED (owner
-      // decision 2026-09-24): Checkout collects the card, Stripe charges it
-      // when the trial ends unless the user cancels. `missing_payment_method:
-      // cancel` stays as the safety net (a detached card never leaves a
-      // subscription in limbo). Two independent records must both say
-      // "never subscribed": the profile's webhook-written status and
-      // Stripe's subscription history.
-      const withTrial =
-        !live &&
-        !customer.hasSubscribedBefore &&
-        (await isTrialEligible(stripe, customer.customerId, customer.email));
+      // The DAYS BANK is the free period (owner 2026-11-06, lib/billing/day-bank.ts):
+      // a fresh subscription's Checkout applies every banked day as
+      // `trial_end` — CARD REQUIRED (Checkout collects it; Stripe charges
+      // when the free period ends unless the user cancels;
+      // `missing_payment_method: cancel` stays as the safety net). The
+      // SIGNUP days (the 7-day trial, as a bank) are owed under the rule the
+      // trial had: never subscribed on this account (the profile's
+      // webhook-written status) and no Stripe history under the email
+      // (`isTrialEligible`) — judged here, where the signup entry is made or
+      // revoked. An account that trialled before and EARNED days gets them
+      // as a free period all the same (owner 2026-11-06).
+      const checkoutSec = Math.floor(Date.now() / 1000);
       // A comp of this plan (or a higher one) that is still running: nothing
       // is charged before it ends, then the plan bills normally (owner rule
-      // 2026-10-30, lib/billing/comp-stripe.ts). The trial, if any, keeps
-      // whichever end is later.
+      // 2026-10-30, lib/billing/comp-stripe.ts). A bank that would end
+      // INSIDE the comp is not spent on it (it waits, to be applied on top).
       const compHold = live ? null : compHoldsCheckoutUntil(customer.comp, input.tier);
-      const checkoutSec = Math.floor(Date.now() / 1000);
-      const trialDaysEnd = checkoutSec + TRIAL_DAYS * 86_400;
-      const heldTrialEnd =
-        compHold == null
-          ? null
-          : Math.max(compHold, withTrial ? trialDaysEnd : 0, carryTrialEnd ?? 0);
-      // The trial end the subscription would have had WITHOUT the comp —
-      // what revoking the free days puts back (lib/billing/free-days.ts planRevoke
-      // reads it): the 7-day trial's end, a carried trial's end, or — no
-      // trial at all — the checkout itself (cleared → charged at once).
-      // Also what tells a cancel during the hold from a lapsed trial
+      let bank: { batchId: string; days: number } | null = null;
+      if (!live && isAdminConfigured()) {
+        const admin = createAdminClient();
+        let signupEligible = false;
+        if (!customer.hasSubscribedBefore) {
+          const eligibility = await isTrialEligible(stripe, customer.customerId, customer.email);
+          if (eligibility === "unknown") {
+            // Never a verdict on a hiccup: the signup days are neither made
+            // nor revoked, and nothing is sold short of them.
+            return { ok: false, error: "Couldn't check your free days with Stripe. Try again in a moment." };
+          }
+          signupEligible = eligibility === "eligible";
+        }
+        // A Checkout the user backed out of still holds its days: expired
+        // and reclaimed first, so this one applies them.
+        await reclaimOpenCheckouts(admin, stripe, customer.userId, new Date(checkoutSec * 1000));
+        bank = await prepareCheckoutBank(admin, customer.userId, {
+          signupEligible,
+          now: new Date(checkoutSec * 1000),
+          skipIfEndsBefore: compHold,
+        });
+      }
+      // The bank is applied as WHOLE DAYS from the moment the checkout
+      // completes (`trial_period_days`, Stripe's floor one day) — never a
+      // fixed instant that a slow checkout eats into (independent check
+      // P2-4). Only a comp hold names an instant.
+      const bankEnd = bank ? checkoutSec + bank.days * 86_400 : null;
+      const withTrial = bankEnd != null;
+      const heldTrialEnd = compHold != null && bank == null ? Math.max(compHold, carryTrialEnd ?? 0) : null;
+      // The free period's end the subscription would have had WITHOUT the
+      // comp — what revoking the free days puts back (lib/billing/free-days.ts
+      // planRevoke reads it): a carried trial's end, or — no free period at
+      // all — the checkout itself (cleared → charged at once). Also what
+      // tells a cancel during the hold from a lapsed trial
       // (isUnconvertedTrial).
-      const trialEndBeforeComp =
-        heldTrialEnd == null ? null : withTrial ? trialDaysEnd : (carryTrialEnd ?? checkoutSec);
+      const trialEndBeforeComp = heldTrialEnd == null ? null : (carryTrialEnd ?? checkoutSec);
       // Win-back: a trial that ended unconverted within the last 30 days
       // buys its first month at a discount — applied here, never as a code.
       // Never on a comp hold: the first invoice is the hold's $0 one, and a
@@ -566,7 +596,7 @@ export async function createCheckoutSessionAction(
         (await hasRecentLapsedTrial(stripe, customer.userId, customer.customerId));
       // The card networks' trial terms, on the Checkout page itself: when
       // the free period ends, what is charged then, how to cancel.
-      const freeUntil = heldTrialEnd ?? (withTrial ? trialDaysEnd : carryTrialEnd);
+      const freeUntil = heldTrialEnd ?? bankEnd ?? carryTrialEnd;
       // "Complimentary" only when the comp is what sets the end — a comp
       // shorter than the 7-day trial leaves a plain trial.
       const trialTerms =
@@ -592,6 +622,9 @@ export async function createCheckoutSessionAction(
           period: input.period ?? "monthly",
           discount: winback ? "trial_winback" : "none",
           ...(supersedes ? { supersedes_subscription_id: supersedes } : {}),
+          // The days bank's reservation: the webhook spends it on
+          // completion and returns it on expiry (lib/billing/day-bank.ts).
+          ...(bank ? { bank_batch: bank.batchId, bank_days: String(bank.days) } : {}),
         },
         subscription_data: {
           metadata: {
@@ -607,9 +640,9 @@ export async function createCheckoutSessionAction(
                   end_behavior: { missing_payment_method: "cancel" as const },
                 },
               }
-            : withTrial
+            : bank != null
             ? {
-                trial_period_days: TRIAL_DAYS,
+                trial_period_days: bank.days,
                 trial_settings: {
                   end_behavior: { missing_payment_method: "cancel" as const },
                 },
@@ -642,6 +675,7 @@ export async function createCheckoutSessionAction(
               tier: input.tier,
               period: input.period ?? "monthly",
               trial: withTrial,
+              bankDays: bank?.days ?? 0,
               discount: winback ? "trial_winback" : "none",
             },
           })
@@ -649,25 +683,37 @@ export async function createCheckoutSessionAction(
       if (funnelId) sessionParams.metadata = { ...(sessionParams.metadata ?? {}), funnel_id: funnelId };
       let session: Stripe.Checkout.Session;
       try {
-        session = await stripe.checkout.sessions.create(sessionParams);
+        try {
+          session = await stripe.checkout.sessions.create(sessionParams);
+        } catch (error) {
+          // A missing win-back coupon must never block a subscription: log it
+          // and sell at full price (with promotion codes back on).
+          const message = error instanceof Error ? error.message : String(error);
+          if (!winback || !/coupon/i.test(message)) throw error;
+          console.error(
+            `[stripe] Win-back coupon ${TRIAL_WINBACK_COUPON_ID} unusable — selling at full price:`,
+            message,
+          );
+          const fullPrice: Stripe.Checkout.SessionCreateParams = {
+            ...sessionParams,
+            allow_promotion_codes: true,
+            metadata: { ...(sessionParams.metadata ?? {}), discount: "none" },
+          };
+          delete fullPrice.discounts;
+          session = await stripe.checkout.sessions.create(fullPrice);
+        }
       } catch (error) {
-        // A missing win-back coupon must never block a subscription: log it
-        // and sell at full price (with promotion codes back on).
-        const message = error instanceof Error ? error.message : String(error);
-        if (!winback || !/coupon/i.test(message)) throw error;
-        console.error(
-          `[stripe] Win-back coupon ${TRIAL_WINBACK_COUPON_ID} unusable — selling at full price:`,
-          message,
-        );
-        const fullPrice: Stripe.Checkout.SessionCreateParams = {
-          ...sessionParams,
-          allow_promotion_codes: true,
-          metadata: { ...(sessionParams.metadata ?? {}), discount: "none" },
-        };
-        delete fullPrice.discounts;
-        session = await stripe.checkout.sessions.create(fullPrice);
+        // No session: the reserved days go straight back to the bank.
+        if (bank && isAdminConfigured()) await settleBankBatch(createAdminClient(), bank.batchId, { kind: "banked" });
+        throw error;
       }
-      if (!session.url) return { ok: false, error: "Couldn't start checkout." };
+      if (!session.url) {
+        if (bank && isAdminConfigured()) await settleBankBatch(createAdminClient(), bank.batchId, { kind: "banked" });
+        return { ok: false, error: "Couldn't start checkout." };
+      }
+      // The session the batch waits on: a later checkout can expire it and
+      // take the days back if this one is abandoned.
+      if (bank && isAdminConfigured()) await stampBankBatchSession(createAdminClient(), bank.batchId, session.id);
       return { ok: true, url: session.url };
     }
 
