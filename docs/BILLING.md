@@ -884,7 +884,11 @@ overlay the admin typed by hand, #688's balance credit and #726's coupon:
   from the profile and Stripe's CURRENT subscription) and **the writer**
   (`lib/billing/free-days-apply.ts` `grantFreeDays`: the row first, then
   Stripe under the idempotency key `plan-grant:<id>`, then the overlay, then
-  `applied`; a Stripe failure leaves a `failed` row and nothing else):
+  `applied`, then the FIRST credit allotment at once — `grantCreditsForGrant`,
+  so a referral's free days never read "Plus plan · Remaining 4" until the
+  06:00 UTC cron (owner, production 2026-11-06); a refused first allotment
+  is a warning the cron catches up — ; a Stripe failure leaves a `failed` row
+  and nothing else):
 
 | The user has | N × 30 days become | Credits |
 |---|---|---|

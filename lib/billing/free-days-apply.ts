@@ -5,6 +5,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { resolveSubscriptionTier, syncSubscriptionForUser } from "@/lib/stripe/subscription-sync";
 import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { grantCreditsForGrant } from "@/lib/billing/free-days-credits";
 import {
   freeDaysNote,
   isoOf,
@@ -78,6 +79,9 @@ export type GrantFreeDaysResult =
       holdEndsAt: string | null;
       /** One line for the admin. */
       note: string;
+      /** Credit allotments granted right away (an overlay's first one; a
+       *  hold's wait for the paid time to end). */
+      creditsGranted: number;
       /** Something after the Stripe write did not land (logged). */
       warning?: string;
     }
@@ -253,14 +257,39 @@ export async function grantFreeDays(
     }
   }
   const { error: applyError } = await admin.from("plan_grants").update({ status: "applied" }).eq("id", grantId);
+  let creditsGranted = 0;
   if (applyError) {
     console.error(`grantFreeDays(${input.userId}): status write failed`, applyError.message);
     warnings.push("The grant is still listed as pending (its credits wait until it reads applied).");
+  } else if (plan.kind !== "below_plan") {
+    // The first allotment NOW (lib/billing/free-days-credits.ts): a user
+    // whose plan just read Plus saw "Remaining 4" until the daily cron. A
+    // hold's credits_from is the paid time's end, so nothing is due yet.
+    const credits = await grantCreditsForGrant(
+      admin,
+      {
+        id: grantId,
+        user_id: input.userId,
+        tier: input.tier,
+        units: input.units,
+        credits_from: isoOf(startsAt),
+        ends_at: endsAt == null ? null : isoOf(endsAt),
+        applied_as: plan.kind === "hold" ? "subscription_hold" : "overlay",
+        status: "applied",
+      },
+      deps.now,
+    );
+    if (credits.ok) creditsGranted = credits.granted;
+    else {
+      console.error(`grantFreeDays(${input.userId}): first credits failed`, credits.error);
+      warnings.push("The free days are on, but their first credits couldn't be granted yet — the daily refill run grants them.");
+    }
   }
 
   return {
     ok: true,
     grantId,
+    creditsGranted,
     plan,
     endsAt: endsAt == null ? null : isoOf(endsAt),
     holdEndsAt,

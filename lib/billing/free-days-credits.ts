@@ -12,6 +12,13 @@ import { FREE_DAYS_UNIT_SECONDS } from "@/lib/billing/free-days";
 // sweep after the subscribers' one; `grant_credits` dedupes on the key, so
 // a rerun grants nothing twice and a missed day is caught up the next.
 //
+// The FIRST allotment is also granted the moment the grant is applied
+// (`grantCreditsForGrant`, called by lib/billing/free-days-apply.ts): a
+// referral's free days turned the plan badge to Plus at once while the 30
+// credits waited for the 06:00 UTC cron — "Remaining 4 · Monthly allotment
+// 30" for up to a day (owner, production, 2026-11-06). The cron stays the
+// catch-up for later allotments and for a grant whose first call failed.
+//
 // It replaces the calendar-month rule a comp had before (an unexpired comp
 // was "owed its tier every month" by lib/billing/credit-refill.ts — a
 // 30-day grant starting Nov 20 banked November AND December): a grant's
@@ -126,6 +133,25 @@ export async function grantFreeDaysCredits(
     if ((page?.length ?? 0) < GRANT_SWEEP_PAGE_SIZE) break;
   }
   return { ok: true, processed, granted, failed };
+}
+
+/**
+ * ONE grant's due allotments, now — what the sweep does per row, callable
+ * the moment a grant is applied so its first credits land at once. Never
+ * throws: a failure is the caller's warning and the cron's catch-up.
+ */
+export async function grantCreditsForGrant(
+  admin: CreditGrantClient,
+  grant: PlanGrantCreditRow,
+  now: Date = new Date(),
+): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
+  const due = freeDaysAllotmentsDue(grant, now);
+  if (due.length === 0) return { ok: true, granted: 0 };
+  try {
+    return await grantDueAllotments(admin, grant, due);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 /** The allotment an OVERLAY grant adds on top of a running ACTIVE plan: the
