@@ -7,9 +7,11 @@ import { describeLedgerReason } from "@/lib/billing/ledger-reasons";
 // Credits GRANTED by reason (owner 2026-11-06, with the one-time credits):
 // how many credits each stream handed out — plan credits, free-period
 // credits, packs, admin grants, referral credits, the old refills — in the
-// last 30 days and all time. Read from credit_ledger (positive deltas),
-// paged past PostgREST's 1000-row cap, grouped by the reason's head (the
-// label the usage ledger prints). Service role, admins only.
+// last 30 days and all time. Summed in SQL by
+// `admin_credit_grant_stats` (0181: positive deltas, grouped by the reason's
+// head — the label the usage ledger prints); until that migration is on the
+// database the rows are read paged past PostgREST's 1000-row cap and grouped
+// here. Service role, admins only.
 // ---------------------------------------------------------------------------
 
 export type CreditGrantRow = { reason: string; label: string; credits: number; grants: number };
@@ -38,6 +40,23 @@ export function groupCreditGrants(rows: Array<{ delta: unknown; reason: string |
     .sort((a, b) => b.credits - a.credits);
 }
 
+/** The SQL function's rows, labelled (it sums and sorts; a bad row is skipped). */
+export function labelCreditGrants(rows: Array<{ reason: unknown; credits: unknown; grants: unknown }>): CreditGrantRow[] {
+  const out: CreditGrantRow[] = [];
+  for (const row of rows) {
+    const credits = Number(row.credits);
+    const grants = Number(row.grants);
+    if (typeof row.reason !== "string" || !Number.isFinite(credits) || !Number.isFinite(grants)) continue;
+    out.push({ reason: row.reason, label: describeLedgerReason(row.reason), credits, grants });
+  }
+  return out;
+}
+
+/** PostgREST "no such function" — the code is live before migration 0181. */
+function isMissingFunction(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST202" || /could not find the function/i.test(error.message ?? "");
+}
+
 async function readGrants(admin: NonNullable<Awaited<ReturnType<typeof requireAdminClient>>>, since: string | null) {
   const rows: Array<{ delta: unknown; reason: string | null }> = [];
   for (let from = 0; ; from += PAGE) {
@@ -57,8 +76,22 @@ export async function getCreditGrantStats(now: Date = new Date()): Promise<Credi
   if (!admin) return null;
   try {
     const since30 = new Date(now.getTime() - 30 * 86_400_000).toISOString();
-    const [last30, allTime] = await Promise.all([readGrants(admin, since30), readGrants(admin, null)]);
-    return { last30: groupCreditGrants(last30), allTime: groupCreditGrants(allTime) };
+    const [d30, all] = await Promise.all([
+      admin.rpc("admin_credit_grant_stats", { p_since: since30 }),
+      admin.rpc("admin_credit_grant_stats", { p_since: null }),
+    ]);
+    if ([d30.error, all.error].some((e) => e && isMissingFunction(e))) {
+      // The code is live before migration 0181: sum the ledger in the app.
+      console.error("[admin] admin_credit_grant_stats is missing (migration 0181 not applied?) — summing the ledger in the app.");
+      const [last30, allTime] = await Promise.all([readGrants(admin, since30), readGrants(admin, null)]);
+      return { last30: groupCreditGrants(last30), allTime: groupCreditGrants(allTime) };
+    }
+    if (d30.error) throw new Error(d30.error.message);
+    if (all.error) throw new Error(all.error.message);
+    return {
+      last30: labelCreditGrants((d30.data ?? []) as Array<{ reason: unknown; credits: unknown; grants: unknown }>),
+      allTime: labelCreditGrants((all.data ?? []) as Array<{ reason: unknown; credits: unknown; grants: unknown }>),
+    };
   } catch (error) {
     console.warn("getCreditGrantStats:", error instanceof Error ? error.message : error);
     return null;

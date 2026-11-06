@@ -52,18 +52,53 @@ export function freePeriodCreditsKey(userId: string): string {
   return `free-period:${userId}`;
 }
 
+/** PostgREST "no such function" — the code is live before migration 0181. */
+function isMissingFunction(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST202" || /could not find the function/i.test(error.message ?? "");
+}
+
 /**
  * The tier's one-time credits for this account: the difference between the
- * tier's stock and what the account's plan keys already granted (any tier).
- * `granted` is what this call asked for — an existing key no-ops inside the
- * RPC. An unreadable ledger is an error (never a guess: a Pro grant judged
- * without seeing Plus's would hand out 120 on top of 60). The read and the
- * grant are two statements: two DIFFERENT tiers' paid invoices handled in
- * the same second (an upgrade seconds after the first payment, delivered
- * concurrently) could each read an empty set — the one over-grant this
- * design allows, judged not worth a SQL function (independent check).
+ * tier's stock and what the account's plan keys already granted (any tier),
+ * judged and granted in ONE statement under the user's row lock
+ * (`grant_plan_credits_once`, 0181) — so two DIFFERENT tiers' paid invoices
+ * handled in the same second (an upgrade seconds after the first payment,
+ * delivered concurrently) serialize, and the second sees the first's row.
+ * `granted` is what the function granted — an existing key is 0 inside it.
+ * Until 0181 is on the database the two-statement path of #773 runs
+ * (`grantPlanCreditsOnceTwoStep`): the read first, then the grant.
  */
 export async function grantPlanCreditsOnce(
+  admin: CreditGrantClient,
+  userId: string,
+  tier: PaidTier,
+): Promise<CreditGrantResult> {
+  const target = PLAN_CREDITS_ONCE[tier] ?? 0;
+  if (target <= 0) return { ok: true, granted: 0 };
+  const { data, error } = await admin.rpc("grant_plan_credits_once", {
+    p_user_id: userId,
+    p_tier: tier,
+    p_target: target,
+  });
+  if (error && isMissingFunction(error)) {
+    console.error(
+      `[billing] grant_plan_credits_once is missing (migration 0181 not applied?) — granting ${userId}'s ${tier} credits in two steps.`,
+    );
+    return grantPlanCreditsOnceTwoStep(admin, userId, tier);
+  }
+  if (error) return { ok: false, error: error.message };
+  const granted = typeof data === "number" && Number.isFinite(data) ? data : 0;
+  return { ok: true, granted };
+}
+
+/**
+ * #773's path, kept for a database 0181 has not reached: read the account's
+ * plan keys, then grant the difference. An unreadable ledger is an error
+ * (never a guess: a Pro grant judged without seeing Plus's would hand out
+ * 120 on top of 60). The read and the grant are two statements — the
+ * cross-tier race 0181 closes.
+ */
+export async function grantPlanCreditsOnceTwoStep(
   admin: CreditGrantClient,
   userId: string,
   tier: PaidTier,

@@ -13,6 +13,10 @@ import { dateTextToString, formatUtcDate, type DateText } from "@/lib/format/dat
 //   cancel_at_period_end      "stops at the stored period end" — the only
 //                             fact a row synced before 0135 has, so it is
 //                             the fallback, dated by `current_period_end`.
+//   subscription_held_from    what a free-days hold was added to (0181):
+//                             'active' = a PAYING plan that reads `trialing`
+//                             on Stripe until the days end — its cancellation
+//                             is a plan's, never "a cancelled trial".
 //
 // Pure and dependency-light (no "server-only"): server components, the
 // /api/me island and unit tests share it. The billing page's plan card keeps
@@ -26,6 +30,7 @@ export type PlanEndingProfile = {
   cancel_at_period_end?: boolean | null;
   subscription_ends_at?: string | null;
   subscription_canceled_at?: string | null;
+  subscription_held_from?: string | null;
 };
 
 export type PlanEnding = {
@@ -64,9 +69,11 @@ export function planEndingOf(profile: PlanEndingProfile | null | undefined): Pla
   if (!endsAt) return null;
   const billedFirst =
     periodEnd != null && Date.parse(endsAt) > Date.parse(periodEnd) + PERIOD_END_SLACK_MS;
+  // A paying plan under a free-days hold reads `trialing` (0181): a plan.
+  const heldPayer = profile.subscription_held_from === "active";
   return {
     // A trial that is billed before it ends has converted by then: a plan.
-    kind: status === "trialing" && !billedFirst ? "trial" : "plan",
+    kind: status === "trialing" && !billedFirst && !heldPayer ? "trial" : "plan",
     endsAt,
     billedBeforeAt: billedFirst ? periodEnd : null,
     canceledAt: validIso(profile.subscription_canceled_at),

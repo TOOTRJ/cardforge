@@ -18,7 +18,7 @@ import { FREE_PERIOD_CREDITS, PLAN_CREDITS_ONCE } from "@/lib/billing/plans";
 
 function makeAdmin(profile: Record<string, unknown> = {}) {
   const updates: Array<Record<string, unknown>> = [];
-  const rpcs: Array<{ fn: string; args: Record<string, unknown> }> = [];
+  const rpcs: Array<{ fn: string; args: Record<string, unknown>; granted?: number }> = [];
   const admin = {
     from(table: string) {
       return {
@@ -49,6 +49,18 @@ function makeAdmin(profile: Record<string, unknown> = {}) {
       };
     },
     rpc: async (fn: string, args: Record<string, unknown>) => {
+      if (fn === "grant_plan_credits_once") {
+        // 0181's function, as the stub's plan-once rows would answer it.
+        const ledger = (profile.__planRows as Array<{ delta?: number; idempotency_key?: string }> | undefined) ?? [];
+        const prefix = `plan-once:${String(args.p_user_id)}:`;
+        const key = `${prefix}${String(args.p_tier)}`;
+        const already = ledger
+          .filter((r) => typeof r.idempotency_key === "string" && r.idempotency_key.startsWith(prefix))
+          .reduce((sum, r) => sum + (r.delta ?? 0), 0);
+        const granted = ledger.some((r) => r.idempotency_key === key) ? 0 : Math.max(0, Number(args.p_target) - already);
+        rpcs.push({ fn, args, granted });
+        return { data: granted, error: null };
+      }
       rpcs.push({ fn, args });
       return { data: 0, error: null };
     },
@@ -629,7 +641,8 @@ describe("grantCreditsForSync (one-time credits, owner 2026-11-06)", () => {
       admin,
       { isCreationEvent: false, paid: true },
     );
-    expect(rpcs[0]?.args).toMatchObject({ p_amount: PLAN_CREDITS_ONCE.pro, p_reason: "plan_credits_once", p_idempotency_key: "plan-once:user-1:pro" });
+    // 0181: the function is asked for the tier's target and answers what it granted.
+    expect(rpcs[0]).toMatchObject({ fn: "grant_plan_credits_once", args: { p_user_id: "user-1", p_tier: "pro", p_target: PLAN_CREDITS_ONCE.pro }, granted: PLAN_CREDITS_ONCE.pro });
 
     const unpaid = makeAdmin();
     await grantCreditsForSync(
@@ -674,17 +687,17 @@ describe("grantCreditsForSync (one-time credits, owner 2026-11-06)", () => {
     expect(served.rpcs).toHaveLength(0);
   });
 
-  it("Pro after Plus grants the DIFFERENCE; the same tier twice, or a downgrade, nothing", async () => {
+  it("Pro after Plus grants the DIFFERENCE; the same tier twice, or a downgrade, nothing — the function's answer (0181), one call each", async () => {
     const afterPlus = makeAdmin({ __planRows: [{ delta: 60, idempotency_key: "plan-once:user-1:plus" }] });
     const pro = { userId: "user-1", subscriptionId: "sub_1", tier: "pro" as const, status: "active", unresolvedPrice: false, source: "primary" as const };
     await grantCreditsForSync(pro, afterPlus.admin, { isCreationEvent: false, paid: true });
-    expect(afterPlus.rpcs[0]?.args).toMatchObject({ p_amount: 60, p_idempotency_key: "plan-once:user-1:pro" });
+    expect(afterPlus.rpcs).toEqual([{ fn: "grant_plan_credits_once", args: { p_user_id: "user-1", p_tier: "pro", p_target: 120 }, granted: 60 }]);
     const again = makeAdmin({ __planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
     await grantCreditsForSync(pro, again.admin, { isCreationEvent: false, paid: true });
-    expect(again.rpcs).toHaveLength(0);
+    expect(again.rpcs).toEqual([expect.objectContaining({ fn: "grant_plan_credits_once", granted: 0 })]);
     const down = makeAdmin({ __planRows: [{ delta: 120, idempotency_key: "plan-once:user-1:pro" }] });
     await grantCreditsForSync({ ...pro, tier: "plus" }, down.admin, { isCreationEvent: false, paid: true });
-    expect(down.rpcs).toHaveLength(0);
+    expect(down.rpcs).toEqual([expect.objectContaining({ fn: "grant_plan_credits_once", args: expect.objectContaining({ p_tier: "plus", p_target: 60 }), granted: 0 })]);
   });
 });
 
@@ -733,6 +746,64 @@ describe("the plan's interval (0175: profiles.billing_interval)", () => {
     const c = makeAdmin();
     await syncSubscriptionForUser(c.admin, makeStripe([bare]), "user-1", { eventSub: bare });
     expect(c.updates[0]).toMatchObject({ billing_interval: null });
+  });
+});
+
+describe("what a free-days hold was added to (0181: profiles.subscription_held_from)", () => {
+  const price = { id: "price_plus", recurring: { interval: "month" } } as never;
+
+  it("is the subscription's pipglyph_hold_from while it is live — 'active' for a held PAYING plan — and null without one or once it ends", async () => {
+    const heldPayer = sub("sub_h", "trialing", price, { created: 1, cancel_at_period_end: false, metadata: { pipglyph_hold_from: "active" } });
+    const a = makeAdmin();
+    const result = await syncSubscriptionForUser(a.admin, makeStripe([heldPayer]), "user-1", { eventSub: heldPayer });
+    expect(a.updates[0]).toMatchObject({ subscription_status: "trialing", subscription_held_from: "active" });
+    expect(result.heldFrom).toBe("active");
+
+    const heldTrial = sub("sub_t", "trialing", price, { created: 1, cancel_at_period_end: false, metadata: { pipglyph_hold_from: "trialing" } });
+    const b = makeAdmin();
+    await syncSubscriptionForUser(b.admin, makeStripe([heldTrial]), "user-1", { eventSub: heldTrial });
+    expect(b.updates[0]).toMatchObject({ subscription_held_from: "trialing" });
+
+    const plain = sub("sub_p", "active", price, { created: 1, cancel_at_period_end: false });
+    const c = makeAdmin();
+    await syncSubscriptionForUser(c.admin, makeStripe([plain]), "user-1", { eventSub: plain });
+    expect(c.updates[0]).toMatchObject({ subscription_held_from: null });
+
+    // A value the app never writes is not copied (the column's CHECK would refuse it).
+    const odd = sub("sub_o", "trialing", price, { created: 1, cancel_at_period_end: false, metadata: { pipglyph_hold_from: "paused" } });
+    const d = makeAdmin();
+    await syncSubscriptionForUser(d.admin, makeStripe([odd]), "user-1", { eventSub: odd });
+    expect(d.updates[0]).toMatchObject({ subscription_held_from: null });
+
+    const ended = makeAdmin({ stripe_subscription_id: "sub_h" });
+    const canceled = sub("sub_h", "canceled", price, { created: 1, metadata: { pipglyph_hold_from: "active" } });
+    await syncSubscriptionForUser(ended.admin, makeStripe([canceled]), "user-1", { eventSub: canceled, eventDeleted: true });
+    expect(ended.updates[0]).toMatchObject({ subscription_status: "canceled", subscription_held_from: null });
+  });
+
+  it("a database 0181 has not reached (PGRST204 on the column) is written without it, the rest intact", async () => {
+    const heldPayer = sub("sub_h", "trialing", price, { created: 1, cancel_at_period_end: false, metadata: { pipglyph_hold_from: "active" } });
+    const updates: Array<Record<string, unknown>> = [];
+    const admin = {
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: "user-1" }, error: null }) }) }),
+        update: (values: Record<string, unknown>) => ({
+          eq: async () => {
+            updates.push(values);
+            return "subscription_held_from" in values
+              ? { error: { code: "PGRST204", message: "Could not find the 'subscription_held_from' column of 'profiles' in the schema cache" } }
+              : { error: null };
+          },
+        }),
+      }),
+      rpc: async () => ({ data: 0, error: null }),
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await syncSubscriptionForUser(admin as any, makeStripe([heldPayer]), "user-1", { eventSub: heldPayer });
+    expect(updates).toHaveLength(2);
+    expect(updates[1]).not.toHaveProperty("subscription_held_from");
+    expect(updates[1]).toMatchObject({ subscription_status: "trialing", billing_interval: "month" });
+    expect(result.heldFrom).toBe("active");
   });
 });
 

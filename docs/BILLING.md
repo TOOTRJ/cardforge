@@ -330,6 +330,44 @@ fixed ≤ 3 on a paid plan, ≤ 1 on free. Ledger reasons: `plan_credits_once`
 ("Plan credits"), `free_period_bonus` ("Free-period credits");
 `subscription_refill` rows before this date keep "Monthly plan credits".
 
+### The audit's leftovers (migration 0181, 2026-11-06)
+
+Three small things the audit noted and the owner asked for after #773, none
+of which moves money:
+
+- **A held PAYER reads as a plan, not a trial, on every profile-only page.**
+  A paying plan under a free-days hold reads `trialing` on Stripe until the
+  days end (`lib/billing/free-days.ts`), and the pages that name the plan
+  from the profile row alone — the dashboard notice, Settings, the header
+  menu, `/api/me`, the admin directory (`lib/billing/plan-ending.ts`) —
+  called its cancellation "a cancelled trial … you won't be charged". The
+  sync now copies the subscription's `pipglyph_hold_from` metadata into
+  `profiles.subscription_held_from` (`'active'` = a held payer, `'trialing'`
+  = a real trial the days were added to, NULL = no hold; pinned by the
+  billing trigger, returned by `get_my_billing()` and `admin_list_users()`),
+  and `planEndingOf` reads a held payer as `kind: "plan"` ("Your Plus plan
+  was cancelled and ends on …"). Settings' plan panel reads the status as
+  `active` for one ("Renews on …", never "Your free trial ends on …"). The
+  billing page already knew (it reads `plan_grants` through
+  `readOwnHoldGrant`). Until 0181 is on the database the sync writes the
+  row without the column (PGRST204 fallback, like 0135 / 0174 / 0175).
+- **The one-time plan credits are judged and granted in ONE statement.**
+  `grant_plan_credits_once(user, tier, target)` locks the profile row (the
+  lock `grant_credits` takes), checks the account+tier key, sums the
+  account's `plan-once:<user>:%` rows and grants the difference under the
+  same key and reason as before. #773 did it in two statements, so two
+  DIFFERENT tiers' paid invoices handled in the same second (a Pro upgrade
+  seconds after the first Plus payment, delivered concurrently) could each
+  read an empty set and grant 60 + 120; proved serialized on the local
+  stack with two sessions (the second waited for the first's commit and
+  granted 60). `grantPlanCreditsOnce` calls the function and falls back to
+  the two-step path (`grantPlanCreditsOnceTwoStep`) on PGRST202 only.
+- **The admin "Credits granted" panel sums in SQL.**
+  `admin_credit_grant_stats(since)` (service role only) groups the positive
+  ledger rows by the reason's head — the same grouping the app did after
+  paging every row past PostgREST's 1000-row cap; the paged read stays as
+  the PGRST202 fallback.
+
 ## 8. Free credits once, packs where the need is felt (2026-09-24)
 
 Owner decisions of 2026-09-24 (audit §6 recommendations 1 and 2):

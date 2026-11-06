@@ -214,6 +214,10 @@ export type SubscriptionSyncResult = {
   /** ISO instant the payment was first seen broken (past_due / unpaid) —
    *  what `payment_failed_at` was written as; null while it pays. */
   paymentFailedAt?: string | null;
+  /** What a free-days hold was added to (0181, the subscription's
+   *  `pipglyph_hold_from`): 'active' = a PAYING plan that reads `trialing`
+   *  until the days end; what `subscription_held_from` was written as. */
+  heldFrom?: "active" | "trialing" | null;
 };
 
 const iso = (seconds: number | null | undefined): string | null =>
@@ -266,6 +270,14 @@ function isMissingIntervalColumn(error: { code?: string; message?: string }): bo
   return (
     (error.code === "PGRST204" || error.code === "42703") &&
     /billing_interval/.test(error.message ?? "")
+  );
+}
+
+/** The same for 0181's `subscription_held_from`. */
+function isMissingHeldFromColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /subscription_held_from/.test(error.message ?? "")
   );
 }
 
@@ -516,10 +528,31 @@ export async function syncSubscriptionForUser(
   const rawInterval = chosenDeleted ? null : (item?.price?.recurring?.interval ?? null);
   const billingInterval: "month" | "year" | null =
     live && (rawInterval === "month" || rawInterval === "year") ? rawInterval : null;
+  // What a free-days hold was added to (0181): the profile-only readers
+  // (lib/billing/plan-ending.ts) tell a held PAYER from a trial by it.
+  const rawHeldFrom = chosenDeleted ? null : (chosen.metadata?.[HOLD_FROM_KEY] ?? null);
+  const heldFrom: "active" | "trialing" | null =
+    live && (rawHeldFrom === "active" || rawHeldFrom === "trialing") ? rawHeldFrom : null;
   let { error: writeError } = await admin
     .from("profiles")
-    .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt, billing_interval: billingInterval })
+    .update({
+      ...base,
+      ...endingColumns,
+      payment_failed_at: paymentFailedAt,
+      billing_interval: billingInterval,
+      subscription_held_from: heldFrom,
+    })
     .eq("id", userId);
+  if (writeError && isMissingHeldFromColumn(writeError)) {
+    // The code is live before migration 0181: write what the schema holds.
+    console.error(
+      `[stripe] profiles.subscription_held_from is missing (migration 0181 not applied?) — synced ${userId} without it.`,
+    );
+    ({ error: writeError } = await admin
+      .from("profiles")
+      .update({ ...base, ...endingColumns, payment_failed_at: paymentFailedAt, billing_interval: billingInterval })
+      .eq("id", userId));
+  }
   if (writeError && isMissingIntervalColumn(writeError)) {
     // The code is live before migration 0175: write what the schema holds.
     console.error(
@@ -565,6 +598,7 @@ export async function syncSubscriptionForUser(
     endsAt: live ? ending.endsAt : null,
     billingInterval,
     paymentFailedAt,
+    heldFrom,
   };
 }
 
