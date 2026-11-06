@@ -139,10 +139,13 @@ async function listCustomerSubscriptions(
   customerId: string,
 ): Promise<Stripe.Subscription[] | null> {
   try {
+    // Stripe's page maximum. A customer with more subscriptions than one
+    // page holds (years of monthly trials and cancels) had the live one
+    // outside the newest 20 (audit 2026-11-05, nice-to-have).
     const list = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
-      limit: 20,
+      limit: 100,
     });
     return list.data;
   } catch {

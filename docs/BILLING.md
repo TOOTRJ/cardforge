@@ -45,7 +45,7 @@ only — nothing needs them configured:
 
 Sandbox webhook endpoint `we_1UIfs5QFLEpCg9s2TgN3OiCm` → the `dev` branch
 alias (`https://cardforge-git-dev-orderoftheredjester.vercel.app/api/stripe/webhook`,
-API version `2026-05-27.dahlia`, the same nine events as production). Its
+API version `2026-05-27.dahlia`, the same thirteen events as production). Its
 signing secret is what Preview's `STRIPE_WEBHOOK_SECRET` holds. Preview
 deployments sit behind Vercel Deployment Protection, which answers 401 to
 anything without a Vercel session — including Stripe. The endpoint URL
@@ -224,7 +224,8 @@ arrived" signal — does three things:
    "Trial start" for a plan's first ($0 `subscription_create`, the
    card-required trial), else "no charge" — and is in no total or count.
    Totals are kept per currency (never added across currencies), before
-   Stripe fees and refunds (refunds are not logged). Each log is read up to
+   Stripe fees; a refund marks its row (0174, §"Refunds, disputes and fraud
+   warnings") and is shown beside the gross total, never subtracted. Each log is read up to
    5,000 rows; when one reaches it, "All time" says it covers the newest
    rows only.
 2. **Resync.** The subscription the invoice bills is re-read and run through
@@ -260,7 +261,7 @@ Both handlers: the notification insert is the durable part (a failure throws
 so Stripe retries); the email is best effort with a provider idempotency key
 (`checkout-reminder:<session>`). Both events are subscribed on both
 endpoints (sandbox and live `we_1TrupnQFLEpCg9s2bSILz13V`, 2026-09-23 — the
-live endpoint now carries all nine events). Sandbox proof 2026-09-23: an
+live endpoint carried all nine events then; thirteen since 2026-11-05). Sandbox proof 2026-09-23: an
 expired dev_new session produced exactly one `checkout_reminder` (three later
 expiries produced none — the 30-day guard); a dev_pro Pro subscription
 produced the revenue row, the resync, one `payment_received` and exactly one
@@ -384,6 +385,49 @@ Owner decisions of 2026-09-24 (audit §6 recommendation 3, all three parts):
   on a string field is a word match (`email:"joe@mail.com"` also returns
   `a.joe@mail.com`), so only a customer whose own email equals the
   account's, lowercased, counts.
+
+### Owner Dashboard checklist (2026-11-06, audit BA6 — nothing the API can read or set)
+
+The app's side of trial compliance and dunning is built; three settings live
+only in the Stripe Dashboard and are yours to confirm. None of them changes
+money by itself.
+
+1. **Trial reminder email — ON.** Dashboard → Settings → Billing →
+   [Subscriptions and emails](https://dashboard.stripe.com/settings/billing/automatic)
+   → "Manage free trial messaging" → **Send a reminder email 7 days before a
+   free trial ends** (link to a Stripe-hosted page). Stripe sends it 7 days
+   before the trial ends — for our 7-day trial, as soon as it starts — with
+   the cancellation link the card networks ask for. The app ALSO sends its
+   own `trial_ending` email on `trial_will_end` (3 days before), so a
+   trialist gets two reminders (day 0 from Stripe, day 4 from us); the
+   networks' rule is satisfied by Stripe's. Not sent in the sandbox.
+   Verify: start a live trial with a test card of your own → the Stripe
+   reminder arrives within minutes; the app's arrives on day 4.
+2. **Smart Retries — ON, 8 tries in 2 weeks (Stripe's recommended
+   default), and after the last retry "mark the subscription as unpaid".**
+   Dashboard → [Revenue recovery → Retries](https://dashboard.stripe.com/revenue_recovery/retries)
+   for the policy; Settings → Billing → Subscriptions and emails → "Manage
+   failed payments for subscriptions" for what happens after. The app's
+   14-day dunning grace (0174) is sized to that window and reads `unpaid`
+   as "retries exhausted"; "cancel the subscription" would also work (the
+   webhook's win-back skips a `payment_failed` ending, #763) but loses the
+   customer's plan record. Stripe's own "Send emails when card payments
+   fail" can stay off (the app sends one) or on (two emails).
+3. **Portal cancellation reasons — already ON** (verified through the API
+   2026-11-06: the live portal configuration `bpc_1TruxhQFLEpCg9s22wWCrEgw`
+   asks the customer why, with all seven of Stripe's options). The answer
+   lands on the `subscription_cancelled` funnel row (`cancelReason` /
+   `cancelFeedback`) and, since the audit's nice-to-haves PR, on the admin
+   Funnel panel as "Cancellations by reason · 30d". Nothing to do.
+
+Two audit notes that turned out to need no change: **`pause_collection`**
+(a Dashboard "Pause payment collection") keeps the subscription `active`
+and the customer's perks on purpose — Stripe documents it as "offer your
+services for free for a while"; the app's reading of `active` is right.
+**Idempotency on `checkout.sessions.create`**: stripe-node retries a failed
+network call up to twice by default (`maxNetworkRetries` 2) under an
+idempotency key it generates itself, so a retried create never makes two
+sessions; a key of ours would add nothing.
 
 ## 10. Funnel instrumentation (2026-09-24)
 
