@@ -45,6 +45,10 @@ create table if not exists public.plan_grants (
   note text check (note is null or char_length(note) <= 500),
   applied_as text not null check (applied_as in ('overlay', 'subscription_hold', 'below_plan')),
   stripe_subscription_id text,
+  -- A hold: what it was added to. 'active' = PAID time runs until starts_at
+  -- (the refill cron keeps that time's monthly allotments; a revoke leaves
+  -- Stripe `trialing` until then, still paid); 'trialing' = a trial's end.
+  held_from text check (held_from is null or held_from in ('active', 'trialing')),
   -- The free days run from starts_at to ends_at (NULL = no end).
   starts_at timestamptz not null,
   ends_at timestamptz,
@@ -64,6 +68,10 @@ comment on table public.plan_grants is
 
 create index if not exists plan_grants_user_idx on public.plan_grants (user_id, created_at desc);
 create index if not exists plan_grants_applied_idx on public.plan_grants (ends_at) where status = 'applied';
+-- ONE grant in flight per user: two admins (or a referral and an admin)
+-- granting at once both read the same period end and both add the days —
+-- the second insert fails here instead (the writer says "try again").
+create unique index if not exists plan_grants_one_pending_idx on public.plan_grants (user_id) where status = 'pending';
 
 alter table public.plan_grants enable row level security;
 

@@ -182,16 +182,21 @@ export function refillTierFor(
   return tier === "plus" || tier === "pro" ? tier : null;
 }
 
-/** The users whose applied free-days HOLD starts in the future (the paid
- *  time before it — see refillTierFor). A failed read answers nobody: the
- *  allotment waits a day, never doubles. */
+/** The users whose free-days HOLD on a PAYING plan (`held_from` active —
+ *  a hold on a trial added nothing paid) starts in the future: the paid
+ *  time before it (see refillTierFor). A REVOKED hold counts too — Stripe
+ *  stays `trialing` until the period end it was put back on, still paid.
+ *  A failed read answers nobody: the allotment waits a day, never
+ *  doubles. */
 async function usersHeldBeforeStart(admin: CreditGrantClient, now: Date): Promise<Set<string>> {
   const { data, error } = await admin
     .from("plan_grants")
     .select("user_id")
-    .eq("status", "applied")
+    .in("status", ["applied", "revoked"])
     .eq("applied_as", "subscription_hold")
-    .gt("starts_at", now.toISOString());
+    .eq("held_from", "active")
+    .gt("starts_at", now.toISOString())
+    .limit(REFILL_PAGE_SIZE * 5);
   if (error) {
     console.error(`[refill-credits] plan_grants hold read failed: ${error.message}`);
     return new Set();

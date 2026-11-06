@@ -31,6 +31,11 @@ describe("0176", () => {
     expect(flat).toContain("status text not null default 'pending' check (status in ('pending', 'applied', 'failed', 'revoked'))");
     expect(flat).toContain("constraint plan_grants_end_matches_units check ((units is null) = (ends_at is null))");
     expect(flat).toContain("credits_from timestamptz not null");
+    expect(flat).toContain("held_from text check (held_from is null or held_from in ('active', 'trialing'))");
+  });
+
+  it("one grant in flight per user: a partial unique index on pending rows", () => {
+    expect(flat).toContain("create unique index if not exists plan_grants_one_pending_idx on public.plan_grants (user_id) where status = 'pending';");
   });
 
   it("the service role owns it; a user reads their OWN rows and only the public columns; anon nothing", () => {

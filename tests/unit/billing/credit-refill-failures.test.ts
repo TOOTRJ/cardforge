@@ -22,9 +22,9 @@ function admin(failing: Set<string>, pageError?: string) {
   const client = {
     from: () => ({
       select: () => ({
-        // plan_grants (the holds not yet started): .eq().eq().gt()
-        eq: () => {
-          const chain = { eq: () => chain, gt: async () => ({ data: [], error: null }) };
+        // plan_grants (the paid time before a hold): .in().eq().eq().gt().limit()
+        in: () => {
+          const chain = { eq: () => chain, gt: () => chain, limit: async () => ({ data: [], error: null }) };
           return chain;
         },
         like: async () => ({ data: [], error: null }),

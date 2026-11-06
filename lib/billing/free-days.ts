@@ -76,6 +76,9 @@ export type FreeDaysProfile = {
 export type FreeDaysSubscription = {
   id: string;
   status: string;
+  /** A subscription schedule (a pending downgrade): Stripe refuses a
+   *  direct update while one manages the subscription. */
+  schedule?: string | { id: string } | null;
   trial_end?: number | null;
   cancel_at_period_end?: boolean | null;
   cancel_at?: number | null;
@@ -241,6 +244,12 @@ export function planFreeDays(input: {
     const planEndsAt = typeof sub.cancel_at === "number" ? sub.cancel_at : (periodEndOf(sub) ?? nowSec);
     return { kind: "overlay", tier, ...overlayFrom(planEndsAt), why: "plan_ending", planEndsAt };
   }
+  if (sub.schedule) {
+    return {
+      kind: "refused",
+      error: "Their plan has a scheduled change (a pending downgrade). Release it first — \"Keep plan\" on their billing page — then give the free days.",
+    };
+  }
 
   const base = sub.status === "trialing" ? (typeof sub.trial_end === "number" ? sub.trial_end : null) : periodEndOf(sub);
   if (base == null) {
@@ -344,8 +353,37 @@ export function planRevoke(input: {
 
   let overlay: OverlayWrite;
   let trial: TrialMove | null = null;
+  // The instant the grant's days end at: the overlay's end, else (the
+  // overlay write failed, or was cleared by hand) the row's own.
+  const anchorSec = current?.endSec ?? sec(grant.ends_at);
+  const moveTrialBack = (seconds: number) => {
+    // A Stripe trial held at that instant moves back with it.
+    if (
+      anchorSec != null &&
+      sub &&
+      sub.status === "trialing" &&
+      typeof sub.trial_end === "number" &&
+      Math.abs(sub.trial_end - anchorSec) <= HELD_TOLERANCE_SECONDS
+    ) {
+      const before = storedBefore(sub);
+      if (before != null) {
+        let target = sub.trial_end - seconds;
+        let beforeComp = String(before);
+        if (target <= before) {
+          target = before;
+          beforeComp = "";
+        }
+        trial = {
+          subscriptionId: sub.id,
+          trialEnd: target <= nowSec ? "now" : target,
+          beforeComp: target <= nowSec ? "" : beforeComp,
+        };
+      }
+    }
+  };
   if (!current) {
     overlay = { comp_tier: paidTier(profile.comp_tier), comp_expires_at: profile.comp_expires_at ?? null };
+    if (grant.units != null) moveTrialBack(grant.units * FREE_DAYS_UNIT_SECONDS);
   } else if (grant.units == null || current.endSec == null) {
     // An open-ended grant (or an overlay with no end, which only such a
     // grant makes): what the other live grants give, else nothing.
@@ -363,28 +401,7 @@ export function planRevoke(input: {
       newEnd <= nowSec || othersTier == null
         ? { comp_tier: null, comp_expires_at: null }
         : { comp_tier: othersTier, comp_expires_at: isoOf(newEnd) };
-    // A Stripe trial held at the overlay's end moves back with it.
-    if (
-      sub &&
-      sub.status === "trialing" &&
-      typeof sub.trial_end === "number" &&
-      Math.abs(sub.trial_end - current.endSec) <= HELD_TOLERANCE_SECONDS
-    ) {
-      const before = storedBefore(sub);
-      if (before != null) {
-        let target = sub.trial_end - seconds;
-        let beforeComp = String(before);
-        if (target <= before) {
-          target = before;
-          beforeComp = "";
-        }
-        trial = {
-          subscriptionId: sub.id,
-          trialEnd: target <= nowSec ? "now" : target,
-          beforeComp: target <= nowSec ? "" : beforeComp,
-        };
-      }
-    }
+    moveTrialBack(seconds);
   }
   return { kind: "revoke", overlay, trial };
 }

@@ -313,11 +313,12 @@ function stubSweepAdmin(opts: SweepStubOpts & { heldBeforeStart?: string[] }): {
   const admin = {
     from: (table: string) => ({
       select: () => ({
-        // plan_grants path (the holds not yet started): .eq().eq().gt()
-        eq: () => {
+        // plan_grants path (the paid time before a hold): .in().eq().eq().gt().limit()
+        in: () => {
           const chain = {
             eq: () => chain,
             gt: () => chain,
+            limit: () => chain,
             then: (resolve: (v: unknown) => void) =>
               resolve({ data: (opts.heldBeforeStart ?? []).map((user_id) => ({ user_id })), error: null }),
           };

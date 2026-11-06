@@ -24,6 +24,19 @@ import { TIER_RANK, type PlanTier } from "@/lib/billing/plans";
  *  moved it. Cleared ("") when no free days hold the trial any more. */
 export const TRIAL_END_BEFORE_COMP_KEY = "pipglyph_trial_end_before_comp";
 
+/** Subscription metadata key: what a free-days hold was added to —
+ *  "active" (a PAYING plan: the `trialing` Stripe reports is paid time plus
+ *  the days — never a free trial: no lapsed-trial logic, no trial reminder
+ *  of its own, the dunning grace applies, the pack discount stays) or
+ *  "trialing". Written by the hold, kept by a revoke; absent on a real
+ *  trial and on a Checkout hold. */
+export const HOLD_FROM_KEY = "pipglyph_hold_from";
+
+/** A `trialing` subscription that is really a PAYING plan under a hold. */
+export function isHeldPayingPlan(sub: { status?: string | null; metadata?: Record<string, string> | null } | null | undefined): boolean {
+  return sub?.status === "trialing" && sub.metadata?.[HOLD_FROM_KEY] === "active";
+}
+
 /** Stripe refuses a trial end more than 730 days out. */
 export const MAX_TRIAL_SECONDS = 730 * 86_400;
 

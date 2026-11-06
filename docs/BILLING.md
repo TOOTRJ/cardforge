@@ -812,6 +812,29 @@ overlay the admin typed by hand, #688's balance credit and #726's coupon:
   comp is owed its tier every calendar month", banked both). A comp
   converted by 0176 counts from the first of the month after the
   conversion. `grant_credits` dedupes on the key.
+- **A held PAYING plan is never a trial** (the independent check, 2026-11-05):
+  the hold writes `pipglyph_hold_from` = `active` | `trialing` on the
+  subscription (`held_from` on the row). For `active`: the time until the
+  hold's `starts_at` is PAID time — the subscribers' sweep keeps its monthly
+  allotments (applied or revoked hold), a declined renewal after the days
+  gets the dunning grace (never "a trial that declined"), no `trial_lapsed`
+  / win-back on a cancel, no `trial_converted` funnel row, the pack
+  discount stays, and `trial_will_end` with no comp holding the trial any
+  more (revoked: the trial is back on the paid period's end, which simply
+  renews) sends nothing — the billing page then says "Renews on …". A hold
+  on a TRIAL adds no paid time (`trialing`). The hold sets
+  `missing_payment_method: cancel`, as Checkout's trial does.
+- **An overlay grant on an ACTIVE plan** (a comp 0176 converted on a
+  payer, a past-due plan that recovers) adds only the DIFFERENCE between
+  the tiers' credits (`overlayAllotmentOver`: Pro days on a Plus plan = 70;
+  the plan's or a lower tier = 0) — the overlay's old "higher of the two"
+  rule, never a second allotment.
+- **One grant in flight per user** (0176's partial unique index on pending
+  rows): two admins granting at once would both add the days to the same
+  period end; the second insert is refused ("try again"); a pending row
+  older than 10 minutes (a crash) is marked failed first. A plan under a
+  subscription SCHEDULE (a pending downgrade) is refused with the way out
+  (release it on the billing page); Stripe would refuse the update anyway.
 - **Revoke** (`adminRevokeFreeDaysAction` → `revokeFreeDays`, the NEWEST
   applied grant only; `planRevoke`): the overlay shrinks by the grant's days
   (cleared when no other live grant remains — or when that end is now or
@@ -931,44 +954,44 @@ resets to it — no money, the admin Revenue panel lists it as "Trial start").
 sandbox catalog: pro_monthly $15.00, plus_monthly $6.00, plus_annual $60.00
 
 1. Monthly Pro paid on day 0; 30 free days on day 5 → charged on day 60, not day 30
-  ✓ active, period ends 2026-12-05T23:59:20.000Z
-  ⏩ clock → 2026-11-10T23:59:20.000Z (day 5)
-  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 5, 2026, 11:59 PM UTC to Jan 4, 2027, 11:59 PM UTC — the free days are added to the time they paid for.
-  ✓ Stripe: trialing until 2027-01-04T23:59:20.000Z = period end + 30 d
+  ✓ active, period ends 2026-12-06T00:19:06.000Z
+  ⏩ clock → 2026-11-11T00:19:06.000Z (day 5)
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 6, 2026, 12:19 AM UTC to Jan 5, 2027, 12:19 AM UTC — the free days are added to the time they paid for.
+  ✓ Stripe: trialing until 2027-01-05T00:19:06.000Z = period end + 30 d
   ✓ metadata keeps the pre-hold end
   ✓ overlay written to the same instant
   ✓ grant row applied as subscription_hold
   ✓ one $0 invoice for the hold itself, still one paid ($15.00, $0.00)
-  ⏩ clock → 2026-12-06T23:59:20.000Z (day 31: the old billing day has passed)
+  ⏩ clock → 2026-12-07T00:19:06.000Z (day 31: the old billing day has passed)
   ✓ still ONE paid invoice ($15.00, $0.00) — nothing charged on the old day
-  ⏩ clock → 2027-01-05T01:59:20.000Z (day 60 + 2 h: the free days are over)
-  ✓ second paid invoice: $15.00 paid on 2027-01-04T23:59:20.000Z
+  ⏩ clock → 2027-01-05T02:19:06.000Z (day 60 + 2 h: the free days are over)
+  ✓ second paid invoice: $15.00 paid on 2027-01-05T00:19:06.000Z
   ✓ charged at the moved date (period end + 30 d)
-  ✓ then monthly from there: next period end 2027-02-04T23:59:20.000Z
+  ✓ then monthly from there: next period end 2027-02-05T00:19:06.000Z
 
 2. A 7-day card-backed trial; 30 free days on day 2 → charged on day 37
-  ⏩ clock → 2026-11-07T23:59:42.000Z (day 2)
-  ✓ grantFreeDays: Their Stripe trial now ends on Dec 12, 2026, 11:59 PM UTC instead of Nov 12, 2026, 11:59 PM UTC; the first charge lands then.
-  ✓ trial now ends 2026-12-12T23:59:42.000Z = its own end + 30 d
-  ⏩ clock → 2026-11-13T23:59:42.000Z (day 8: the old trial end has passed)
+  ⏩ clock → 2026-11-08T00:19:31.000Z (day 2)
+  ✓ grantFreeDays: Their Stripe trial now ends on Dec 13, 2026, 12:19 AM UTC instead of Nov 13, 2026, 12:19 AM UTC; the first charge lands then.
+  ✓ trial now ends 2026-12-13T00:19:31.000Z = its own end + 30 d
+  ⏩ clock → 2026-11-14T00:19:31.000Z (day 8: the old trial end has passed)
   ✓ no charge on the old trial end (2 $0 invoice(s))
-  ⏩ clock → 2026-12-13T01:59:42.000Z (day 37 + 2 h)
-  ✓ first charge $6.00 on 2026-12-12T23:59:42.000Z
+  ⏩ clock → 2026-12-13T02:19:31.000Z (day 37 + 2 h)
+  ✓ first charge $6.00 on 2026-12-13T00:19:31.000Z
 
 3. An annual Plus plan; 30 free days → the renewal moves by 30 days (asserted on the subscription)
-  ✓ grantFreeDays: Their Stripe plan's next charge moves from Nov 6, 2027, 12:00 AM UTC to Dec 6, 2027, 12:00 AM UTC — the free days are added to the time they paid for.
-  ✓ renewal moved to 2027-12-06T00:00:06.000Z = year end + 30 d
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Nov 6, 2027, 12:19 AM UTC to Dec 6, 2027, 12:19 AM UTC — the free days are added to the time they paid for.
+  ✓ renewal moved to 2027-12-06T00:19:52.000Z = year end + 30 d
   ✓ nothing charged or credited ($0.00, $60.00; the $0 one is the hold's own)
   ✓ a second grant would stack on the moved end
 
 4. Scenario 1 revoked on day 10 → charged on day 30 after all
-  ⏩ clock → 2026-11-11T00:00:11.000Z (day 5)
-  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 6, 2026, 12:00 AM UTC to Jan 5, 2027, 12:00 AM UTC — the free days are added to the time they paid for.
-  ⏩ clock → 2026-11-16T00:00:11.000Z (day 10)
-  ✓ revokeFreeDays: Their complimentary access is cleared. Their Stripe trial is moved back to Dec 6, 2026, 12:00 AM UTC.
-  ✓ trial back on 2026-12-06T00:00:11.000Z, metadata cleared
+  ⏩ clock → 2026-11-11T00:19:58.000Z (day 5)
+  ✓ grantFreeDays: Their Stripe plan's next charge moves from Dec 6, 2026, 12:19 AM UTC to Jan 5, 2027, 12:19 AM UTC — the free days are added to the time they paid for.
+  ⏩ clock → 2026-11-16T00:19:58.000Z (day 10)
+  ✓ revokeFreeDays: Their complimentary access is cleared. Their Stripe trial is moved back to Dec 6, 2026, 12:19 AM UTC.
+  ✓ trial back on 2026-12-06T00:19:58.000Z, metadata cleared
   ✓ overlay cleared, row revoked
-  ⏩ clock → 2026-12-06T02:00:11.000Z (day 30 + 2 h)
+  ⏩ clock → 2026-12-06T02:19:58.000Z (day 30 + 2 h)
   ✓ charged $15.00 on the original day
 
 All free-days scenarios passed.

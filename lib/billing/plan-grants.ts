@@ -4,27 +4,29 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 import type { GrantAppliedAs, GrantSource } from "@/lib/billing/free-days";
 
-/** The viewer's own running HOLD (0176: a user reads their own rows' public
- *  columns): when their free days start and end. `startsAhead` = the start
- *  is still more than a minute away (the paid time runs until then — the
- *  billing page's copy). Null when none. */
+/** The viewer's own HOLD on a PAYING plan (0176: a user reads their own
+ *  rows' public columns), applied or revoked, whose start is still more
+ *  than a minute ahead: the plan is PAID through `startsAt` (Stripe reads
+ *  `trialing` until the hold's end — or, revoked, until that start, where
+ *  it simply renews). Null when none. The billing page's copy. */
 export async function readOwnHoldGrant(
   client: Awaited<ReturnType<typeof createClient>>,
   now: Date = new Date(),
-): Promise<{ startsAt: string; endsAt: string; startsAhead: boolean } | null> {
+): Promise<{ startsAt: string; endsAt: string; status: "applied" | "revoked" } | null> {
   const { data, error } = await client
     .from("plan_grants")
-    .select("starts_at, ends_at")
-    .eq("status", "applied")
+    .select("starts_at, ends_at, status")
+    .in("status", ["applied", "revoked"])
     .eq("applied_as", "subscription_hold")
-    .gt("ends_at", now.toISOString())
+    .eq("held_from", "active")
+    .gt("starts_at", new Date(now.getTime() + 60_000).toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !data) return null;
-  const row = data as { starts_at: string; ends_at: string | null };
+  const row = data as { starts_at: string; ends_at: string | null; status: "applied" | "revoked" };
   if (!row.ends_at) return null;
-  return { startsAt: row.starts_at, endsAt: row.ends_at, startsAhead: Date.parse(row.starts_at) > now.getTime() + 60_000 };
+  return { startsAt: row.starts_at, endsAt: row.ends_at, status: row.status };
 }
 
 // The admin's read of a user's free-days grants (migration 0176) — newest

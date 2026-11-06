@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { resolveSubscriptionTier, syncSubscriptionForUser } from "@/lib/stripe/subscription-sync";
-import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 import {
   freeDaysNote,
   isoOf,
@@ -36,6 +36,11 @@ import { planForTier, type PaidTier, type PlanTier } from "@/lib/billing/plans";
 // ---------------------------------------------------------------------------
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+/** A `pending` grant older than this never finished (the process died
+ *  between the row and its Stripe write): marked failed, so it no longer
+ *  blocks the user's next grant. */
+export const STALE_PENDING_MS = 10 * 60_000;
 
 const TIER_NAME = (tier: PaidTier) => planForTier(tier).name;
 
@@ -148,6 +153,15 @@ export async function grantFreeDays(
 
   const startsAt = plan.kind === "below_plan" ? Math.floor((deps.now ?? new Date()).getTime() / 1000) : plan.startsAt;
   const endsAt = plan.kind === "below_plan" ? startsAt + (input.units ?? 0) * 30 * 86_400 : plan.endsAt;
+  // ONE grant in flight per user (0176's partial unique index): a row left
+  // `pending` by a crash would block the user for good, so one older than
+  // STALE_PENDING_MS is marked failed first.
+  await admin
+    .from("plan_grants")
+    .update({ status: "failed", stripe_error: "stale: never finished" })
+    .eq("user_id", input.userId)
+    .eq("status", "pending")
+    .lt("created_at", new Date((deps.now ?? new Date()).getTime() - STALE_PENDING_MS).toISOString());
   const { data: inserted, error: insertError } = await admin
     .from("plan_grants")
     .insert({
@@ -159,6 +173,7 @@ export async function grantFreeDays(
       note: input.note,
       applied_as: plan.kind === "hold" ? "subscription_hold" : plan.kind === "below_plan" ? "below_plan" : "overlay",
       stripe_subscription_id: plan.kind === "hold" ? plan.subscriptionId : null,
+      held_from: plan.kind === "hold" ? plan.was : null,
       starts_at: isoOf(startsAt),
       ends_at: endsAt == null ? null : isoOf(endsAt),
       credits_from: isoOf(startsAt),
@@ -168,6 +183,9 @@ export async function grantFreeDays(
     .single();
   const grantId = (inserted as { id?: string } | null)?.id;
   if (insertError || !grantId) {
+    if (insertError?.code === "23505") {
+      return { ok: false, error: "Another grant for this user is being applied right now. Try again in a moment." };
+    }
     console.warn(`grantFreeDays(${input.userId}): insert failed`, insertError?.message);
     return { ok: false, error: "Couldn't record the grant. Nothing was granted." };
   }
@@ -182,7 +200,10 @@ export async function grantFreeDays(
         {
           trial_end: plan.trialEnd,
           proration_behavior: "none",
-          metadata: { [TRIAL_END_BEFORE_COMP_KEY]: plan.beforeComp },
+          // A card that goes missing before the days end: the plan ends,
+          // never a past-due invoice (the billing page says so).
+          trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+          metadata: { [TRIAL_END_BEFORE_COMP_KEY]: plan.beforeComp, [HOLD_FROM_KEY]: plan.was },
         },
         { idempotencyKey: `plan-grant:${grantId}` },
       );

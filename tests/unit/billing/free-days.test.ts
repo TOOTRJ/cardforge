@@ -116,6 +116,13 @@ describe("the owner's example — a live, renewing plan: the days are ADDED to t
     });
   });
 
+  it("a plan managed by a schedule (a pending downgrade): refused with the way out", () => {
+    expect(planFreeDays({ profile, sub: activeSub({ schedule: "sub_sched_1" }), subscribedTier: "pro", tier: "pro", units: 1, now: NOW })).toMatchObject({
+      kind: "refused",
+      error: expect.stringMatching(/scheduled change/),
+    });
+  });
+
   it("a period end in the past (a renewal in flight) or missing: refused", () => {
     expect(planFreeDays({ profile, sub: activeSub({ items: { data: [{ current_period_end: nowSec - 60 }] } }), subscribedTier: "pro", tier: "pro", units: 1, now: NOW })).toMatchObject({ kind: "refused", error: expect.stringMatching(/renewing right now/) });
     expect(planFreeDays({ profile, sub: activeSub({ items: { data: [] } }), subscribedTier: "pro", tier: "pro", units: 1, now: NOW })).toMatchObject({ kind: "refused", error: expect.stringMatching(/no period end/) });
@@ -254,6 +261,16 @@ describe("revoking the newest grant", () => {
     const plan = planRevoke({ grant: { ...grant, tier: "pro", ends_at: iso(JAN_4) }, profile, sub, otherGrants: [], now: later });
     expect(plan).toMatchObject({ trial: { trialEnd: "now", beforeComp: "" } });
     expect(revokeNote(plan as Extract<typeof plan, { kind: "revoke" }>, name)).toMatch(/ends now and is charged/);
+  });
+
+  it("the overlay gone (its write failed) but the trial held at the GRANT's end: the trial still moves back", () => {
+    const profile = { ...free, subscription_status: "trialing", subscription_tier: "pro", comp_tier: null, comp_expires_at: null };
+    const sub = activeSub({ status: "trialing", trial_end: JAN_4, metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(DEC_5) } });
+    expect(planRevoke({ grant: { ...grant, tier: "pro", ends_at: iso(JAN_4) }, profile, sub, otherGrants: [], now: NOW })).toEqual({
+      kind: "revoke",
+      overlay: { comp_tier: null, comp_expires_at: null },
+      trial: { subscriptionId: "sub_1", trialEnd: DEC_5, beforeComp: "" },
+    });
   });
 
   it("a trial NOT at the overlay's end (the plan's own trial outlasts it) is left alone", () => {

@@ -5,6 +5,7 @@ import {
   GRANT_SWEEP_PAGE_SIZE,
   freeDaysAllotmentsDue,
   grantFreeDaysCredits,
+  overlayAllotmentOver,
   planGrantCreditKey,
 } from "@/lib/billing/free-days-credits";
 
@@ -58,8 +59,16 @@ describe("freeDaysAllotmentsDue", () => {
 });
 
 describe("grantFreeDaysCredits — the sweep", () => {
-  function stub(rows: Array<Record<string, unknown>>, ledger: Record<string, string[]> = {}, opts: { rpcError?: string; pageError?: string } = {}) {
+  function stub(
+    rows: Array<Record<string, unknown>>,
+    ledger: Record<string, string[]> = {},
+    opts: { rpcError?: string; pageError?: string; profiles?: Record<string, { subscription_status: string | null; subscription_tier: string | null }> } = {},
+  ) {
     const s = chainClient((table, calls): ChainAnswer => {
+      if (table === "profiles") {
+        const id = String(calls.find((c) => c.method === "eq")?.args[1]);
+        return { data: opts.profiles?.[id] ?? null };
+      }
       if (table === "plan_grants") {
         if (opts.pageError) return { error: { message: opts.pageError } };
         const range = calls.find((c) => c.method === "range")!.args as unknown as [number, number];
@@ -94,6 +103,26 @@ describe("grantFreeDaysCredits — the sweep", () => {
     const or = String(page.find((c) => c.method === "or")?.args[0]);
     expect(or).toMatch(/^ends_at\.is\.null,ends_at\.gte\./);
     expect(Date.parse(or.slice("ends_at.is.null,ends_at.gte.".length))).toBe(now.getTime() - GRANT_SWEEP_LOOKBACK_DAYS * DAY_MS);
+  });
+
+  it("an OVERLAY grant on an ACTIVE plan adds only the difference between the tiers — nothing when the plan's tier is the grant's or higher (a comp converted by 0176 on a payer never double-grants)", async () => {
+    expect(overlayAllotmentOver("pro", { subscription_status: "active", subscription_tier: "plus" })).toBe(70);
+    expect(overlayAllotmentOver("plus", { subscription_status: "active", subscription_tier: "pro" })).toBe(0);
+    expect(overlayAllotmentOver("plus", { subscription_status: "active", subscription_tier: "plus" })).toBe(0);
+    expect(overlayAllotmentOver("pro", { subscription_status: "canceled", subscription_tier: "pro" })).toBe(100);
+    expect(overlayAllotmentOver("pro", { subscription_status: "trialing", subscription_tier: "pro" })).toBe(100);
+    expect(overlayAllotmentOver("pro", null)).toBe(100);
+    const s = stub([plus, { ...pro, applied_as: "overlay" }], {}, {
+      profiles: { u1: { subscription_status: "active", subscription_tier: "plus" }, u2: { subscription_status: "active", subscription_tier: "plus" } },
+    });
+    const result = await grantFreeDaysCredits(s.client as never, { now });
+    // u1: a Plus overlay on a Plus plan — nothing; u2: a Pro overlay on a Plus plan — 70.
+    expect(result).toEqual({ ok: true, processed: 2, granted: 1, failed: 0 });
+    expect((s.rpc.mock.calls as unknown as Array<[string, { p_amount: number; p_idempotency_key: string }]>).map((c) => [c[1].p_idempotency_key, c[1].p_amount])).toEqual([["grant:g2:0", 70]]);
+    // A HOLD grant never reads the profile (its plan reads trialing).
+    const held = stub([pro], {}, { profiles: { u2: { subscription_status: "active", subscription_tier: "pro" } } });
+    await grantFreeDaysCredits(held.client as never, { now });
+    expect(held.forTable("profiles")).toHaveLength(0);
   });
 
   it("a failed RPC is counted, logged and handed to onGrantFailed; the sweep goes on", async () => {

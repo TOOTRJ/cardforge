@@ -464,6 +464,7 @@ export type Database = {
           note: string | null;
           applied_as: string;
           stripe_subscription_id: string | null;
+          held_from: string | null;
           starts_at: string;
           ends_at: string | null;
           credits_from: string;
@@ -483,6 +484,7 @@ export type Database = {
           note?: string | null;
           applied_as: string;
           stripe_subscription_id?: string | null;
+          held_from?: string | null;
           starts_at: string;
           ends_at?: string | null;
           credits_from: string;
@@ -502,6 +504,7 @@ export type Database = {
           note?: string | null;
           applied_as?: string;
           stripe_subscription_id?: string | null;
+          held_from?: string | null;
           starts_at?: string;
           ends_at?: string | null;
           credits_from?: string;

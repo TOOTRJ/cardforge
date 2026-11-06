@@ -195,6 +195,13 @@ describe("adminGrantFreeDaysAction", () => {
       payload: { tier: "plus", days: 30, expiresAt: "2027-01-04T12:00:00.000Z", holdEndsAt: "2027-01-04T12:00:00.000Z", was: "active" },
     });
   });
+  it("a grant BELOW the plan they pay for is recorded and tells the user nothing (it changed nothing)", async () => {
+    const stub = db();
+    freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "below_plan", tier: "plus", subscribedTier: "pro" }, endsAt: "2026-12-05T12:00:00.000Z", holdEndsAt: null, note: "Plus is below the Pro they pay for: recorded, but it changes nothing and grants no credits." });
+    expect(await adminGrantFreeDaysAction({ userId: TARGET, tier: "plus", units: 1, note: null })).toMatchObject({ ok: true, stripeNote: expect.stringMatching(/below the Pro/) });
+    expect(stub.forTable("notifications")).toHaveLength(0);
+  });
+
   it("an open-ended (staff) grant sends no day count", async () => {
     const stub = db();
     freeDays.grantFreeDays.mockResolvedValue({ ok: true, grantId: "g1", plan: { kind: "overlay", why: "staff" }, endsAt: null, holdEndsAt: null, note: "Pro with no end date (staff)." });

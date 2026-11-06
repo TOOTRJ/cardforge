@@ -128,12 +128,39 @@ export async function grantFreeDaysCredits(
   return { ok: true, processed, granted, failed };
 }
 
+/** The allotment an OVERLAY grant adds on top of a running ACTIVE plan: the
+ *  difference between the two tiers' credits (the plan's own allotment is
+ *  the subscribers' sweep's / the invoice's), nothing when the plan's tier
+ *  is the grant's or higher — the rule the overlay had before 0176 ("the
+ *  higher of the two"). A comp converted by 0176 on a paying plan, or a
+ *  past-due plan that recovers, lands here; a hold never does (its plan
+ *  reads `trialing`). */
+export function overlayAllotmentOver(
+  grantTier: PaidTier,
+  profile: { subscription_status?: string | null; subscription_tier?: string | null } | null,
+): number {
+  const own = MONTHLY_CREDITS[grantTier] ?? 0;
+  if (profile?.subscription_status !== "active") return own;
+  const paid = profile.subscription_tier === "plus" || profile.subscription_tier === "pro" ? profile.subscription_tier : null;
+  if (!paid) return own;
+  return Math.max(0, own - (MONTHLY_CREDITS[paid] ?? 0));
+}
+
 async function grantDueAllotments(
   admin: CreditGrantClient,
   grant: PlanGrantCreditRow,
   due: number[],
 ): Promise<{ ok: true; granted: number } | { ok: false; error: string }> {
-  const amount = MONTHLY_CREDITS[grant.tier as PaidTier] ?? 0;
+  let amount = MONTHLY_CREDITS[grant.tier as PaidTier] ?? 0;
+  if (amount > 0 && grant.applied_as === "overlay") {
+    const { data: profile, error } = await admin
+      .from("profiles")
+      .select("subscription_status, subscription_tier")
+      .eq("id", grant.user_id)
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    amount = overlayAllotmentOver(grant.tier as PaidTier, profile as { subscription_status?: string | null; subscription_tier?: string | null } | null);
+  }
   if (amount <= 0) return { ok: true, granted: 0 };
   // One read of what the ledger already holds for this grant; a failed read
   // falls through to the RPC, which dedupes on the key itself.

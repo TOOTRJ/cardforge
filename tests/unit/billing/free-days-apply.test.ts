@@ -16,7 +16,7 @@ vi.mock("@/lib/stripe/subscription-sync", () => sync);
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => true }));
 
 import { grantFreeDays, revokeFreeDays } from "@/lib/billing/free-days-apply";
-import { TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
+import { HOLD_FROM_KEY, TRIAL_END_BEFORE_COMP_KEY } from "@/lib/billing/comp-stripe";
 
 const USER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const ADMIN = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -33,6 +33,7 @@ type Profile = Record<string, unknown>;
 function db(opts: {
   profile?: Profile | null;
   insertError?: string;
+  insertCode?: string;
   overlayError?: string;
   grants?: Array<Record<string, unknown>>;
 } = {}) {
@@ -44,8 +45,10 @@ function db(opts: {
     if (table === "profiles" && called(calls, "select")) return { data: profile };
     if (table === "profiles" && called(calls, "update")) return { error: opts.overlayError ? { message: opts.overlayError } : null };
     if (table === "plan_grants" && called(calls, "insert")) {
-      return opts.insertError ? { error: { message: opts.insertError } } : { data: { id: GRANT } };
+      return opts.insertError ? { error: { message: opts.insertError, code: opts.insertCode } } : { data: { id: GRANT } };
     }
+    // The stale-pending sweep (an update before the insert): nothing to do.
+    if (table === "plan_grants" && called(calls, "update") && called(calls, "lt")) return { data: null };
     if (table === "plan_grants" && called(calls, "select")) {
       const byId = calls.find((c) => c.method === "eq" && c.args[0] === "id")?.args[1];
       const rows = opts.grants ?? [];
@@ -104,6 +107,7 @@ describe("grantFreeDays — a live plan (the hold)", () => {
       note: "thanks",
       applied_as: "subscription_hold",
       stripe_subscription_id: "sub_1",
+      held_from: "active",
       starts_at: iso(DEC_5),
       ends_at: iso(JAN_4),
       credits_from: iso(DEC_5),
@@ -111,15 +115,24 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     });
     expect(s.update).toHaveBeenCalledWith(
       "sub_1",
-      { trial_end: JAN_4, proration_behavior: "none", metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(DEC_5) } },
+      {
+        trial_end: JAN_4,
+        proration_behavior: "none",
+        trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+        metadata: { [TRIAL_END_BEFORE_COMP_KEY]: String(DEC_5), [HOLD_FROM_KEY]: "active" },
+      },
       { idempotencyKey: `plan-grant:${GRANT}` },
     );
+    // A pending row older than STALE_PENDING_MS is marked failed before the insert.
+    const stale = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && called(e.calls, "lt"))!;
+    expect(payloadOf(stale.calls, "update")).toEqual({ status: "failed", stripe_error: "stale: never finished" });
+    expect(stub.log.indexOf(stale)).toBeLessThan(stub.log.indexOf(insert));
     // The order: insert → Stripe → overlay → applied.
     const order = stub.log.map((e) => `${e.table}:${e.calls[0]?.method}`);
     expect(order.indexOf("plan_grants:insert")).toBeLessThan(order.indexOf("profiles:update"));
     const overlay = stub.forTable("profiles").find((e) => called(e.calls, "update"))!;
     expect(payloadOf(overlay.calls, "update")).toEqual({ comp_tier: "pro", comp_expires_at: iso(JAN_4) });
-    const applied = stub.forTable("plan_grants").filter((e) => called(e.calls, "update"));
+    const applied = stub.forTable("plan_grants").filter((e) => called(e.calls, "update") && !called(e.calls, "lt"));
     expect(payloadOf(applied.at(-1)!.calls, "update")).toEqual({ status: "applied" });
     // The profile's dates follow at once.
     expect(sync.syncSubscriptionForUser).toHaveBeenCalledWith(stub.client, s, USER, expect.objectContaining({ customerId: "cus_1" }));
@@ -141,7 +154,7 @@ describe("grantFreeDays — a live plan (the hold)", () => {
     const s = stripe(activeSub, { updateError: "No such subscription: sub_1" });
     const result = await grantFreeDays(stub.client as never, input, { stripe: s as never, now: NOW });
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/nothing was granted/) });
-    const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update"))!;
+    const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && !called(e.calls, "lt"))!;
     expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "No such subscription: sub_1" });
     expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
     expect(sync.syncSubscriptionForUser).not.toHaveBeenCalled();
@@ -189,8 +202,17 @@ describe("grantFreeDays — no live plan (the overlay)", () => {
     const stub = db({ overlayError: "permission denied" });
     const result = await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never, now: NOW });
     expect(result).toEqual({ ok: false, error: expect.stringMatching(/Nothing was granted/) });
-    const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update"))!;
+    const failed = stub.forTable("plan_grants").find((e) => called(e.calls, "update") && !called(e.calls, "lt"))!;
     expect(payloadOf(failed.calls, "update")).toEqual({ status: "failed", stripe_error: "overlay: permission denied" });
+  });
+
+  it("a second grant for the same user while one is in flight (0176's one-pending index, 23505): refused, try again", async () => {
+    const stub = db({ insertError: "duplicate key value violates unique constraint \"plan_grants_one_pending_idx\"", insertCode: "23505" });
+    expect(await grantFreeDays(stub.client as never, { userId: USER, tier: "plus", units: 1, source: "comp", grantedBy: ADMIN, note: null }, { stripe: stripe(null) as never })).toEqual({
+      ok: false,
+      error: expect.stringMatching(/being applied right now/),
+    });
+    expect(stub.forTable("profiles").some((e) => called(e.calls, "update"))).toBe(false);
   });
 
   it("no such user / the insert fails: an error, nothing else", async () => {
@@ -211,6 +233,8 @@ describe("revokeFreeDays", () => {
     const s = stripe(heldSub);
     const result = await revokeFreeDays(stub.client as never, { grantId: GRANT, revokedBy: ADMIN }, { stripe: s as never, now: NOW });
     expect(result).toMatchObject({ ok: true, overlay: { comp_tier: null, comp_expires_at: null }, chargesNow: false });
+    // The hold_from key is NOT touched: the plan reads trialing until Dec 5
+    // and every trial reader must still know it is a paying plan.
     expect(s.update).toHaveBeenCalledWith(
       "sub_1",
       { trial_end: DEC_5, proration_behavior: "none", metadata: { [TRIAL_END_BEFORE_COMP_KEY]: "" } },

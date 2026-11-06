@@ -21,6 +21,7 @@ import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
   compHoldsCheckoutUntil,
+  isHeldPayingPlan,
   type CompFacts,
 } from "@/lib/billing/comp-stripe";
 import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
@@ -624,7 +625,8 @@ export async function createCheckoutSessionAction(
     // never a code the client could supply. The webhook grants by
     // pack_credits, so the discount changes the price and nothing else.
     const live = await findLiveSubscription(stripe, customer.customerId);
-    const subscriberDiscount = live?.status === "active";
+    // A paying plan under a free-days hold reads `trialing` (lib/billing/free-days.ts).
+    const subscriberDiscount = live?.status === "active" || isHeldPayingPlan(live);
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       customer: customer.customerId,

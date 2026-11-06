@@ -107,9 +107,12 @@ export default async function BillingPage() {
       compExpiresAt: liveComp.expiresAt,
       stripeTrialEnd: stripeDetails?.subscription?.trialEnd ?? null,
     }) === "held";
-  // When the free days START (the plan is paid through then): the viewer's
-  // own grant row — a hold given mid-period adds its days to the paid time.
-  const hold = heldByComp ? await readOwnHoldGrant(await createClient()) : null;
+  // A hold on a PAYING plan whose start is still ahead (the plan is paid
+  // through then): the viewer's own grant row. Applied: the free days run
+  // from that start. Revoked: Stripe still reads `trialing` until that
+  // start, where the plan simply renews — never "your free trial".
+  const hold = status === "trialing" ? await readOwnHoldGrant(await createClient()) : null;
+  const paidThrough = hold?.status === "revoked" && !heldByComp ? hold.startsAt : null;
   const sub = stripeDetails?.subscription ?? null;
   const priceLine = sub?.amountCents != null && sub.interval
     ? `${formatMoney(sub.amountCents, sub.currency)} / ${sub.interval}`
@@ -121,7 +124,7 @@ export default async function BillingPage() {
   // live answer first (cancel_at, cancel_at_period_end, a schedule that ends
   // in a cancellation), the webhook-written profile flag when Stripe is
   // unreachable. A scheduled downgrade is not a cancellation.
-  const planStatus = planStatusOf({
+  const stripeStatus = planStatusOf({
     live,
     delinquent,
     graceUntil: entitlements.dunningGraceUntil,
@@ -134,6 +137,8 @@ export default async function BillingPage() {
       endsAt: profile?.subscription_ends_at ?? null,
     },
   });
+  const planStatus =
+    stripeStatus.kind === "trial" && paidThrough ? { kind: "renews" as const, renewsAt: paidThrough } : stripeStatus;
   const ending = isEndingStatus(planStatus);
   // The plan grid below reads the same fact (the profile flag can lag the
   // live read until the next webhook event).
@@ -198,7 +203,7 @@ export default async function BillingPage() {
               hasPaymentMethod={Boolean(stripeDetails?.paymentMethod)}
               compExpiresAt={profile?.comp_expires_at ?? null}
               heldByComp={heldByComp}
-              heldFrom={hold?.startsAhead ? hold.startsAt : null}
+              heldFrom={hold?.status === "applied" ? hold.startsAt : null}
             />
           </p>
           {liveComp ? (

@@ -210,7 +210,9 @@ export async function adminGrantFreeDaysAction(input: {
   });
   if (!result.ok) return result;
 
-  await notifyUser(admin, {
+  // Below the plan they pay for: recorded, nothing changed — nothing to tell.
+  if (result.plan.kind !== "below_plan") {
+    await notifyUser(admin, {
     recipientId: userId,
     actorId: gate.adminId,
     type: "comp_plan",
@@ -222,7 +224,8 @@ export async function adminGrantFreeDaysAction(input: {
       // the time paid for (never "your trial").
       ...(result.holdEndsAt ? { holdEndsAt: result.holdEndsAt, was: result.plan.kind === "hold" ? result.plan.was : null } : {}),
     },
-  });
+    });
+  }
 
   return {
     ok: true,

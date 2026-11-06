@@ -922,6 +922,12 @@ describe("createCheckoutSessionAction", () => {
     await createCheckoutSessionAction({ kind: "pack", pack: "large" });
     expect(checkoutParams()).not.toHaveProperty("discounts");
     expect(checkoutParams().metadata).toMatchObject({ discount: "none" });
+
+    // A PAYING plan under a free-days hold reads trialing (lib/billing/free-days.ts): still a subscriber.
+    s.checkoutCreate.mockClear();
+    s.live = { id: "sub_held", status: "trialing", metadata: { pipglyph_hold_from: "active" }, items: { data: [{ id: "si_1", price: { id: "price_plus_monthly" } }] } };
+    await createCheckoutSessionAction({ kind: "pack", pack: "large" });
+    expect(checkoutParams().metadata).toMatchObject({ discount: "subscriber" });
   });
 
   it("a missing coupon never blocks a sale: the pack is sold at full price and the failure logged", async () => {
