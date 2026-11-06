@@ -26,12 +26,13 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/stripe/client", () => ({ getStripe: vi.fn(), isStripeConfigured: () => false }));
 const freeDays = vi.hoisted(() => ({ grantFreeDays: vi.fn(), revokeFreeDays: vi.fn() }));
 vi.mock("@/lib/billing/free-days-apply", () => freeDays);
-const bank = vi.hoisted(() => ({ bankDays: vi.fn(), revokeBankedEntry: vi.fn() }));
+const bank = vi.hoisted(() => ({ bankDays: vi.fn(), revokeBankedEntry: vi.fn(), readBank: vi.fn() }));
 vi.mock("@/lib/billing/day-bank", () => ({
   MAX_BANK_DAYS_APPLIED: 730,
   MIN_ADMIN_BANK_DAYS: 2,
   adminBankReference: (id: string) => `admin:${id}`,
   bankDays: (...args: unknown[]) => bank.bankDays(...args),
+  readBank: (...args: unknown[]) => bank.readBank(...args),
   revokeBankedEntry: (...args: unknown[]) => bank.revokeBankedEntry(...args),
 }));
 vi.mock("@/lib/stripe/subscription-sync", () => ({
@@ -51,7 +52,7 @@ import {
   adminSetCardLimitAction,
 } from "@/lib/admin/user-actions";
 
-function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null; grantUser?: string | null } = {}) {
+function db(opts: { targetExists?: boolean; updateError?: string; subscriptionStatus?: string | null; grantUser?: string | null; targetAdmin?: boolean; targetComp?: { tier: string; expiresAt: string | null } } = {}) {
   const stub = chainClient((table, calls): ChainAnswer => {
     if (table === "plan_grants" && called(calls, "select")) {
       return { data: opts.grantUser === undefined ? { user_id: TARGET } : opts.grantUser ? { user_id: opts.grantUser } : null };
@@ -61,7 +62,13 @@ function db(opts: { targetExists?: boolean; updateError?: string; subscriptionSt
       return {
         data:
           opts.targetExists !== false && id === TARGET
-            ? { id, subscription_status: opts.subscriptionStatus ?? null }
+            ? {
+                id,
+                subscription_status: opts.subscriptionStatus ?? null,
+                is_admin: opts.targetAdmin ?? false,
+                comp_tier: opts.targetComp?.tier ?? null,
+                comp_expires_at: opts.targetComp ? opts.targetComp.expiresAt : null,
+              }
             : null,
       };
     }
@@ -80,7 +87,8 @@ const notification = (stub: ReturnType<typeof chainClient>) =>
 beforeEach(() => {
   state.profile = { id: ADMIN, is_admin: true };
   state.configured = true;
-  bank.bankDays.mockReset().mockResolvedValue({ ok: true, entryId: "e1", created: true });
+  bank.bankDays.mockReset().mockImplementation(async (_admin: unknown, input: { days: number }) => ({ ok: true, entryId: "e1", created: true, days: input.days }));
+  bank.readBank.mockReset().mockResolvedValue({ banked: 7, reserved: 0, entries: [] });
   bank.revokeBankedEntry.mockReset().mockResolvedValue({ ok: true, days: 7, userId: TARGET });
   freeDays.grantFreeDays.mockReset().mockResolvedValue({
     ok: true,
@@ -186,13 +194,29 @@ describe("adminBankDaysAction — the comp since owner 2026-11-06", () => {
       payload: { days: 14, note: "thanks for the bug report" },
     });
   });
-  it("a double submit finds the entry it made and tells the user nothing twice", async () => {
+  it("a double submit finds the entry it made — ITS days, not the input's — and tells the user nothing twice", async () => {
     const stub = db();
-    bank.bankDays.mockResolvedValue({ ok: true, entryId: "e1", created: false });
-    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toEqual({ ok: true, days: 7, created: false });
+    bank.bankDays.mockResolvedValue({ ok: true, entryId: "e1", created: false, days: 7 });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 14, note: null, requestId: REQUEST })).toEqual({ ok: true, days: 7, created: false });
     expect(stub.forTable("notifications")).toHaveLength(0);
   });
-  it("validates the days (2 … 730 whole days — Stripe's 48 h minimum), the note and the request id before touching anything", async () => {
+  it("refuses an admin and an open-ended staff account (the days would never be used), and a bank that would pass 730 days (Stripe's limit at once)", async () => {
+    db({ targetAdmin: true });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toMatchObject({ ok: false, error: expect.stringMatching(/admin already has every plan/) });
+    db({ targetComp: { tier: "pro", expiresAt: null } });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).toMatchObject({ ok: false, error: expect.stringMatching(/open-ended staff access/) });
+    // A DATED comp (an old overlay running out) is no bar.
+    db({ targetComp: { tier: "pro", expiresAt: "2026-12-01T00:00:00Z" } });
+    expect((await adminBankDaysAction({ userId: TARGET, days: 7, note: null, requestId: REQUEST })).ok).toBe(true);
+    db();
+    bank.readBank.mockResolvedValue({ banked: 700, reserved: 20, entries: [] });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 11, note: null, requestId: REQUEST })).toEqual({ ok: false, error: "Their bank holds 720 days; at most 10 more can be banked (730 at once is Stripe's limit)." });
+    expect((await adminBankDaysAction({ userId: TARGET, days: 10, note: null, requestId: REQUEST })).ok).toBe(true);
+    bank.readBank.mockResolvedValue({ banked: 730, reserved: 0, entries: [] });
+    expect(await adminBankDaysAction({ userId: TARGET, days: 2, note: null, requestId: REQUEST })).toEqual({ ok: false, error: "Their bank already holds 730 days — the most that can be applied at once is 730." });
+    expect(bank.bankDays).toHaveBeenCalledTimes(2);
+  });
+  it("validates the days (2 … 730 whole days — the owner's floor), the note and the request id before touching anything", async () => {
     db();
     for (const days of [0, 1, 731, 2.5]) {
       expect((await adminBankDaysAction({ userId: TARGET, days, note: null, requestId: REQUEST })).ok).toBe(false);

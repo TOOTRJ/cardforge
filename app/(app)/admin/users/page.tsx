@@ -601,7 +601,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
               <section className="flex flex-col gap-3 border-t border-border/50 pt-5">
                 <SectionTitle
                   title="Plan grants"
-                  hint="Banked days applied to a plan (the next charge moved), staff access, and the dated comps given before 2026-11-06 (they run out on their date). Revoke takes the newest applied one back."
+                  hint="Banked days applied to a plan (the next charge moved), staff access, and the dated comps given before 2026-11-06 (they run out on their date). Revoke takes the newest applied one back — the Stripe hold moves back; applied banked days are NOT returned to the bank (bank them again if they should be)."
                 />
                 <PlanGrantsList rows={grants.rows} loadError={grants.loadError} />
               </section>

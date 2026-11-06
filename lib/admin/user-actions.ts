@@ -14,7 +14,7 @@ import {
   syncSubscriptionForUser,
 } from "@/lib/stripe/subscription-sync";
 import { grantFreeDays, revokeFreeDays } from "@/lib/billing/free-days-apply";
-import { MAX_BANK_DAYS_APPLIED, MIN_ADMIN_BANK_DAYS, adminBankReference, bankDays, revokeBankedEntry } from "@/lib/billing/day-bank";
+import { MAX_BANK_DAYS_APPLIED, MIN_ADMIN_BANK_DAYS, adminBankReference, bankDays, readBank, revokeBankedEntry } from "@/lib/billing/day-bank";
 
 // Admin user tools — grant credits, bank free days (a comp, owner
 // 2026-11-06: banked days the user applies with a card on file), staff
@@ -170,7 +170,7 @@ const bankDaysSchema = z.object({
   days: z
     .number()
     .int("Whole days.")
-    .min(MIN_ADMIN_BANK_DAYS, `At least ${MIN_ADMIN_BANK_DAYS} days (Stripe's 48-hour minimum for a free period).`)
+    .min(MIN_ADMIN_BANK_DAYS, `At least ${MIN_ADMIN_BANK_DAYS} days.`)
     .max(MAX_BANK_DAYS_APPLIED, `At most ${MAX_BANK_DAYS_APPLIED} days.`),
   note: z.string().trim().max(500, "Keep the note under 500 characters.").nullable(),
   /** The form's one id per fill-in: a double submit banks once. */
@@ -199,7 +199,34 @@ export async function adminBankDaysAction(input: {
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   const { userId, days, note, requestId } = parsed.data;
   const { admin } = gate;
-  if (!(await targetExists(admin, userId))) return { ok: false, error: "No user with that id." };
+  // The days must be usable: an admin has every plan already (the billing
+  // page shows no bank), and an account on open-ended staff access never
+  // checks out — banked days would sit there for good, and the notice would
+  // point at a section they don't have (independent check).
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, is_admin, comp_tier, comp_expires_at")
+    .eq("id", userId)
+    .maybeSingle();
+  const row = target as { id: string; is_admin: boolean | null; comp_tier: string | null; comp_expires_at: string | null } | null;
+  if (!row) return { ok: false, error: "No user with that id." };
+  if (row.is_admin) return { ok: false, error: "An admin already has every plan — banked days would never be used." };
+  if (row.comp_tier && row.comp_expires_at == null) {
+    return { ok: false, error: "This account has open-ended staff access, so banked days would never be used. Revoke it first." };
+  }
+  // Stripe applies at most 730 days at once (reserveBank leaves the rest
+  // banked), so the bank is held under it: the admin is told the headroom.
+  const bank = await readBank(admin, userId);
+  const headroom = MAX_BANK_DAYS_APPLIED - bank.banked - bank.reserved;
+  if (days > headroom) {
+    return {
+      ok: false,
+      error:
+        headroom < MIN_ADMIN_BANK_DAYS
+          ? `Their bank already holds ${bank.banked + bank.reserved} days — the most that can be applied at once is ${MAX_BANK_DAYS_APPLIED}.`
+          : `Their bank holds ${bank.banked + bank.reserved} days; at most ${headroom} more can be banked (${MAX_BANK_DAYS_APPLIED} at once is Stripe's limit).`,
+    };
+  }
 
   const banked = await bankDays(admin, {
     userId,
@@ -217,7 +244,8 @@ export async function adminBankDaysAction(input: {
       payload: { days, note: note || null },
     });
   }
-  return { ok: true, days, created: banked.created };
+  // A double submit finds the entry it made: ITS days, not this input's.
+  return { ok: true, days: banked.days, created: banked.created };
 }
 
 export type AdminRevokeBankedDaysResult = { ok: true; days: number } | ActionError;

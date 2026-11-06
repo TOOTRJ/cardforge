@@ -934,7 +934,7 @@ out on or already has.
 > **Superseded for admins on 2026-11-06 (migration 0179, "The days bank"
 > above): a comp is BANKED DAYS now.** The admin's "Bank free days" form
 > (`adminBankDaysAction` → `bankDays`, source `admin`, keyed by the form's
-> request id; at least `MIN_ADMIN_BANK_DAYS` = 2, Stripe's 48 h) puts
+> request id; at least `MIN_ADMIN_BANK_DAYS` = 2, the owner's floor — not a Stripe limit; the bank is held under 730 days, Stripe's most at once, and `reserveBank` applies oldest-first up to it, the rest staying banked) puts
 > tier-less days with no credits in the user's bank, and tells them
 > (`banked_days`); the user's first checkout applies the whole bank as its
 > free period (card required, billed when the days end unless they cancel),

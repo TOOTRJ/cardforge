@@ -338,7 +338,7 @@ export function PlanGrantsList({ rows, loadError }: { rows: PlanGrantRow[]; load
   const newestApplied = rows.find((row) => row.status === "applied")?.id ?? null;
 
   function revoke(grantId: string) {
-    if (!window.confirm("Revoke these free days? The overlay shrinks by them and a held Stripe trial moves back (it may end — and charge — now).")) return;
+    if (!window.confirm("Revoke these free days? The overlay shrinks by them and a held Stripe trial moves back (it may end — and charge — now). Applied banked days are not returned to the bank.")) return;
     startTransition(async () => {
       const result = await adminRevokeFreeDaysAction({ grantId });
       if (!result.ok) {

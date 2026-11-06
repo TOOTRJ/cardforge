@@ -90,10 +90,10 @@ describe("the bank's reads and writes", () => {
 
   it("bankDays writes once per reference (a duplicate finds the entry it made) and refuses a bad length", async () => {
     const stub = db([]);
-    expect(await bankDays(stub.client as never, { userId: USER, days: 7, source: "signup", reference: signupBankReference(USER) })).toEqual({ ok: true, entryId: "e_new", created: true });
+    expect(await bankDays(stub.client as never, { userId: USER, days: 7, source: "signup", reference: signupBankReference(USER) })).toEqual({ ok: true, entryId: "e_new", created: true, days: 7 });
     expect(payloadOf(stub.forTable("day_bank_entries")[0].calls, "insert")).toMatchObject({ user_id: USER, days: 7, source: "signup", reference: `signup:${USER}` });
     const dup = db([banked(7, { id: "e_old", reference: signupBankReference(USER) })], { insertCode: "23505" });
-    expect(await ensureSignupBankEntry(dup.client as never, USER)).toEqual({ ok: true, entryId: "e_old", created: false });
+    expect(await ensureSignupBankEntry(dup.client as never, USER)).toEqual({ ok: true, entryId: "e_old", created: false, days: 7 });
     expect(await bankDays(stub.client as never, { userId: USER, days: 0, source: "signup", reference: "x" })).toMatchObject({ ok: false });
     expect(SIGNUP_BANK_DAYS).toBe(7);
   });
@@ -132,6 +132,28 @@ describe("prepareCheckoutBank — a fresh checkout's free period", () => {
     expect(stub.forTable("day_bank_entries").some((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status: string }).status === "reserved")).toBe(false);
     const inside = db([banked(7)]);
     expect(await prepareCheckoutBank(inside.client as never, USER, { signupEligible: false, now: NOW, skipIfEndsBefore: Math.floor(NOW.getTime() / 1000) + 3 * 86_400 })).toMatchObject({ days: 7 });
+  });
+
+  it("a bank past 730 days is reserved up to the limit, OLDEST first — the entry that would pass it stays banked (check P2)", async () => {
+    const rows = [
+      banked(700, { id: "e_old", created_at: "2026-01-01T00:00:00Z" }),
+      banked(40, { id: "e_mid", created_at: "2026-06-01T00:00:00Z" }),
+      banked(20, { id: "e_new", created_at: "2026-11-01T00:00:00Z" }),
+    ];
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (table !== "day_bank_entries") return {};
+      if (called(calls, "update")) {
+        const ids = calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1] as string[] | undefined;
+        if (!ids) return { data: [] }; // the signup revoke (by reference)
+        return { data: rows.filter((r) => ids.includes(r.id)).map((r) => ({ days: r.days })) };
+      }
+      if (called(calls, "select")) return { data: rows.map((r) => ({ id: r.id, days: r.days })) };
+      return {};
+    });
+    const out = await prepareCheckoutBank(stub.client as never, USER, { signupEligible: false, now: NOW });
+    expect(out).toMatchObject({ days: 720 });
+    const reserve = stub.forTable("day_bank_entries").find((e) => called(e.calls, "update") && (payloadOf(e.calls, "update") as { status: string }).status === "reserved")!;
+    expect(reserve.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["e_old", "e_new"]);
   });
 
   it("nothing banked: null, nothing written but the signup decision", async () => {
@@ -215,7 +237,7 @@ describe("an abandoned Checkout's days (check P1-2)", () => {
 });
 
 describe("the admin's comp (owner 2026-11-06): banked days", () => {
-  it("MIN_ADMIN_BANK_DAYS is Stripe's 48 h; the reference is the form's request id", () => {
+  it("MIN_ADMIN_BANK_DAYS is the owner's floor of two; the reference is the form's request id", () => {
     expect(MIN_ADMIN_BANK_DAYS).toBe(2);
     expect(adminBankReference("req_1")).toBe("admin:req_1");
   });

@@ -202,7 +202,7 @@ export async function readBank(client: UserClient | AdminClient, userId: string)
 export async function bankDays(
   admin: AdminClient,
   input: { userId: string; days: number; source: BankSource; reference: string; note?: string | null },
-): Promise<{ ok: true; entryId: string; created: boolean } | { ok: false; error: string }> {
+): Promise<{ ok: true; entryId: string; created: boolean; days: number } | { ok: false; error: string }> {
   if (!Number.isInteger(input.days) || input.days < 1 || input.days > MAX_BANK_DAYS_APPLIED) {
     return { ok: false, error: `Days must be a whole number from 1 to ${MAX_BANK_DAYS_APPLIED}.` };
   }
@@ -211,10 +211,13 @@ export async function bankDays(
     .insert({ user_id: input.userId, days: input.days, source: input.source, reference: input.reference, note: input.note ?? null })
     .select("id")
     .maybeSingle();
-  if (!error && data) return { ok: true, entryId: (data as { id: string }).id, created: true };
+  if (!error && data) return { ok: true, entryId: (data as { id: string }).id, created: true, days: input.days };
   if (error?.code === "23505") {
-    const { data: existing } = await admin.from("day_bank_entries").select("id").eq("reference", input.reference).maybeSingle();
-    if (existing) return { ok: true, entryId: (existing as { id: string }).id, created: false };
+    const { data: existing } = await admin.from("day_bank_entries").select("id, days").eq("reference", input.reference).maybeSingle();
+    if (existing) {
+      const row = existing as { id: string; days: number };
+      return { ok: true, entryId: row.id, created: false, days: row.days };
+    }
   }
   return { ok: false, error: error?.message ?? "Couldn't bank the days." };
 }
@@ -234,19 +237,38 @@ export async function revokeSignupBankEntry(admin: AdminClient, userId: string, 
     .eq("status", "banked");
 }
 
-/** Reserve every banked day under a new batch. Returns the batch and the
- *  days it holds (0 = nothing banked; nothing reserved then). */
+/** Reserve the banked days under a new batch — oldest entries first, up to
+ *  MAX_BANK_DAYS_APPLIED (Stripe's 730-day trial limit); an entry that
+ *  would take the batch past it STAYS BANKED for a later application, never
+ *  reserved and then applied short (independent check P2). Returns the
+ *  batch and the days it holds (0 = nothing banked; nothing reserved then). */
 export async function reserveBank(
   admin: AdminClient,
   userId: string,
   now: Date = new Date(),
 ): Promise<{ ok: true; batchId: string; days: number } | { ok: false; error: string }> {
+  const { data: banked, error: readError } = await admin
+    .from("day_bank_entries")
+    .select("id, days")
+    .eq("user_id", userId)
+    .eq("status", "banked")
+    .order("created_at", { ascending: true });
+  if (readError) return { ok: false, error: readError.message };
+  const ids: string[] = [];
+  let total = 0;
+  for (const row of (banked ?? []) as Array<{ id: string; days: number }>) {
+    if (total + row.days > MAX_BANK_DAYS_APPLIED) continue;
+    ids.push(row.id);
+    total += row.days;
+  }
+  if (ids.length === 0) return { ok: true, batchId: randomUUID(), days: 0 };
   const batchId = randomUUID();
   const { data, error } = await admin
     .from("day_bank_entries")
     .update({ status: "reserved", batch_id: batchId, reserved_at: now.toISOString() })
     .eq("user_id", userId)
     .eq("status", "banked")
+    .in("id", ids)
     .select("days");
   if (error) return { ok: false, error: error.message };
   const days = ((data ?? []) as Array<{ days: number }>).reduce((n, r) => n + r.days, 0);
@@ -415,7 +437,7 @@ export async function applyBankToPlan(
   const reserved = await reserveBank(admin, input.userId, now);
   if (!reserved.ok) return { ok: false, error: reserved.error };
   if (reserved.days < 1) return { ok: false, error: "You have no banked days to apply.", code: "nothing_banked" };
-  const days = Math.min(reserved.days, MAX_BANK_DAYS_APPLIED);
+  const days = reserved.days; // ≤ MAX_BANK_DAYS_APPLIED: reserveBank leaves the rest banked
   let granted: Awaited<ReturnType<typeof grantFreeDays>>;
   try {
     granted = await grantFreeDays(
