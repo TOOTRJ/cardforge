@@ -397,7 +397,7 @@ export const COMPARISON_FAQ: FaqEntry[] = [
   {
     id: "is-pipglyph-free",
     q: "Is PipGlyph free?",
-    a: "Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). Plus and Pro add monthly credits, watermark-free hi-res downloads, print files (800 ppi, bleed, MakePlayingCards) and print-ready PDFs, and Pro adds deck-aware AI design, print sheets and whole-deck export.",
+    a: `Yes. PipGlyph's card maker is free with a free account — every card type, every frame, the live preview, saving up to ${cardCap("free")} cards, publishing to the gallery, deck building and custom pip uploads, plus 5 AI credits to get started (Free doesn't refill). While a Plus or Pro plan is active your account has the plan's full card limit — Plus holds ${cardCap("plus")} saved cards, Pro holds them all; both add monthly credits, watermark-free hi-res downloads, print files (800 ppi, bleed, MakePlayingCards) and print-ready PDFs, and Pro adds deck-aware AI design, print sheets and whole-deck export. Nothing is ever deleted: when a plan ends your cards stay — viewable, editable, downloadable — and saving a new one needs room under your current plan's cap.`,
   },
 ];
 
