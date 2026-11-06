@@ -28,7 +28,7 @@ const answer = (body: unknown) => Promise.resolve({ ok: true, json: async () => 
 describe("ReferralJoinNote", () => {
   it("with a first-touch code and the program on: says what the friend gets and what it takes", async () => {
     sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify({ ref: "ab12cd34" }));
-    fetchMock.mockReturnValue(answer({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: null }));
+    fetchMock.mockReturnValue(answer({ enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: null, ladder: null }));
     await act(async () => {
       render(<ReferralJoinNote where="signup" />);
     });
@@ -41,7 +41,7 @@ describe("ReferralJoinNote", () => {
   it("onboarding wording", async () => {
     sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify({ ref: "ab12cd34" }));
     // An older answer without the signup days falls back to 7.
-    fetchMock.mockReturnValue(answer({ enabled: true, friendGets: "14 free days", code: null }));
+    fetchMock.mockReturnValue(answer({ enabled: true, friendGets: "14 free days", code: null, ladder: null }));
     await act(async () => {
       render(<ReferralJoinNote where="onboarding" />);
     });
@@ -58,7 +58,7 @@ describe("ReferralJoinNote", () => {
   });
   it("the program off: nothing", async () => {
     sessionStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify({ ref: "ab12cd34" }));
-    fetchMock.mockReturnValue(answer({ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null }));
+    fetchMock.mockReturnValue(answer({ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null, ladder: null }));
     await act(async () => {
       render(<ReferralJoinNote where="signup" />);
     });

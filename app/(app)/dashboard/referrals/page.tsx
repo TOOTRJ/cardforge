@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LocalDate } from "@/components/ui/local-date";
 import { ReferralLinkBox } from "@/components/referrals/referral-link-box";
+import { LadderProgressBar } from "@/components/referrals/ladder-progress";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { getMyReferralDashboard } from "@/lib/referrals/queries";
 import { friendRewardPhrase, ladderRewardFor, rewardStepPhrase } from "@/lib/referrals/settings";
 import type { ReferralRow } from "@/lib/referrals/summary";
+import { ladderProgressOf } from "@/lib/referrals/ladder-progress";
 import { REFERRAL_STATUS_LABELS, type ReferralStatus } from "@/lib/referrals/rules";
 
 export const metadata: Metadata = {
@@ -123,18 +125,12 @@ export default async function ReferralsPage() {
       {settings.enabled ? (
         <section className="mt-6" aria-labelledby="referral-ladder">
           <SurfaceCard className="flex flex-col gap-4 p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="referral-ladder" className="font-display text-lg font-semibold text-foreground">
-                Your ladder
-              </h2>
-              <p className="text-sm text-muted">
-                {summary.rewardsEarned === 0
-                  ? `Your first referral earns ${firstStep}.`
-                  : summary.pastLadder
-                    ? `${summary.rewardsEarned} referrals rewarded — every further one earns ${summary.nextRewardPhrase}.`
-                    : `${summary.rewardsEarned} rewarded — next: ${summary.nextRewardPhrase}.`}
-              </p>
-            </div>
+            <h2 id="referral-ladder" className="font-display text-lg font-semibold text-foreground">
+              Your ladder
+            </h2>
+            {/* SG4: the rung against the ladder's length, and what the next
+                referral earns — the same sentence the share dialog carries. */}
+            <LadderProgressBar progress={ladderProgressOf(summary)} />
             <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Rewards by referral">
               {settings.ladder.map((step, i) => {
                 const n = i + 1;

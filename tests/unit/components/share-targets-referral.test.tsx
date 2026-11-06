@@ -15,7 +15,7 @@ import { ShareTargets } from "@/components/cards/share-targets";
 // ---------------------------------------------------------------------------
 
 const URL_ = "https://pipglyph.com/card/dev_free/hedge-witchs-familiar";
-const ON = { enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34" };
+const ON = { enabled: true, friendGets: "7 free days", cardsRequired: 5, windowDays: 30, signupDays: 7, code: "ab12cd34", ladder: null };
 
 afterEach(() => cleanup());
 
@@ -55,6 +55,23 @@ describe("ShareTargets with the viewer's referral", () => {
     expect(copy.getAttribute("title")).toMatch(/your referral code/);
   });
 
+  it("names the viewer's rung and the next reward when the answer carries a ladder (SG4) — and nothing of it without one", () => {
+    render(
+      <ShareTargets
+        open
+        onOpenChange={() => {}}
+        title="T"
+        url={URL_}
+        itemId="c1"
+        referral={{ ...ON, ladder: { rewardsEarned: 2, ladderLength: 10, nextRewardPhrase: "+7 free days", pastLadder: false } }}
+      />,
+    );
+    expect(screen.getByText(/2 of 10 referrals rewarded — next: \+7 free days\./)).toBeTruthy();
+    cleanup();
+    render(<ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={ON} />);
+    expect(screen.queryByText(/referrals rewarded/)).toBeNull();
+  });
+
   it("a visitor (no referral) shares the plain links and words of before", () => {
     render(<ShareTargets open onOpenChange={() => {}} title="Hedge Witch's Familiar" url={URL_} itemId="c1" referral={null} />);
     const h = hrefs();
@@ -71,7 +88,7 @@ describe("ShareTargets with the viewer's referral", () => {
 
   it("the program OFF (or a code-less answer) is a plain share even for a signed-in viewer", () => {
     render(
-      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null }} />,
+      <ShareTargets open onOpenChange={() => {}} title="T" url={URL_} itemId="c1" referral={{ enabled: false, friendGets: null, cardsRequired: null, windowDays: null, signupDays: null, code: null, ladder: null }} />,
     );
     expect(new URL(new URL(hrefs().X).searchParams.get("url") ?? "").searchParams.has("ref")).toBe(false);
   });
