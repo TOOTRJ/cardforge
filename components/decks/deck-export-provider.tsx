@@ -28,7 +28,9 @@ import {
   DeckExportError,
   formatBytes,
   isCardsExportRequest,
+  isKitExportRequest,
   runCardsExport,
+  runKitExport,
   runDeckExport,
   type CardsExportRequest,
   type DeckExportKind,
@@ -55,7 +57,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** What is being exported — a deck, or a selection of cards. */
-type ExportSubject = "deck" | "cards";
+type ExportSubject = "deck" | "cards" | "kit";
 
 /** A selection export may carry its cards' titles, to name skipped ones. */
 export type StartExportRequest = ExportRequest | (CardsExportRequest & { titles?: Record<string, string> });
@@ -95,7 +97,7 @@ export function useDeckExport(): DeckExportContextValue {
 /** "Deck ZIP" / "Card ZIP" / "Print PDF". */
 function fileLabel(kind: DeckExportKind, subject: ExportSubject): string {
   if (kind === "pdf") return "Print PDF";
-  return subject === "deck" ? "Deck ZIP" : "Card ZIP";
+  return subject === "deck" ? "Deck ZIP" : subject === "kit" ? "Token ZIP" : "Card ZIP";
 }
 
 /** Mid-sentence: "deck ZIP", "card ZIP", "print PDF". */
@@ -169,7 +171,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
       const controller = new AbortController();
       abortRef.current = controller;
       const id = Date.now();
-      const subject: ExportSubject = isCardsExportRequest(request) ? "cards" : "deck";
+      const subject: ExportSubject = isKitExportRequest(request) ? "kit" : isCardsExportRequest(request) ? "cards" : "deck";
       setDismissed(false);
       setState({
         id,
@@ -207,7 +209,9 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
         });
       };
 
-      const run = isCardsExportRequest(request)
+      const run = isKitExportRequest(request)
+        ? runKitExport(request, { onProgress, signal: controller.signal })
+        : isCardsExportRequest(request)
         ? runCardsExport(request, { onProgress, signal: controller.signal })
         : runDeckExport(request, { onProgress, signal: controller.signal }).then((result) => ({
             ...result,
@@ -349,7 +353,7 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
             </span>
             <span className="text-xs leading-5 text-muted">
               {state.status === "preparing" ? (
-                <>{state.subject === "deck" ? "Reading the deck…" : "Reading your selection…"}</>
+                <>{state.subject === "deck" ? "Reading the deck…" : state.subject === "kit" ? "Reading your kit…" : "Reading your selection…"}</>
               ) : state.status === "rendering" ? (
                 <>Rendering cards clean at full size. Tap for time left — safe to keep browsing.</>
               ) : state.status === "packaging" ? (

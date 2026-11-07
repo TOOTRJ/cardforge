@@ -103,7 +103,14 @@ export async function fetchWithLimits(
     signal,
     headersTimeoutMs = LIVE_DOWNLOAD_HEADERS_TIMEOUT_MS,
     stallTimeoutMs = LIVE_DOWNLOAD_STALL_TIMEOUT_MS,
-  }: { fetchImpl?: FetchLike; signal?: AbortSignal } & LiveFetchLimits = {},
+    init,
+  }: {
+    fetchImpl?: FetchLike;
+    signal?: AbortSignal;
+    /** A POST render's method, headers and body (the Token Kit's
+     *  /api/tools/token-kit/render); a GET without it, as before. */
+    init?: Pick<RequestInit, "method" | "headers" | "body">;
+  } & LiveFetchLimits = {},
 ): Promise<LiveFetchResult> {
   const controller = new AbortController();
   let expired: "TIMEOUT" | "STALLED" | null = null;
@@ -132,7 +139,7 @@ export async function fetchWithLimits(
     arm(headersTimeoutMs, "TIMEOUT");
     let response: Response;
     try {
-      response = await fetchImpl(href, { signal: controller.signal, credentials: "same-origin" });
+      response = await fetchImpl(href, { ...init, signal: controller.signal, credentials: "same-origin" });
     } catch {
       throw failure();
     }

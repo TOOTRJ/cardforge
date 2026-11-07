@@ -95,6 +95,7 @@ export const URL_SOURCES = [
   { table: "notifications", columns: ["payload"], note: "alert payloads" },
   { table: "site_updates", columns: ["summary", "body", "link_href"], note: "news posts (Markdown)" },
   { table: "card_exports", columns: ["file_url", "storage_path"], note: "card-exports history (a bare key in storage_path)" },
+  { table: "token_kits", columns: ["items"], note: "the Token Kit's per-token pictures (items.<key>.artUrl, card-art: an upload or an AI picture) — never a card's" },
 ];
 
 /** PostgREST/OpenAPI `format`s that can't hold a string. Everything else —

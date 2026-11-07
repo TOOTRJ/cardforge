@@ -22,7 +22,11 @@
 // Pure and client-safe.
 // ---------------------------------------------------------------------------
 
-export type DeckTokenKind = "token" | "emblem";
+/** A token, an emblem, or a HELPER card — the game pieces Scryfall lists
+ *  as a "combo_piece" whose every face is a "Card" or a "Dungeon": the
+ *  Monarch, the Initiative (Undercity), Day // Night, the venture
+ *  dungeons, Energy Reserve, the Poison Counter… (TODO token kit). */
+export type DeckTokenKind = "token" | "emblem" | "helper";
 
 export type DeckToken = {
   /** Stable key: the same token from two cards (or two printings of one
@@ -73,17 +77,30 @@ export type ScryfallPart = {
  *  what the cache stores per card). */
 export type TokenPart = { id: string; name: string; typeLine: string | null; kind: DeckTokenKind };
 
-/** The tokens and emblems among a card's related objects — never the card
- *  itself, a meld piece, a combo piece that is a card, or a dungeon. */
+/** True when a related object's type line is a helper card's: every face
+ *  a bare "Card" (the Monarch, Day // Night, Energy Reserve, the Poison
+ *  Counter) or a "Dungeon" (the venture dungeons, the Initiative's
+ *  Undercity) — never a real card, whose faces carry card types. */
+export function isHelperTypeLine(typeLine: string | null | undefined): boolean {
+  const faces = (typeLine ?? "").split("//").map((face) => face.trim());
+  return faces.length > 0 && faces.every((face) => /^(?:card|dungeon)\b/i.test(face) && !/^card\s*—/i.test(face));
+}
+
+/** The tokens, emblems and helper cards among a card's related objects —
+ *  never the card itself, a meld piece, or a combo piece that is a real
+ *  card. Scryfall files emblems and helper cards as "combo_piece"s (The
+ *  Monarch: "Card"; Undercity // The Initiative: "Dungeon — Undercity //
+ *  Card"), so those are read by their type line. */
 export function tokenPartsOf(card: { id: string; all_parts?: readonly ScryfallPart[] | null }): TokenPart[] {
   const out: TokenPart[] = [];
   for (const part of card.all_parts ?? []) {
     if (!part || part.id === card.id) continue;
     const typeLine = part.type_line?.trim() || null;
     const emblem = /^emblem\b/i.test(typeLine ?? "");
-    if (!emblem && part.component !== "token") continue;
+    const helper = !emblem && part.component === "combo_piece" && isHelperTypeLine(typeLine);
+    if (!emblem && !helper && part.component !== "token") continue;
     if (out.some((p) => p.id === part.id)) continue;
-    out.push({ id: part.id, name: part.name, typeLine, kind: emblem ? "emblem" : "token" });
+    out.push({ id: part.id, name: part.name, typeLine, kind: emblem ? "emblem" : helper ? "helper" : "token" });
   }
   return out;
 }
@@ -143,19 +160,108 @@ function titleCase(word: string): string {
   return word ? word[0].toUpperCase() + word.slice(1) : word;
 }
 
+/** A token or emblem one card's words make, as STRUCTURED data (the token
+ *  kit draws it; tokensFromRulesText words it for the deck page). */
+export type TextTokenSpec = {
+  kind: "token" | "emblem";
+  /** "Saproling", "Soldier Warrior", "Treasure", "<card> Emblem". */
+  name: string;
+  /** The token's card-type words, printed order ("Creature",
+   *  "Enchantment Artifact Creature", "Artifact"); null on an emblem. */
+  typeWords: string | null;
+  /** Its creature types / its predefined name, one word each. */
+  subtypes: string[];
+  /** Lower-case colour words ("green", "red", "colorless"). */
+  colors: string[];
+  power: string | null;
+  toughness: string | null;
+  /** The abilities after "with" as written ("flying", "vigilance and
+   *  haste"); an emblem's ability. */
+  abilities: string | null;
+  /** How many one sentence makes: a number word, or null for "X" /
+   *  "that many" (a variable count). */
+  count: number | null;
+  /** True when the sentence can make it again and again: a trigger
+   *  ("Whenever", "At the beginning of", landfall) or an activated
+   *  ability ("{2}, {T}: Create …"). */
+  repeats: boolean;
+};
+
+const NUMBER_WORDS: Record<string, number> = {
+  a: 1,
+  an: 1,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
+
+/** How many tokens the words before a match name ("create two 1/1 …",
+ *  "create a tapped Clue"): a number word or digits, else null (X, "that
+ *  many", "a number of"). The adjectives between the count and the token
+ *  are skipped. */
+function countBefore(clause: string, index: number): number | null {
+  const words = clause
+    .slice(0, index)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  while (words.length > 0 && /^(tapped|untapped|attacking|blocking|legendary|additional|more|and|token|tokens|another)$/.test(words[words.length - 1])) {
+    words.pop();
+  }
+  const last = words[words.length - 1] ?? "";
+  if (/^\d+$/.test(last)) return Math.max(1, Math.min(99, Number(last)));
+  return NUMBER_WORDS[last] ?? (last === "create" || last === "creates" ? 1 : null);
+}
+
+/** True when a sentence can create again: its ability is a trigger
+ *  ("Whenever", "At the beginning of", a landfall word — read on the
+ *  ability's first sentence: Smothering Tithe's Treasure is made in the
+ *  second) or an activated ability (a cost and a colon before the verb).
+ *  "When … enters" creates once. */
+function sentenceRepeats(ability: string, sentence: string, verbAt: number): boolean {
+  if (/^\s*(?:whenever|at the beginning of|landfall)\b/i.test(ability)) return true;
+  return sentence.slice(0, verbAt).includes(":");
+}
+
+/** Colour words as the rules wrote them: "green", "red and white",
+ *  "white, blue and black". */
+function colourPhrase(colors: readonly string[]): string {
+  return colors.length <= 2 ? colors.join(" and ") : `${colors.slice(0, -1).join(", ")} and ${colors[colors.length - 1]}`;
+}
+
 /**
  * The tokens and emblems a PipGlyph card's words make, in the order they
- * are named — only inside a sentence that CREATES (or, for an emblem, that
- * "gets an emblem"). `cardName` names an emblem ("<name> Emblem"). Copies
- * and wording outside the templates give nothing.
+ * are named, as structured specs — only inside a sentence that CREATES (or,
+ * for an emblem, that "gets an emblem"). `cardName` names an emblem
+ * ("<name> Emblem"). Copies and wording outside the templates give nothing.
  */
-export function tokensFromRulesText(text: string | null | undefined, cardName: string): TextToken[] {
+export function tokenSpecsFromRulesText(text: string | null | undefined, cardName: string): TextTokenSpec[] {
   if (!text?.trim()) return [];
-  const out: TextToken[] = [];
-  const add = (token: TextToken) => {
-    if (!out.some((t) => t.name === token.name && t.typeLine === token.typeLine && t.details === token.details)) {
-      out.push(token);
+  const out: TextTokenSpec[] = [];
+  const add = (spec: TextTokenSpec) => {
+    const same = out.find(
+      (t) =>
+        t.kind === spec.kind &&
+        t.name === spec.name &&
+        t.typeWords === spec.typeWords &&
+        t.power === spec.power &&
+        t.toughness === spec.toughness &&
+        t.colors.join() === spec.colors.join() &&
+        t.abilities === spec.abilities,
+    );
+    if (same) {
+      same.repeats ||= spec.repeats;
+      same.count = same.count === null || spec.count === null ? null : Math.max(same.count, spec.count);
+      return;
     }
+    out.push(spec);
   };
   // One sentence at a time (a quoted ability is its own text: an emblem's
   // words are its details, never a token of the card's).
@@ -163,30 +269,85 @@ export function tokensFromRulesText(text: string | null | undefined, cardName: s
     const emblem = /you get an emblem with "([^"]+)"/i.exec(line);
     if (emblem) {
       const name = cardName.trim() ? `${cardName.trim()} Emblem` : "Emblem";
-      add({ kind: "emblem", name, typeLine: "Emblem", details: emblem[1].trim().replace(/\.$/, "") });
+      add({
+        kind: "emblem",
+        name,
+        typeWords: null,
+        subtypes: [],
+        colors: [],
+        power: null,
+        toughness: null,
+        abilities: emblem[1].trim().replace(/\.$/, ""),
+        count: 1,
+        repeats: false,
+      });
     }
     const outsideQuotes = line.replace(/"[^"]*"/g, " ");
     for (const sentence of outsideQuotes.split(/(?<=\.)\s+/)) {
-      if (!/\bcreates?\b/i.test(sentence)) continue;
+      const verbAt = sentence.search(/\bcreates?\b/i);
+      if (verbAt < 0) continue;
       // From the verb on: "When it dies, create …" — what comes before the
       // verb is the trigger, never a token.
-      const clause = sentence.slice(sentence.search(/\bcreates?\b/i));
+      const clause = sentence.slice(verbAt);
       if (/\btokens? that'?s? (?:is )?a copy\b|\bcopy of\b/i.test(clause)) continue;
+      const repeats = sentenceRepeats(outsideQuotes, sentence, verbAt);
       for (const match of clause.matchAll(CREATURE_TOKEN)) {
         const [, power, toughness, colours, subtypes, types, abilities] = match;
-        const typeWords = types.split(" ").map(titleCase).join(" ");
-        const details = [
-          `${power}/${toughness} ${colours.toLowerCase()}`,
-          abilities?.trim() ? abilities.trim().replace(/\s+/g, " ") : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        add({ kind: "token", name: subtypes, typeLine: `Token ${typeWords} — ${subtypes}`, details });
+        add({
+          kind: "token",
+          name: subtypes,
+          typeWords: types.split(" ").map(titleCase).join(" "),
+          subtypes: subtypes.split(" "),
+          colors: colours
+            .toLowerCase()
+            .split(/, and |, | and /)
+            .map((c) => c.trim())
+            .filter(Boolean),
+          power,
+          toughness,
+          abilities: abilities?.trim() ? abilities.trim().replace(/\s+/g, " ") : null,
+          count: countBefore(clause, match.index ?? 0),
+          repeats,
+        });
       }
       for (const match of clause.matchAll(PREDEFINED_TOKEN)) {
-        add({ kind: "token", name: match[1], typeLine: `Token Artifact — ${match[1]}`, details: null });
+        add({
+          kind: "token",
+          name: match[1],
+          typeWords: "Artifact",
+          subtypes: [match[1]],
+          colors: ["colorless"],
+          power: null,
+          toughness: null,
+          abilities: null,
+          count: countBefore(clause, match.index ?? 0),
+          repeats,
+        });
       }
     }
+  }
+  return out;
+}
+
+/**
+ * The tokens and emblems a PipGlyph card's words make, in the order they
+ * are named, as the deck page words them (tokenSpecsFromRulesText).
+ */
+export function tokensFromRulesText(text: string | null | undefined, cardName: string): TextToken[] {
+  const out: TextToken[] = [];
+  for (const spec of tokenSpecsFromRulesText(text, cardName)) {
+    const token: TextToken =
+      spec.kind === "emblem"
+        ? { kind: "emblem", name: spec.name, typeLine: "Emblem", details: spec.abilities }
+        : spec.power !== null
+          ? {
+              kind: "token",
+              name: spec.name,
+              typeLine: `Token ${spec.typeWords} — ${spec.name}`,
+              details: [`${spec.power}/${spec.toughness} ${colourPhrase(spec.colors)}`, spec.abilities].filter(Boolean).join(" · "),
+            }
+          : { kind: "token", name: spec.name, typeLine: `Token Artifact — ${spec.name}`, details: null };
+    if (!out.some((t) => t.name === token.name && t.typeLine === token.typeLine && t.details === token.details)) out.push(token);
   }
   return out;
 }
@@ -246,14 +407,17 @@ export function realTokenSourceIds(items: readonly TokenSourceItem[]): string[] 
   return [...ids].sort();
 }
 
+/** The list's order: tokens, then emblems, then helper cards. */
+const KIND_ORDER: Record<DeckTokenKind, number> = { token: 0, emblem: 1, helper: 2 };
+
 function tokenKey(kind: DeckTokenKind, name: string, typeLine: string | null, details: string | null): string {
   return [kind, name, typeLine ?? "", details ?? ""].map((part) => part.toLowerCase()).join("|");
 }
 
 /**
- * The deck's tokens and emblems: every played entry's, a token made by two
- * cards (or two printings of one token) listed once with both makers —
- * tokens first, then emblems, each by name. `partsById` is the real cards'
+ * The deck's tokens, emblems and helper cards: every played entry's, a
+ * token made by two cards (or two printings of one token) listed once with
+ * both makers — tokens first, then emblems, then helper cards, each by name. `partsById` is the real cards'
  * answer (realTokenSourceIds → Scryfall); a printing missing from it makes
  * nothing.
  */
@@ -309,5 +473,5 @@ export function collectDeckTokens(
 
   return [...byKey.values()]
     .map(({ makerSet, ...token }) => ({ ...token, makers: [...makerSet].sort((a, b) => a.localeCompare(b)) }))
-    .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === "token" ? -1 : 1));
+    .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : KIND_ORDER[a.kind] - KIND_ORDER[b.kind]));
 }
