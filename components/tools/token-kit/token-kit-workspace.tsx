@@ -107,24 +107,45 @@ export function TokenKitWorkspace({
   useEffect(() => {
     latest.current = { kit, settings, states };
   }, [kit, settings, states]);
+  /** The save waiting for its moment, if any. */
+  const pendingSave = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSnapshot = useCallback(async (current: typeof latest.current) => {
+    if (!current.kit) return;
+    const result = await saveTokenKitAction({
+      sourceKey: current.kit.sourceKey,
+      deckId: current.kit.deckId,
+      title: current.kit.title,
+      sourceText: current.kit.sourceText,
+      settings: current.settings,
+      items: current.states,
+    }).catch(() => ({ ok: false as const, error: "The kit didn't save." }));
+    // Only the kit on screen reports its save (a flushed one has left).
+    if (latest.current.kit?.sourceKey === current.kit.sourceKey) setSaveStatus(result.ok ? "saved" : "error");
+  }, []);
   useEffect(() => {
     if (revision === 0 || !latest.current.kit) return;
     setSaveStatus("saving");
-    const timer = setTimeout(async () => {
-      const current = latest.current;
-      if (!current.kit) return;
-      const result = await saveTokenKitAction({
-        sourceKey: current.kit.sourceKey,
-        deckId: current.kit.deckId,
-        title: current.kit.title,
-        sourceText: current.kit.sourceText,
-        settings: current.settings,
-        items: current.states,
-      }).catch(() => ({ ok: false as const, error: "The kit didn't save." }));
-      setSaveStatus(result.ok ? "saved" : "error");
+    const timer = setTimeout(() => {
+      pendingSave.current = null;
+      void saveSnapshot(latest.current);
     }, SAVE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [revision]);
+    pendingSave.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (pendingSave.current === timer) pendingSave.current = null;
+    };
+  }, [revision, saveSnapshot]);
+
+  /** Leave the kit for the source picker — a change still waiting for its
+   *  autosave is saved now, never dropped. */
+  const leaveKit = useCallback(() => {
+    if (pendingSave.current) {
+      clearTimeout(pendingSave.current);
+      pendingSave.current = null;
+      void saveSnapshot(latest.current);
+    }
+    setKit(null);
+  }, [saveSnapshot]);
 
   const items = useMemo(() => kit?.items ?? [], [kit]);
   const frameSettings = useMemo(() => ({ design: settings.design, nyx: settings.nyx }), [settings.design, settings.nyx]);
@@ -189,6 +210,8 @@ export function TokenKitWorkspace({
   }
 
   const countsLine = kitCountsLine(summary);
+  /** A picture still being made would land on the next kit's token. */
+  const artBusy = Object.keys(art.busy).length > 0;
   const busyOf = (key: string) => (saving[key] ? ("save" as const) : (art.busy[key] ?? null));
 
   return (
@@ -203,7 +226,7 @@ export function TokenKitWorkspace({
           <SaveLine status={saveStatus} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => setKit(null)} disabled={pending}>
+          <Button type="button" variant="outline" onClick={leaveKit} disabled={pending || artBusy}>
             <ArrowLeftRight aria-hidden /> Another deck
           </Button>
           <Button type="button" onClick={() => setPrintOpen(true)} disabled={summary.included === 0}>

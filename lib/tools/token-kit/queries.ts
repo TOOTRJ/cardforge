@@ -25,6 +25,8 @@ export async function listRecentTokenKits(ownerId: string, limit = 6): Promise<R
       .from("token_kits")
       .select("id, title, deck_id, source_text, updated_at, items")
       .eq("owner_id", ownerId)
+      // A kit whose deck was deleted names no source: never a "recent" slot.
+      .or("deck_id.not.is.null,source_text.not.is.null")
       .order("updated_at", { ascending: false })
       .limit(limit);
     if (error || !data) return [];

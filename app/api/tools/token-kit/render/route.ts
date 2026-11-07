@@ -54,6 +54,10 @@ export async function POST(request: NextRequest) {
   const access = await checkToolAccess("token-kit");
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "That token is too big to render." }, { status: 413 });
+  }
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) {
     return NextResponse.json({ error: "That token is too big to render." }, { status: 413 });

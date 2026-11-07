@@ -4,6 +4,7 @@ import {
   isDungeonFace,
   kitFrameFor,
   KIT_MAX_COPIES,
+  kitItemStateSchema,
   type KitFrame,
   type KitItemState,
   type KitSettings,
@@ -128,4 +129,44 @@ export function makersLine(makers: readonly string[], shown = 2): string {
     return makers.length === 1 ? makers[0] : `${makers.slice(0, -1).join(", ")} and ${makers[makers.length - 1]}`;
   }
   return `${makers.slice(0, shown).join(", ")} and ${makers.length - shown} more`;
+}
+
+/** The most item states one saved kit keeps. */
+export const MAX_SAVED_ITEMS = 300;
+
+/** A stored kit's item states, read defensively: what no longer parses is
+ *  left out (the defaults stand in for it). */
+export function storedKitItems(raw: unknown): Record<string, KitItemState> {
+  const items: Record<string, KitItemState> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return items;
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const parsed = kitItemStateSchema.safeParse(value);
+    if (parsed.success) items[key] = parsed.data;
+  }
+  return items;
+}
+
+/**
+ * What a save writes: the incoming states (the tokens this build shows)
+ * over the stored ones, so a token the build didn't show — a Scryfall
+ * outage, a card out of the deck for a while, a reworded token — keeps its
+ * copies and picture. Past `max`, the incoming ones win and, of the stored
+ * extras, the ones holding a picture are kept first.
+ */
+export function mergeKitItems(
+  stored: Readonly<Record<string, KitItemState>>,
+  incoming: Readonly<Record<string, KitItemState>>,
+  max: number,
+): Record<string, KitItemState> {
+  const merged: Record<string, KitItemState> = { ...incoming };
+  let room = max - Object.keys(merged).length;
+  const extras = Object.entries(stored)
+    .filter(([key]) => !(key in incoming))
+    .sort(([, a], [, b]) => Number(Boolean(b.artUrl)) - Number(Boolean(a.artUrl)));
+  for (const [key, state] of extras) {
+    if (room <= 0) break;
+    merged[key] = state;
+    room -= 1;
+  }
+  return merged;
 }

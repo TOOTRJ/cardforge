@@ -8,6 +8,8 @@ import {
   kitSlug,
   kitSummary,
   makersLine,
+  mergeKitItems,
+  storedKitItems,
 } from "@/lib/tools/token-kit/workspace";
 
 // ---------------------------------------------------------------------------
@@ -83,5 +85,25 @@ describe("kitSlug / makersLine", () => {
     expect(makersLine(["A"])).toBe("A");
     expect(makersLine(["A", "B", "C"])).toBe("A, B and C");
     expect(makersLine(["A", "B", "C", "D"])).toBe("A, B and 2 more");
+  });
+});
+
+describe("storedKitItems / mergeKitItems (a save never forgets a token it wasn't shown)", () => {
+  it("reads only the states that still parse", () => {
+    expect(storedKitItems(null)).toEqual({});
+    expect(storedKitItems([on(1)])).toEqual({});
+    expect(storedKitItems({ a: on(2), b: { include: "yes" }, c: { ...on(30) } })).toEqual({ a: on(2) });
+  });
+
+  it("keeps the stored states of tokens this build didn't show; the build's win", () => {
+    const stored = { a: on(2), gone: { ...on(5), artUrl: "https://x/card-art/u/ai-1.png" } };
+    const merged = mergeKitItems(stored, { a: on(4), b: on(1) }, 300);
+    expect(merged).toEqual({ a: on(4), b: on(1), gone: stored.gone });
+  });
+
+  it("past the cap the build's states stay whole and pictures are kept first", () => {
+    const stored = { x: on(1), y: { ...on(1), artUrl: "https://x/card-art/u/up.png" }, z: on(1) };
+    const merged = mergeKitItems(stored, { a: on(1), b: on(1) }, 3);
+    expect(Object.keys(merged).sort()).toEqual(["a", "b", "y"]);
   });
 });

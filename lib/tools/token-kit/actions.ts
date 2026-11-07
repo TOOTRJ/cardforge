@@ -23,6 +23,7 @@ import {
   type KitItemState,
   type KitSettings,
 } from "@/lib/tools/token-kit/model";
+import { MAX_SAVED_ITEMS, mergeKitItems, storedKitItems } from "@/lib/tools/token-kit/workspace";
 import { buildKitFromLines, kitLinesOfDeck, kitLinesOfList, listSourceKey, type KitSourceLine } from "@/lib/tools/token-kit/server";
 
 // ---------------------------------------------------------------------------
@@ -70,14 +71,7 @@ export type BuiltKitResult =
 function savedKitOf(row: { settings: unknown; items: unknown } | null): SavedKit | null {
   if (!row) return null;
   const settings = kitSettingsSchema.safeParse({ ...DEFAULT_KIT_SETTINGS, ...(row.settings as object) });
-  const items: Record<string, KitItemState> = {};
-  if (row.items && typeof row.items === "object" && !Array.isArray(row.items)) {
-    for (const [key, value] of Object.entries(row.items as Record<string, unknown>)) {
-      const parsed = kitItemStateSchema.safeParse(value);
-      if (parsed.success) items[key] = parsed.data;
-    }
-  }
-  return { settings: settings.success ? settings.data : DEFAULT_KIT_SETTINGS, items };
+  return { settings: settings.success ? settings.data : DEFAULT_KIT_SETTINGS, items: storedKitItems(row.items) };
 }
 
 /** Build (or reopen) a kit from one of the viewer's decks or a pasted list. */
@@ -189,7 +183,7 @@ export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult>
     return { ok: false, error: "That kit couldn't be saved." };
   }
   const kit = parsed.data;
-  if (Object.keys(kit.items).length > 300) return { ok: false, error: "That kit has too many tokens to save." };
+  if (Object.keys(kit.items).length > MAX_SAVED_ITEMS) return { ok: false, error: "That kit has too many tokens to save." };
 
   let sourceKey: string;
   let deckId: string | null = null;
@@ -215,6 +209,21 @@ export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult>
   }
 
   const supabase = await createClient();
+  // A save names only the tokens the CURRENT build holds. Keep the stored
+  // choices of every other one (a Scryfall outage that left the real cards'
+  // tokens out, a card out of the deck for a while, a reworded token): a
+  // save never forgets copies or a picture it wasn't shown.
+  const { data: stored, error: readError } = await supabase
+    .from("token_kits")
+    .select("items")
+    .eq("owner_id", access.userId)
+    .eq("source_key", sourceKey)
+    .maybeSingle();
+  if (readError) {
+    console.error("[token-kit] save read failed:", readError.message);
+    return { ok: false, error: "The kit didn't save. Try again in a moment." };
+  }
+  const merged = mergeKitItems(storedKitItems(stored?.items), items, MAX_SAVED_ITEMS);
   const { error } = await supabase.from("token_kits").upsert(
     {
       owner_id: access.userId,
@@ -223,7 +232,7 @@ export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult>
       title: kit.title,
       source_text: sourceText,
       settings: kit.settings,
-      items,
+      items: merged,
     },
     { onConflict: "owner_id,source_key" },
   );
