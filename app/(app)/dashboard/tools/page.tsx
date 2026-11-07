@@ -18,6 +18,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { ToolCard } from "@/components/tools/tool-card";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { getViewerTools } from "@/lib/tools/queries";
+import { CUSTOM_PIPS_HREF } from "@/lib/pips/href";
 
 // ---------------------------------------------------------------------------
 // /dashboard/tools — the signed-in Tools hub (owner request 2026-11-06):
@@ -53,8 +54,8 @@ const CORE_TOOLS: readonly CoreTool[] = [
   {
     name: "Custom pips",
     summary: "Swap the six standard mana symbols for your own art.",
-    href: "/settings",
-    cta: "Manage in Settings",
+    href: CUSTOM_PIPS_HREF,
+    cta: "Manage pips",
     icon: Shapes,
   },
   {

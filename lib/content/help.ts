@@ -147,7 +147,7 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         },
         {
           title: "Upload them",
-          body: "In Settings, open Custom pips and upload an image for a symbol — or choose “Customize pips” beside the Cost field in the creator. Both open the same list.",
+          body: "In Tools, open Custom pips and upload an image for a symbol — or choose “Customize pips” beside the Cost field in the creator. Both open the same list.",
         },
         {
           title: "See them everywhere",
