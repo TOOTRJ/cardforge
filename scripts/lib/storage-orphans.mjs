@@ -96,6 +96,7 @@ export const URL_SOURCES = [
   { table: "site_updates", columns: ["summary", "body", "link_href"], note: "news posts (Markdown)" },
   { table: "card_exports", columns: ["file_url", "storage_path"], note: "card-exports history (a bare key in storage_path)" },
   { table: "token_kits", columns: ["items"], note: "the Token Kit's per-token pictures (items.<key>.artUrl, card-art: an upload or an AI picture) — never a card's" },
+  { table: "set_symbols", columns: ["files"], note: "Set Symbol Studio's current version of each symbol (set-covers sym-<v>-*.png + source, card-art wm-sym-<v>.png); a card's set_icon_url / watermark keeps an older version" },
 ];
 
 /** PostgREST/OpenAPI `format`s that can't hold a string. Everything else —
@@ -279,6 +280,27 @@ export class KeyIndex {
   }
 }
 
+/** A Set Symbol Studio rarity file (`sym-<v>-<rarity>.png`) is never named
+ *  by a card that follows its rarity: the card stores `sym-<v>-auto.png` and
+ *  the renderers draw the rarity's file in its place
+ *  (lib/tools/set-symbol/naming.ts `setIconForRarity`). Such a file is kept
+ *  while its `-auto` sibling is referenced: this is that sibling's path, or
+ *  null for every other object. */
+const SYMBOL_RARITY_FILE = /^([0-9a-f-]{36})\/(sym-[0-9a-f-]{36})-(?:common|uncommon|rare|mythic)\.png$/i;
+export function rarityFollowSiblingPath(objectPath) {
+  const m = SYMBOL_RARITY_FILE.exec(String(objectPath ?? ""));
+  return m ? `${m[1]}/${m[2]}-auto.png` : null;
+}
+
+/** Whether a row references `objectPath`, itself or (a symbol's rarity
+ *  file) through its `-auto` sibling. */
+export function isReferencedPath(objectPath, referenced) {
+  const key = referenceKey(objectPath);
+  if (key && referenced.has(key)) return true;
+  const sibling = rarityFollowSiblingPath(objectPath);
+  return Boolean(sibling && referenced.has(referenceKey(sibling)));
+}
+
 /** The lookup key of an object path (matches what KeyIndex.mark records). */
 export function referenceKey(objectPath) {
   const key = userFolderKey(objectPath);
@@ -440,7 +462,7 @@ export function classify(objects, { referenced, cardIds, now, minAgeDays }) {
       if (!SWEEP_BUCKETS.includes(obj.bucket)) return "notSwept";
       const key = referenceKey(obj.path);
       if (!key || !obj.etag) return "outside";
-      if (referenced.has(key)) return "referenced";
+      if (isReferencedPath(obj.path, referenced)) return "referenced";
       if (obj.bucket === "card-renders") {
         const cardId = renderCardId(obj.path);
         if (!cardId) return "unknownRender";
@@ -807,9 +829,10 @@ export async function applySweep({
       if (!batch.length) continue;
 
       // 2. The database, again, for exactly these keys.
-      const fresh = await scanReferences(db, new KeyIndex(batch.map((o) => o.path)), { log });
+      const lookFor = batch.flatMap((o) => [o.path, rarityFollowSiblingPath(o.path)].filter(Boolean));
+      const fresh = await scanReferences(db, new KeyIndex(lookFor), { log });
       const unreferenced = batch.filter((obj) => {
-        if (fresh.referenced.has(referenceKey(obj.path))) {
+        if (isReferencedPath(obj.path, fresh.referenced)) {
           skip(bucket, obj, "a row references it now");
           return false;
         }

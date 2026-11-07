@@ -481,6 +481,10 @@ type CardCreatorFormProps = {
    *  into the Tags field — including into a restored draft — so a "Start
    *  designing" CTA always produces an entry that counts. Create mode only. */
   initialTag?: string | null;
+  /** A Set Symbol Studio symbol a NEW card starts with ("Use on a card" in
+   *  the studio, /create?setSymbol=): its rarity-following set icon, or its
+   *  watermark. */
+  initialSetSymbol?: { setIconUrl: string | null; watermarkUrl: string | null } | null;
   /** The currently running challenge, if any — powers the Publish panel's
    *  "Enter the challenge" toggle (server-fetched). */
   activeChallenge?: Challenge | null;
@@ -808,6 +812,7 @@ export function CardCreatorForm({
   aiConfigured,
   pipOverrides = {},
   initialTag = null,
+  initialSetSymbol = null,
   capacity = null,
   activeChallenge = null,
   defaultArtistCredit = "",
@@ -1056,8 +1061,18 @@ export function CardCreatorForm({
     if (defaultArtistCredit && !card && !base.artist_credit) {
       base.artist_credit = defaultArtistCredit;
     }
+    // A studio symbol, on a new card only (an edit keeps the card's own).
+    if (initialSetSymbol && !card) {
+      if (initialSetSymbol.setIconUrl) {
+        base.set_icon_url = initialSetSymbol.setIconUrl;
+        base.set_icon_code = "";
+      }
+      if (initialSetSymbol.watermarkUrl) {
+        base.watermark = { kind: "custom", key: "", url: initialSetSymbol.watermarkUrl, size: "normal", opacity: null };
+      }
+    }
     return base;
-  }, [mode, card, gameSystems, initialTag, defaultArtistCredit, isPaid, defaultFooterText]);
+  }, [mode, card, gameSystems, initialTag, defaultArtistCredit, isPaid, defaultFooterText, initialSetSymbol]);
 
   // The full methods object is spread into <FormProvider> below so the step
   // components can reach the same form instance via useFormContext().

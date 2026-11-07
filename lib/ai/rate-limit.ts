@@ -49,7 +49,8 @@ export type AiActionLabel =
   | "generate_card_ideas"
   | "generate_deck_ideas"
   | "analyze_deck"
-  | "build_collection_deck";
+  | "build_collection_deck"
+  | "generate_set_icon";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -241,6 +242,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit: the AI picks a Commander deck from the user's collection
    *  (the Collection Deck Builder beta tool). */
   build_collection_deck: 1,
+  /** One credit: one set symbol drawn by FLUX (the Set Symbol Studio beta
+   *  tool) — its rarity looks and watermark are painted from it for free. */
+  generate_set_icon: 1,
 };
 
 export type CreditSpendResult =

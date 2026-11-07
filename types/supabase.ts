@@ -596,6 +596,53 @@ export type Database = {
         Relationships: [];
       };
       // Migration 0177 — referrals.
+      // Migration 0187 — the Set Symbol Studio beta tool's symbols.
+      set_symbols: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          source: "ai" | "upload";
+          prompt: string | null;
+          style: "bold" | "geometric" | "ornate" | "runic" | null;
+          cutout: Json;
+          /** The version every file in `files` belongs to. */
+          version: string;
+          files: Json;
+          legibility: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          source: "ai" | "upload";
+          prompt?: string | null;
+          style?: "bold" | "geometric" | "ornate" | "runic" | null;
+          cutout?: Json;
+          version: string;
+          files: Json;
+          legibility?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          source?: "ai" | "upload";
+          prompt?: string | null;
+          style?: "bold" | "geometric" | "ornate" | "runic" | null;
+          cutout?: Json;
+          version?: string;
+          files?: Json;
+          legibility?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       // Migration 0184 — the Token Kit beta tool's saved kits.
       token_kits: {
         Row: {

@@ -210,6 +210,8 @@ const NOT_COUNTED: Record<string, string> = {
   "lib/media/user-storage.ts": "the door itself",
   "lib/cards/bake-core.ts": "our own renders (card-renders): the save bake and the admin sweep",
   "lib/ai/random-art.ts": "AI art: paid for in credits and capped by lib/ai/rate-limit.ts",
+  "lib/tools/set-symbol/server.ts":
+    "Set Symbol Studio's store: its upload and re-cut actions count first (lib/tools/set-symbol/actions.ts); its AI route is paid in credits and capped by lib/ai/rate-limit.ts",
 };
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -241,6 +243,7 @@ describe("every user-folder writer counts the upload", () => {
       "lib/media/user-storage.ts",
       "lib/pips/actions.ts",
       "lib/profile/upload-server.ts",
+      "lib/tools/set-symbol/server.ts",
     ]);
   });
 
