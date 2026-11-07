@@ -44,6 +44,11 @@ export const SCRYFALL_LIMITS = {
   // view is never refused; the numbers are what the usage panels compare it
   // with.
   deck_tokens: { perMinute: 30, perDay: 500 },
+  // One row per collection-import CHUNK the server resolves (the Collection
+  // Deck Builder beta tool, migration 0185): ≤ 300 lines, a handful of
+  // /cards/collection calls. A 25,000-card collection is ~84 chunks, a few
+  // seconds each, so a whole import fits a day several times over.
+  collection_import: { perMinute: 40, perDay: 400 },
 } as const;
 
 const LIMITS = SCRYFALL_LIMITS;

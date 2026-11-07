@@ -240,10 +240,13 @@ describe("scryfall_calls: the deck page's tokens lookup is logged", () => {
   it("no migration between 0143 and this one redefined it", () => {
     for (const f of readdirSync(dir).filter((name) => /^\d{4}_/.test(name))) {
       const n = Number(f.slice(0, 4));
-      if (n > 143 && f !== FILE) expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("scryfall_calls_action_check");
+      // 0185 (the collection import) adds a label after this one, held by
+      // its own test.
+      if (n > 143 && n < 185 && f !== FILE) expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("scryfall_calls_action_check");
     }
   });
-  it("names exactly the app's actions (lib/scryfall/rate-limit.ts)", () => {
-    expect(actions(SQL).sort()).toEqual(Object.keys(SCRYFALL_LIMITS).sort());
+  it("names exactly the app's actions (lib/scryfall/rate-limit.ts) but those added later", () => {
+    const later = new Set(["collection_import"]);
+    expect(actions(SQL).sort()).toEqual(Object.keys(SCRYFALL_LIMITS).filter((a) => !later.has(a)).sort());
   });
 });

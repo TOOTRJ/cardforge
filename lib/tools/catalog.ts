@@ -56,7 +56,7 @@ export const TOOL_CATALOG = [
       "An AI-built Commander deck from cards you own",
     ],
     icon: "collection",
-    built: false,
+    built: true,
   },
   {
     slug: "token-kit",

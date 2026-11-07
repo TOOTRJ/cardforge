@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Layers, Loader2, Plus } from "lucide-react";
+import { Check, Layers, LibraryBig, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,14 +19,22 @@ import { addToDeckAction } from "@/lib/decks/add-actions";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import type { PickerDeck } from "@/lib/decks/membership-state";
 import { EXACT_COPY_SAVE_REASON } from "@/lib/cards/exact-copy";
+import {
+  addToCollectionAction,
+  getCollectionPrintingStateAction,
+  type PrintingState,
+} from "@/lib/tools/collection/actions";
 
 // ---------------------------------------------------------------------------
 // The creator's word while an import is untouched (lib/cards/exact-copy.ts):
 // an exact copy of a real card is never saved as a PipGlyph card, so in
 // place of Save's plain reason it says so and offers what the maker can do
 // with the real card — put it in one of their decks, as the printing itself
-// (a deck's printing entry uses no card slot). "Add to my collection" joins
-// it when the collection ships (the Collection Deck Builder).
+// (a deck's printing entry uses no card slot), or, where the Collection Deck
+// Builder beta tool is open to them, add the printing to their collection
+// (migration 0185; a collection never uses card slots either). The tool's
+// button shows only once the server says the tool is open: a closed tool is
+// no button at all, never a refused click.
 // ---------------------------------------------------------------------------
 
 export function ExactCopyNotice({ realCardName, scryfallId }: { realCardName: string; scryfallId: string }) {
@@ -39,10 +47,13 @@ export function ExactCopyNotice({ realCardName, scryfallId }: { realCardName: st
       <p role="status" className="text-xs leading-5 text-gold">
         {EXACT_COPY_SAVE_REASON}
       </p>
-      <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setOpen(true)}>
-        <Layers className="h-4 w-4" aria-hidden />
-        Add the real card to a deck
-      </Button>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setOpen(true)}>
+          <Layers className="h-4 w-4" aria-hidden />
+          Add the real card to a deck
+        </Button>
+        <AddToCollectionButton realCardName={realCardName} scryfallId={scryfallId} />
+      </div>
       <AddPrintingToDeckDialog
         open={open}
         onOpenChange={setOpen}
@@ -50,6 +61,55 @@ export function ExactCopyNotice({ realCardName, scryfallId }: { realCardName: st
         scryfallId={scryfallId}
       />
     </div>
+  );
+}
+
+/** "Add to my collection" — one copy of this printing per press, the owned
+ *  count beside it. Nothing at all unless the tool is open to the viewer. */
+function AddToCollectionButton({ realCardName, scryfallId }: { realCardName: string; scryfallId: string }) {
+  // The answer is kept with the printing it is for: another printing shows
+  // nothing until its own answer lands.
+  const [answer, setAnswer] = useState<{ id: string; state: PrintingState } | null>(null);
+  const [adding, setAdding] = useState(false);
+  const seq = useRef(0);
+
+  useEffect(() => {
+    const run = ++seq.current;
+    getCollectionPrintingStateAction(scryfallId)
+      .then((next) => {
+        if (run === seq.current) setAnswer({ id: scryfallId, state: next });
+      })
+      .catch(() => {
+        // The tool's door stays shut: the deck button is still there.
+      });
+  }, [scryfallId]);
+
+  const state = answer?.id === scryfallId ? answer.state : null;
+  if (!state?.open) return null;
+
+  async function add() {
+    setAdding(true);
+    try {
+      const result = await addToCollectionAction({ scryfallId, quantity: 1, finish: "nonfoil", surface: "creator" });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setAnswer({ id: scryfallId, state: { open: true, owned: result.owned } });
+      toast.success(`Added ${realCardName} to your collection — you own ${result.owned.toLocaleString("en-US")}.`);
+    } catch {
+      toast.error("That card couldn't be added. Try again.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void add()} disabled={adding}>
+      {adding ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <LibraryBig className="h-4 w-4" aria-hidden />}
+      Add to my collection
+      {state.owned > 0 ? <span className="text-muted">(you own {state.owned.toLocaleString("en-US")})</span> : null}
+    </Button>
   );
 }
 

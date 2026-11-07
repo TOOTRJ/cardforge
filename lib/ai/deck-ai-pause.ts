@@ -14,6 +14,11 @@
 //     (owner D4);
 //   * the creator's deck-aware card AI — the `card` / `card_fill` kinds with
 //     a `deck_id`, "Theme the ideas to a deck" — is create-card AI (owner D5).
+//   * a BETA TOOL's AI (owner 2026-11-06: every beta tool runs its AI where
+//     it uses AI, under the credit rules) — the Collection Deck Builder's
+//     "Build with AI" (POST /api/tools/collection-builder/ai-build, label
+//     `build_collection_deck`) picks a Commander deck from the user's own
+//     collection, gated by has_tool_access and an admin's release.
 //
 // Turning the SERVER back on is this one constant. The deck pages show the
 // same words on greyed "Coming soon" controls
