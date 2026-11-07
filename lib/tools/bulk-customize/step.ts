@@ -2,9 +2,10 @@ import "server-only";
 
 import { z } from "zod";
 import { getCardById } from "@/lib/scryfall/client";
-import { checkScryfallRateLimit } from "@/lib/scryfall/rate-limit";
+import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
 import { storeScryfallArt } from "@/lib/scryfall/import-art";
 import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
+import { userFolder } from "@/lib/media/user-storage";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -90,8 +91,14 @@ const IMPORT_ART_WAIT_FALLBACK_S = 20;
 const ONE_PICTURE_BUDGET_MS = 130_000;
 const TWO_PICTURES_BUDGET_MS = 70_000;
 
+// Every result names `error_code`, `note` and `retry_after_seconds` (null
+// when unset): a step copies its last attempt, and a code from an earlier
+// try (a RATE_LIMITED wait, a CARD_CAPACITY stop) must not ride on the next
+// outcome; patchJobStep writes these keys only for a step that names them.
+const CLEARED = { error_code: null, note: null, retry_after_seconds: null } as const;
+
 function failed(step: JobStep, error: string, extra: Partial<JobStep> = {}): JobStep {
-  return { ...step, status: "failed", error, ...extra };
+  return { ...step, ...CLEARED, status: "failed", error, ...extra };
 }
 
 function createFailure(result: Extract<CreateCardResult, { ok: false }>): Partial<JobStep> & { error: string } {
@@ -154,10 +161,26 @@ export async function runBulkCustomizeStep(
   // A retry after the card saved: only its link is left.
   if (step.card_id) {
     const note = await recordCustomized(userId, source, step.card_id);
-    return { ...step, status: "done", error: undefined, note: note ?? null };
+    return { ...step, ...CLEARED, status: "done", error: undefined, note: note ?? null };
   }
   if (!source) return failed(step, "This card is no longer in your deck or collection.");
 
+  // A spent MINUTE puts the step back in line (the runner waits); a spent
+  // DAY fails it — waiting would never end.
+  const wait = (seconds: number | undefined): JobStep => ({
+    ...step,
+    ...CLEARED,
+    status: "pending",
+    error: undefined,
+    error_code: "RATE_LIMITED",
+    retry_after_seconds: Math.max(1, Math.min(120, Math.round(seconds || IMPORT_ART_WAIT_FALLBACK_S))),
+  });
+
+  // The printing is read from Scryfall on the caller's own quota (the plan
+  // is the owner's to insert: its steps are never free calls).
+  const lookup = await checkScryfallRateLimit(userId, "named");
+  if (!lookup.ok) return lookup.reason === "per_day" ? failed(step, lookup.message) : wait(lookup.retryAfterSeconds);
+  await logScryfallCall(userId, "named");
   const card = await getCardById(source.scryfallId);
   if (!card) return failed(step, "Scryfall didn't answer for this card — try it again.");
 
@@ -214,6 +237,7 @@ export async function runBulkCustomizeStep(
     const note = await recordCustomized(userId, source, result.cardId);
     return {
       ...step,
+      ...CLEARED,
       ...extra,
       status: "done",
       card_id: result.cardId,
@@ -227,20 +251,20 @@ export async function runBulkCustomizeStep(
 
   // ---- Each printing's own art ----
   if (plan.choices.art === "keep") {
+    // Scryfall's art quota first: an upload is counted only when the
+    // import can go ahead.
     const quota = await checkScryfallRateLimit(userId, "import_art");
-    const uploads = await checkUploadRateLimit(userId);
-    const wait = !quota.ok ? quota : !uploads.ok ? uploads : null;
-    if (wait) {
-      // Not a failure: the step goes back in line and the runner waits.
-      const seconds = "retryAfterSeconds" in wait ? wait.retryAfterSeconds : IMPORT_ART_WAIT_FALLBACK_S;
-      if (!quota.ok && quota.reason === "per_day") return failed(step, quota.message);
-      return {
-        ...step,
-        status: "pending",
-        error: undefined,
-        error_code: "RATE_LIMITED",
-        retry_after_seconds: Math.max(1, Math.min(120, Math.round(seconds || IMPORT_ART_WAIT_FALLBACK_S))),
-      };
+    if (!quota.ok) {
+      if (quota.reason === "per_day") return failed(step, quota.message);
+      return wait(quota.retryAfterSeconds);
+    }
+    // One upload counted per picture the card stores (a double-faced card
+    // stores two).
+    for (let i = 0; i < (planned.doubleFaced ? 2 : 1); i += 1) {
+      const uploads = await checkUploadRateLimit(userId);
+      if (uploads.ok) continue;
+      if (uploads.window === "minute") return wait(uploads.retryAfterSeconds);
+      return failed(step, uploads.message);
     }
     const front = await storeScryfallArt(userId, card, "art");
     let back: Awaited<ReturnType<typeof storeScryfallArt>> | null = null;
@@ -251,7 +275,12 @@ export async function runBulkCustomizeStep(
       back: back?.ok ? back.publicUrl : undefined,
       backArtist: back?.ok ? (back.artist ?? undefined) : undefined,
     });
-    if (!result.ok) return failed(step, createFailure(result).error, createFailure(result));
+    if (!result.ok) {
+      // The stored pictures are unused: removed (best effort).
+      const names = [front, back].flatMap((art) => (art?.ok ? [art.fileName] : []));
+      if (names.length > 0) await userFolder("card-art", userId).remove(names).catch(() => undefined);
+      return failed(step, createFailure(result).error, createFailure(result));
+    }
     return done(result, front.ok ? {} : { note: "Saved without its art (Scryfall had none to give) — add your own." });
   }
 

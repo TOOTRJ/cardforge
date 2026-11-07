@@ -120,7 +120,6 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
   const upgrade = useUpgradeModal();
   const upgradeSurface = `bulk_customize_${surface}`;
   const runner = useBulkRunner(job);
-  const finishedRef = useRef(false);
   const sourcesKey = sources.map((s) => `${s.kind}:${s.id}`).join(",");
 
   // Read the selection each time the dialog opens on a new selection (the
@@ -133,12 +132,24 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
     setLoadError(null);
     setPrepared(null);
   }
+  // One request per selection read: StrictMode runs the effect twice in
+  // dev, and each read spends the maker's Scryfall quota.
+  const preparing = useRef<{ key: string; request: ReturnType<typeof prepareBulkCustomizeAction> } | null>(null);
   useEffect(() => {
     // Only a reset selection is read (a reopen keeps what it has: no second
     // Scryfall run for the same cards).
     if (!open || job || loadedKey === null || phase !== "loading") return;
     let cancelled = false;
-    void prepareBulkCustomizeAction(sources).then((result) => {
+    if (preparing.current?.key !== loadedKey) {
+      const request = prepareBulkCustomizeAction(sources);
+      preparing.current = { key: loadedKey, request };
+      // A finished read is dropped, so a reset of the same selection (a
+      // failed read retried) asks again.
+      void request.finally(() => {
+        if (preparing.current?.request === request) preparing.current = null;
+      });
+    }
+    void preparing.current!.request.then((result) => {
       if (cancelled) return;
       if (!result.ok) {
         setLoadError(result.error);
@@ -208,7 +219,6 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
         return;
       }
       setServerSkipped(result.skipped);
-      finishedRef.current = false;
       setJob(result.job);
       setPhase("running");
     });
@@ -225,20 +235,23 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
   const failedCount = runner.steps.filter((s) => s.status === "failed").length;
   const total = runner.steps.length;
   const settled = job !== null && !runner.running && doneCount + failedCount === total;
+  // A run that ended with cards still to make (a stop, a limit, a door
+  // error): nothing runs, the dialog offers to continue.
+  const paused = job !== null && !runner.running && runner.paused && !settled;
 
+  // Every run that ends refreshes the page behind (the cards made so far);
+  // the opener's own "finished" waits for the dialog to close.
   useEffect(() => {
-    if (settled && !finishedRef.current) {
-      finishedRef.current = true;
-      onFinished?.();
-    }
-  }, [settled, onFinished]);
+    if (runner.runsEnded > 0) onFinished?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner.runsEnded]);
 
   const close = (next: boolean) => {
     if (!next && running) return; // the leave warning's job; the X waits
     onOpenChange(next);
     // A selection that couldn't be read is read again on the next open.
     if (!next && phase === "failed") setLoadedKey(null);
-    if (!next && settled) {
+    if (!next && (settled || paused)) {
       // A finished batch is gone; the next open starts fresh.
       setJob(null);
       setPrepared(null);
@@ -252,11 +265,11 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
       <DialogContent size="xl" className="max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {job ? (settled ? "Your cards are ready" : "Making your cards") : `Customize ${sources.length} card${sources.length === 1 ? "" : "s"}`}
+            {job ? (settled ? "Your cards are ready" : paused ? "The batch is paused" : "Making your cards") : `Customize ${sources.length} card${sources.length === 1 ? "" : "s"}`}
           </DialogTitle>
           <DialogDescription>
             {job
-              ? settled
+              ? settled || paused
                 ? "Each card is saved as your own. Close this to get back to your cards."
                 : "Each card is saved as your own as it is made. Keep this open until it's done."
               : "One look and one art choice for every card. Nothing is made until you press Create."}
@@ -279,6 +292,7 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
             doneCount={doneCount}
             failedCount={failedCount}
             settled={settled}
+            paused={paused}
             skipped={serverSkipped}
           />
         ) : prepared ? (
@@ -531,6 +545,7 @@ function BulkProgress({
   doneCount,
   failedCount,
   settled,
+  paused,
   skipped,
 }: {
   runner: ReturnType<typeof useBulkRunner>;
@@ -538,6 +553,7 @@ function BulkProgress({
   doneCount: number;
   failedCount: number;
   settled: boolean;
+  paused: boolean;
   skipped: Array<{ name: string; reason: string }>;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -553,8 +569,8 @@ function BulkProgress({
       <div>
         <div className="flex items-center justify-between text-sm">
           <span role="status" className="text-foreground">
-            {settled
-              ? `${doneCount} of ${total} made${failedCount ? ` · ${failedCount} didn't` : ""}`
+            {settled || paused
+              ? `${doneCount} of ${total} made${failedCount ? ` · ${failedCount} didn't` : ""}${paused ? " · paused" : ""}`
               : `Making ${doneCount + failedCount + 1 > total ? total : doneCount + failedCount + 1} of ${total}…`}
           </span>
           {waitSeconds > 0 ? (
@@ -621,9 +637,20 @@ function BulkProgress({
         ))}
       </ul>
 
-      {settled ? (
+      {runner.running ? (
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={runner.stop}>
+            Stop after the cards being made
+          </Button>
+        </div>
+      ) : settled || paused ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {failedCount > 0 && !runner.stoppedBy ? (
+          {paused ? (
+            <Button variant="outline" onClick={runner.retryFailed}>
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Continue the batch
+            </Button>
+          ) : failedCount > 0 ? (
             <Button variant="outline" onClick={runner.retryFailed}>
               <RotateCcw className="h-4 w-4" aria-hidden />
               Try the failed ones again

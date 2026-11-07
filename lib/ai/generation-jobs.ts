@@ -3187,6 +3187,11 @@ async function patchJobStep(
     // A card saved private for its text (owner policy 2026-10-28): only
     // a step that says so names the key, so every other patch is as before.
     ...(step.forced_private ? { forced_private: step.forced_private } : {}),
+    // Bulk Customize: a done card's note and a waiting step's retry time.
+    // Only a step that NAMES the key writes it (its results always do, null
+    // to clear), so every other kind's patch is as before.
+    ...(step.note !== undefined ? { note: step.note } : {}),
+    ...(step.retry_after_seconds !== undefined ? { retry_after_seconds: step.retry_after_seconds } : {}),
   };
   // The work (credit spend, card insert, image) is already committed by the
   // time we get here — losing this write means a stale reclaim would re-run

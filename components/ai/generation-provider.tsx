@@ -770,7 +770,8 @@ export function GenerationJobProvider({
         // A fill job's result belongs to the creator form that started it —
         // there is nothing to resume without that form (the GET already
         // filters these out; belt and braces).
-        if (pending.kind === "card_fill") return;
+        // Nor does a Bulk Customize batch (its dialog runs it).
+        if ((pending.kind as string) === "card_fill" || (pending.kind as string) === "bulk_customize") return;
         if (
           pending.status !== "generating" ||
           !pending.steps.some(

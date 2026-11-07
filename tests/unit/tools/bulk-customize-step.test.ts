@@ -24,6 +24,7 @@ const m = vi.hoisted(() => ({
   link: vi.fn(),
   credited: vi.fn(),
   plan: vi.fn(),
+  remove: vi.fn(),
 }));
 
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
@@ -34,9 +35,10 @@ vi.mock("@/lib/tools/bulk-customize/server", () => ({
 }));
 vi.mock("@/lib/tools/bulk-customize/planner", () => ({ planCustomizedCard: m.plan }));
 vi.mock("@/lib/scryfall/client", () => ({ getCardById: m.getCard }));
-vi.mock("@/lib/scryfall/rate-limit", () => ({ checkScryfallRateLimit: m.scryfallRate }));
+vi.mock("@/lib/scryfall/rate-limit", () => ({ checkScryfallRateLimit: m.scryfallRate, logScryfallCall: vi.fn() }));
 vi.mock("@/lib/scryfall/import-art", () => ({ storeScryfallArt: m.storeArt }));
 vi.mock("@/lib/media/upload-rate-limit", () => ({ checkUploadRateLimit: m.uploadRate }));
+vi.mock("@/lib/media/user-storage", () => ({ userFolder: () => ({ remove: m.remove }) }));
 vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => [] }));
 vi.mock("@/lib/billing/entitlements", () => ({ getEntitlements: async () => ({ removeWatermark: true }) }));
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: m.capacity }));
@@ -104,7 +106,8 @@ beforeEach(() => {
   m.capacity.mockResolvedValue({ used: 3, cap: 50, tier: "free" });
   m.scryfallRate.mockResolvedValue({ ok: true });
   m.uploadRate.mockResolvedValue({ ok: true });
-  m.storeArt.mockResolvedValue({ ok: true, publicUrl: "https://x.supabase.co/storage/v1/object/public/card-art/u1/a.jpg", artist: "Kev Walker", warning: null });
+  m.storeArt.mockResolvedValue({ ok: true, publicUrl: "https://x.supabase.co/storage/v1/object/public/card-art/u1/a.jpg", fileName: "a.jpg", artist: "Kev Walker", warning: null });
+  m.remove.mockResolvedValue({ error: null });
   m.create.mockResolvedValue({ ok: true, cardId: "card-1" });
   m.link.mockResolvedValue({ ok: true });
   m.credited.mockImplementation(async (_u, _j, _amount, _reason, _step, body: () => Promise<JobStep>) => body());
@@ -214,6 +217,66 @@ describe("limits", () => {
     m.scryfallRate.mockResolvedValue({ ok: false, reason: "per_day", message: "Come back tomorrow.", retryAfterSeconds: 3600 });
     const result = await run(planOf({ art: "keep" }));
     expect(result.status).toBe("failed");
+    expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it("a spent Scryfall quota counts no upload", async () => {
+    m.scryfallRate.mockResolvedValue({ ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 37 });
+    await run(planOf({ art: "keep" }));
+    expect(m.uploadRate).not.toHaveBeenCalled();
+  });
+
+  it("a full upload DAY fails the step — a wait would never end", async () => {
+    m.uploadRate.mockResolvedValue({ ok: false, window: "day", message: "Daily upload limit.", retryAfterSeconds: 3600 });
+    const result = await run(planOf({ art: "keep" }));
+    expect(result.status).toBe("failed");
+    expect(result.error_code).toBeNull();
+    expect(m.storeArt).not.toHaveBeenCalled();
+  });
+
+  it("a full upload MINUTE puts the step back in line", async () => {
+    m.uploadRate.mockResolvedValue({ ok: false, window: "minute", message: "Slow down.", retryAfterSeconds: 12 });
+    const result = await run(planOf({ art: "keep" }));
+    expect(result.status).toBe("pending");
+    expect(result.retry_after_seconds).toBe(12);
+  });
+
+  it("a double-faced card counts two uploads", async () => {
+    m.plan.mockReturnValue({ ...PLANNED, doubleFaced: true });
+    await run(planOf({ art: "keep" }));
+    expect(m.uploadRate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("what a result carries", () => {
+  it("a code from an earlier try never rides on the next outcome", async () => {
+    const waited: JobStep = { ...STEP, error_code: "RATE_LIMITED", retry_after_seconds: 30 };
+    const done = await run(planOf({ art: "later" }), waited);
+    expect(done.status).toBe("done");
+    expect(done.error_code).toBeNull();
+    expect(done.retry_after_seconds).toBeNull();
+    m.create.mockResolvedValue({ ok: false, formError: "Nope." });
+    const failed = await run(planOf({ art: "later" }), waited);
+    expect(failed.status).toBe("failed");
+    expect(failed.error_code).toBeNull();
+  });
+
+  it("a save that doesn't land removes the art it stored", async () => {
+    m.create.mockResolvedValue({ ok: false, formError: "Nope." });
+    const result = await run(planOf({ art: "keep" }));
+    expect(result.status).toBe("failed");
+    expect(m.remove).toHaveBeenCalledWith(["a.jpg"]);
+  });
+});
+
+describe("the printing's lookup", () => {
+  it("is on the caller's own Scryfall quota, whatever the art", async () => {
+    m.scryfallRate.mockImplementation(async (_user: string, label: string) =>
+      label === "named" ? { ok: false, reason: "per_day", message: "Come back tomorrow.", retryAfterSeconds: 3600 } : { ok: true },
+    );
+    const result = await run(planOf({ art: "later" }));
+    expect(result.status).toBe("failed");
+    expect(m.getCard).not.toHaveBeenCalled();
     expect(m.create).not.toHaveBeenCalled();
   });
 });

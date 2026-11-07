@@ -41,6 +41,9 @@ export type StoredScryfallArt =
   | {
       ok: true;
       publicUrl: string;
+      /** The object's name in the caller's `card-art` folder (a save that
+       *  didn't land removes it). */
+      fileName: string;
       /** The requested face's artist (TODO 1.8). */
       artist: string | null;
       /** A low-resolution scan: a non-blocking note. */
@@ -124,6 +127,7 @@ export async function storeScryfallArt(
   return {
     ok: true,
     publicUrl: art.publicUrl(name),
+    fileName: name,
     artist: scryfallFaceArtist(card, isBack ? 1 : 0) ?? null,
     warning: imageQuality === "lowres" ? "This printing only has a low-resolution scan on Scryfall." : null,
   };

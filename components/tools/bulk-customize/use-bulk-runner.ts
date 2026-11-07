@@ -16,7 +16,11 @@ import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 //   * a PLAN LIMIT (the card limit, an empty balance) stops the whole run
 //     and hands the code back, so the dialog opens the matching upgrade
 //     prompt instead of retrying into the same wall;
-//   * a 429 from the step door (the AI per-minute limit) waits and retries.
+//   * a 429 from the step door (the AI per-minute limit) waits and retries;
+//   * a door that keeps failing (offline, 5xx) or refuses the job (4xx)
+//     ends the run with an error — never a step dropped in silence.
+// A run that ends with steps still waiting (a stop, a plan limit, a door
+// error, the maker's Stop) is PAUSED: the dialog offers to continue it.
 // Failed steps stay failed — the dialog offers "Try the failed ones again".
 // ---------------------------------------------------------------------------
 
@@ -36,9 +40,13 @@ export type BulkRunState = {
   stoppedBy: BulkRunStop;
   /** A door error the run couldn't get past (the job is gone, signed out). */
   error: string | null;
+  /** The last run ended with steps still waiting to be made. */
+  paused: boolean;
+  /** How many runs have ended (the dialog refreshes the page on each). */
+  runsEnded: number;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const unfinished = (steps: JobStep[]) => steps.filter((step) => step.status === "pending" || step.status === "running");
 
 export function useBulkRunner(job: GenerationJobView | null) {
   const [state, setState] = useState<BulkRunState>({
@@ -47,8 +55,17 @@ export function useBulkRunner(job: GenerationJobView | null) {
     waitingUntil: null,
     stoppedBy: null,
     error: null,
+    paused: false,
+    runsEnded: 0,
   });
   const stopRef = useRef(false);
+  // A wait the maker's Stop can cut short (checked every half second).
+  const sleep = useCallback(async (ms: number) => {
+    const until = Date.now() + ms;
+    while (!stopRef.current && Date.now() < until) {
+      await new Promise((resolve) => setTimeout(resolve, Math.min(500, until - Date.now())));
+    }
+  }, []);
   const runningRef = useRef(false);
   /** The latest steps, read by a run as it starts (state is a render behind). */
   const stepsRef = useRef<JobStep[]>(job?.steps ?? []);
@@ -64,13 +81,10 @@ export function useBulkRunner(job: GenerationJobView | null) {
       if (!jobId || runningRef.current) return;
       runningRef.current = true;
       stopRef.current = false;
-      setState((prev) => ({ ...prev, running: true, stoppedBy: null, error: null }));
+      setState((prev) => ({ ...prev, running: true, stoppedBy: null, error: null, paused: false }));
 
       // The queue: the keys asked for, else every step not yet finished.
-      const queue = (
-        keys ??
-        stepsRef.current.filter((step) => step.status === "pending" || step.status === "running").map((step) => step.key)
-      ).slice();
+      const queue = (keys ?? unfinished(stepsRef.current).map((step) => step.key)).slice();
       const doorErrors = new Map<string, number>();
       let stop: BulkRunStop = null;
       let fatal: string | null = null;
@@ -91,10 +105,13 @@ export function useBulkRunner(job: GenerationJobView | null) {
           } catch {
             const n = (doorErrors.get(key) ?? 0) + 1;
             doorErrors.set(key, n);
-            if (n < MAX_DOOR_ERRORS) {
-              await sleep(HICCUP_WAIT_MS);
-              queue.push(key);
+            if (n >= MAX_DOOR_ERRORS) {
+              queue.unshift(key);
+              fatal = "We couldn't reach PipGlyph — check your connection and continue the batch.";
+              return;
             }
+            await sleep(HICCUP_WAIT_MS);
+            queue.push(key);
             continue;
           }
           if (response.status === 429) {
@@ -110,16 +127,18 @@ export function useBulkRunner(job: GenerationJobView | null) {
             | { ok: false; error?: string }
             | null;
           if (!body || body.ok !== true) {
-            if (response.status === 401 || response.status === 502) {
-              const n = (doorErrors.get(key) ?? 0) + 1;
-              doorErrors.set(key, n);
-              if (n >= MAX_DOOR_ERRORS) {
-                fatal = (body && "error" in body && body.error) || "The batch stopped — try again in a moment.";
-                return;
-              }
-              await sleep(HICCUP_WAIT_MS);
-              queue.push(key);
+            const message = (body && "error" in body && body.error) || "The batch stopped — try again in a moment.";
+            // A signed-out moment or a server hiccup is tried again; any
+            // other refusal (the job is gone, not yours) ends the run.
+            const retryable = response.status === 401 || response.status >= 500;
+            const n = (doorErrors.get(key) ?? 0) + 1;
+            doorErrors.set(key, n);
+            if (!retryable || n >= MAX_DOOR_ERRORS) {
+              fatal = message;
+              return;
             }
+            await sleep(HICCUP_WAIT_MS);
+            queue.push(key);
             continue;
           }
           if (typeof body.credits === "number") publishCredits(body.credits);
@@ -148,9 +167,18 @@ export function useBulkRunner(job: GenerationJobView | null) {
 
       await Promise.all(Array.from({ length: WORKERS }, () => worker()));
       runningRef.current = false;
-      setState((prev) => ({ ...prev, running: false, waitingUntil: null, stoppedBy: stop, error: fatal }));
+      const paused = unfinished(stepsRef.current).length > 0;
+      setState((prev) => ({
+        ...prev,
+        running: false,
+        waitingUntil: null,
+        stoppedBy: stop,
+        error: fatal,
+        paused,
+        runsEnded: prev.runsEnded + 1,
+      }));
     },
-    [jobId, mergeSteps],
+    [jobId, mergeSteps, sleep],
   );
 
   // A new job's steps, taken in during render (React's "adjust state on a
@@ -159,12 +187,18 @@ export function useBulkRunner(job: GenerationJobView | null) {
   if (jobId !== shownJob) {
     setShownJob(jobId);
     stepsRef.current = job?.steps ?? [];
-    setState({ steps: job?.steps ?? [], running: false, waitingUntil: null, stoppedBy: null, error: null });
+    setState({ steps: job?.steps ?? [], running: false, waitingUntil: null, stoppedBy: null, error: null, paused: false, runsEnded: 0 });
   }
 
   // A new job starts at once.
   useEffect(() => {
     if (!job) return;
+    // StrictMode runs this twice in dev: the first run is still going, so
+    // the second only takes back the first cleanup's stop.
+    stopRef.current = false;
+    if (runningRef.current) return () => {
+      stopRef.current = true;
+    };
     stepsRef.current = job.steps;
     void run();
     return () => {
@@ -174,8 +208,11 @@ export function useBulkRunner(job: GenerationJobView | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.id]);
 
+  /** The failed steps and every one still waiting, run again. */
   const retryFailed = useCallback(() => {
-    const keys = state.steps.filter((step) => step.status === "failed").map((step) => step.key);
+    const keys = state.steps
+      .filter((step) => step.status === "failed" || step.status === "pending" || step.status === "running")
+      .map((step) => step.key);
     if (keys.length > 0) void run(keys);
   }, [run, state.steps]);
 
