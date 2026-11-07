@@ -136,11 +136,43 @@ export type CardsExportRequest = {
   includeBacks?: boolean;
 };
 
-/** Either export; DeckExportProvider runs one at a time. */
-export type ExportRequest = DeckExportRequest | CardsExportRequest;
+/** Print / download a Token Kit (beta tool `token-kit`): tokens that are
+ *  NOT cards — each rendered by /api/tools/token-kit/render from its face,
+ *  the kit's settings and its own state, then laid out exactly as a
+ *  selection is (the same PDF builder, ZIP and options). */
+export type KitExportRequest = {
+  kit: {
+    /** "Atraxa tokens" — the file's and the progress line's name. */
+    title: string;
+    /** The kit's file slug ("atraxa-token-kit"). */
+    slug: string;
+    tokens: Array<{
+      key: string;
+      title: string;
+      /** A file-name slug for the token ("treasure", "spirit-2"). */
+      slug: string;
+      copies: number;
+      /** The render route's body: { face, settings, state } (the route
+       *  parses it). */
+      body: unknown;
+    }>;
+  };
+  kind: DeckExportKind;
+  quality: DeckExportQuality;
+  layout: SelectionPdfLayout;
+  sheet?: DeckPdfSheetOptions;
+  bleed?: boolean;
+};
+
+/** Any export; DeckExportProvider runs one at a time. */
+export type ExportRequest = DeckExportRequest | CardsExportRequest | KitExportRequest;
 
 export function isCardsExportRequest(request: ExportRequest): request is CardsExportRequest {
   return "cards" in request;
+}
+
+export function isKitExportRequest(request: ExportRequest): request is KitExportRequest {
+  return "kit" in request;
 }
 
 export type DeckExportProgress = {
@@ -263,9 +295,25 @@ export function exportCardHref(
   return cardPngHref(cardId, { preset: "default", corners: "square", face });
 }
 
+/**
+ * The Token Kit render's address for one token (the route takes the png
+ * route's params): exportCardHref's choice of render, on the kit route.
+ */
+export function kitRenderHref(opts: { kind: DeckExportKind; quality: DeckExportQuality; bleed: boolean }): string {
+  const href = exportCardHref("kit", opts);
+  return `/api/tools/token-kit/render${href.slice(href.indexOf("?"))}`;
+}
+
 /** One render to fetch: a card's face. The front is reported under the
  *  card's title, the back as "<title> (back)". */
-type FaceJob = { id: string; title: string; face: CardFace };
+type FaceJob = {
+  id: string;
+  title: string;
+  face: CardFace;
+  /** A POST render's request (the Token Kit's tokens, which are no card
+   *  row: their face, settings and state travel in the body). */
+  init?: Pick<RequestInit, "method" | "headers" | "body">;
+};
 
 /** The renders an export fetches: every card's front, and the back of each
  *  double-faced card when backs are included (TODO 5.3). */
@@ -311,7 +359,7 @@ async function fetchCardPngs(
       // that restarts on every chunk — a render that hangs is a skipped
       // card the summary names, a big file on a slow link still arrives.
       try {
-        const response = await fetchWithLimits(hrefOf(job), { fetchImpl, signal, ...limits });
+        const response = await fetchWithLimits(hrefOf(job), { fetchImpl, signal, init: job.init, ...limits });
         if (!response.ok) {
           onOne(job.title, false);
           continue;
@@ -617,6 +665,99 @@ export async function runCardsExport(
     zip.file("MISSING.txt", `These cards were skipped:\n${progress.failed.join("\n")}\n`);
   }
   // PNGs are already compressed — STORE keeps packaging near-instant.
+  const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+  return { blob, filename, cardsIncluded: rendered.length, failed: progress.failed, title };
+}
+
+/**
+ * A Token Kit's print / download (beta tool `token-kit`): runCardsExport's
+ * pipeline for tokens that are no card rows — each token's render POSTed to
+ * the kit's render route (its face, the kit's settings, its own art), the
+ * same render choice (exportCardHref), the same acceptance checks (bleed,
+ * MPC), the same PDF builder and ZIP. No manifest: the kit is the page's.
+ */
+export async function runKitExport(
+  request: KitExportRequest,
+  options: {
+    onProgress: (progress: DeckExportProgress) => void;
+    signal?: AbortSignal;
+    fetchImpl?: FetchLike;
+    renderLimits?: LiveFetchLimits;
+  },
+): Promise<CardsExportResult> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const { signal } = options;
+  const tokens = request.kit.tokens.filter((token) => token.copies > 0);
+  const title = request.kit.title;
+  const progress: DeckExportProgress = { phase: "rendering", total: tokens.length, done: 0, failed: [], deckTitle: title };
+  const emit = () => options.onProgress({ ...progress, failed: [...progress.failed] });
+  emit();
+  if (tokens.length === 0) throw new DeckExportError("Pick at least one token to print.");
+
+  const mpc = mpcZip(request);
+  const bleed = request.bleed === true && !mpc;
+  const href = kitRenderHref({ kind: request.kind, quality: request.quality, bleed });
+  const jobs: FaceJob[] = tokens.map((token) => ({
+    id: token.key,
+    title: token.title,
+    face: "front",
+    init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(token.body) },
+  }));
+  const pngs = await fetchCardPngs(
+    jobs,
+    () => href,
+    fetchImpl,
+    signal,
+    (tokenTitle, ok) => {
+      progress.done += 1;
+      if (!ok) progress.failed.push(tokenTitle);
+      emit();
+    },
+    mpc ? isMpcExportRender : bleed ? carriesPrintBleed : undefined,
+    options.renderLimits,
+  );
+
+  progress.phase = "packaging";
+  emit();
+  const rendered = tokens.filter((token) => pngs.get(token.key)?.front);
+  if (rendered.length === 0) {
+    throw new DeckExportError("None of the tokens could be rendered — try again in a moment.");
+  }
+  const filename = selectionExportFilename([{ slug: request.kit.slug }], {
+    kind: request.kind,
+    layout: request.layout,
+    bleed,
+    quality: request.quality,
+  });
+
+  if (request.kind === "pdf") {
+    const bytes = await buildDeckPdf(
+      rendered.map((token) => ({ png: pngs.get(token.key)!.front as Uint8Array, copies: token.copies, back: null })),
+      {
+        title,
+        layout: request.layout,
+        sheet: request.sheet,
+        bleed,
+        subject: "Custom MTG-style tokens — fan-made, not affiliated with Wizards of the Coast.",
+      },
+    );
+    return {
+      blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
+      filename,
+      cardsIncluded: rendered.length,
+      failed: progress.failed,
+      title,
+    };
+  }
+
+  const zip = new JSZip();
+  const suffix = mpc ? "-mpc" : bleed ? "-bleed" : "";
+  rendered.forEach((token, index) => {
+    zip.file(zipImageName(index + 1, token.slug, "front", suffix), pngs.get(token.key)!.front as Uint8Array);
+  });
+  if (progress.failed.length > 0) {
+    zip.file("MISSING.txt", `These tokens were skipped:\n${progress.failed.join("\n")}\n`);
+  }
   const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
   return { blob, filename, cardsIncluded: rendered.length, failed: progress.failed, title };
 }

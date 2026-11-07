@@ -596,6 +596,47 @@ export type Database = {
         Relationships: [];
       };
       // Migration 0177 — referrals.
+      // Migration 0184 — the Token Kit beta tool's saved kits.
+      token_kits: {
+        Row: {
+          id: string;
+          owner_id: string;
+          /** `deck:<uuid>` or `list:<hash>`. */
+          source_key: string;
+          deck_id: string | null;
+          title: string | null;
+          source_text: string | null;
+          settings: Json;
+          items: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          source_key: string;
+          deck_id?: string | null;
+          title?: string | null;
+          source_text?: string | null;
+          settings?: Json;
+          items?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          source_key?: string;
+          deck_id?: string | null;
+          title?: string | null;
+          source_text?: string | null;
+          settings?: Json;
+          items?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       tool_releases: {
         Row: {
           slug: string;

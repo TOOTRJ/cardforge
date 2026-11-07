@@ -70,7 +70,7 @@ export const TOOL_CATALOG = [
       "Print-ready sheets with bleed, or an MPC file",
     ],
     icon: "tokens",
-    built: false,
+    built: true,
   },
   {
     slug: "pip-forge",

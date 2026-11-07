@@ -200,6 +200,7 @@ describe("reference detection — every column, any depth, any URL form", () => 
     ["notifications.payload", "card-renders", (db, k) => db.notifications.rows.push({ id: 1, payload: { image: pub("card-renders", k) } })],
     ["site_updates.body (Markdown, a full stop after the URL)", "card-art", (db, k) => db.site_updates.rows.push({ id: "s1", body: `Look: ![art](${pub("card-art", k)}).` })],
     ["card_exports.storage_path (a bare key)", "card-art", (db, k) => db.card_exports.rows.push({ id: "e1", storage_path: k })],
+    ["token_kits.items.<key>.artUrl (the Token Kit)", "card-art", (db, k) => db.token_kits.rows.push({ id: "tk1", items: { "token|treasure": { artUrl: pub("card-art", k) } } })],
     ["a /render-cdn/ path", "card-renders", (db, k) => db.messages.rows.push({ id: "m1", body: `see /render-cdn/${k}?v=3` })],
     ["a next/image URL (percent-encoded)", "profile-media", (db, k) => db.feedback.rows.push({ id: "f1", page_url: `https://pipglyph.com/_next/image?url=${encodeURIComponent(pub("profile-media", k))}&w=96` })],
     ["JSON-escaped slashes inside a string", "card-art", (db, k) => db.site_settings.rows.push({ key: "hero", value: JSON.stringify({ u: pub("card-art", k) }).replaceAll("/", "\\/") })],

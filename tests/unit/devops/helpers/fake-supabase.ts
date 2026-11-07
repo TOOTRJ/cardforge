@@ -49,6 +49,7 @@ export function emptyDb(): Db {
     notifications: t(["id"], { id: "bigint", payload: "jsonb" }),
     site_updates: t(["id"], { id: "uuid", summary: "text", body: "text", link_href: "text" }),
     card_exports: t(["id"], { id: "uuid", file_url: "text", storage_path: "text" }),
+    token_kits: t(["id"], { id: "uuid", owner_id: "uuid", items: "jsonb", settings: "jsonb" }),
     messages: t(["id"], { id: "uuid", body: "text" }),
     feedback: t(["id"], { id: "uuid", page_url: "text" }),
     site_settings: t(["key"], { key: "text", value: "jsonb" }),
