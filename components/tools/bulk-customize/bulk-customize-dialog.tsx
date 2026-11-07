@@ -145,9 +145,11 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
       preparing.current = { key: loadedKey, request };
       // A finished read is dropped, so a reset of the same selection (a
       // failed read retried) asks again.
-      void request.finally(() => {
-        if (preparing.current?.request === request) preparing.current = null;
-      });
+      void request
+        .finally(() => {
+          if (preparing.current?.request === request) preparing.current = null;
+        })
+        .catch(() => undefined); // the effect below says why
     }
     void preparing.current!.request.then((result) => {
       if (cancelled) return;
@@ -159,6 +161,11 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
       setPrepared(result);
       if (typeof result.credits === "number") publishCredits(result.credits);
       setPhase("choose");
+    }, () => {
+      // The request itself failed (offline): said, and read again next open.
+      if (cancelled) return;
+      setLoadError("We couldn't read these cards — check your connection and try again.");
+      setPhase("failed");
     });
     return () => {
       cancelled = true;
@@ -645,6 +652,9 @@ function BulkProgress({
         </div>
       ) : settled || paused ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {paused ? (
+            <p className="mr-auto text-xs text-muted">Closing ends this batch; the cards made so far stay saved.</p>
+          ) : null}
           {paused ? (
             <Button variant="outline" onClick={runner.retryFailed}>
               <RotateCcw className="h-4 w-4" aria-hidden />
