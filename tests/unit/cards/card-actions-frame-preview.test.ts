@@ -410,7 +410,9 @@ describe("updateCardsVisibilityAction — frame previews in the batch", () => {
     const reads = stub
       .forTable("cards")
       .filter((entry) => called(entry.calls, "select"))
-      .map((entry) => entry.calls.find((c) => c.method === "select")!.args[0] as string);
+      .map((entry) => entry.calls.find((c) => c.method === "select")!.args[0] as string)
+      // The exact-copy read (lib/cards/exact-copy-read.ts) is a read of its own.
+      .filter((columns) => !columns.startsWith("id, import_scryfall_id"));
     expect(reads).toHaveLength(2);
     expect(reads[1]).not.toMatch(/frame_preview/);
     expect(updatedIds(stub)).toEqual([ORDINARY]);

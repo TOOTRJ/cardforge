@@ -81,7 +81,11 @@ vi.mock("@/components/cards/card-preview", () => ({
   CardPreview: (props: { title?: string }) => <div data-testid="card-preview" data-title={props.title ?? ""} />,
 }));
 
+vi.mock("@/lib/decks/membership-actions", () => ({ getDeckPickerDataAction: vi.fn() }));
+vi.mock("@/lib/decks/add-actions", () => ({ addToDeckAction: vi.fn() }));
+
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import { EXACT_COPY_SAVE_REASON } from "@/lib/cards/exact-copy";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -448,6 +452,11 @@ describe("F3 — Fill from the printing after an import with no collector line",
   it("an import changed first stays changed", { timeout: 30_000 }, async () => {
     prefill(elves(), EVERYTHING, { edit: withoutCollector });
     await landed();
+    while (!screen.queryByPlaceholderText("Emberbound Wyrm")) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Back$/ }));
+      });
+    }
     const title = screen.getByPlaceholderText("Emberbound Wyrm") as HTMLInputElement;
     await act(async () => {
       fireEvent.change(title, { target: { value: "Llanowar Elder" } });
@@ -455,5 +464,64 @@ describe("F3 — Fill from the printing after an import with no collector line",
     await fillFromPrinting();
     const payload = await saveAsDraft();
     expect(payload.import_unchanged).toBe(false);
+  });
+});
+
+describe("an exact copy can't be saved (owner 2026-11-06, lib/cards/exact-copy.ts)", () => {
+  const save = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
+
+  async function toLastStep() {
+    while (screen.queryByRole("button", { name: /^Next/ })) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Next/ }));
+      });
+    }
+  }
+
+  it("an untouched import: Save says why and offers the real card to a deck; one change enables it", { timeout: 30_000 }, async () => {
+    const card = elves();
+    stubFetch(card, EVERYTHING);
+    render(
+      <CardCreatorForm
+        mode="create"
+        userId={USER}
+        ownerUsername="tester"
+        gameSystems={GAME_SYSTEMS}
+        aiConfigured
+        verifiedFrameKeys={[...EVERYTHING]}
+      />,
+    );
+    await act(async () => {
+      notices.onImport!({ patch: patchOf(card, EVERYTHING), importedArtUrl: ART, source: { name: card.name, scryfallUri: null } });
+    });
+    await settle(700);
+    await toLastStep();
+    expect(save().disabled).toBe(true);
+    expect(save().title).toBe(EXACT_COPY_SAVE_REASON);
+    const notice = screen.getByTestId("exact-copy-notice");
+    expect(notice.textContent).toContain(EXACT_COPY_SAVE_REASON);
+    expect(screen.getByRole("button", { name: "Add the real card to a deck" })).toBeTruthy();
+
+    while (!screen.queryByPlaceholderText("Emberbound Wyrm")) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /^Back$/ }));
+      });
+    }
+    const title = screen.getByPlaceholderText("Emberbound Wyrm") as HTMLInputElement;
+    await act(async () => {
+      fireEvent.input(title, { target: { value: "Llanowar Elder" } });
+      fireEvent.change(title, { target: { value: "Llanowar Elder" } });
+    });
+    expect(save().disabled).toBe(false);
+    expect(screen.queryByTestId("exact-copy-notice")).toBeNull();
+  });
+
+  it("the deck's custom proxy says it in the deck's words", { timeout: 30_000 }, async () => {
+    prefill(elves(), EVERYTHING);
+    await landed();
+    await settle(700);
+    await toLastStep();
+    expect(save().disabled).toBe(true);
+    expect(save().title).toBe("Change something to make it your own custom proxy — an exact copy can't be saved.");
   });
 });
