@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { PageHeader } from "@/components/layout/page-header";
@@ -15,9 +16,8 @@ import { getMyEmailPreferences } from "@/lib/email/preferences";
 import { isGeneratedUsername } from "@/lib/auth/usernames";
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
 import { UsagePanel } from "@/components/settings/usage-panel";
-import { CustomPipsPanel } from "@/components/settings/custom-pips-panel";
+import { CUSTOM_PIPS_HREF } from "@/lib/pips/href";
 import { ThemePreference } from "@/components/settings/theme-preference";
-import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { LocalDate } from "@/components/ui/local-date";
@@ -110,7 +110,19 @@ export default async function SettingsPage({
           </div>
         </SurfaceCard>
 
-        <CustomPipsPanel overrides={user ? await getPipOverrides(user.id) : {}} />
+        <SurfaceCard as="section" aria-labelledby="settings-pips" className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <h2 id="settings-pips" className="font-display text-sm font-semibold tracking-wide text-foreground">
+              Custom pips
+            </h2>
+            <p className="text-xs leading-5 text-muted">
+              Your own mana symbol art now lives with the other tools.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0 self-start sm:self-auto">
+            <Link href={CUSTOM_PIPS_HREF}>Manage custom pips</Link>
+          </Button>
+        </SurfaceCard>
 
         <SurfaceCard className="grid gap-6 p-6 grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="flex flex-col gap-1">
