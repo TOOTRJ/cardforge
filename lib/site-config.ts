@@ -250,15 +250,16 @@ export const siteConfig = {
 
   // Dashboard left-rail nav (rendered inside DashboardShell). Feed lives
   // here instead of the global header so the top nav stays lean.
-  // Order: the user's own library (cards → decks) first, then Feed.
+  // Order: the user's own library (cards → decks) first, then Feed, then
+  // Tools (tests/e2e/my-cards.spec.ts holds Feed right below My Decks).
   // "Messages" (/messages) is NOT listed: DashboardNav inserts it after
   // Notifications only for users who have a support thread.
   dashboardNav: [
     { label: "Overview", href: "/dashboard" },
     { label: "My Cards", href: "/dashboard/cards" },
     { label: "My Decks", href: "/dashboard/decks" },
-    { label: "Tools", href: "/dashboard/tools" },
     { label: "Feed", href: "/feed" },
+    { label: "Tools", href: "/dashboard/tools" },
     { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Billing", href: "/dashboard/billing" },
     { label: "Refer a friend", href: "/dashboard/referrals" },
