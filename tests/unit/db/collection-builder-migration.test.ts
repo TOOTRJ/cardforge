@@ -30,10 +30,41 @@ describe("0185 collection builder", () => {
     expect(sql).toContain("alter table public.collection_cards enable row level security;");
     const revoke = sql.indexOf("revoke all on public.collection_cards from public, anon, authenticated;");
     expect(revoke).toBeGreaterThan(0);
-    expect(sql.indexOf("grant select, insert, update, delete on public.collection_cards to authenticated;")).toBeGreaterThan(revoke);
+    // No INSERT for the API roles (add_collection_cards is the one way in),
+    // and an UPDATE of the quantity alone.
+    expect(sql.indexOf("grant select, delete on public.collection_cards to authenticated;")).toBeGreaterThan(revoke);
+    expect(sql.indexOf("grant update (quantity) on public.collection_cards to authenticated;")).toBeGreaterThan(revoke);
+    expect(sql).not.toMatch(/grant [^;]*\binsert\b[^;]*on public\.collection_cards to authenticated/);
     expect(sql.indexOf("grant select, insert, update, delete on public.collection_cards to service_role;")).toBeGreaterThan(revoke);
     expect(sql).not.toMatch(/to [a-z_, ]*\banon\b/);
     expect(sql).not.toMatch(/grant all on all/i);
+  });
+
+  it("add_collection_cards is the one way in: definer, signed in, tool open, once per chunk", () => {
+    const fn = sql.slice(sql.indexOf("create or replace function public.add_collection_cards("));
+    const body = fn.slice(0, fn.indexOf("$$;"));
+    expect(body).toContain("security definer");
+    expect(body).toContain("set search_path = ''");
+    expect(body).toContain("v_me uuid := auth.uid();");
+    expect(body).toContain("raise exception 'not_authenticated'");
+    expect(body).toContain(`if not public.has_tool_access('${COLLECTION_TOOL_SLUG}') then`);
+    // Rows go in under the caller's id alone.
+    expect(body).toMatch(/select v_me, m\.scryfall_id/);
+    // A chunk applied once: recorded before the write, "already" answered.
+    expect(body.indexOf("insert into public.collection_import_chunks")).toBeLessThan(
+      body.indexOf("insert into public.collection_cards"),
+    );
+    expect(body).toContain("'already', true");
+    // The chunk ledger is that function's alone.
+    expect(sql).toContain("revoke all on public.collection_import_chunks from public, anon, authenticated;");
+    expect(sql).not.toMatch(/grant [^;]* on public\.collection_import_chunks to authenticated/);
+  });
+
+  it("decks you can build: the decks sharing the most cards, never the newest", () => {
+    const fn = sql.slice(sql.indexOf("create or replace function public.collection_buildable_decks("));
+    const candidates = fn.slice(fn.indexOf("candidate_decks as ("), fn.indexOf("entries as ("));
+    expect(candidates).toContain("join mine m on m.name_key");
+    expect(candidates).toMatch(/order by count\(\*\) desc/);
   });
 
   it("every policy is the owner's, gated by the tool", () => {

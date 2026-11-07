@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Crown, Hammer, Minus, Plus, Sparkles, Undo2, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -206,9 +206,11 @@ export function CollectionBuild({
                       name="commander"
                       value={card.id}
                       checked={active}
-                      disabled={off}
-                      aria-label={off ? `${card.name} (banned in Commander)` : card.name}
+                      // Reachable, its reason in its name; never picked.
+                      aria-disabled={off || undefined}
+                      aria-label={off ? `${card.name} (not legal in Commander)` : card.name}
                       onChange={() => {
+                        if (off) return;
                         setCommanderId(card.id);
                         setDraft(null);
                         setError(null);
@@ -217,7 +219,7 @@ export function CollectionBuild({
                     />
                     <PrintingPicture imageUrl={card.imageUrl} name={card.name} size="small" />
                     <span className="truncate text-xs font-medium text-foreground">{card.name}</span>
-                    {off ? <span className="text-[11px] leading-4 text-subtle">Banned in Commander</span> : null}
+                    {off ? <span className="text-[11px] leading-4 text-subtle">Not legal in Commander</span> : null}
                   </label>
                 );
               })}
@@ -290,6 +292,7 @@ function DraftReview({ draft, source, truncated }: { draft: CommanderDraft; sour
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [saved, setSaved] = useState<{ slug: string; title: string } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const savePressed = useRef(false);
   const [pending, startTransition] = useTransition();
   const ids = { title: useId(), heading: useId() };
 
@@ -322,14 +325,25 @@ function DraftReview({ draft, source, truncated }: { draft: CommanderDraft; sour
       setSaveError(`That's ${total} cards — leave out ${over} to make ${COMMANDER_DECK_SIZE}.`);
       return;
     }
+    // Every press after the first says so: a press whose answer was lost
+    // made a deck, and the server takes that one back instead of a second.
+    const retry = savePressed.current;
+    savePressed.current = true;
     startTransition(async () => {
-      const result = await saveCollectionDeckAction({
-        commanderId: draft.commander.cardId,
-        cardIds: kept.map((p) => p.cardId),
-        basics: basics.filter((b) => b.count > 0).map((b) => ({ name: b.name, count: b.count })),
-        title,
-        visibility,
-      });
+      let result: Awaited<ReturnType<typeof saveCollectionDeckAction>>;
+      try {
+        result = await saveCollectionDeckAction({
+          commanderId: draft.commander.cardId,
+          cardIds: kept.map((p) => p.cardId),
+          basics: basics.filter((b) => b.count > 0).map((b) => ({ name: b.name, count: b.count })),
+          title,
+          visibility,
+          retry,
+        });
+      } catch {
+        setSaveError("The connection dropped before the deck was saved. Press Save deck again — it won't make a second one.");
+        return;
+      }
       if (!result.ok) {
         setSaveError(result.error);
         return;

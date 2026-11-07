@@ -142,17 +142,34 @@ describe("saving a draft", () => {
     m.access.mockResolvedValue(ACCESS);
   });
 
-  const save = (cardIds: string[], basics: Array<{ name: string; count: number }> = []) =>
-    actions.saveCollectionDeckAction({ commanderId: commander.id, cardIds, basics, title: "Goblins", visibility: "public" });
+  const save = (cardIds: string[], basics: Array<{ name: string; count: number }> = [], retry = false) =>
+    actions.saveCollectionDeckAction({ commanderId: commander.id, cardIds, basics, title: "Goblins", visibility: "public", retry });
+
+  /** The decks table as the action reads it: the new deck's card_count, and
+   *  the delete that removes an empty one. */
+  function decksTable(cardCount: number) {
+    const eqOwner = vi.fn(async () => ({ error: null }));
+    const eqId = vi.fn(() => ({ eq: eqOwner }));
+    const del = vi.fn(() => ({ eq: eqId }));
+    const maybeSingle = vi.fn(async () => ({ data: { card_count: cardCount }, error: null }));
+    const select = vi.fn(() => ({ eq: () => ({ eq: () => ({ maybeSingle }) }) }));
+    m.createClient.mockResolvedValue({ from: vi.fn(() => ({ delete: del, select })) });
+    return { del, eqId, eqOwner };
+  }
 
   it("goes through createDeckAction and the decklist commit, the commander on its board", async () => {
     const goblin = row({ name: "Goblin Guide" });
     m.rowsById.mockResolvedValue([commander, goblin]);
     m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
     m.commit.mockResolvedValue({ ok: true, added: 3, merged: 0, placeholders: 0 });
+    const { del } = decksTable(0);
     const result = await save([goblin.id], [{ name: "Mountain", count: 30 }]);
     expect(result).toEqual({ ok: true, slug: "goblins", title: "Goblins", placeholders: 0 });
-    expect(m.createDeck).toHaveBeenCalledWith(expect.objectContaining({ title: "Goblins", format: "commander", visibility: "public" }));
+    expect(m.createDeck).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Goblins", format: "commander", visibility: "public" }),
+      { reuseRecentTwin: false },
+    );
+    expect(del).not.toHaveBeenCalled();
     const [payload, options] = m.commit.mock.calls[0];
     expect(options).toEqual({ quota: "deck_import_commit" });
     expect(payload.deckId).toBe("d1");
@@ -193,13 +210,68 @@ describe("saving a draft", () => {
     m.rowsById.mockResolvedValue([commander]);
     m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
     m.commit.mockResolvedValue({ ok: false, error: "Scryfall didn't respond." });
-    const eqOwner = vi.fn(async () => ({ error: null }));
-    const eqId = vi.fn(() => ({ eq: eqOwner }));
-    const del = vi.fn(() => ({ eq: eqId }));
-    m.createClient.mockResolvedValue({ from: vi.fn(() => ({ delete: del })) });
+    const { eqId, eqOwner } = decksTable(0);
     const result = await save([]);
     expect(result).toMatchObject({ ok: false, error: "Scryfall didn't respond." });
     expect(eqId).toHaveBeenCalledWith("id", "d1");
     expect(eqOwner).toHaveBeenCalledWith("owner_id", "u1");
+  });
+
+  it("a commit that throws still removes the empty deck", async () => {
+    m.rowsById.mockResolvedValue([commander]);
+    m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
+    m.commit.mockRejectedValue(new Error("socket hang up"));
+    const { eqId } = decksTable(0);
+    await expect(save([])).rejects.toThrow("socket hang up");
+    expect(eqId).toHaveBeenCalledWith("id", "d1");
+  });
+
+  it("a press after a lost answer takes back that deck — never a second one", async () => {
+    m.rowsById.mockResolvedValue([commander]);
+    m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
+    const { del } = decksTable(1);
+    const result = await save([], [], true);
+    expect(m.createDeck).toHaveBeenCalledWith(expect.anything(), { reuseRecentTwin: true });
+    expect(result).toEqual({ ok: true, slug: "goblins", title: "Goblins", placeholders: 0 });
+    expect(m.commit).not.toHaveBeenCalled();
+    expect(del).not.toHaveBeenCalled();
+  });
+});
+
+describe("finishing a replace import", () => {
+  const finish = (complete: boolean) =>
+    actions.finishCollectionImportAction({
+      batchId: UUID,
+      mode: "replace",
+      format: "csv",
+      lines: 10,
+      matched: 8,
+      unmatched: 2,
+      complete,
+    });
+
+  beforeEach(() => {
+    m.access.mockResolvedValue(ACCESS);
+  });
+
+  it("an import cut short by the cap removes nothing", async () => {
+    const result = await finish(false);
+    expect(result).toEqual({ ok: true, removed: 0 });
+    expect(m.createClient).not.toHaveBeenCalled();
+  });
+
+  it("a complete one removes every row another batch wrote", async () => {
+    const or = vi.fn(async () => ({ error: null, count: 4 }));
+    const eqBatch = vi.fn(async () => ({ count: 8 }));
+    m.createClient.mockResolvedValue({
+      from: vi.fn(() => ({
+        select: () => ({ eq: eqBatch }),
+        delete: () => ({ or }),
+      })),
+    });
+    const result = await finish(true);
+    expect(result).toEqual({ ok: true, removed: 4 });
+    expect(eqBatch).toHaveBeenCalledWith("import_batch", UUID);
+    expect(or).toHaveBeenCalledWith(`import_batch.is.null,import_batch.neq.${UUID}`);
   });
 });

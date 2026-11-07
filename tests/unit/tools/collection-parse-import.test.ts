@@ -76,6 +76,22 @@ describe("CSV exports", () => {
     ]);
   });
 
+  it("Deckbox without an Edition Code column: a short set NAME is never a code", () => {
+    const parsed = parseCollectionImport(
+      [
+        "Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price",
+        "1,0,Regisaur Alpha,Ixalan,227,Near Mint,English,,,,,,,,$1.00",
+      ].join("\n"),
+    );
+    expect(parsed.format).toBe("deckbox");
+    expect(parsed.lines).toMatchObject([{ name: "Regisaur Alpha", setCode: null, collectorNumber: null }]);
+  });
+
+  it("keeps a collector number's case (The List's DMR-123)", () => {
+    const parsed = parseCollectionImport("1 Ancient Grudge (PLST) DMR-123");
+    expect(parsed.lines[0]).toMatchObject({ setCode: "plst", collectorNumber: "DMR-123" });
+  });
+
   it("TCGplayer: Simple Name beats the product name, Printing is the finish", () => {
     const parsed = parseCollectionImport(
       [

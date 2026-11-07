@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { containsProfanity } from "@/lib/moderation/profanity";
+import { PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import {
   COLLECTION_CARD_COLUMNS,
   collectionCardOf,
@@ -232,10 +234,14 @@ function missingCardsOf(value: unknown): MissingCard[] {
     if (!item || typeof item !== "object") return [];
     const row = item as Record<string, unknown>;
     if (typeof row.name !== "string") return [];
+    // A name the deck page would mask (a linked card the viewer can't see,
+    // whose name holds strong language — `hidesEntryName`) isn't named here
+    // either: SQL can't run the detector.
+    const name = containsProfanity(row.name) ? PRIVATE_CARD_NAME : row.name;
     const image = typeof row.image_url === "string" && isScryfallPrintingImage(row.image_url) ? row.image_url : null;
     return [
       {
-        name: row.name,
+        name,
         quantity: typeof row.quantity === "number" ? row.quantity : 1,
         imageUrl: image,
         scryfallId: typeof row.scryfall_id === "string" ? row.scryfall_id : null,
@@ -264,7 +270,7 @@ export async function listBuildableDecks(limit = 60): Promise<BuildableDeck[]> {
     title: row.title,
     ownerUsername: row.owner_username,
     colorIdentity: row.color_identity ?? [],
-    commanders: row.commanders ?? [],
+    commanders: (row.commanders ?? []).map((name) => (containsProfanity(name) ? PRIVATE_CARD_NAME : name)),
     ownsCommander: row.owns_commander,
     total: row.total,
     owned: row.owned,

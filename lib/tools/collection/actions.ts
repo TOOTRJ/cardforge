@@ -84,7 +84,11 @@ export async function importCollectionChunkAction(payload: unknown): Promise<Imp
     throw error;
   }
 
-  const write = await writeCollectionRows(resolved.rows, { batchId: parsed.data.batchId, mode: parsed.data.mode });
+  const write = await writeCollectionRows(resolved.rows, {
+    batchId: parsed.data.batchId,
+    mode: parsed.data.mode,
+    chunk: parsed.data.chunk,
+  });
   if (!write.ok) return { ok: false, error: write.error };
   const overCap: ImportProblem[] = write.overCap.map(({ line }) => ({
     line: line?.line ?? 0,
@@ -103,17 +107,18 @@ export async function importCollectionChunkAction(payload: unknown): Promise<Imp
 
 export type FinishImportResult = { ok: true; removed: number } | Fail;
 
-/** After the last chunk: a "replace" import removes every row it didn't
- *  write (only once it wrote at least one — an import that matched nothing
- *  never empties a collection), and the import is recorded. */
+/** After the last chunk: a COMPLETE "replace" import removes every row it
+ *  didn't write (only once it wrote at least one — an import that matched
+ *  nothing never empties a collection; one cut short by the cap removes
+ *  nothing), and the import is recorded. */
 export async function finishCollectionImportAction(payload: unknown): Promise<FinishImportResult> {
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = finishImportSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, error: "That import couldn't be finished." };
-  const { batchId, mode } = parsed.data;
+  const { batchId, mode, complete } = parsed.data;
   let removed = 0;
-  if (mode === "replace") {
+  if (mode === "replace" && complete) {
     const supabase = await createClient();
     const { count: written } = await supabase
       .from("collection_cards")
@@ -336,24 +341,53 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
     return { ok: false, error: `That's ${total} cards — a Commander deck is ${COMMANDER_DECK_SIZE}. Remove ${total - COMMANDER_DECK_SIZE}.` };
   }
 
-  const created = await createDeckAction({
-    title,
-    format: "commander",
-    visibility,
-    description: `Built from my collection around ${commander.name}.`,
-  });
+  // A press after a failed or unanswered one (`retry`) takes back the deck
+  // that press made in the last minute (createDeckAction's reuseRecentTwin,
+  // as the New deck dialog does) — never a second deck.
+  const created = await createDeckAction(
+    {
+      title,
+      format: "commander",
+      visibility,
+      description: `Built from my collection around ${commander.name}.`,
+    },
+    { reuseRecentTwin: parsed.data.retry },
+  );
   if (!created.ok) {
     return { ok: false, error: created.formError ?? Object.values(created.fieldErrors ?? {})[0] ?? "The deck couldn't be made. Try again." };
   }
-  const commit = await commitImportLines(
-    { deckId: created.deckId, lines, firstImportOnly: true },
-    { quota: "deck_import_commit" },
-  );
+  const supabase = await createClient();
+  const cardCount = async () => {
+    const { data } = await supabase
+      .from("decks")
+      .select("card_count")
+      .eq("id", created.deckId)
+      .eq("owner_id", access.userId)
+      .maybeSingle();
+    return data?.card_count ?? 0;
+  };
+  // The twin of a press whose list DID go in (only its answer was lost):
+  // the deck is saved already.
+  if (parsed.data.retry && (await cardCount()) > 0) {
+    return { ok: true, slug: created.slug, title, placeholders: 0 };
+  }
+
+  let commit: Awaited<ReturnType<typeof commitImportLines>> | null = null;
+  try {
+    commit = await commitImportLines(
+      { deckId: created.deckId, lines, firstImportOnly: true },
+      { quota: "deck_import_commit" },
+    );
+  } finally {
+    if (!commit?.ok && (await cardCount()) === 0) {
+      // An empty deck the user didn't ask for is removed again (their own,
+      // made a moment ago) — whether the commit refused or threw; the draft
+      // stays on screen to try once more.
+      await supabase.from("decks").delete().eq("id", created.deckId).eq("owner_id", access.userId);
+    }
+  }
   if (!commit.ok) {
-    // An empty deck the user didn't ask for is removed again (their own,
-    // made a moment ago); the draft stays on screen to try once more.
-    const supabase = await createClient();
-    await supabase.from("decks").delete().eq("id", created.deckId).eq("owner_id", access.userId);
+    if (commit.alreadyImported) return { ok: true, slug: created.slug, title, placeholders: 0 };
     return { ok: false, error: commit.error, retryAfterSeconds: commit.retryAfterSeconds };
   }
   await recordToolEvent({

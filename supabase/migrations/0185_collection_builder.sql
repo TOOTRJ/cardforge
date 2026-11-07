@@ -35,8 +35,13 @@
 --    'replace' sets them, but adds onto a row THIS batch already wrote — a
 --    file may list one printing on two lines, in two chunks), stamping the
 --    import batch a "replace" import deletes everything else by when it
---    finishes. Security INVOKER: the RLS
---    below applies to it.
+--    finishes. SECURITY DEFINER with its own checks (the caller signed in,
+--    the tool open to them, rows written under the caller's id alone): it is
+--    the ONLY way a row goes in — the API roles have no INSERT grant and may
+--    UPDATE the quantity column alone, so every row's printing data is what
+--    the server fetched from Scryfall. Idempotent per import CHUNK: a chunk
+--    (batch, index) is applied once (collection_import_chunks), so a chunk
+--    sent again after a lost answer adds nothing twice.
 --
 -- 4. collection_stats() — the meter: different cards, copies, the cap.
 --
@@ -180,15 +185,36 @@ create trigger collection_cards_touch
 revoke all on function public.collection_cards_touch() from public, anon, authenticated;
 
 revoke all on public.collection_cards from public, anon, authenticated;
-grant select, insert, update, delete on public.collection_cards to authenticated;
+-- No INSERT for the API roles: add_collection_cards (below) is the one way in.
+-- UPDATE of the quantity alone (the collection's edit dialog).
+grant select, delete on public.collection_cards to authenticated;
+grant update (quantity) on public.collection_cards to authenticated;
 grant select, insert, update, delete on public.collection_cards to service_role;
+
+-- The import chunks add_collection_cards has applied: (owner, batch, chunk)
+-- once. Read and written by that function alone; rows older than two days
+-- are dropped by it as it goes.
+create table if not exists public.collection_import_chunks (
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  batch uuid not null,
+  chunk integer not null check (chunk between 0 and 100000),
+  created_at timestamptz not null default now(),
+  primary key (owner_id, batch, chunk)
+);
+
+comment on table public.collection_import_chunks is
+  'Collection Deck Builder (0185): the import chunks add_collection_cards has applied, so a chunk sent twice is written once. That function''s alone; no API role reads it.';
+
+alter table public.collection_import_chunks enable row level security;
+revoke all on public.collection_import_chunks from public, anon, authenticated;
+grant select, insert, delete on public.collection_import_chunks to service_role;
 
 -- ===========================================================================
 -- 2. The safety cap
 -- ===========================================================================
 
 -- THE number. lib/tools/collection/limits.ts COLLECTION_CARD_CAP mirrors it
--- (tests/unit/tools/collection-cap-sync.test.ts holds them equal).
+-- (tests/unit/db/collection-builder-migration.test.ts holds them equal).
 create or replace function public.collection_card_cap()
 returns integer
 language sql
@@ -248,11 +274,13 @@ revoke all on function public.enforce_collection_cap() from public, anon, authen
 -- source_line}], at most 1000 a call. Duplicate keys inside one call are
 -- summed first (an insert can't touch one row twice). p_mode: 'add' adds
 -- the quantities; 'replace' sets them, adding onto a row p_batch already
--- wrote. Answers {"added": n, "updated": m}.
-create or replace function public.add_collection_cards(p_rows jsonb, p_batch uuid, p_mode text)
+-- wrote. p_chunk: the chunk's index in its import (with p_batch) — a chunk
+-- already applied writes nothing and answers {"already": true}. Answers
+-- {"added": n, "updated": m}.
+create or replace function public.add_collection_cards(p_rows jsonb, p_batch uuid, p_mode text, p_chunk integer default null)
 returns jsonb
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 declare
@@ -263,11 +291,25 @@ begin
   if v_me is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
+  if not public.has_tool_access('collection-builder') then
+    raise exception 'collection_tool_closed' using errcode = '42501';
+  end if;
   if p_mode not in ('add', 'replace') then
     raise exception 'collection_bad_mode' using errcode = '22023';
   end if;
   if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) > 1000 then
     raise exception 'collection_bad_rows' using errcode = '22023';
+  end if;
+
+  if p_batch is not null and p_chunk is not null then
+    delete from public.collection_import_chunks
+      where owner_id = v_me and created_at < now() - interval '2 days';
+    insert into public.collection_import_chunks (owner_id, batch, chunk)
+      values (v_me, p_batch, p_chunk)
+      on conflict do nothing;
+    if not found then
+      return jsonb_build_object('added', 0, 'updated', 0, 'already', true);
+    end if;
   end if;
 
   with input as (
@@ -340,11 +382,11 @@ begin
 end;
 $$;
 
-comment on function public.add_collection_cards(jsonb, uuid, text) is
-  'Collection Deck Builder (0185): the app''s one collection write — insert or merge (mode add: quantities added; replace: set, added onto rows the same batch wrote), stamping the import batch. Security invoker: the owner-only, tool-gated RLS applies.';
+comment on function public.add_collection_cards(jsonb, uuid, text, integer) is
+  'Collection Deck Builder (0185): the ONE collection insert — insert or merge (mode add: quantities added; replace: set, added onto rows the same batch wrote), stamping the import batch, once per (batch, chunk). Security definer: the caller signed in with has_tool_access(''collection-builder''), rows under auth.uid() only.';
 
-revoke all on function public.add_collection_cards(jsonb, uuid, text) from public, anon;
-grant execute on function public.add_collection_cards(jsonb, uuid, text) to authenticated, service_role;
+revoke all on function public.add_collection_cards(jsonb, uuid, text, integer) from public, anon;
+grant execute on function public.add_collection_cards(jsonb, uuid, text, integer) to authenticated, service_role;
 
 -- ===========================================================================
 -- 4. collection_stats — the meter
@@ -418,16 +460,23 @@ as $$
     where c.owner_id = (select auth.uid())
     group by c.name_key
   ),
+  -- The 400 decks that share the MOST cards with the collection (basics
+  -- left out) — never the newest 400: an older deck you own nearly all of
+  -- must be found.
   candidate_decks as (
     select d.id, d.slug, d.title, d.owner_id, d.updated_at
     from public.decks d
+    join public.deck_cards dc on dc.deck_id = d.id and dc.board in ('commander', 'main')
+    join mine m on m.name_key = lower(split_part(dc.name, ' // ', 1))
     where d.visibility = 'public'
       and d.format = 'commander'
       and d.card_count > 0
       and d.owner_id <> (select auth.uid())
       and public.owner_is_creator(d.owner_id)
       and public.has_tool_access('collection-builder')
-    order by d.updated_at desc
+      and not public.collection_is_basic_land(dc.name, dc.type_line)
+    group by d.id, d.slug, d.title, d.owner_id, d.updated_at
+    order by count(*) desc, d.updated_at desc
     limit 400
   ),
   entries as (

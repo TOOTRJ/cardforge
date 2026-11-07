@@ -82,8 +82,10 @@ export async function resolveImportLines(lines: readonly ImportLine[]): Promise<
       line,
       row: collectionRowFor(match.card, {
         finish: finishFor(match.card, line.finish),
-        // A line read by its Scryfall id IS that printing's language.
-        lang: line.scryfallId ? match.card.lang : line.lang,
+        // The printing's own language: a line matched by set + number (or
+        // name) is Scryfall's English printing whatever its Language column
+        // said, and the row is that printing.
+        lang: match.card.lang,
         quantity: line.quantity,
         sourceLine: line.raw,
       }),
@@ -106,7 +108,7 @@ export const COLLECTION_FULL_MESSAGE = `Your collection is full: it holds at mos
  */
 export async function writeCollectionRows(
   items: Array<{ line: ImportLine | null; row: CollectionRowInput }>,
-  options: { batchId: string | null; mode: "add" | "replace" },
+  options: { batchId: string | null; mode: "add" | "replace"; chunk?: number | null },
 ): Promise<WriteResult> {
   if (items.length === 0) return { ok: true, added: 0, updated: 0, overCap: [] };
   const supabase = await createClient();
@@ -149,12 +151,15 @@ export async function writeCollectionRows(
     p_rows: write as unknown as Json,
     p_batch: options.batchId,
     p_mode: options.mode,
+    p_chunk: options.chunk ?? null,
   });
   if (error) {
     if (/collection_capacity_exceeded/.test(error.message ?? "")) return { ok: false, error: COLLECTION_FULL_MESSAGE };
     console.error("[collection] write failed:", error.message);
     return { ok: false, error: "Couldn't save those cards — nothing was added. Try again." };
   }
-  const result = (data ?? {}) as { added?: number; updated?: number };
+  // `already`: this chunk was applied before (its answer was lost and it was
+  // sent again) — nothing is written twice; the counts read 0.
+  const result = (data ?? {}) as { added?: number; updated?: number; already?: boolean };
   return { ok: true, added: result.added ?? 0, updated: result.updated ?? 0, overCap };
 }

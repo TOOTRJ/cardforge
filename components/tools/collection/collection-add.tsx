@@ -97,6 +97,7 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
     if (!source || !batchId) return;
     const progress: Progress = { ...base, unmatched: [...base.unmatched] };
     setPhase({ kind: "running", progress });
+    let cutShort = false;
     const chunks = Math.ceil(source.lines.length / IMPORT_CHUNK_LINES);
     for (let chunk = startChunk; chunk < chunks; chunk += 1) {
       const lines = source.lines.slice(chunk * IMPORT_CHUNK_LINES, (chunk + 1) * IMPORT_CHUNK_LINES);
@@ -105,7 +106,8 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
       // collection stops the import where it is, to go on later.
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          result = await importCollectionChunkAction({ batchId, mode, lines });
+          // A chunk sent again after a lost answer is written once (its index).
+          result = await importCollectionChunkAction({ batchId, mode, chunk, lines });
         } catch {
           result = { ok: false, error: "The connection dropped.", retryAfterSeconds: 3 };
         }
@@ -134,6 +136,7 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
           progress.unmatched.push({ line: line.line, raw: line.raw, reason: "Your collection is full." });
         }
         progress.done = progress.total;
+        cutShort = true;
         break;
       }
     }
@@ -144,6 +147,8 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
       lines: source.lines.length,
       matched: progress.matched,
       unmatched: progress.unmatched.length,
+      // A "replace" cut short by the cap removes nothing.
+      complete: !cutShort,
     });
     const removed = finished.ok ? finished.removed : 0;
     if (!finished.ok) toast.error(finished.error);
@@ -314,6 +319,12 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
             </p>
             {phase.kind === "running" ? (
               <p className="text-xs text-subtle">Keep this page open until it finishes — the cards matched so far are already saved.</p>
+            ) : null}
+            {phase.kind === "done" && phase.full && mode === "replace" ? (
+              <p className="text-sm text-muted">
+                Your collection filled up before the whole list was in, so none of your old cards were removed. To replace
+                it, clear your collection first, then import the list again.
+              </p>
             ) : null}
           </div>
 

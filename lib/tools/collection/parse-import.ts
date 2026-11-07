@@ -281,6 +281,10 @@ function parseCsv(text: string, delimiter: string): Omit<ParsedImport, "truncate
   const columns = findColumns(header.cells);
   const lines: ImportLine[] = [];
   const problems: ImportProblem[] = [];
+  // Deckbox's "Edition" is a set NAME ("Ixalan", "Theros" — short enough to
+  // look like codes): there only its "Edition Code" column is a code.
+  const setHeader = columns.setCode === undefined ? "" : (header.cells[columns.setCode] ?? "");
+  const setColumnIsCode = format !== "deckbox" || /code/i.test(setHeader);
   const cell = (cells: string[], column: Column) => {
     const at = columns[column];
     return at === undefined ? "" : (cells[at] ?? "").trim();
@@ -302,9 +306,9 @@ function parseCsv(text: string, delimiter: string): Omit<ParsedImport, "truncate
       continue;
     }
     const setRaw = cell(record.cells, "setCode");
-    // "Edition" / "Set" columns hold a set NAME in some exports (Deckbox):
-    // only a code-shaped value is a code.
-    const setCode = SET_CODE_RE.test(setRaw) ? setRaw.toLowerCase() : null;
+    // Other exports' "Set" / "Edition" column is a code where it is
+    // code-shaped.
+    const setCode = setColumnIsCode && SET_CODE_RE.test(setRaw) ? setRaw.toLowerCase() : null;
     const number = cell(record.cells, "collectorNumber");
     const id = cell(record.cells, "scryfallId");
     lines.push({
@@ -312,7 +316,8 @@ function parseCsv(text: string, delimiter: string): Omit<ParsedImport, "truncate
       raw,
       name: cleanName(name),
       setCode,
-      collectorNumber: setCode && COLLECTOR_RE.test(number) ? number.toLowerCase() : null,
+      // As printed: Scryfall's numbers keep their case (The List's "DMR-123").
+      collectorNumber: setCode && COLLECTOR_RE.test(number) ? number : null,
       scryfallId: UUID_RE.test(id) ? id.toLowerCase() : null,
       quantity,
       finish: finishOf(cell(record.cells, "finish")),
@@ -367,7 +372,7 @@ function parseText(text: string): Omit<ParsedImport, "truncated" | "copies"> {
       raw,
       name: cleaned,
       setCode: set ? set.toLowerCase() : null,
-      collectorNumber: set && number ? number.toLowerCase() : null,
+      collectorNumber: set && number ? number : null,
       scryfallId: null,
       quantity,
       finish: mark ? (mark.toLowerCase() === "e" ? "etched" : "foil") : "nonfoil",

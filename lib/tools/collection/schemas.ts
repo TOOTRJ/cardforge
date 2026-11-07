@@ -18,7 +18,7 @@ export const importLineSchema = z.object({
   raw: z.string().max(300),
   name: z.string().trim().min(1).max(200),
   setCode: z.string().regex(/^[a-z0-9]{2,6}$/).nullable(),
-  collectorNumber: z.string().regex(/^[a-z0-9★†\-.]{1,12}$/).nullable(),
+  collectorNumber: z.string().regex(/^[A-Za-z0-9★†\-.]{1,12}$/).nullable(),
   scryfallId: uuid.nullable(),
   quantity: z.number().int().min(1).max(MAX_COLLECTION_QUANTITY),
   finish,
@@ -28,6 +28,8 @@ export const importLineSchema = z.object({
 export const importChunkSchema = z.object({
   batchId: uuid,
   mode: z.enum(["add", "replace"]),
+  // The chunk's index in its import: (batch, chunk) is written once.
+  chunk: z.number().int().min(0).max(100_000),
   lines: z.array(importLineSchema).min(1).max(IMPORT_CHUNK_LINES),
 });
 
@@ -38,6 +40,10 @@ export const finishImportSchema = z.object({
   lines: z.number().int().min(0).max(1_000_000),
   matched: z.number().int().min(0).max(1_000_000),
   unmatched: z.number().int().min(0).max(1_000_000),
+  // Every line of the file was sent and none was refused as over the cap.
+  // A "replace" removes the old rows only then: an import cut short (the
+  // collection full, a stop) never takes away cards the file still holds.
+  complete: z.boolean().default(false),
 });
 
 export const addCardSchema = z.object({
@@ -68,4 +74,7 @@ export const saveDeckSchema = z.object({
     .max(BASIC_NAMES.length),
   title: z.string().trim().min(1, "Give the deck a name.").max(80, "Deck names are 80 characters or fewer."),
   visibility: z.enum(["private", "unlisted", "public"]),
+  // A press after one that failed or got no answer: its deck, made in the
+  // last minute, is taken back instead of a second one.
+  retry: z.boolean().default(false),
 });

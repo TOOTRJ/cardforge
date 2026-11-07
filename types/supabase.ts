@@ -3454,7 +3454,7 @@ export type Database = {
         Returns: { cards: number; copies: number; commanders: number; cap: number }[];
       };
       add_collection_cards: {
-        Args: { p_rows: Json; p_batch: string | null; p_mode: string };
+        Args: { p_rows: Json; p_batch: string | null; p_mode: string; p_chunk?: number | null };
         Returns: Json;
       };
       collection_is_basic_land: { Args: { p_name: string; p_type_line: string | null }; Returns: boolean };
