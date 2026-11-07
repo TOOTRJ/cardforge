@@ -28,8 +28,9 @@ type AdminClient = ReturnType<typeof createAdminClient>;
  *  route's maxDuration; what is left waits for the next hour). */
 const PAGE_SIZE = 500;
 const MAX_PAGES = 20;
-/** Card ids per UPDATE. */
-const UPDATE_CHUNK = 200;
+/** UPDATEs in flight at once (one per card: each is held to its row's
+ *  `updated_at` as scanned). */
+const UPDATE_CONCURRENCY = 8;
 /** Cards a notification names (its count is the full number). */
 const NOTIFY_NAMES = 3;
 
@@ -47,11 +48,17 @@ export type ExactCopySweepResult = {
   more: boolean;
 };
 
-type ScanRow = ExactCopyCard & { id: string; owner_id: string; slug: string | null; title: string | null };
+type ScanRow = ExactCopyCard & {
+  id: string;
+  owner_id: string;
+  slug: string | null;
+  title: string | null;
+  updated_at: string;
+};
 
 export async function unlistPublicExactCopies(admin: AdminClient): Promise<ExactCopySweepResult> {
   const result: ExactCopySweepResult = { scanned: 0, exactCopies: 0, unlisted: 0, notified: 0, errors: 0, more: false };
-  const columns = [...EXACT_COPY_COLUMNS, "owner_id", "slug"].join(", ");
+  const columns = [...EXACT_COPY_COLUMNS, "owner_id", "slug", "updated_at"].join(", ");
 
   const copies: ScanRow[] = [];
   let after: string | null = null;
@@ -76,28 +83,32 @@ export async function unlistPublicExactCopies(admin: AdminClient): Promise<Exact
   result.exactCopies = copies.length;
   if (copies.length === 0) return result;
 
-  // Move them — only while still public, so a card its owner unlisted or
-  // made private meanwhile is left alone, and the rows that come back are
-  // exactly the ones this run moved.
+  // Move them — each only while it is still public AND unedited since the
+  // scan (`updated_at` as read; a render write never moves it, 0108): a card
+  // its owner unlisted, made private or customised meanwhile is left alone,
+  // and the rows that come back are exactly the ones this run moved.
   const moved: ScanRow[] = [];
-  const byId = new Map(copies.map((card) => [card.id, card]));
-  for (let i = 0; i < copies.length; i += UPDATE_CHUNK) {
-    const ids = copies.slice(i, i + UPDATE_CHUNK).map((card) => card.id);
-    const { data, error } = await admin
-      .from("cards")
-      .update({ visibility: "unlisted" })
-      .in("id", ids)
-      .eq("visibility", "public")
-      .select("id");
-    if (error) {
-      console.error("[exact-copies] unlist failed:", error.message);
-      result.errors += 1;
-      continue;
-    }
-    for (const row of data ?? []) {
-      const card = byId.get(row.id);
-      if (card) moved.push(card);
-    }
+  for (let i = 0; i < copies.length; i += UPDATE_CONCURRENCY) {
+    const batch = copies.slice(i, i + UPDATE_CONCURRENCY);
+    const answers = await Promise.all(
+      batch.map((card) =>
+        admin
+          .from("cards")
+          .update({ visibility: "unlisted" })
+          .eq("id", card.id)
+          .eq("visibility", "public")
+          .eq("updated_at", card.updated_at)
+          .select("id"),
+      ),
+    );
+    answers.forEach(({ data, error }, index) => {
+      if (error) {
+        console.error("[exact-copies] unlist failed:", error.message);
+        result.errors += 1;
+      } else if ((data ?? []).length > 0) {
+        moved.push(batch[index]!);
+      }
+    });
   }
   result.unlisted = moved.length;
   if (moved.length === 0) return result;

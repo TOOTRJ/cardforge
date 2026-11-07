@@ -11,8 +11,14 @@ import {
 //
 //   * The creator never saves a NEW one: it says so above Save and offers
 //     to put the real card in a deck instead (a deck's printing entry uses
-//     no card slot). createCardAction refuses one too — the creator's
-//     `import_unchanged` claim, `EXACT_COPY_CODE` — so no caller saves one.
+//     no card slot). createCardAction refuses one too — on the creator's
+//     `import_unchanged` claim, `EXACT_COPY_CODE`. The claim is the
+//     creator's own (lib/creator/import-baseline.ts): where it can't make
+//     it — the import's baseline lost to a reload, a guest's restored card,
+//     the Source field emptied — the card saves with no fingerprint and
+//     counts as customised, as the deck pages' "Edited" does. The server
+//     can't judge it alone (the fingerprint is the creator's form after
+//     the import's automatic steps).
 //   * The PUBLIC gallery shows only customised cards: an exact copy may be
 //     unlisted or private, never public. An edit that leaves a stored one
 //     still exact is saved at most unlisted (updateCardAction's

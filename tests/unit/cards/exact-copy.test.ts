@@ -30,7 +30,7 @@ import { unlistPublicExactCopies } from "@/lib/cards/exact-copy-sweep";
 
 const SOURCE = "581b7327-3215-4a4f-b4ae-d9d4002ba882";
 
-function imported(overrides: Record<string, unknown> = {}) {
+function imported(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const row: Record<string, unknown> = {
     title: "Llanowar Elves",
     cost: "{G}",
@@ -45,8 +45,10 @@ function imported(overrides: Record<string, unknown> = {}) {
     lang: "en",
     import_scryfall_id: SOURCE,
   };
+  // Not a fingerprinted column: the sweep holds its UPDATE to it.
+  const stamp = { updated_at: "2026-11-01T00:00:00+00:00" };
   row.import_fingerprint = importFingerprintOf(row);
-  return { ...row, ...overrides };
+  return { ...row, ...stamp, ...overrides };
 }
 
 describe("isExactCopyOfImport — the deck pages' \"Imported\", one answer", () => {
@@ -132,11 +134,11 @@ describe("migration 0183", () => {
     }
   });
 
-  it("every notification kind has words", () => {
-    for (const kind of kinds(sql)) {
-      const d = describeNotification({ type: kind, payload: {}, actor: null } as never, { isAdmin: false });
-      expect(d.body, kind).toBeTruthy();
-    }
+  it("the new kind has words of its own, not the generic fallback's", () => {
+    const own = describeNotification({ type: "exact_copy_unlisted", payload: { count: 1, titles: ["X"] }, actor: null } as never, { isAdmin: false });
+    const fallback = describeNotification({ type: "no_such_kind", payload: {}, actor: null } as never, { isAdmin: false });
+    expect(own.body).not.toBe(fallback.body);
+    expect(own.subject).toBe("PipGlyph team");
   });
 });
 
@@ -150,12 +152,21 @@ describe("unlistPublicExactCopies — the hourly sweep", () => {
     revalidate.path.mockReset();
   });
 
-  function harness(rows: Array<Record<string, unknown>>, options: { stillPublic?: (id: string) => boolean } = {}) {
+  function harness(
+    rows: Array<Record<string, unknown>>,
+    options: { stillPublic?: (id: string) => boolean } = {},
+  ) {
     return chainClient((table, calls): ChainAnswer => {
-      if (table === "cards" && called(calls, "select") && !called(calls, "update")) return { data: rows };
+      if (table === "cards" && called(calls, "select") && !called(calls, "update")) {
+        // Keyset paging as PostgREST would answer it: ids after `gt`, `limit` of them.
+        const after = calls.find((c) => c.method === "gt")?.args[1] as string | undefined;
+        const limit = calls.find((c) => c.method === "limit")?.args[0] as number;
+        const sorted = [...rows].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        return { data: sorted.filter((r) => after === undefined || String(r.id) > after).slice(0, limit) };
+      }
       if (table === "cards" && called(calls, "update")) {
-        const ids = calls.find((c) => c.method === "in")?.args[1] as string[];
-        return { data: ids.filter((id) => options.stillPublic?.(id) ?? true).map((id) => ({ id })) };
+        const id = calls.find((c) => c.method === "eq" && c.args[0] === "id")?.args[1] as string;
+        return { data: (options.stillPublic?.(id) ?? true) ? [{ id }] : [] };
       }
       if (table === "profiles") return { data: [{ id: OWNER, username: "tester" }, { id: OTHER, username: "other" }] };
       return { data: null };
@@ -177,11 +188,15 @@ describe("unlistPublicExactCopies — the hourly sweep", () => {
     expect(called(scan!.calls, "eq", "visibility")).toBe(true);
     expect(scan!.calls).toContainEqual({ method: "not", args: ["import_fingerprint", "is", null] });
 
-    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
-    expect(payloadOf(update.calls, "update")).toEqual({ visibility: "unlisted" });
-    expect(update.calls).toContainEqual({ method: "in", args: ["id", ["a", "b", "d"]] });
-    // Only while still public: an owner's own change meanwhile wins.
-    expect(update.calls).toContainEqual({ method: "eq", args: ["visibility", "public"] });
+    const updates = stub.forTable("cards").filter((e) => called(e.calls, "update"));
+    expect(updates.map((u) => u.calls.find((c) => c.method === "eq" && c.args[0] === "id")?.args[1])).toEqual(["a", "b", "d"]);
+    for (const update of updates) {
+      expect(payloadOf(update.calls, "update")).toEqual({ visibility: "unlisted" });
+      // Only while still public AND unedited since the scan: an owner's own
+      // change meanwhile wins.
+      expect(update.calls).toContainEqual({ method: "eq", args: ["visibility", "public"] });
+      expect(update.calls).toContainEqual({ method: "eq", args: ["updated_at", "2026-11-01T00:00:00+00:00"] });
+    }
 
     const notes = stub.forTable("notifications").map((e) => payloadOf(e.calls, "insert") as Record<string, unknown>);
     expect(notes).toHaveLength(2);
@@ -204,6 +219,17 @@ describe("unlistPublicExactCopies — the hourly sweep", () => {
     expect(result).toMatchObject({ exactCopies: 1, unlisted: 0, notified: 0 });
     expect(stub.forTable("notifications")).toHaveLength(0);
     expect(revalidate.lists).not.toHaveBeenCalled();
+  });
+
+  it("pages through every public fingerprinted card by id (500 a page)", async () => {
+    const base = imported();
+    const id = (i: number) => `id-${String(i).padStart(4, "0")}`;
+    const rows = Array.from({ length: 1001 }, (_, i) => ({ ...base, id: id(i), owner_id: OWNER, slug: `s${i}` }));
+    const stub = harness(rows);
+    const result = await unlistPublicExactCopies(stub.client as never);
+    expect(result).toMatchObject({ scanned: 1001, exactCopies: 1001, unlisted: 1001, notified: 1, more: false });
+    const scans = stub.forTable("cards").filter((e) => !called(e.calls, "update"));
+    expect(scans.map((e) => e.calls.find((c) => c.method === "gt")?.args[1] ?? null)).toEqual([null, id(499), id(999)]);
   });
 
   it("nothing to move: one read, nothing written", async () => {

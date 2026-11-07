@@ -99,8 +99,15 @@ function AddPrintingToDeckDialog({
 
   const decks = load.state === "ready" ? load.decks : [];
 
+  // Closed, it forgets the list: the next open shows "Loading…" until its
+  // own read lands, never the last open's decks.
+  function setOpen(next: boolean) {
+    if (!next) setLoad({ state: "loading" });
+    onOpenChange(next);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add {realCardName} to a deck</DialogTitle>
@@ -179,7 +186,7 @@ function AddPrintingToDeckDialog({
         )}
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             Done
           </Button>
         </DialogFooter>
