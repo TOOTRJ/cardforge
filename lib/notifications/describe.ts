@@ -163,6 +163,19 @@ export function describeNotification(
         href: "/dashboard/billing#banked-days",
       };
     }
+    case "tool_access": {
+      // A tester let into a beta tool (0182, /admin/tools).
+      const name = str(payload.toolName) ?? "a new tool";
+      const slug = str(payload.tool);
+      const built = payload.built === true;
+      return {
+        subject: "PipGlyph team",
+        body: built
+          ? `gave you early access to ${name}. It's on your Tools page — tell us what you think.`
+          : `added you to the ${name} beta. It opens on your Tools page as soon as it's ready.`,
+        href: built && slug ? `/dashboard/tools/${slug}` : "/dashboard/tools",
+      };
+    }
     case "render_update": {
       const count = num(payload.count);
       return {

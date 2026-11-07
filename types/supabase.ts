@@ -596,6 +596,96 @@ export type Database = {
         Relationships: [];
       };
       // Migration 0177 — referrals.
+      tool_releases: {
+        Row: {
+          slug: string;
+          /** NULL = beta (admins + testers); else released to that plan and up. */
+          release_tier: "free" | "plus" | "pro" | null;
+          paused: boolean;
+          released_at: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          slug: string;
+          release_tier?: "free" | "plus" | "pro" | null;
+          paused?: boolean;
+          released_at?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          slug?: string;
+          release_tier?: "free" | "plus" | "pro" | null;
+          paused?: boolean;
+          released_at?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      tool_access_grants: {
+        Row: {
+          tool_slug: string;
+          user_id: string;
+          granted_by: string | null;
+          granted_at: string;
+          expires_at: string | null;
+          note: string | null;
+        };
+        Insert: {
+          tool_slug: string;
+          user_id: string;
+          granted_by?: string | null;
+          granted_at?: string;
+          expires_at?: string | null;
+          note?: string | null;
+        };
+        Update: {
+          tool_slug?: string;
+          user_id?: string;
+          granted_by?: string | null;
+          granted_at?: string;
+          expires_at?: string | null;
+          note?: string | null;
+        };
+        Relationships: [];
+      };
+      tool_interest: {
+        Row: { tool_slug: string; user_id: string; created_at: string };
+        Insert: { tool_slug: string; user_id: string; created_at?: string };
+        Update: { tool_slug?: string; user_id?: string; created_at?: string };
+        Relationships: [];
+      };
+      tool_events: {
+        Row: {
+          id: number;
+          tool_slug: string;
+          user_id: string | null;
+          event: string;
+          access: "admin" | "grant" | "release" | null;
+          props: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: never;
+          tool_slug: string;
+          user_id?: string | null;
+          event: string;
+          access?: "admin" | "grant" | "release" | null;
+          props?: Json;
+          created_at?: string;
+        };
+        Update: {
+          tool_slug?: string;
+          user_id?: string | null;
+          event?: string;
+          access?: "admin" | "grant" | "release" | null;
+          props?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       referral_codes: {
         Row: { user_id: string; code: string; created_at: string };
         Insert: { user_id: string; code: string; created_at?: string };
@@ -3270,6 +3360,27 @@ export type Database = {
       };
       // Migration 0074 — private billing columns.
       // Migration 0177 — referrals.
+      has_tool_access: {
+        Args: { p_slug: string };
+        Returns: boolean;
+      };
+      admin_tool_summary: {
+        Args: Record<string, never>;
+        Returns: {
+          tool_slug: string;
+          testers: number;
+          interested: number;
+          users_7d: number;
+          users_30d: number;
+          opens_30d: number;
+          uses_30d: number;
+          last_event_at: string | null;
+        }[];
+      };
+      admin_tool_detail: {
+        Args: { p_slug: string; p_days?: number };
+        Returns: Json;
+      };
       my_referral_code: {
         Args: Record<string, never>;
         Returns: string | null;
