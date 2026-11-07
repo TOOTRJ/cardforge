@@ -13,9 +13,10 @@ export const SYMBOL_LIBRARY_MAX = 200;
 /** The biggest side the cut-out works on; a bigger picture is scaled down
  *  first (the browser's preview and the server alike). */
 export const WORKING_MAX_PX = 1024;
-/** An upload's limit in bytes (the Set icon step's is 2 MB; a drawing photo
- *  is bigger). */
-export const SYMBOL_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+/** An upload's limit in bytes: under Vercel's 4.5 MB function body limit
+ *  (the picture travels as a server-action body) and the set-covers
+ *  bucket's 5 MB, as Pip Forge's 4 MB. */
+export const SYMBOL_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 
 export const INK_CHOICES = ["one", "colour"] as const;
 export type InkChoice = (typeof INK_CHOICES)[number];

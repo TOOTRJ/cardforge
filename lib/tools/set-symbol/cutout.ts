@@ -367,15 +367,58 @@ function dropBorderBlobs(mask: Mask): void {
   }
 }
 
+/** How far (px) a soft pixel may sit from a kept shape and still be its
+ *  anti-aliased edge. */
+const SOFT_EDGE_REACH = 3;
+
 /** Drop specks: components smaller than 0.15 % of the picture, or under
- *  2 % of the biggest one. Their soft edges go with them. In place. */
+ *  2 % of the biggest one — and every soft pixel (under 128) that is not
+ *  within SOFT_EDGE_REACH of a kept shape: a dropped speck's fringe, or a
+ *  faint smudge that never reached 128 (it would widen the symbol's bounds
+ *  and shrink it in every file). In place. */
 export function dropSpecks(mask: Mask): void {
+  const { width, height } = mask;
   const { labels, sizes } = components(mask);
   const biggest = Math.max(0, ...sizes);
-  const floor = Math.max(mask.width * mask.height * 0.0015, biggest * 0.02);
+  const floor = Math.max(width * height * 0.0015, biggest * 0.02);
   const drop = new Uint8Array(sizes.length);
   for (let k = 1; k < sizes.length; k += 1) if (sizes[k] < floor) drop[k] = 1;
-  for (let p = 0; p < labels.length; p += 1) if (drop[labels[p]]) mask.data[p] = 0;
+  const kept = new Uint8Array(width * height);
+  for (let p = 0; p < labels.length; p += 1) {
+    if (drop[labels[p]]) mask.data[p] = 0;
+    else if (labels[p]) kept[p] = 1;
+  }
+  // Near a kept shape = the kept pixels dilated by a square of SOFT_EDGE_REACH
+  // (one horizontal pass, then one vertical).
+  const across = new Uint8Array(width * height);
+  for (let y = 0; y < height; y += 1) {
+    let last = -Infinity;
+    for (let x = 0; x < width; x += 1) {
+      if (kept[y * width + x]) last = x;
+      if (x - last <= SOFT_EDGE_REACH) across[y * width + x] = 1;
+    }
+    last = Infinity;
+    for (let x = width - 1; x >= 0; x -= 1) {
+      if (kept[y * width + x]) last = x;
+      if (last - x <= SOFT_EDGE_REACH) across[y * width + x] = 1;
+    }
+  }
+  const near = new Uint8Array(width * height);
+  for (let x = 0; x < width; x += 1) {
+    let last = -Infinity;
+    for (let y = 0; y < height; y += 1) {
+      if (across[y * width + x]) last = y;
+      if (y - last <= SOFT_EDGE_REACH) near[y * width + x] = 1;
+    }
+    last = Infinity;
+    for (let y = height - 1; y >= 0; y -= 1) {
+      if (across[y * width + x]) last = y;
+      if (last - y <= SOFT_EDGE_REACH) near[y * width + x] = 1;
+    }
+  }
+  for (let p = 0; p < mask.data.length; p += 1) {
+    if (mask.data[p] < 128 && !near[p]) mask.data[p] = 0;
+  }
 }
 
 /**

@@ -151,6 +151,19 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
 
   // Rename
   const [renaming, setRenaming] = useState<string | null>(null);
+  // One answer per rename: Enter's submit, then the blur of the input it
+  // unmounts, or Escape then that blur, must not save (twice).
+  const renameSettled = useRef(true);
+  const renameButtonRef = useRef<HTMLButtonElement | null>(null);
+  const startRename = (id: string) => {
+    renameSettled.current = false;
+    setRenaming(id);
+  };
+  const endRename = () => {
+    renameSettled.current = true;
+    setRenaming(null);
+    requestAnimationFrame(() => renameButtonRef.current?.focus());
+  };
   const renameId = useId();
 
   const selected = useMemo(() => symbols.find((s) => s.id === selectedId) ?? null, [symbols, selectedId]);
@@ -223,7 +236,7 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
       return;
     }
     if (file.size > SYMBOL_UPLOAD_MAX_BYTES) {
-      setUploadError("Pictures can be up to 8 MB.");
+      setUploadError("Pictures can be up to 4 MB.");
       return;
     }
     try {
@@ -292,8 +305,9 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
 
   // --- rename / delete ------------------------------------------------------
   const rename = (symbol: StudioSymbol, name: string) => {
+    if (renameSettled.current) return;
     const next = name.replace(/\s+/g, " ").trim();
-    setRenaming(null);
+    endRename();
     if (!next || next === symbol.name) return;
     setSymbols((prev) => prev.map((s) => (s.id === symbol.id ? { ...s, name: next } : s)));
     void renameSymbolAction({ id: symbol.id, name: next }).then((result) => {
@@ -392,9 +406,13 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
                 defaultValue={selected.name}
                 maxLength={SYMBOL_NAME_MAX}
                 autoFocus
+                onFocus={(event) => event.currentTarget.select()}
                 onBlur={(event) => rename(selected, event.currentTarget.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Escape") setRenaming(null);
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    endRename();
+                  }
                 }}
                 className={inputClass(false)}
               />
@@ -409,7 +427,7 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
             </div>
           )}
           <div className="flex shrink-0 gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setRenaming(selected.id)} aria-label={`Rename ${selected.name}`}>
+            <Button variant="ghost" size="sm" ref={renameButtonRef} onClick={() => startRename(selected.id)} aria-label={`Rename ${selected.name}`}>
               <Pencil aria-hidden />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => remove(selected)} disabled={saving} aria-label={`Remove ${selected.name}`}>
@@ -571,7 +589,7 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
                   <span className="text-sm font-medium text-foreground">
                     {draft?.kind === "upload" ? "Choose another picture" : "Choose a picture or drop it here"}
                   </span>
-                  <span className="text-xs text-muted">PNG, JPEG or WebP, up to 8 MB. Free — no AI runs.</span>
+                  <span className="text-xs text-muted">PNG, JPEG or WebP, up to 4 MB. Free — no AI runs.</span>
                 </button>
                 {uploadError ? (
                   <p role="alert" className="text-sm text-danger">

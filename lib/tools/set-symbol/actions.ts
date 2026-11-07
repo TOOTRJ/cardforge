@@ -88,7 +88,7 @@ export async function uploadSymbolAction(formData: FormData): Promise<SymbolResu
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Choose a picture first." };
   if (file.size === 0) return { ok: false, error: "That file is empty." };
-  if (file.size > SYMBOL_UPLOAD_MAX_BYTES) return { ok: false, error: "Pictures can be up to 8 MB." };
+  if (file.size > SYMBOL_UPLOAD_MAX_BYTES) return { ok: false, error: "Pictures can be up to 4 MB." };
   const name = symbolNameSchema.safeParse(formData.get("name") ?? "");
   if (!name.success) return { ok: false, error: name.error.issues[0]?.message ?? "Give the symbol a name." };
   const settings = parseSettings(formData.get("settings"));

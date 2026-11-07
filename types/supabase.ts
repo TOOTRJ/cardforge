@@ -595,7 +595,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      // Migration 0177 — referrals.
       // Migration 0187 — the Set Symbol Studio beta tool's symbols.
       set_symbols: {
         Row: {
@@ -643,6 +642,7 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0177 — referrals.
       // Migration 0184 — the Token Kit beta tool's saved kits.
       token_kits: {
         Row: {

@@ -99,21 +99,23 @@ export function StudioSetIconPicker({ current, onPick }: { current: string; onPi
           Your symbols · Set Symbol Studio
         </span>
         {onStudioIcon ? (
-          <label htmlFor={switchId} className="inline-flex cursor-pointer items-center gap-2 text-xs text-foreground">
-            <input
-              id={switchId}
-              type="checkbox"
-              role="switch"
-              checked={follows}
-              onChange={(event) => setFollows(event.target.checked)}
-              aria-describedby={`${switchId}-note`}
-              className="h-4 w-4 accent-[var(--color-gold)]"
-            />
-            Colour by rarity
+          <span className="inline-flex items-center">
+            <label htmlFor={switchId} className="inline-flex cursor-pointer items-center gap-2 text-xs text-foreground">
+              <input
+                id={switchId}
+                type="checkbox"
+                role="switch"
+                checked={follows}
+                onChange={(event) => setFollows(event.target.checked)}
+                aria-describedby={`${switchId}-note`}
+                className="h-4 w-4 accent-[var(--color-gold)]"
+              />
+              Colour by rarity
+            </label>
             <span id={`${switchId}-note`} className="sr-only">
               On: the card draws the common, uncommon, rare or mythic look of its rarity. Off: one look on every rarity.
             </span>
-          </label>
+          </span>
         ) : null}
       </div>
       {symbols.length === 0 ? (
@@ -127,7 +129,7 @@ export function StudioSetIconPicker({ current, onPick }: { current: string; onPi
                 key={symbol.id}
                 type="button"
                 aria-pressed={active}
-                onClick={() => onPick(follows || !active ? symbol.auto : symbol.plain)}
+                onClick={() => onPick(follows ? symbol.auto : symbol.plain)}
                 className={cn(
                   TILE,
                   active ? "border-gold bg-gold/10" : "border-border bg-elevated/50 hover:border-border-strong",

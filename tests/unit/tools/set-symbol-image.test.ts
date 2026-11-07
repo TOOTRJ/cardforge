@@ -110,6 +110,29 @@ describe("cutOut", () => {
     expect(maskBounds(mask)).toEqual({ x: 30, y: 30, width: 61, height: 61 });
   });
 
+  it("drops a speck's soft fringe too, so the bounds stay the shape's", () => {
+    // A 100 px square and, in a corner, a 4 px speck in a grey anti-aliased
+    // ring (alpha under 128 after the cut): the ring must go with the speck.
+    const square = (x: number, y: number) => x >= 150 && x < 250 && y >= 150 && y < 250;
+    const speck = (x: number, y: number) => x >= 20 && x < 24 && y >= 20 && y < 24;
+    const fringe = (x: number, y: number) => x >= 19 && x < 25 && y >= 19 && y < 25 && !speck(x, y);
+    const bg = (x: number, y: number): Rgb => (fringe(x, y) ? [196, 196, 196] : [255, 255, 255]);
+    const img = picture(400, 400, bg, (x, y) => square(x, y) || speck(x, y));
+    for (const mode of ["edges", "colour"] as const) {
+      const { mask } = cutOut(img, { mode, tolerance: 40 });
+      expect(at(mask, 19, 19), mode).toBe(0);
+      expect(maskBounds(mask), mode).toEqual({ x: 150, y: 150, width: 100, height: 100 });
+    }
+  });
+
+  it("keeps a kept shape's own soft edge", () => {
+    const square = (x: number, y: number) => x >= 40 && x < 80 && y >= 40 && y < 80;
+    const edge = (x: number, y: number) => x === 39 && y >= 40 && y < 80;
+    const bg = (x: number, y: number): Rgb => (edge(x, y) ? [196, 196, 196] : [255, 255, 255]);
+    const { mask } = cutOut(picture(120, 120, bg, square), { mode: "edges", tolerance: 40 });
+    expect(at(mask, 39, 60)).toBeGreaterThan(0);
+  });
+
   it("higher tolerance removes more of a faint grey", () => {
     const faint = (x: number, y: number) => x >= 20 && x < 100 && y >= 40 && y < 80;
     const img = picture(120, 120, white, faint, [205, 205, 205]);
