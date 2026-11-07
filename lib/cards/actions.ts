@@ -103,6 +103,8 @@ import {
   allStrongLanguageMessage,
 } from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
+import { EXACT_COPY_CODE, EXACT_COPY_MESSAGE, isExactCopyOfImport } from "@/lib/cards/exact-copy";
+import { readExactCopyIds } from "@/lib/cards/exact-copy-read";
 import {
   isModerationLocked,
   isModerationLockViolation,
@@ -159,6 +161,10 @@ type UpdateCardSuccess = {
    *  PRIVATE because moderation hid the card (migration 0156,
    *  lib/moderation/lock.ts) — the UI says why. */
   moderationLocked?: true;
+  /** Set only when the edit asked for public and was stored UNLISTED
+   *  because the card is still exactly the real card it was imported from
+   *  (lib/cards/exact-copy.ts) — the UI says why. */
+  exactCopyUnlisted?: true;
 };
 
 type DeleteCardSuccess = {
@@ -331,6 +337,15 @@ export async function createCardAction(
   // 0121's CHECK keeps it private). Anyone else's request is ignored.
   const framePreview =
     data.frame_preview === true && (await viewerIsAdmin());
+
+  // An exact copy of a real card is the real card, not a PipGlyph card
+  // (owner 2026-11-06, lib/cards/exact-copy.ts): never saved, whoever asks —
+  // the creator offers the deck instead. An admin's frame preview is the one
+  // save that may start from an untouched printing (it lands private and
+  // flagged, out of every list).
+  if (data.import_unchanged === true && data.source_scryfall_id?.trim() && !data.parent_card_id && !framePreview) {
+    return { ok: false, code: EXACT_COPY_CODE, formError: EXACT_COPY_MESSAGE };
+  }
 
   // Verification gate — the server twin of the picker's: a (template,
   // colour) pair saves only when the admin has published it in
@@ -1217,6 +1232,15 @@ export async function updateCardAction(
     isModerationLocked(existing) && (update.visibility ?? existing.visibility) !== "private";
   if (moderationLocked) update.visibility = "private";
 
+  // An exact copy of a real card (lib/cards/exact-copy.ts) is never public:
+  // judged on the card as it will be stored, an edit that leaves it still
+  // exactly its import and asks for public is saved unlisted, and the result
+  // says why. Any change to the card itself makes it the maker's own.
+  const exactCopyUnlisted =
+    (update.visibility ?? existing.visibility) === "public" &&
+    isExactCopyOfImport({ ...existing, ...update });
+  if (exactCopyUnlisted) update.visibility = "unlisted";
+
   // An unnamed second face is a draft's privilege (TODO 3b.5): judged on the
   // card as it will be stored — the patched back face over the stored one,
   // at the visibility the rules above settled on (the strong-language rule
@@ -1342,6 +1366,7 @@ export async function updateCardAction(
     slug: row.slug,
     ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
     ...(moderationLocked ? { moderationLocked: true as const } : {}),
+    ...(exactCopyUnlisted ? { exactCopyUnlisted: true as const } : {}),
   };
 }
 
@@ -1444,6 +1469,8 @@ export type BulkVisibilityResult =
       skippedLanguage?: number;
       skippedArtless?: number;
       skippedModeration?: number;
+      /** Cards a PUBLISH left as they were: still exactly the real card. */
+      skippedExactCopy?: number;
     })
   | (BulkCardsFailure & { reason?: "moderation" });
 
@@ -1530,13 +1557,30 @@ export async function updateCardsVisibilityAction(
       : rows.filter(
           (c) => c.frame_preview !== true && !strongLanguage.includes(c) && storedArtMissing(c) !== null,
         );
+  // An exact copy of a real card is never PUBLISHED (lib/cards/exact-copy.ts:
+  // only customised cards go public): left as it is and counted, like the
+  // artwork rule. Unlisting it stays allowed.
+  const exactCopyIds =
+    parsed.data.visibility === "public"
+      ? await readExactCopyIds(
+          supabase,
+          rows
+            .filter((c) => c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c))
+            .map((c) => c.id),
+        )
+      : new Set<string>();
+  const exactCopies = rows.filter((c) => exactCopyIds.has(c.id));
   const targets = goingPrivate
     ? rows
-    : rows.filter((c) => c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c));
+    : rows.filter(
+        (c) =>
+          c.frame_preview !== true && !strongLanguage.includes(c) && !artless.includes(c) && !exactCopyIds.has(c.id),
+      );
   if (targets.length === 0) {
-    // ONE sentence for every reason when the lock or the artwork is among
-    // them (the strong-language and preview-only wordings keep theirs).
-    if (moderationLocked.length > 0 || artless.length > 0) {
+    // ONE sentence for every reason when the lock, the artwork or an exact
+    // copy is among them (the strong-language and preview-only wordings keep
+    // theirs).
+    if (moderationLocked.length > 0 || artless.length > 0 || exactCopies.length > 0) {
       return {
         ok: false,
         ...(moderationLocked.length > 0 ? { reason: "moderation" as const } : {}),
@@ -1545,6 +1589,7 @@ export async function updateCardsVisibilityAction(
           strongLanguage: strongLanguage.length,
           previews: previews.length,
           artless: artless.length,
+          exactCopy: exactCopies.length,
         }),
       };
     }
@@ -1678,6 +1723,7 @@ export async function updateCardsVisibilityAction(
     ...(strongLanguage.length > 0 ? { skippedLanguage: strongLanguage.length } : {}),
     ...(moderationLocked.length > 0 ? { skippedModeration: moderationLocked.length } : {}),
     ...(artless.length > 0 ? { skippedArtless: artless.length } : {}),
+    ...(exactCopies.length > 0 ? { skippedExactCopy: exactCopies.length } : {}),
   };
 }
 

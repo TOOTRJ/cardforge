@@ -74,6 +74,16 @@ export function artlessSkippedLine(skipped: number | undefined): string {
     : `${skipped} cards stayed as they were: they have no artwork yet. Add artwork before publishing.`;
 }
 
+/** The cards a PUBLISH left as they were because each is still exactly the
+ *  real card it was imported from (lib/cards/exact-copy.ts: only customised
+ *  cards go public) — "" when there were none. */
+export function exactCopySkippedLine(skipped: number | undefined): string {
+  if (!skipped || skipped <= 0) return "";
+  return skipped === 1
+    ? "1 card stayed as it was: it's still exactly the real card. Change something on it to publish it."
+    : `${skipped} cards stayed as they were: they're still exactly the real card. Change something on them to publish them.`;
+}
+
 /** Every selected card is held back — by the moderation lock (migration
  *  0156, lib/moderation/lock.ts), its missing artwork, its text, or as a
  *  frame preview — and at least one of them by the lock or the artwork:
@@ -81,13 +91,14 @@ export function artlessSkippedLine(skipped: number | undefined): string {
  *  publishing." only when a card has none. */
 export function allHeldBackMessage(
   visibility: Visibility,
-  held: { moderation?: number; strongLanguage: number; previews: number; artless?: number },
+  held: { moderation?: number; strongLanguage: number; previews: number; artless?: number; exactCopy?: number },
 ): string {
   const moderation = held.moderation ?? 0;
   const artless = held.artless ?? 0;
+  const exactCopy = held.exactCopy ?? 0;
   const nothing =
     visibility === "public" ? "Nothing was published" : `Nothing was made ${visibility}`;
-  const alone = (n: number) => n === 1 && moderation + artless + held.strongLanguage + held.previews === 1;
+  const alone = (n: number) => n === 1 && moderation + artless + exactCopy + held.strongLanguage + held.previews === 1;
   const reasons = [
     moderation > 0
       ? alone(moderation)
@@ -99,11 +110,18 @@ export function allHeldBackMessage(
         ? "the selected card has no artwork yet"
         : `${cards(artless)} ${plural(artless, "has", "have")} no artwork yet`
       : "",
+    exactCopy > 0
+      ? alone(exactCopy)
+        ? "the selected card is still exactly the real card"
+        : `${cards(exactCopy)} ${plural(exactCopy, "is", "are")} still exactly the real card`
+      : "",
     held.strongLanguage > 0
       ? `${cards(held.strongLanguage)} ${plural(held.strongLanguage, "has", "have")} strong language in ${plural(held.strongLanguage, "its", "their")} text`
       : "",
     held.previews > 0 ? `${held.previews} ${plural(held.previews, "is a frame preview", "are frame previews")}` : "",
   ].filter(Boolean);
   const list = reasons.length > 1 ? `${reasons.slice(0, -1).join(", ")} and ${reasons[reasons.length - 1]}` : reasons[0];
-  return `${nothing}: ${list}.${artless > 0 ? " Add artwork before publishing." : ""}`;
+  return `${nothing}: ${list}.${artless > 0 ? " Add artwork before publishing." : ""}${
+    exactCopy > 0 ? " Change something on a copy to publish it." : ""
+  }`;
 }

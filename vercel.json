@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/referral-rewards",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/exact-copies",
+      "schedule": "40 * * * *"
     }
   ]
 }

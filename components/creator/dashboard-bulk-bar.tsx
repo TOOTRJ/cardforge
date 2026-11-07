@@ -30,6 +30,7 @@ import {
 } from "@/lib/cards/actions";
 import {
   artlessSkippedLine,
+  exactCopySkippedLine,
   bulkVisibilityMessage,
   strongLanguageSkippedLine,
 } from "@/lib/cards/bulk-visibility-copy";
@@ -100,6 +101,7 @@ export function DashboardBulkBar({
           bulkVisibilityMessage(visibility, result.count, result.skippedPreviews),
           strongLanguageSkippedLine(result.skippedLanguage),
           artlessSkippedLine(result.skippedArtless),
+          exactCopySkippedLine(result.skippedExactCopy),
           moderationLockedSkippedLine(result.skippedModeration),
         ]
           .filter(Boolean)

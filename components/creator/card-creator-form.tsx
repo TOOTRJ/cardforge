@@ -418,6 +418,8 @@ import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import { creatorLanguageFields, NO_STRONG_LANGUAGE, strongLanguageChoices } from "@/lib/creator/strong-language";
 import { isModerationLocked, moderationLockedSavedMessage } from "@/lib/moderation/lock";
 import { strongLanguageSavedMessage } from "@/lib/moderation/profanity";
+import { EXACT_COPY_SAVE_REASON, EXACT_COPY_UNLISTED_MESSAGE } from "@/lib/cards/exact-copy";
+import { ExactCopyNotice } from "@/components/creator/exact-copy-notice";
 import {
   isFramePreviewSave,
   withPreviewFramesParam,
@@ -1546,6 +1548,15 @@ export function CardCreatorForm({
     : isRemix
       ? !hasMeaningfulChange(Object.keys(dirtyFields), "remix")
       : false;
+  // A NEW card that still prints exactly what its import gave it is the real
+  // card (lib/cards/exact-copy.ts): never saved — Save says why and offers
+  // the deck instead (the deck remix in its own words: the real card is
+  // already in that deck). An admin's frame preview may save one (it stays
+  // private and flagged). The server refuses one too (EXACT_COPY).
+  const importIsUnchanged =
+    mode === "create" &&
+    !previewSave &&
+    importUnchangedPayload(importBaseline, watched).import_unchanged === true;
   // A restored guest card's pictures upload first (TODO HM3): a `blob:` URL
   // is this page's own and never reaches the save.
   const localPictureWaiting = Boolean(userId) && blobUrlPaths(watched).length > 0;
@@ -1556,13 +1567,15 @@ export function CardCreatorForm({
         ? guestUploads === "failed"
           ? GUEST_PICTURE_FAILED_REASON
           : GUEST_PICTURE_UPLOADING_REASON
-      : deckRemix && remixSource && !isDirty
+      : deckRemix && remixSource && (!isDirty || importIsUnchanged)
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
           ? isRemix
             ? "Change something — the name, art, text or numbers — to make this remix your own."
             : "Change something to enable Save."
-          : null;
+          : importIsUnchanged
+            ? EXACT_COPY_SAVE_REASON
+            : null;
   const statVis = statVisibility(
     watched.card_type,
     parseSubtypes(watched.subtypes_text),
@@ -4666,7 +4679,12 @@ export function CardCreatorForm({
       // Kept private for the strong language in its text (the Publish
       // step's note, or the server): ONE toast says so.
       const editLanguageNotice = result.forcedPrivate?.fields ?? (languageFields.length > 0 ? languageFields : null);
-      const editSavedVisibility = result.forcedPrivate || result.moderationLocked ? "private" : finalVisibility;
+      const editSavedVisibility =
+        result.forcedPrivate || result.moderationLocked
+          ? "private"
+          : result.exactCopyUnlisted
+            ? "unlisted"
+            : finalVisibility;
       // …and for the moderation lock (0156), when the maker asked for more.
       const editLockNotice = result.moderationLocked === true || (moderationLocked && chosenVisibility !== "private");
       toast.success(
@@ -4674,7 +4692,9 @@ export function CardCreatorForm({
           ? moderationLockedSavedMessage(payload.title)
           : editLanguageNotice
             ? strongLanguageSavedMessage(payload.title, editLanguageNotice)
-            : "Changes saved.",
+            : result.exactCopyUnlisted
+              ? EXACT_COPY_UNLISTED_MESSAGE
+              : "Changes saved.",
       );
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
@@ -5784,7 +5804,7 @@ export function CardCreatorForm({
                 ? saveDisabledReason
                 : !watched.title.trim()
                   ? "Add a title first to save it as a draft."
-                  : isRemix && reviseUnchanged
+                  : (isRemix && reviseUnchanged) || importIsUnchanged
                     ? saveDisabledReason
                     : null
             }
@@ -5887,6 +5907,11 @@ export function CardCreatorForm({
                   twoFaces
                 }
                 faceGroups={faceTabs && faceWords ? groupNeedsByFace(saveNeeds, faceWords) : null}
+              />
+            ) : userId && saveDisabledReason === EXACT_COPY_SAVE_REASON ? (
+              <ExactCopyNotice
+                realCardName={remixSource?.name ?? watched.title}
+                scryfallId={watched.source_scryfall_id.trim()}
               />
             ) : userId && saveDisabledReason ? (
               <p
