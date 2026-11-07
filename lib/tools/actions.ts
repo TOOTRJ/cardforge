@@ -40,18 +40,30 @@ export async function setToolInterestAction(
   return { ok: true };
 }
 
+/** Browser events one user may record per tool per minute. */
+const CLIENT_TOOL_EVENTS_PER_MINUTE = 60;
+
 /**
  * A tool's event from the browser (a click that never reaches a server
  * action of its own: a copy, an export opened). Recorded only for a viewer
- * the access rule lets in, with the path that let them in.
+ * the access rule lets in, with the path that let them in. Never `open` —
+ * the page records its own view (`openTool`), so a client can't inflate it —
+ * and at most CLIENT_TOOL_EVENTS_PER_MINUTE a minute per user and tool.
  */
 export async function trackToolEventAction(
   slug: string,
   event: string,
   props?: Record<string, unknown>,
 ): Promise<void> {
-  if (!toolBySlug(slug) || !TOOL_EVENT_RE.test(event)) return;
+  if (!toolBySlug(slug) || event === "open" || !TOOL_EVENT_RE.test(event)) return;
   const access = await checkToolAccess(slug);
-  if (!access) return;
+  if (!access || !isAdminConfigured()) return;
+  const { count, error } = await createAdminClient()
+    .from("tool_events")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", access.userId)
+    .eq("tool_slug", slug)
+    .gte("created_at", new Date(Date.now() - 60_000).toISOString());
+  if (error || (count ?? 0) >= CLIENT_TOOL_EVENTS_PER_MINUTE) return;
   await recordToolEvent({ slug, userId: access.userId, event, access: access.via, props });
 }

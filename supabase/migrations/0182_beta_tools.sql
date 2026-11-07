@@ -83,6 +83,7 @@ alter table public.tool_access_grants enable row level security;
 drop policy if exists "Tool grants: own or admin read" on public.tool_access_grants;
 create policy "Tool grants: own or admin read"
   on public.tool_access_grants for select
+  to authenticated
   using (user_id = auth.uid() or public.viewer_is_admin());
 
 revoke all on public.tool_access_grants from public, anon, authenticated;
@@ -110,6 +111,7 @@ alter table public.tool_interest enable row level security;
 drop policy if exists "Tool interest: own or admin read" on public.tool_interest;
 create policy "Tool interest: own or admin read"
   on public.tool_interest for select
+  to authenticated
   using (user_id = auth.uid() or public.viewer_is_admin());
 
 revoke all on public.tool_interest from public, anon, authenticated;
@@ -133,7 +135,7 @@ create table if not exists public.tool_events (
 create index if not exists tool_events_slug_time_idx
   on public.tool_events (tool_slug, created_at desc);
 create index if not exists tool_events_user_idx
-  on public.tool_events (user_id);
+  on public.tool_events (user_id, created_at desc);
 
 comment on table public.tool_events is
   'Beta tools (0182): one row per tool event — open (the tool''s page) or a tool''s own action name. access = the path that let the user in. Service role only; read through admin_tool_summary / admin_tool_detail.';
@@ -204,7 +206,7 @@ $$;
 comment on function public.has_tool_access(text) is
   'Whether the caller may use a tool (0182): an admin always; nobody else while it is paused; else a plan at or above its release_tier, or an unexpired tool_access_grants row. Mirrors lib/tools/access.ts resolveToolAccess (billing on); change both together.';
 
-revoke all on function public.has_tool_access(text) from public;
+revoke all on function public.has_tool_access(text) from public, anon;
 grant execute on function public.has_tool_access(text) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
@@ -269,7 +271,10 @@ as $$
     select e.*
     from public.tool_events e, params
     where e.tool_slug = p_slug
-      and e.created_at > now() - make_interval(days => params.days)
+      -- From the start of the chart's first UTC day, so the totals and the
+      -- daily series count the same rows.
+      and e.created_at >= (((now() at time zone 'utc')::date - (params.days - 1))::timestamp
+                           at time zone 'utc')
   ),
   days as (
     select d::date as day
@@ -279,6 +284,15 @@ as $$
         (now() at time zone 'utc')::date,
         interval '1 day'
       ) d
+  ),
+  per_day as (
+    select
+      (ev.created_at at time zone 'utc')::date as day,
+      count(*) filter (where ev.event = 'open') as opens,
+      count(*) filter (where ev.event <> 'open') as uses,
+      count(distinct ev.user_id) as users
+    from ev
+    group by 1
   ),
   per_user as (
     select
@@ -304,11 +318,12 @@ as $$
     'daily', coalesce((
       select jsonb_agg(jsonb_build_object(
         'day', to_char(days.day, 'YYYY-MM-DD'),
-        'opens', (select count(*) from ev where event = 'open' and (created_at at time zone 'utc')::date = days.day),
-        'uses', (select count(*) from ev where event <> 'open' and (created_at at time zone 'utc')::date = days.day),
-        'users', (select count(distinct user_id) from ev where (created_at at time zone 'utc')::date = days.day)
+        'opens', coalesce(pd.opens, 0),
+        'uses', coalesce(pd.uses, 0),
+        'users', coalesce(pd.users, 0)
       ) order by days.day)
       from days
+      left join per_day pd on pd.day = days.day
     ), '[]'::jsonb),
     'events', coalesce((
       select jsonb_agg(jsonb_build_object('event', x.event, 'count', x.n, 'users', x.u) order by x.n desc)

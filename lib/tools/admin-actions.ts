@@ -211,7 +211,7 @@ export async function grantInterestedAction(input: {
   if ("error" in ctx) return { ok: false, error: ctx.error };
   if (!isToolSlug(input.slug)) return { ok: false, error: "That tool doesn't exist." };
   const [{ data: interest, error }, { data: grants }] = await Promise.all([
-    ctx.admin.from("tool_interest").select("user_id").eq("tool_slug", input.slug).limit(200),
+    ctx.admin.from("tool_interest").select("user_id").eq("tool_slug", input.slug).order("created_at", { ascending: true }).limit(200),
     ctx.admin.from("tool_access_grants").select("user_id, expires_at").eq("tool_slug", input.slug),
   ]);
   if (error) return { ok: false, error: "Couldn't read the interest list." };

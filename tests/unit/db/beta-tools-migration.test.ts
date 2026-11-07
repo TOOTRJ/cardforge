@@ -87,6 +87,7 @@ describe("0182 beta tools", () => {
     expect(body).toContain("public.subscription_perks_on(p.subscription_status, p.payment_failed_at)");
     expect(body).toContain("p.comp_expires_at is null or p.comp_expires_at > now()");
     expect(sql).toContain("grant execute on function public.has_tool_access(text) to authenticated, service_role;");
+    expect(sql).toContain("revoke all on function public.has_tool_access(text) from public, anon;");
   });
 
   it("keeps every notification kind the previous list allowed, plus tool_access", () => {
