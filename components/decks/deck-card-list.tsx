@@ -15,6 +15,7 @@ import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
 import { DeckMobileBar, deckMoreButton } from "@/components/decks/deck-mobile-bar";
 // The bulk bar loads in a chunk of its own, when a selection starts.
 import { DeckBulkBar } from "@/components/decks/deck-owner-parts";
+import { DeckBulkCustomize } from "@/components/tools/bulk-customize/deck-bulk-customize";
 import { createPreviewStore, DeckPreviewPane } from "@/components/decks/deck-preview-pane";
 import type { DeckRowUi, OpenerProps, ViewRow } from "@/components/decks/deck-row-ui";
 import { DeckSummaryBar } from "@/components/decks/deck-summary-bar";
@@ -118,6 +119,9 @@ type DeckCardListProps = {
   emptyState?: ReactNode;
   /** A commander deck with no commander yet: its slot (over the cards). */
   commanderSlot?: ReactNode;
+  /** The owner has the Bulk Customize tool: the selection bar gains
+   *  Customize for the picked real cards (components/tools/bulk-customize). */
+  bulkCustomize?: boolean;
 };
 
 export function DeckCardList(props: DeckCardListProps) {
@@ -155,6 +159,7 @@ function DeckCardArea({
   summary,
   emptyState,
   commanderSlot,
+  bulkCustomize = false,
 }: DeckCardListProps) {
   const editor = useDeckEditor();
   const editing = Boolean(editor);
@@ -754,6 +759,15 @@ function DeckCardArea({
                     setPicked(new Set());
                   }}
                   onDone={stopSelecting}
+                  customize={
+                    bulkCustomize && editor ? (
+                      <DeckBulkCustomize
+                        rows={visibleRows.filter((row) => picked.has(row.id) && !row.item.pending)}
+                        deckSlug={editor.deck.slug}
+                        onFinished={stopSelecting}
+                      />
+                    ) : null
+                  }
                 />
               ) : bar ? (
                 <DeckSummaryBar

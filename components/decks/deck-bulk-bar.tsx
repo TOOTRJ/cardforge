@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRightLeft, CheckSquare, Minus, Plus, Trash2, X } from "lucide-react";
 import { EntryMenu, type MenuItem } from "@/components/decks/deck-entry-menu";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ export function DeckBulkBar({
   onStep,
   onRemove,
   onDone,
+  customize = null,
   className,
 }: {
   /** Entries picked. */
@@ -42,6 +43,9 @@ export function DeckBulkBar({
   onStep: (by: number) => void;
   onRemove: () => void;
   onDone: () => void;
+  /** The Bulk Customize tool's button for the picked real cards (shown only
+   *  where the owner has the tool). */
+  customize?: ReactNode;
   className?: string;
 }) {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -111,6 +115,7 @@ export function DeckBulkBar({
             <Plus className="h-3.5 w-3.5" aria-hidden />
           </button>
         </div>
+        {customize}
         <button
           type="button"
           aria-disabled={none || undefined}
