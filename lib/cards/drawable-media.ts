@@ -1,6 +1,7 @@
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { PipOverrides } from "@/lib/pips/override";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { setIconForRarity } from "@/lib/tools/set-symbol/naming";
 
 // ---------------------------------------------------------------------------
 // The pictures a card may DRAW (migration 0127, TODO 3.14b): its art (both
@@ -42,7 +43,9 @@ export function drawableCardMedia<T extends CardPreviewData>(card: T, local?: re
   return {
     ...card,
     artUrl: drawable("card-art", card.artUrl),
-    setIconUrl: drawableMediaUrl("set-icon", card.setIconUrl),
+    // A Set Symbol Studio "follows the rarity" icon draws the card's rarity's
+    // file (lib/tools/set-symbol/naming.ts); every other icon as stored.
+    setIconUrl: drawableMediaUrl("set-icon", setIconForRarity(card.setIconUrl, card.rarity)),
     watermark,
     backFace: card.backFace
       ? { ...card.backFace, art_url: drawable("card-art", card.backFace.art_url) ?? undefined }

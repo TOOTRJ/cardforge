@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
 import { uploadWatermarkServerAction } from "@/lib/cards/upload-watermark-server";
+import { StudioWatermarkPicker } from "@/components/tools/set-symbol-studio/studio-symbol-picker";
 import { GUEST_PICTURE_KEPT_MESSAGE, useGuestPictures } from "@/components/creator/guest-pictures";
 import {
   WATERMARK_PRESETS,
@@ -167,6 +168,13 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
                 onChange={pick}
                 options={presetOptions}
               />
+
+              {userId ? (
+                <StudioWatermarkPicker
+                  current={wm.kind === "custom" ? wm.url : ""}
+                  onPick={(url) => field.onChange({ ...wm, kind: "custom", key: "", url })}
+                />
+              ) : null}
 
               <div className="flex flex-wrap items-center gap-2">
                 <input

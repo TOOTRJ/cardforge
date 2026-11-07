@@ -162,7 +162,9 @@ describe("the surfaces that draw a picture column", () => {
     // The page's own blob: pictures (a guest's kept art, TODO HM3) are the
     // one exception, and only those the page names.
     ["components/cards/card-preview.tsx", /drawableCardMedia\(rawProps, rawProps\.localPictureUrls\)/],
-    ["components/cards/set-symbol.tsx", /drawableMediaUrl\("set-icon", iconUrl\)/],
+    // A studio symbol's `-auto` file is read as its rarity's sibling FIRST
+    // (Set Symbol Studio), and that URL goes through the guard.
+    ["components/cards/set-symbol.tsx", /drawableMediaUrl\("set-icon", setIconForRarity\(iconUrl, rarity\)\)/],
     // The row goes through the guard, then through the front face's twin
     // (TODO 5.0a: frontPreviewData is the identity for a single-faced row).
     ["lib/cards/bake-core.ts", /return frontPreviewData\(drawableCardMedia\(\{/],
