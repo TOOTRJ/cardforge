@@ -130,6 +130,7 @@ import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateTakesBackBody } from "@/lib/cards/dfc";
+import { runBulkCustomizeStep, type BulkCustomizeJobPlan } from "@/lib/tools/bulk-customize/step";
 
 /** A remix step priced for both faces whose double-faced frames aren't
  *  available any more (a tick withdrawn since the plan): refused, refunded. */
@@ -192,7 +193,10 @@ async function aiArtistCredit(): Promise<string | undefined> {
 }
 
 type JobStepStatus = "pending" | "running" | "done" | "failed";
-type JobStepErrorCode = "CARD_CAPACITY" | "INSUFFICIENT_CREDITS";
+// RATE_LIMITED (Bulk Customize): not a failure — the step went back to
+// "pending" because a per-minute quota (Scryfall's art imports, uploads) is
+// spent; the runner waits `retry_after_seconds` and runs it again.
+type JobStepErrorCode = "CARD_CAPACITY" | "INSUFFICIENT_CREDITS" | "RATE_LIMITED";
 
 export type JobStep = {
   key: string;
@@ -250,12 +254,18 @@ export type JobStep = {
    *  lib/moderation/profanity.ts — the card action's notice, passed on):
    *  the runner says so. Absent on every other step. */
   forced_private?: ForcedPrivateNotice | null;
+  /** Bulk Customize: a DONE card's one line of what didn't go as asked
+   *  (saved without its art, not linked to its deck entry). */
+  note?: string | null;
+  /** Bulk Customize: on a step put back to "pending" (error_code
+   *  RATE_LIMITED), how long the runner waits before running it again. */
+  retry_after_seconds?: number | null;
 };
 
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill";
+  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill" | "bulk_customize";
   /** "done" = every step succeeded; "done_with_errors" = finished with a mix
    *  of successes and failures (retryable); "failed" = nothing succeeded. */
   status: "generating" | "done" | "done_with_errors" | "failed" | "cancelled";
@@ -266,6 +276,7 @@ export type GenerationJobRow = {
     | CardJobPlan
     | CardRemixJobPlan
     | CardFillJobPlan
+    | BulkCustomizeJobPlan
     | null;
   steps: JobStep[];
   deck_id: string | null;
@@ -539,7 +550,12 @@ async function executeJobStep(
 ): Promise<JobStep> {
   // Card jobs have no deck target — the plan is the whole contract.
   const isCardKind =
-    job.kind === "card" || job.kind === "card_remix" || job.kind === "card_fill";
+    job.kind === "card" ||
+    job.kind === "card_remix" ||
+    job.kind === "card_fill" ||
+    // A Bulk Customize batch has no deck of its own (each card links to
+    // the entry it came from).
+    job.kind === "bulk_customize";
   if (!job.plan || (!isCardKind && !job.deck_id)) {
     return { ...step, status: "failed", error: "Job has no plan — recreate it." };
   }
@@ -579,6 +595,13 @@ async function executeJobStep(
       return step.key === FILL_BACK_STEP_KEY
         ? runCardFillBackStep(userId, job, step, job.plan as CardFillJobPlan)
         : runCardFillStep(userId, job.id, step, job.plan as CardFillJobPlan);
+    case "bulk_customize":
+      // The beta tool's batch (migration 0186): one card a step, every
+      // input re-read and re-planned by the step itself.
+      return runBulkCustomizeStep(userId, job.id, job.plan, step, stepIndex, {
+        gameSystemId: activeGameSystemId,
+        artistCredit: aiArtistCredit,
+      });
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -3164,6 +3187,11 @@ async function patchJobStep(
     // A card saved private for its text (owner policy 2026-10-28): only
     // a step that says so names the key, so every other patch is as before.
     ...(step.forced_private ? { forced_private: step.forced_private } : {}),
+    // Bulk Customize: a done card's note and a waiting step's retry time.
+    // Only a step that NAMES the key writes it (its results always do, null
+    // to clear), so every other kind's patch is as before.
+    ...(step.note !== undefined ? { note: step.note } : {}),
+    ...(step.retry_after_seconds !== undefined ? { retry_after_seconds: step.retry_after_seconds } : {}),
   };
   // The work (credit spend, card insert, image) is already committed by the
   // time we get here — losing this write means a stale reclaim would re-run
