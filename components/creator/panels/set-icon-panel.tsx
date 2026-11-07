@@ -50,7 +50,7 @@ import { useGuestGate } from "@/components/creator/guest-pictures";
 // A curated set of recognizable Keyrune set-symbol codes (same list as the
 // picker). The full Keyrune library has hundreds; these cover popular
 // real-world sets.
-const PRESET_SET_CODES = [
+export const PRESET_SET_CODES = [
   "dom",
   "war",
   "eld",

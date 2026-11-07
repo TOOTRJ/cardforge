@@ -5,6 +5,7 @@ import {
   realTokenSourceIds,
   scryfallImageForId,
   tokenPartsOf,
+  tokenSpecsFromRulesText,
   tokensFromRulesText,
   type TokenPart,
   type TokenSourceItem,
@@ -24,7 +25,7 @@ const TREASURE_2 = "33333333-3333-4333-8333-333333333333";
 const EMBLEM = "44444444-4444-4444-8444-444444444444";
 
 describe("tokenPartsOf — Scryfall's related objects", () => {
-  it("keeps tokens and emblems, never the card, a meld piece or a dungeon", () => {
+  it("keeps tokens, emblems and helper cards, never the card or a meld piece", () => {
     const parts = tokenPartsOf({
       id: GOLDSPAN,
       all_parts: [
@@ -39,7 +40,46 @@ describe("tokenPartsOf — Scryfall's related objects", () => {
     expect(parts).toEqual([
       { id: TREASURE, name: "Treasure", typeLine: "Token Artifact — Treasure", kind: "token" },
       { id: EMBLEM, name: "Chandra Emblem", typeLine: "Emblem — Chandra", kind: "emblem" },
+      { id: "66666666-6666-4666-8666-666666666666", name: "Tomb of Annihilation", typeLine: "Dungeon", kind: "helper" },
     ]);
+  });
+
+  it("keeps the helper cards Scryfall files as combo pieces (Monarch, Initiative, Day // Night)", () => {
+    const parts = tokenPartsOf({
+      id: GOLDSPAN,
+      all_parts: [
+        { id: "a1111111-1111-4111-8111-111111111111", component: "combo_piece", name: "The Monarch", type_line: "Card" },
+        {
+          id: "a2222222-2222-4222-8222-222222222222",
+          component: "combo_piece",
+          name: "Undercity // The Initiative",
+          type_line: "Dungeon — Undercity // Card",
+        },
+        { id: "a3333333-3333-4333-8333-333333333333", component: "combo_piece", name: "Day // Night", type_line: "Card // Card" },
+        { id: "a4444444-4444-4444-8444-444444444444", component: "combo_piece", name: "Energy Reserve", type_line: "Card" },
+        { id: "a5555555-5555-4555-8555-555555555555", component: "combo_piece", name: "The Ring // The Ring Tempts You", type_line: "Emblem // Card" },
+      ],
+    });
+    expect(parts.map((p) => [p.name, p.kind])).toEqual([
+      ["The Monarch", "helper"],
+      ["Undercity // The Initiative", "helper"],
+      ["Day // Night", "helper"],
+      ["Energy Reserve", "helper"],
+      ["The Ring // The Ring Tempts You", "emblem"],
+    ]);
+  });
+
+  it("a combo piece that is a real card is never a helper", () => {
+    const parts = tokenPartsOf({
+      id: GOLDSPAN,
+      all_parts: [
+        { id: "b1111111-1111-4111-8111-111111111111", component: "combo_piece", name: "Thassa's Oracle", type_line: "Creature — Merfolk Wizard" },
+        { id: "b2222222-2222-4222-8222-222222222222", component: "combo_piece", name: "Delver", type_line: "Creature — Human // Creature — Insect" },
+        { id: "b3333333-3333-4333-8333-333333333333", component: "combo_piece", name: "No type", type_line: null },
+        { id: "b4444444-4444-4444-8444-444444444444", component: "combo_piece", name: "Half", type_line: "Card // Creature — Insect" },
+      ],
+    });
+    expect(parts).toEqual([]);
   });
 
   it("a card with no all_parts makes nothing", () => {
@@ -187,5 +227,55 @@ describe("scryfallImageForId", () => {
   it("builds the CDN's path from an id, nothing from anything else", () => {
     expect(scryfallImageForId(TREASURE)).toBe(`https://cards.scryfall.io/small/front/2/2/${TREASURE}.jpg`);
     expect(scryfallImageForId("../../etc", "normal")).toBeNull();
+  });
+});
+
+describe("tokenSpecsFromRulesText — the token kit's structured read", () => {
+  it("reads the count, the colours, the stats and whether it repeats", () => {
+    const [spirit] = tokenSpecsFromRulesText("Whenever you cast a spell, create two 1/1 white Spirit creature tokens with flying.", "X");
+    expect(spirit).toMatchObject({
+      kind: "token",
+      name: "Spirit",
+      typeWords: "Creature",
+      subtypes: ["Spirit"],
+      colors: ["white"],
+      power: "1",
+      toughness: "1",
+      abilities: "flying",
+      count: 2,
+      repeats: true,
+    });
+    const [once] = tokenSpecsFromRulesText("When this creature enters, create a 3/3 green Beast creature token.", "X");
+    expect(once).toMatchObject({ count: 1, repeats: false, colors: ["green"] });
+  });
+
+  it("an activated ability repeats; X and 'that many' are a variable count", () => {
+    const [treasure] = tokenSpecsFromRulesText("{2}, {T}: Create a tapped Treasure token.", "X");
+    expect(treasure).toMatchObject({ name: "Treasure", typeWords: "Artifact", colors: ["colorless"], count: 1, repeats: true });
+    const [x] = tokenSpecsFromRulesText("Create X 2/2 black Zombie creature tokens.", "X");
+    expect(x.count).toBeNull();
+    const [many] = tokenSpecsFromRulesText("Create that many Food tokens.", "X");
+    expect(many.count).toBeNull();
+  });
+
+  it("three colours keep their phrase on the deck page", () => {
+    expect(tokensFromRulesText("Create a 4/4 white, blue and black Angel creature token.", "X")[0].details).toBe("4/4 white, blue and black");
+  });
+
+  it("an emblem keeps its ability", () => {
+    expect(tokenSpecsFromRulesText('-6: You get an emblem with "Creatures you control get +1/+1."', "Veyra")).toEqual([
+      {
+        kind: "emblem",
+        name: "Veyra Emblem",
+        typeWords: null,
+        subtypes: [],
+        colors: [],
+        power: null,
+        toughness: null,
+        abilities: "Creatures you control get +1/+1",
+        count: 1,
+        repeats: false,
+      },
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -48,6 +48,8 @@ import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estima
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
+import { checkToolAccess } from "@/lib/tools/queries";
+import { recordToolEvent } from "@/lib/tools/events";
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/jobs — create an AI batch-generation job and run its PLAN
@@ -228,6 +230,12 @@ const requestSchema = z.discriminatedUnion("kind", [
     theme_twist: twist,
     style_preset: presetId,
     style_twist: twist,
+    /** A beta tool's fill (lib/tools/catalog.ts): the Token Kit paints a
+     *  kit token's picture through this fill (`want: ["art"]`, its credit
+     *  as everywhere else). Named, the fill is the tool's — refused unless
+     *  the tool is open to the caller (checkToolAccess, the beta gate; never
+     *  DECK_AI_PAUSED, owner decision) and counted in its analytics. */
+    tool: z.enum(["token-kit"]).optional(),
   }),
 ]);
 
@@ -351,6 +359,16 @@ export async function POST(request: Request) {
   // (D6); the creator's deck-aware `card` / `card_fill` stay open (D5).
   if ((parsed.data.kind === "deck" || parsed.data.kind === "deck_remix") && isDeckAiPaused()) {
     return NextResponse.json(deckAiPausedBody(), { status: DECK_AI_PAUSED_STATUS });
+  }
+
+  // A beta tool's fill is refused before the rate limit and any credit
+  // unless the tool is open to the caller (the Token Kit's art).
+  let fillTool: Awaited<ReturnType<typeof checkToolAccess>> = null;
+  if (parsed.data.kind === "card_fill" && parsed.data.tool) {
+    fillTool = await checkToolAccess(parsed.data.tool);
+    if (!fillTool) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
   }
 
   // The AI rate limit comes FIRST: sizing a deck remix resolves the deck's
@@ -595,6 +613,12 @@ export async function POST(request: Request) {
       );
     }
     await recordGeneration(user.id, parsed.data.kind);
+    // A beta tool's fill counts in its analytics once it is planned.
+    if (fillTool) {
+      const tool = fillTool;
+      const want = fill.want.join(",");
+      after(() => recordToolEvent({ slug: tool.tool.slug, userId: user.id, event: "ai_art", access: tool.via, props: { want } }));
+    }
     // `cost`: what the steps reserve — one credit per picture, so a
     // double-faced fill that paints (PR 3: two steps) says 2; every other
     // fill's answer is what it always was.

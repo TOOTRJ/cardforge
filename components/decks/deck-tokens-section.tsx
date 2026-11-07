@@ -28,10 +28,12 @@ export async function DeckTokensSection({
 export function DeckTokensList({ tokens, realCardsFailed }: { tokens: readonly DeckToken[]; realCardsFailed: boolean }) {
   if (tokens.length === 0) return null;
   const tokenCount = tokens.filter((t) => t.kind === "token").length;
-  const emblemCount = tokens.length - tokenCount;
+  const emblemCount = tokens.filter((t) => t.kind === "emblem").length;
+  const helperCount = tokens.length - tokenCount - emblemCount;
   const summary = [
     tokenCount > 0 ? `${tokenCount} token${tokenCount === 1 ? "" : "s"}` : null,
     emblemCount > 0 ? `${emblemCount} emblem${emblemCount === 1 ? "" : "s"}` : null,
+    helperCount > 0 ? `${helperCount} helper card${helperCount === 1 ? "" : "s"}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -72,7 +74,7 @@ export function DeckTokensList({ tokens, realCardsFailed }: { tokens: readonly D
                 aria-hidden
                 className="flex h-[102px] w-[73px] shrink-0 items-center justify-center rounded-[4px] border border-dashed border-border bg-surface/40 text-[10px] font-semibold uppercase tracking-wider text-subtle"
               >
-                {token.kind === "emblem" ? "Emblem" : "Token"}
+                {token.kind === "emblem" ? "Emblem" : token.kind === "helper" ? "Helper" : "Token"}
               </div>
             )}
             <div className="flex min-w-0 flex-col gap-0.5 text-sm">

@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIP_SYMBOLS as PIP_STRIP_SYMBOLS } from "@/lib/pips/override";
+import { CUSTOM_PIPS_HREF } from "@/lib/pips/href";
 import { listMyCards } from "@/lib/cards/queries";
 import { listMyDecks } from "@/lib/decks/queries";
 import { CardsSummaryCard } from "@/components/dashboard/cards-summary";
@@ -55,7 +56,7 @@ const QUICK_ACTIONS = [
   {
     title: "Custom pips",
     helper: "Upload your own icons",
-    href: "/settings",
+    href: CUSTOM_PIPS_HREF,
     tone: "ember" as const,
     icon: <Palette aria-hidden />,
   },
@@ -223,7 +224,7 @@ export default async function DashboardPage() {
             })}
           </p>
           <Button asChild variant="outline" size="sm" className="self-start">
-            <Link href="/settings">Manage in Settings</Link>
+            <Link href={CUSTOM_PIPS_HREF}>Manage custom pips</Link>
           </Button>
         </SurfaceCard>
 
