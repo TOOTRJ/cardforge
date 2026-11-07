@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/supabase-chain";
 import { importFingerprintOf } from "@/lib/cards/import-fingerprint";
 import { importProvenanceInsert, isMissingImportProvenanceColumn } from "@/lib/cards/import-provenance";
+import { EXACT_COPY_CODE, EXACT_COPY_MESSAGE } from "@/lib/cards/exact-copy";
 
 // ---------------------------------------------------------------------------
 // Import provenance on the save (TODO DK2.5, migration 0144): createCardAction
@@ -107,16 +108,19 @@ beforeEach(() => {
 });
 
 describe("createCardAction — import provenance", () => {
-  it("an import saved unchanged: the source and the fingerprint of the row as inserted", async () => {
+  it("an import saved unchanged is refused: an exact copy is the real card, nothing is written (owner 2026-11-06)", async () => {
     const stub = db();
     const result = await createCardAction({ ...IMPORT, import_unchanged: true });
-    expect(result.ok).toBe(true);
-    const [row] = writes(stub, "insert");
-    expect(row.import_scryfall_id).toBe(SOURCE);
-    expect(row.import_fingerprint).toBe(importFingerprintOf(row));
-    expect(row.import_fingerprint).toMatch(/^v1:[0-9a-f]{64}$/);
-    // The flag itself never reaches the row.
-    expect(row).not.toHaveProperty("import_unchanged");
+    expect(result).toEqual({ ok: false, code: EXACT_COPY_CODE, formError: EXACT_COPY_MESSAGE });
+    expect(writes(stub, "insert")).toEqual([]);
+  });
+
+  it("the fingerprint a provenance insert would carry is the row's own (the frame preview's path)", () => {
+    const row = { ...IMPORT, title: "Llanowar Elves" };
+    const provenance = importProvenanceInsert({ source_scryfall_id: SOURCE, import_unchanged: true }, row);
+    expect(provenance.import_scryfall_id).toBe(SOURCE);
+    expect(provenance.import_fingerprint).toBe(importFingerprintOf(row));
+    expect(provenance.import_fingerprint).toMatch(/^v1:[0-9a-f]{64}$/);
   });
 
   it("an import changed before its first save (or an AI restyle): the source, no fingerprint", async () => {
@@ -153,7 +157,7 @@ describe("createCardAction — import provenance", () => {
   it("a database 0144 has not reached: the same insert again without the two columns", async () => {
     state.missingColumns = true;
     const stub = db();
-    const result = await createCardAction({ ...IMPORT, import_unchanged: true });
+    const result = await createCardAction({ ...IMPORT, import_unchanged: false });
     expect(result.ok).toBe(true);
     const [first, retry] = writes(stub, "insert");
     expect(first.import_scryfall_id).toBe(SOURCE);
@@ -214,6 +218,62 @@ describe("updateCardAction — never the provenance", () => {
     expect(update).toBeDefined();
     expect(update.title).toBe("Llanowar Elder");
     for (const key of ["import_scryfall_id", "import_fingerprint", "import_unchanged"]) expect(update).not.toHaveProperty(key);
+  });
+});
+
+describe("updateCardAction — an exact copy never goes public (lib/cards/exact-copy.ts)", () => {
+  function storedExactCopy(visibility: "unlisted" | "private" | "public") {
+    const row: Record<string, unknown> = {
+      id: CARD,
+      owner_id: USER,
+      title: "Llanowar Elves",
+      slug: "llanowar-elves",
+      color_identity: ["green"],
+      card_type: "creature",
+      supertype: null,
+      subtypes: ["Elf", "Druid"],
+      cost: "{G}",
+      rules_text: "{T}: Add {G}.",
+      visibility,
+      art_url: "https://example.supabase.co/storage/v1/object/public/card-art/u/a.png",
+      back_face: null,
+      frame_preview: false,
+      frame_style: { template: "m15", finish: "regular" },
+      printed_types: null,
+      footer_text: null,
+      lang: "en",
+      source_scryfall_id: SOURCE,
+      import_scryfall_id: SOURCE,
+    };
+    row.import_fingerprint = importFingerprintOf(row);
+    return row;
+  }
+
+  it("asked for public while still exactly the import: saved unlisted, and the result says why", async () => {
+    state.existing = storedExactCopy("unlisted");
+    const stub = db();
+    const result = await updateCardAction(CARD, { visibility: "public" });
+    const [update] = writes(stub, "update");
+    expect(update.visibility).toBe("unlisted");
+    expect(result).toMatchObject({ ok: true, exactCopyUnlisted: true });
+  });
+
+  it("any change to the card itself makes it the maker's own: public as asked", async () => {
+    state.existing = storedExactCopy("unlisted");
+    const stub = db();
+    const result = await updateCardAction(CARD, { visibility: "public", title: "Llanowar Elder" });
+    const [update] = writes(stub, "update");
+    expect(update.visibility).toBe("public");
+    expect(result).not.toHaveProperty("exactCopyUnlisted");
+  });
+
+  it("an edit that asks for no wider audience is left as it is", async () => {
+    state.existing = storedExactCopy("private");
+    const stub = db();
+    const result = await updateCardAction(CARD, { tags: ["elves"] });
+    const [update] = writes(stub, "update");
+    expect(update).not.toHaveProperty("visibility");
+    expect(result).not.toHaveProperty("exactCopyUnlisted");
   });
 });
 

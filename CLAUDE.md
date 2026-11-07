@@ -1398,6 +1398,20 @@ Rules and gotchas:
   jobs and the deck remix save what they did (no server-side tagging — it
   would put back a tag the maker removed). A creator import is a new card:
   it follows.
+- Exact copies (owner 2026-11-06, migration 0183): a card still EXACTLY
+  the real card it was imported from — ONE test, `isExactCopyOfImport`
+  (`lib/cards/exact-copy.ts`: `importEditStateOf === "unchanged"`, the
+  deck's "Imported") — is never saved new and never public. The creator
+  disables Save on an untouched import (`ExactCopyNotice`: add the real
+  card to a deck as its printing, no card slot) and `createCardAction`
+  refuses one (`EXACT_COPY`); an edit that leaves a public card an exact
+  copy saves it UNLISTED (`exactCopyUnlisted`); My Cards' bulk publish
+  skips them (`skippedExactCopy`); the hourly `/api/cron/exact-copies`
+  (`unlistPublicExactCopies`) moves any public one to unlisted and tells
+  its owner once (`exact_copy_unlisted`). No list function changed: the
+  gallery, hubs, trending, sitemap and profiles already leave unlisted
+  cards out. A card with no fingerprint (from scratch, a remix, an import
+  changed before its first save, one saved before 0144) is customised.
 - AI provenance (TODO CP1, migration 0162): `cards.ai_fields` = the PARTS
   whose current content AI wrote (`title`, `cost`, `type_line`,
   `rules_text`, `flavor_text`, `stats`, `art` and `back.…`;

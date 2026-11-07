@@ -129,6 +129,26 @@ export function describeNotification(
         href: "/settings",
       };
     }
+    case "exact_copy_unlisted": {
+      // The hourly sweep (lib/cards/exact-copy-sweep.ts): public cards that
+      // are still exactly the real card they were imported from went
+      // unlisted — only customised cards stay in the public gallery.
+      const count = num(payload.count) ?? 1;
+      const titles = Array.isArray(payload.titles)
+        ? payload.titles.filter((t): t is string => typeof t === "string" && t.trim() !== "")
+        : [];
+      const one = count === 1;
+      const which = one
+        ? titles[0]
+          ? `“${titles[0]}”`
+          : "one of your cards"
+        : `${count} of your cards${titles.length > 0 ? ` (${titles.join(", ")}${count > titles.length ? "…" : ""})` : ""}`;
+      return {
+        subject: "PipGlyph team",
+        body: `moved ${which} to unlisted: ${one ? "it's" : "they're"} still exactly the real card, and the public gallery shows only cards people have customised. ${one ? "Its link keeps" : "Their links keep"} working — change anything on ${one ? "it" : "a card"} to publish it again.`,
+        href: "/dashboard/cards?show=unlisted",
+      };
+    }
     case "banked_days": {
       // The admin's comp since 0179: days in the bank, the user applies them.
       const days = num(payload.days) ?? 0;
