@@ -48,7 +48,8 @@ export type AiActionLabel =
   | "generate_deck_cards"
   | "generate_card_ideas"
   | "generate_deck_ideas"
-  | "analyze_deck";
+  | "analyze_deck"
+  | "build_collection_deck";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -237,6 +238,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   generate_deck_ideas: 1,
   /** One credit analyses a deck into a how-to-play guide with combos (Pro). */
   analyze_deck: 1,
+  /** One credit: the AI picks a Commander deck from the user's collection
+   *  (the Collection Deck Builder beta tool). */
+  build_collection_deck: 1,
 };
 
 export type CreditSpendResult =

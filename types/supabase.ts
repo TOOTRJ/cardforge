@@ -657,6 +657,89 @@ export type Database = {
         Update: { tool_slug?: string; user_id?: string; created_at?: string };
         Relationships: [];
       };
+      // Migration 0185 — the Collection Deck Builder's collection.
+      collection_cards: {
+        Row: {
+          id: string;
+          owner_id: string;
+          scryfall_id: string;
+          oracle_id: string | null;
+          finish: string;
+          lang: string;
+          quantity: number;
+          name: string;
+          name_key: string;
+          type_line: string | null;
+          mana_cost: string | null;
+          mana_value: number | null;
+          color_identity: string[];
+          oracle_text: string | null;
+          rarity: string | null;
+          set_code: string | null;
+          set_name: string | null;
+          collector_number: string | null;
+          image_url: string | null;
+          commander_legal: boolean;
+          can_be_commander: boolean;
+          source_line: string | null;
+          import_batch: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          scryfall_id: string;
+          oracle_id?: string | null;
+          finish?: string;
+          lang?: string;
+          quantity?: number;
+          name: string;
+          type_line?: string | null;
+          mana_cost?: string | null;
+          mana_value?: number | null;
+          color_identity?: string[];
+          oracle_text?: string | null;
+          rarity?: string | null;
+          set_code?: string | null;
+          set_name?: string | null;
+          collector_number?: string | null;
+          image_url?: string | null;
+          commander_legal?: boolean;
+          can_be_commander?: boolean;
+          source_line?: string | null;
+          import_batch?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          scryfall_id?: string;
+          oracle_id?: string | null;
+          finish?: string;
+          lang?: string;
+          quantity?: number;
+          name?: string;
+          type_line?: string | null;
+          mana_cost?: string | null;
+          mana_value?: number | null;
+          color_identity?: string[];
+          oracle_text?: string | null;
+          rarity?: string | null;
+          set_code?: string | null;
+          set_name?: string | null;
+          collector_number?: string | null;
+          image_url?: string | null;
+          commander_legal?: boolean;
+          can_be_commander?: boolean;
+          source_line?: string | null;
+          import_batch?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       tool_events: {
         Row: {
           id: number;
@@ -3363,6 +3446,35 @@ export type Database = {
       has_tool_access: {
         Args: { p_slug: string };
         Returns: boolean;
+      };
+      // Migration 0185 — the Collection Deck Builder.
+      collection_card_cap: { Args: Record<string, never>; Returns: number };
+      collection_stats: {
+        Args: Record<string, never>;
+        Returns: { cards: number; copies: number; commanders: number; cap: number }[];
+      };
+      add_collection_cards: {
+        Args: { p_rows: Json; p_batch: string | null; p_mode: string };
+        Returns: Json;
+      };
+      collection_is_basic_land: { Args: { p_name: string; p_type_line: string | null }; Returns: boolean };
+      collection_buildable_decks: {
+        Args: { p_limit?: number };
+        Returns: {
+          deck_id: string;
+          slug: string;
+          title: string;
+          owner_username: string | null;
+          color_identity: string[];
+          commanders: string[];
+          owns_commander: boolean;
+          total: number;
+          owned: number;
+          missing: number;
+          proxies: number;
+          missing_cards: Json;
+          updated_at: string;
+        }[];
       };
       admin_tool_summary: {
         Args: Record<string, never>;

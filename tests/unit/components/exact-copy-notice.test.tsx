@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -22,15 +22,24 @@ vi.mock("next/link", () => ({
 const deckActions = vi.hoisted(() => ({ picker: vi.fn(), add: vi.fn() }));
 vi.mock("@/lib/decks/membership-actions", () => ({ getDeckPickerDataAction: deckActions.picker }));
 vi.mock("@/lib/decks/add-actions", () => ({ addToDeckAction: deckActions.add }));
+const collectionActions = vi.hoisted(() => ({ state: vi.fn(), add: vi.fn() }));
+vi.mock("@/lib/tools/collection/actions", () => ({
+  getCollectionPrintingStateAction: collectionActions.state,
+  addToCollectionAction: collectionActions.add,
+}));
 vi.mock("@/components/decks/deck-membership-picker", () => ({ DeckQuickCreate: () => <div data-testid="quick-create" /> }));
 
 import { ExactCopyNotice } from "@/components/creator/exact-copy-notice";
 
 const SCRYFALL = "581b7327-3215-4a4f-b4ae-d9d4002ba882";
 
+beforeEach(() => {
+  collectionActions.state.mockResolvedValue({ open: false });
+});
+
 afterEach(() => {
   cleanup();
-  for (const fn of [...Object.values(toast), ...Object.values(deckActions)]) fn.mockReset();
+  for (const fn of [...Object.values(toast), ...Object.values(deckActions), ...Object.values(collectionActions)]) fn.mockReset();
 });
 
 describe("ExactCopyNotice", () => {
@@ -86,5 +95,41 @@ describe("ExactCopyNotice", () => {
     });
     await waitFor(() => expect(screen.getByText("You have no decks yet — make one below.")).toBeTruthy());
     expect(screen.getByTestId("quick-create")).toBeTruthy();
+  });
+
+  it("no collection button while the Collection Deck Builder is closed to the viewer", async () => {
+    render(<ExactCopyNotice realCardName="Llanowar Elves" scryfallId={SCRYFALL} />);
+    await waitFor(() => expect(collectionActions.state).toHaveBeenCalledWith(SCRYFALL));
+    expect(screen.queryByRole("button", { name: /Add to my collection/ })).toBeNull();
+  });
+
+  it("adds one copy of the printing to the collection where the tool is open", async () => {
+    collectionActions.state.mockResolvedValue({ open: true, owned: 2 });
+    collectionActions.add.mockResolvedValue({ ok: true, name: "Llanowar Elves", owned: 3 });
+    render(<ExactCopyNotice realCardName="Llanowar Elves" scryfallId={SCRYFALL} />);
+    const button = await screen.findByRole("button", { name: "Add to my collection (you own 2)" });
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(collectionActions.add).toHaveBeenCalledWith({
+      scryfallId: SCRYFALL,
+      quantity: 1,
+      finish: "nonfoil",
+      surface: "creator",
+    });
+    expect(toast.success).toHaveBeenCalledWith("Added Llanowar Elves to your collection — you own 3.");
+    expect(screen.getByRole("button", { name: "Add to my collection (you own 3)" })).toBeTruthy();
+  });
+
+  it("a refused add is said, and the count stays", async () => {
+    collectionActions.state.mockResolvedValue({ open: true, owned: 0 });
+    collectionActions.add.mockResolvedValue({ ok: false, error: "Your collection is full." });
+    render(<ExactCopyNotice realCardName="Llanowar Elves" scryfallId={SCRYFALL} />);
+    const button = await screen.findByRole("button", { name: "Add to my collection" });
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(toast.error).toHaveBeenCalledWith("Your collection is full.");
+    expect(screen.getByRole("button", { name: "Add to my collection" })).toBeTruthy();
   });
 });

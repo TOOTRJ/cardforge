@@ -32,6 +32,7 @@ const LABELS: Record<string, string> = {
   fill_card: "AI card fill",
   generate_card_ideas: "Card ideas",
   generate_deck_ideas: "Deck ideas",
+  build_collection_deck: "Collection deck build",
   analyze_deck: "Deck analysis",
   // The image-to-image restyle: "Restyle with AI" in the UI (TODO DK2.3).
   remix_card: "AI restyle",
