@@ -230,6 +230,7 @@ export const siteConfig = {
           { id: "account.my-cards", label: "My cards", href: "/dashboard/cards" },
           { id: "account.my-decks", label: "My decks", href: "/dashboard/decks" },
           { id: "account.new-deck", label: "New deck", href: "/dashboard/decks/new" },
+          { id: "account.tools", label: "Tools", href: "/dashboard/tools" },
         ],
       },
       {
@@ -249,7 +250,8 @@ export const siteConfig = {
 
   // Dashboard left-rail nav (rendered inside DashboardShell). Feed lives
   // here instead of the global header so the top nav stays lean.
-  // Order: the user's own library (cards → decks) first, then Feed.
+  // Order: the user's own library (cards → decks) first, then Feed, then
+  // Tools (tests/e2e/my-cards.spec.ts holds Feed right below My Decks).
   // "Messages" (/messages) is NOT listed: DashboardNav inserts it after
   // Notifications only for users who have a support thread.
   dashboardNav: [
@@ -257,6 +259,7 @@ export const siteConfig = {
     { label: "My Cards", href: "/dashboard/cards" },
     { label: "My Decks", href: "/dashboard/decks" },
     { label: "Feed", href: "/feed" },
+    { label: "Tools", href: "/dashboard/tools" },
     { label: "AI Usage", href: "/dashboard/usage" },
     { label: "Billing", href: "/dashboard/billing" },
     { label: "Refer a friend", href: "/dashboard/referrals" },
@@ -281,6 +284,7 @@ export const siteConfig = {
     { label: "Frame requests", href: "/admin/frame-requests" },
     { label: "Re-bakes", href: "/admin/renders" },
     { label: "Creator lab", href: "/admin/creator-lab" },
+    { label: "Tools", href: "/admin/tools" },
   ] as readonly NavItem[],
 
   // Four even columns (TODO NV2). The tool landing pages are under Create

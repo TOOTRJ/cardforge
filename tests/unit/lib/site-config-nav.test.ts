@@ -107,6 +107,7 @@ describe("the Account menu", () => {
       "My cards",
       "My decks",
       "New deck",
+      "Tools",
       "View profile",
       "Notifications",
       "Messages",
