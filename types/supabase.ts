@@ -644,6 +644,84 @@ export type Database = {
       };
       // Migration 0177 — referrals.
       // Migration 0184 — the Token Kit beta tool's saved kits.
+      deck_art_styles: {
+        Row: {
+          deck_id: string;
+          owner_id: string;
+          preset: string;
+          theme: string;
+          version: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          deck_id: string;
+          owner_id: string;
+          preset: string;
+          theme?: string;
+          version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          deck_id?: string;
+          owner_id?: string;
+          preset?: string;
+          theme?: string;
+          version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      deck_reart_cards: {
+        Row: {
+          deck_id: string;
+          card_id: string;
+          owner_id: string;
+          style_version: number;
+          job_id: string | null;
+          art_url: string | null;
+          back_art_url: string | null;
+          made: boolean;
+          previous_art_url: string | null;
+          previous_art_position: Json | null;
+          previous_back_art_url: string | null;
+          previous_back_art_position: Json | null;
+          painted_at: string;
+        };
+        Insert: {
+          deck_id: string;
+          card_id: string;
+          owner_id: string;
+          style_version: number;
+          job_id?: string | null;
+          art_url?: string | null;
+          back_art_url?: string | null;
+          made?: boolean;
+          previous_art_url?: string | null;
+          previous_art_position?: Json | null;
+          previous_back_art_url?: string | null;
+          previous_back_art_position?: Json | null;
+          painted_at?: string;
+        };
+        Update: {
+          deck_id?: string;
+          card_id?: string;
+          owner_id?: string;
+          style_version?: number;
+          job_id?: string | null;
+          art_url?: string | null;
+          back_art_url?: string | null;
+          made?: boolean;
+          previous_art_url?: string | null;
+          previous_art_position?: Json | null;
+          previous_back_art_url?: string | null;
+          previous_back_art_position?: Json | null;
+          painted_at?: string;
+        };
+        Relationships: [];
+      };
       token_kits: {
         Row: {
           id: string;

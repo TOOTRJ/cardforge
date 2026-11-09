@@ -1,4 +1,4 @@
-import { Coins, Gem, Layers, LibraryBig, Sparkles, type LucideIcon } from "lucide-react";
+import { Coins, Gem, Layers, LibraryBig, Palette, Sparkles, type LucideIcon } from "lucide-react";
 import type { ToolIconKey } from "@/lib/tools/catalog";
 
 // One icon per beta tool (lib/tools/catalog.ts keeps the key, so the
@@ -10,4 +10,5 @@ export const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
   pip: Sparkles,
   "set-symbol": Gem,
   customize: Layers,
+  reart: Palette,
 };
