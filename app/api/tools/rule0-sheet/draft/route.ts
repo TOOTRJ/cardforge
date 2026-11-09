@@ -19,6 +19,7 @@ import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { listDeckCards } from "@/lib/decks/queries";
+import { countsTowardDeckStats } from "@/lib/decks/analytics";
 import { isDeckFormat } from "@/types/deck";
 import { checkToolAccess } from "@/lib/tools/queries";
 import { recordToolEvent } from "@/lib/tools/events";
@@ -78,7 +79,11 @@ export async function POST(request: Request) {
   if (!deck) {
     return NextResponse.json({ ok: false, error: "Only the deck's owner can draft its table sheet." }, { status: 404 });
   }
-  const items = (await listDeckCards(deck.id)).filter((item) => item.entry.board !== "maybe" && item.entry.quantity > 0);
+  // The deck's own cards (the main deck and the commander), as every AI
+  // deck brief reads them (countsTowardDeckStats).
+  const items = (await listDeckCards(deck.id)).filter(
+    (item) => countsTowardDeckStats(item.entry.board) && item.entry.quantity > 0,
+  );
   if (items.length === 0) {
     return NextResponse.json({ ok: false, error: "Add cards to the deck first: the draft is written from them." }, { status: 400 });
   }

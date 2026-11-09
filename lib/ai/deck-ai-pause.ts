@@ -18,7 +18,10 @@
 //     it uses AI, under the credit rules) — the Collection Deck Builder's
 //     "Build with AI" (POST /api/tools/collection-builder/ai-build, label
 //     `build_collection_deck`) picks a Commander deck from the user's own
-//     collection, gated by has_tool_access and an admin's release.
+//     collection, gated by has_tool_access and an admin's release; the Rule
+//     0 table sheet's "Draft with AI" (POST /api/tools/rule0-sheet/draft,
+//     label `draft_table_sheet`) writes a deck's game plan and win
+//     conditions for its owner, gated the same way.
 //
 // Turning the SERVER back on is this one constant. The deck pages show the
 // same words on greyed "Coming soon" controls

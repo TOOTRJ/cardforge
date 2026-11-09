@@ -11,7 +11,7 @@
 //
 // When Wizards updates the list: replace the names, move `updated` and
 // `read`, and point `announcement` at the new article
-// (tests/unit/tools/rule0-game-changers.test.ts holds the shape). Pure,
+// (tests/unit/tools/rule0-sheet.test.ts holds the shape). Pure,
 // client-safe.
 // ---------------------------------------------------------------------------
 

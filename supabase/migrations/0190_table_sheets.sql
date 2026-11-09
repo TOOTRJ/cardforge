@@ -15,7 +15,9 @@
 --                   open its sheet (false = the owner's alone);
 --   ai_drafted_at   when the plan was last drafted by AI (1 credit, the
 --                   route /api/tools/rule0-sheet/draft — reserved, settled
---                   once written, refunded on failure).
+--                   once written, refunded on failure). Informational only,
+--                   and the owner's own column: nothing may present it as a
+--                   proof of AI authorship (that is cards.ai_fields' job).
 --
 -- 1. deck_table_sheets + its RLS:
 --      * the owner reads, writes and deletes their own row while the tool is
@@ -145,6 +147,10 @@ as $$
   );
 $$;
 
+-- Executable by the API roles because the read policy calls it. Asked
+-- directly it says only whether a public or unlisted deck's sheet is shared
+-- and live — for a deck id (a UUID), never its contents; an unlisted deck's
+-- id is as unguessable as its link.
 comment on function public.deck_table_sheet_live(uuid) is
   'Whether a deck''s table sheet is open to visitors (0190): shared by its owner, the deck public or unlisted (never private), and the rule0-sheet tool still open to the deck''s owner. The read policy adds the caller''s own decks check (an unlisted deck only when the request names it).';
 

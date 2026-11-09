@@ -182,6 +182,19 @@ describe("the sheet's facts", () => {
     expect(edited.proxyCount).toBe(0);
   });
 
+  it("counts the deck's own Game Changers: never the sideboard's or a companion's", () => {
+    const facts = buildTableSheetFacts(
+      [
+        item({ name: "Force of Will", board: "side", scryfall_id: "s-fow" }),
+        item({ name: "Gaea's Cradle", board: "companion", scryfall_id: "s-gc" }),
+        item({ name: "Mana Vault", board: "commander", scryfall_id: "s-mv" }),
+      ],
+      true,
+      DECK,
+    );
+    expect(facts.gameChangers.map((card) => card.name)).toEqual(["Mana Vault"]);
+  });
+
   it("has no bracket outside Commander", () => {
     expect(buildTableSheetFacts(items, true, { ...DECK, format: "modern" }).estimate).toBeNull();
   });

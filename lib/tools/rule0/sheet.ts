@@ -2,6 +2,7 @@ import { buildCardPath } from "@/lib/cards/utils";
 import { deckRowsOf, ENTRY_BADGE_LABELS, type DeckRow, type EntryBadge, type ViewItem } from "@/lib/decks/deck-view";
 import { deckEntryAnchor } from "@/lib/decks/return-to";
 import type { DeckBoard } from "@/types/deck";
+import { countsTowardDeckStats } from "@/lib/decks/analytics";
 import { estimateBracket, type BracketEstimate } from "./bracket-estimate";
 import { gameChangerName } from "./game-changers";
 
@@ -134,7 +135,9 @@ export function buildTableSheetFacts(
   // once per card, as the brackets count.
   const changers = new Map<string, SheetGameChanger>();
   for (const row of rows) {
-    if (!row.item.entry.scryfall_id) continue;
+    // The deck's own cards: the main deck and the commander — never the
+    // sideboard or a companion (countsTowardDeckStats, as the page's stats).
+    if (!countsTowardDeckStats(row.board) || !row.item.entry.scryfall_id) continue;
     const name = gameChangerName(row.item.entry.name);
     if (!name) continue;
     const customVersion = row.status !== "imported";

@@ -81,6 +81,8 @@ export function TableSheetEditor({
   const upgrade = useUpgradeModal();
 
   const dirty = !same(fields, saved);
+  const isPrivate = deckVisibility === "private";
+  const shareBlocked = isPrivate && !shared;
   useLeaveWarning(dirty || drafting);
 
   const set = (key: FieldKey) => (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -90,6 +92,9 @@ export function TableSheetEditor({
   };
 
   const save = () => {
+    // aria-disabled, never `disabled`: a control that disables itself under
+    // the focus drops it to <body> — the guards keep it reachable and inert.
+    if (!dirty || saving) return;
     setFormError(null);
     startSave(async () => {
       const result = await saveTableSheetAction(deckId, fields);
@@ -110,6 +115,7 @@ export function TableSheetEditor({
   };
 
   const toggleShare = () => {
+    if (sharing || shareBlocked) return;
     const next = !shared;
     setFormError(null);
     startShare(async () => {
@@ -160,7 +166,7 @@ export function TableSheetEditor({
         const message = body?.error ?? "The draft didn't finish. Try again.";
         if (body?.code === "INSUFFICIENT_CREDITS") upgrade.open("credits", "rule0_sheet");
         setFormError(message);
-        setStatus(message);
+        setStatus("");
         return;
       }
       const drafted = { ...fields, gamePlan: body.draft.gamePlan, winConditions: body.draft.winConditions.join("\n") };
@@ -176,13 +182,18 @@ export function TableSheetEditor({
     } catch {
       const message = "We lost the answer. If a credit was taken, it comes back by itself within the hour.";
       setFormError(message);
-      setStatus(message);
+      setStatus("");
     } finally {
       setDrafting(false);
     }
   };
 
-  const startDraft = () => (hasWrittenText ? setConfirmDraft(true) : void runDraft());
+  const draftOff = drafting || facts.cardCount === 0;
+  const startDraft = () => {
+    if (draftOff) return;
+    if (hasWrittenText) setConfirmDraft(true);
+    else void runDraft();
+  };
 
   const winCount = winConditionLines(fields.winConditions).length;
   const text: TableSheetText = {
@@ -190,11 +201,10 @@ export function TableSheetEditor({
     winConditions: fields.winConditions.trim() || null,
     tableNotes: fields.tableNotes.trim() || null,
   };
-  const isPrivate = deckVisibility === "private";
-  const shareBlocked = isPrivate && !shared;
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
+      <h1 className="sr-only">Table sheet for {deck.title}</h1>
       <section aria-label="Your words for the table" className="table-sheet-controls flex flex-col gap-5 rounded-frame border border-border/60 bg-surface/60 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex max-w-2xl flex-col gap-1">
@@ -210,8 +220,10 @@ export function TableSheetEditor({
               type="button"
               variant="secondary"
               size="sm"
+              className="aria-disabled:cursor-default aria-disabled:opacity-60"
               onClick={startDraft}
-              disabled={drafting || facts.cardCount === 0}
+              aria-disabled={draftOff || undefined}
+              aria-busy={drafting || undefined}
               aria-describedby={facts.cardCount === 0 ? ids.status : undefined}
             >
               {drafting ? <Loader2 className="animate-spin" aria-hidden /> : <Sparkles aria-hidden />}
@@ -274,7 +286,13 @@ export function TableSheetEditor({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4">
-          <Button type="button" onClick={save} disabled={!dirty || saving}>
+          <Button
+            type="button"
+            onClick={save}
+            aria-disabled={!dirty || saving || undefined}
+            aria-busy={saving || undefined}
+            className="aria-disabled:cursor-default aria-disabled:opacity-60"
+          >
             {saving ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
             {saving ? "Saving…" : dirty ? "Save" : "Saved"}
           </Button>
@@ -291,8 +309,8 @@ export function TableSheetEditor({
               aria-describedby={ids.share}
               // A private deck's sheet can't be shared: the switch stays
               // reachable (its reason is its description), it just does nothing.
-              aria-disabled={shareBlocked || undefined}
-              disabled={sharing}
+              aria-disabled={shareBlocked || sharing || undefined}
+              aria-busy={sharing || undefined}
               onClick={shareBlocked ? undefined : toggleShare}
               className="inline-flex h-9 items-center gap-2 rounded-control border border-border px-3 text-sm text-foreground transition-colors hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
             >

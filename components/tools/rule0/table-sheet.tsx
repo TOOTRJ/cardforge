@@ -56,6 +56,7 @@ export function TableSheet({
   className?: string;
 }) {
   const wins = winConditionLines(text.winConditions);
+  const Title = editing ? "h2" : "h1";
   const empty = editing ? "Not written yet — fill it in above." : "Not written yet.";
   return (
     <article
@@ -67,11 +68,13 @@ export function TableSheet({
     >
       {/* The deck at a glance, and the way back to it. */}
       <header className="flex flex-col gap-5 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2 break-words">
           <p className={SECTION_TITLE}>Rule 0 table sheet</p>
-          <h1 id="table-sheet-title" className="font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
+          {/* The page's h1 — but in the owner's editor, whose own h1 comes
+              first, the sheet is a section of the page. */}
+          <Title id="table-sheet-title" className="font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
             {deck.title}
-          </h1>
+          </Title>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
             <span>{deck.formatLabel}</span>
             <span aria-hidden>·</span>
@@ -131,18 +134,18 @@ export function TableSheet({
         ) : null}
       </header>
 
-      <div className="grid gap-6 md:grid-cols-2 print:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 print:grid-cols-2">
         {deck.isCommander ? <BracketSection deck={deck} facts={facts} /> : null}
         <CustomCardsSection facts={facts} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 print:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 print:grid-cols-2">
         <section aria-labelledby="table-sheet-plan" className="flex flex-col gap-2">
           <h2 id="table-sheet-plan" className={SECTION_TITLE}>
             Game plan
           </h2>
           {text.gamePlan ? (
-            <p className="whitespace-pre-line text-sm leading-6">{text.gamePlan}</p>
+            <p className="whitespace-pre-line break-words text-sm leading-6">{text.gamePlan}</p>
           ) : (
             <p className="text-sm italic text-subtle">{empty}</p>
           )}
@@ -152,7 +155,7 @@ export function TableSheet({
             Win conditions
           </h2>
           {wins.length > 0 ? (
-            <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm leading-6 marker:text-subtle">
+            <ol className="flex list-decimal flex-col gap-1 break-words pl-5 text-sm leading-6 marker:text-subtle">
               {wins.map((line, index) => (
                 <li key={`${index}-${line}`}>{line}</li>
               ))}
@@ -168,7 +171,7 @@ export function TableSheet({
           <h2 id="table-sheet-notes" className={SECTION_TITLE}>
             Also worth a word
           </h2>
-          <p className="whitespace-pre-line text-sm leading-6">{text.tableNotes}</p>
+          <p className="whitespace-pre-line break-words text-sm leading-6">{text.tableNotes}</p>
         </section>
       ) : null}
 
@@ -252,7 +255,7 @@ function BracketSection({ deck, facts }: { deck: TableSheetDeck; facts: TableShe
 
 function CardLines({ lines, label }: { lines: readonly SheetCardLine[]; label: string }) {
   return (
-    <ul aria-label={label} className="flex flex-col gap-1 text-sm leading-6 print:columns-2 print:gap-6">
+    <ul aria-label={label} className="flex flex-col gap-1 break-words text-sm leading-6 print:block print:columns-2 print:gap-6">
       {lines.map((line) => (
         <li key={line.id} className="break-inside-avoid">
           {line.quantity > 1 ? <span className="tabular-nums text-muted">{line.quantity}× </span> : null}

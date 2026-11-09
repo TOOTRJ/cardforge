@@ -730,6 +730,7 @@ body {
     display: none !important;
   }
   html:has(.table-sheet) body *:has(.table-sheet) {
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
