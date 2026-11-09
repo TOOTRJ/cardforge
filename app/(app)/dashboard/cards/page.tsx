@@ -27,6 +27,7 @@ import {
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { getMyDeckCounts } from "@/lib/decks/membership-queries";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { getViewerTool } from "@/lib/tools/queries";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { CARD_GRID_CLASS, CARD_GRID_COMPACT_CLASS } from "@/components/cards/card-grid";
@@ -86,7 +87,7 @@ async function MyCardsLibrary({
   sort: MyCardsSort;
 }) {
   const viewer = await getCurrentUser();
-  const [profileOverrides, myCards, likedCards, entitlements, deckCounts] = await Promise.all([
+  const [profileOverrides, myCards, likedCards, entitlements, deckCounts, playExports] = await Promise.all([
     getFrameProfileOverrides(),
     listMyCards(),
     viewer
@@ -99,6 +100,8 @@ async function MyCardsLibrary({
           .then((supabase) => getMyDeckCounts(supabase, viewer.id))
           .catch(() => null)
       : Promise.resolve(null),
+    // The play-exports beta tool: the selection gains "Play online".
+    viewer ? getViewerTool("play-exports") : Promise.resolve(null),
   ]);
   const remixParents = await listRemixParentLinks(myCards);
 
@@ -115,6 +118,7 @@ async function MyCardsLibrary({
       // (Pro, TODO 6.15); POST /api/cards/export checks it again.
       canPrint={entitlements.allowBatchExport}
       deckCounts={deckCounts}
+      playExports={playExports?.allowed === true}
     />
   );
 }
