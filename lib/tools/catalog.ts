@@ -25,7 +25,7 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "table-sheet" | "reart";
+export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "play" | "table-sheet" | "reart";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -126,6 +126,20 @@ export const TOOL_CATALOG = [
       "Common, uncommon, rare and mythic colours from one symbol",
     ],
     icon: "set-symbol",
+    built: true,
+  },
+  {
+    slug: "play-exports",
+    name: "Play Exports",
+    tagline: "Playtest your cards in Cockatrice, Draftmancer or Tabletop Simulator.",
+    description:
+      "Turn a deck or a pick of your cards into the files Cockatrice, Draftmancer and Tabletop Simulator load: your custom cards with their text and pictures, and real cards by name so each app plays them from its own database.",
+    highlights: [
+      "Cockatrice: a custom set with pictures and a matching deck file",
+      "Draftmancer: a custom card list for drafting your cards",
+      "Tabletop Simulator: a deck you drop into a game",
+    ],
+    icon: "play",
     built: true,
   },
   {
