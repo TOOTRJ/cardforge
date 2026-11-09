@@ -315,6 +315,8 @@ describe("every wrapper goes through CardTile (source scan)", () => {
       // A frame's example card on /frames (TODO NV8).
       "components/frames/frame-gallery-tile.tsx",
       "components/gallery/trending-cards-section.tsx",
+      // Re-art deck's studio: the deck's cards as they look now.
+      "components/tools/re-art/reart-card-grid.tsx",
     ]);
     for (const path of passing) {
       const source = read(path);

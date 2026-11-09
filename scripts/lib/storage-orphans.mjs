@@ -97,6 +97,11 @@ export const URL_SOURCES = [
   { table: "card_exports", columns: ["file_url", "storage_path"], note: "card-exports history (a bare key in storage_path)" },
   { table: "token_kits", columns: ["items"], note: "the Token Kit's per-token pictures (items.<key>.artUrl, card-art: an upload or an AI picture) — never a card's" },
   { table: "set_symbols", columns: ["files"], note: "Set Symbol Studio's current version of each symbol (set-covers sym-<v>-*.png + source, card-art wm-sym-<v>.png); a card's set_icon_url / watermark keeps an older version" },
+  {
+    table: "deck_reart_cards",
+    columns: ["art_url", "back_art_url", "previous_art_url", "previous_back_art_url"],
+    note: "Re-art deck (0191): the picture it painted on a card, and the card's own earlier art kept for \"Put the old art back\" (card-art) — no card holds that one any more",
+  },
 ];
 
 /** PostgREST/OpenAPI `format`s that can't hold a string. Everything else —

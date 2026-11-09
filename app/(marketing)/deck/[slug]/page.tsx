@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DeckOwnerTools, DeckToolButton } from "@/components/decks/deck-owner-tools";
+import { DeckReartLink } from "@/components/tools/re-art/deck-reart-link";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { DeckRegenerateBar } from "@/components/decks/deck-regenerate-bar";
 import { getActiveDeckJob, getLatestFailedDeckJob } from "@/lib/ai/generation-jobs";
@@ -495,7 +496,11 @@ export default async function DeckDetailPage({
               defaultCoverSrc={defaultDeckCoverFor(deck.id, deckCoverColors(items))}
               capacity={cardCapacity}
               openImport={search.import === "1"}
-            />
+            >
+              <Suspense fallback={null}>
+                <DeckReartLink deckId={deck.id} />
+              </Suspense>
+            </DeckOwnerTools>
           </div>
           {jobs ? (
             <Suspense fallback={null}>

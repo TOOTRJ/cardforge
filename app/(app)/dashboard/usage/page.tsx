@@ -40,6 +40,8 @@ const JOB_KIND_LABELS: Record<string, string> = {
   card: "Single card generation",
   card_remix: "Card restyle",
   card_fill: "Card fields (creator)",
+  bulk_customize: "Bulk Customize",
+  deck_reart: "Re-art deck",
 };
 
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -54,6 +56,7 @@ const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
   generate_random_card: "Single card generation",
   remix_card: "Card restyle",
   fill_card: "Card fields (creator)",
+  deck_reart_art: "Re-art deck art",
 };
 
 // A ledger row's moment, in the VIEWER's zone (the server's — UTC — put an

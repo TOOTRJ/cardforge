@@ -25,7 +25,7 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "play" | "table-sheet";
+export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "play" | "table-sheet" | "reart";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -84,6 +84,20 @@ export const TOOL_CATALOG = [
       "The cost up front: cards, slots left and credits",
     ],
     icon: "customize",
+    built: true,
+  },
+  {
+    slug: "re-art-deck",
+    name: "Re-art deck",
+    tagline: "Give every card of a deck new art in one shared style.",
+    description:
+      "Pick one of your decks and define its look once: a style and a few words about its world. Try it on a few cards first, then paint the whole deck in that style. Real cards become your own versions with the new art, your own cards get new art on them, and any card can be re-rolled or given its old art back.",
+    highlights: [
+      "One style for the whole deck, kept the same on every card",
+      "Try it on three cards before you paint the deck",
+      "Re-roll any card, or put its old art back",
+    ],
+    icon: "reart",
     built: true,
   },
   {

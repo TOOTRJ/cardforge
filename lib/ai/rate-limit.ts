@@ -56,7 +56,10 @@ export type AiActionLabel =
   | "bulk_customize_art"
   // The Rule 0 table sheet (beta tool, migration 0190): its AI draft of the
   // game plan and win conditions.
-  | "draft_table_sheet";
+  | "draft_table_sheet"
+  // Re-art deck (beta tool, migration 0191): one row per picture a run
+  // paints in the deck's style.
+  | "deck_reart_art";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-

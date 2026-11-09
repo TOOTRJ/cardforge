@@ -1,4 +1,4 @@
-import { Coins, Gamepad2, Gem, Layers, LibraryBig, ScrollText, Sparkles, type LucideIcon } from "lucide-react";
+import { Coins, Gamepad2, Gem, Layers, LibraryBig, Palette, ScrollText, Sparkles, type LucideIcon } from "lucide-react";
 import type { ToolIconKey } from "@/lib/tools/catalog";
 
 // One icon per beta tool (lib/tools/catalog.ts keeps the key, so the
@@ -12,4 +12,5 @@ export const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
   customize: Layers,
   play: Gamepad2,
   "table-sheet": ScrollText,
+  reart: Palette,
 };
