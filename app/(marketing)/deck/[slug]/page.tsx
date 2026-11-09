@@ -80,6 +80,8 @@ import { DeckTokensSection } from "@/components/decks/deck-tokens-section";
 import { SimilarDecksRow } from "@/components/decks/similar-decks-row";
 import { getDeckRemixCredit } from "@/lib/decks/remix-credit";
 import { cloneableEntryCount } from "@/lib/decks/clone";
+import { TableSheetLink } from "@/components/tools/rule0/table-sheet-link";
+import { RULE0_TOOL_SLUG } from "@/lib/tools/rule0/model";
 
 // ---------------------------------------------------------------------------
 // The deck page (TODO DK5.1) — ONE URL, read-only for visitors, the owner's
@@ -225,7 +227,7 @@ export default async function DeckDetailPage({
     : null;
   // A clone's "remixed from" credit (TODO DK5.16), under its own boundary.
   const remixCredit = getDeckRemixCredit(deck.id);
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, bulkCustomize, playExports] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, bulkCustomize, playExports, tableSheetTool] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
@@ -238,6 +240,8 @@ export default async function DeckDetailPage({
     isOwner ? getViewerTool("bulk-customize") : null,
     // The play-exports beta tool: "Play online" for any viewer who has it.
     user ? getViewerTool("play-exports") : null,
+    // The Rule 0 table sheet beta tool: the owner's "Table sheet" link.
+    isOwner ? getViewerTool(RULE0_TOOL_SLUG) : null,
   ]);
 
   // The rows as this viewer's list shows them: a private card's title never
@@ -458,6 +462,7 @@ export default async function DeckDetailPage({
             {playExports?.allowed && copyEntries ? (
               <PlayExportButton source={{ kind: "deck", deckId: deck.id }} label={deck.title} className="h-9" />
             ) : null}
+            {tableSheetTool?.allowed ? <TableSheetLink deckSlug={deck.slug} className="h-9" /> : null}
             {/* Copy deck (TODO DK5.16): the viewer's private copy — never
                 offered when it would be empty. */}
             {canCopy ? (
