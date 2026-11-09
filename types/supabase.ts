@@ -771,6 +771,8 @@ export type Database = {
           can_be_commander: boolean;
           source_line: string | null;
           import_batch: string | null;
+          customized_card_id: string | null;
+          customized_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -797,6 +799,8 @@ export type Database = {
           can_be_commander?: boolean;
           source_line?: string | null;
           import_batch?: string | null;
+          customized_card_id?: string | null;
+          customized_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -823,6 +827,8 @@ export type Database = {
           can_be_commander?: boolean;
           source_line?: string | null;
           import_batch?: string | null;
+          customized_card_id?: string | null;
+          customized_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

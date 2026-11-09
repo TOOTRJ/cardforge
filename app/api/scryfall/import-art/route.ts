@@ -2,21 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
-import {
-  assessPrintImageQuality,
-  fetchScryfallImage,
-  getCardById,
-  pickPrintImageUrl,
-} from "@/lib/scryfall/client";
-import {
-  checkScryfallRateLimit,
-  logScryfallCall,
-} from "@/lib/scryfall/rate-limit";
-import { scryfallFaceArtist } from "@/lib/scryfall/import-mapper";
+import { isUserStorageConfigured } from "@/lib/media/user-storage";
+import { getCardById } from "@/lib/scryfall/client";
+import { checkScryfallRateLimit } from "@/lib/scryfall/rate-limit";
+import { storeScryfallArt } from "@/lib/scryfall/import-art";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
-import { randomId } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // POST /api/scryfall/import-art
@@ -35,8 +26,6 @@ import { randomId } from "@/lib/ids";
 // ---------------------------------------------------------------------------
 
 export const maxDuration = 30;
-
-const MAX_BYTES = 8 * 1024 * 1024;
 
 const bodySchema = z.object({
   scryfallId: z
@@ -61,14 +50,6 @@ const bodySchema = z.object({
     .optional()
     .default("art"),
 });
-
-function extensionFromContentType(contentType: string): string {
-  if (contentType.includes("png")) return "png";
-  if (contentType.includes("jpeg") || contentType.includes("jpg")) return "jpg";
-  if (contentType.includes("webp")) return "webp";
-  if (contentType.includes("gif")) return "gif";
-  return "bin";
-}
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured() || !isUserStorageConfigured()) {
@@ -129,112 +110,22 @@ export async function POST(request: Request) {
     );
   }
 
-  // Quality gate before the budget is charged. A "placeholder"/"missing"
-  // scan would bake a junk frame into the user's card — reject print
-  // imports outright; art crops of a placeholder are equally useless.
-  const imageQuality = assessPrintImageQuality(card);
-  if (imageQuality === "unusable") {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Scryfall only has a placeholder image for this printing — try a different printing.",
-      },
-      { status: 422 },
-    );
-  }
-
-  // For "*-back" modes, source the image from `card_faces[1]`. If the
-  // card has only one face, fail with 404 — the caller asked for art
-  // that doesn't exist.
-  const isBack =
-    parsed.data.mode === "art-back" || parsed.data.mode === "print-back";
-  const faceImages = isBack
-    ? card.card_faces?.[1]?.image_uris ?? null
-    : card.image_uris ?? card.card_faces?.[0]?.image_uris ?? null;
-
-  if (isBack && !card.card_faces?.[1]) {
-    return NextResponse.json(
-      { ok: false, error: "This card has no back face." },
-      { status: 404 },
-    );
-  }
-
-  const wantsArt =
-    parsed.data.mode === "art" || parsed.data.mode === "art-back";
-  const imageUrl = wantsArt
-    ? faceImages?.art_crop ?? faceImages?.normal ?? null
-    : faceImages?.png ?? faceImages?.large ?? faceImages?.normal ?? null;
-
-  // Front-face print still goes through the original picker so historic
-  // behavior is unchanged.
-  const finalImageUrl =
-    !isBack && parsed.data.mode === "print"
-      ? pickPrintImageUrl(card)
-      : imageUrl;
-
-  if (!finalImageUrl) {
-    return NextResponse.json(
-      { ok: false, error: "Scryfall has no image for this card." },
-      { status: 404 },
-    );
-  }
-
-  // Charged only now (TODO 1.8): the face and its image URL both resolved.
-  // "No back face" and "no image" — a split, adventure or flip card asked
-  // for back-face art it doesn't have — never spend the user's quota.
-  await logScryfallCall(user.id, "import_art");
-
-  // 2) Pull the bytes. fetchScryfallImage host-locks the URL.
-  const fetched = await fetchScryfallImage(finalImageUrl);
-  if (!fetched) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Could not download artwork from Scryfall.",
-      },
-      { status: 502 },
-    );
-  }
-
-  if (fetched.blob.size > MAX_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: "Imported image is too large." },
-      { status: 413 },
-    );
-  }
-
-  // 3) Upload into the caller's own card-art folder (service role; the
-  // folder comes from the session, the name is ours).
-  const ext = extensionFromContentType(fetched.contentType);
-  const name = `${randomId()}.${ext}`;
-  const art = userFolder("card-art", user.id);
-  const arrayBuffer = await fetched.blob.arrayBuffer();
-  const { error: uploadError } = await art.upload(name, arrayBuffer, {
-    cacheControl: "3600",
-    contentType: fetched.contentType,
-    upsert: false,
-  });
-
-  if (uploadError) {
-    return NextResponse.json(
-      { ok: false, error: uploadError.message },
-      { status: 500 },
-    );
+  // 2) Pick, gate, charge, fetch and store — the one path the Bulk
+  // Customize batch takes too (lib/scryfall/import-art.ts).
+  const stored = await storeScryfallArt(user.id, card, parsed.data.mode);
+  if (!stored.ok) {
+    return NextResponse.json({ ok: false, error: stored.error }, { status: stored.status });
   }
 
   return NextResponse.json({
     ok: true,
-    publicUrl: art.publicUrl(name),
+    publicUrl: stored.publicUrl,
     // The requested face's artist (TODO 1.8): Ice's, not "David Martin &
     // Franz Vohwinkel".
-    artist: scryfallFaceArtist(card, isBack ? 1 : 0) ?? null,
+    artist: stored.artist,
     // Non-blocking quality signal — the dialog surfaces this as a toast so
     // the user can pick a better printing if they care.
-    warning:
-      imageQuality === "lowres"
-        ? "This printing only has a low-resolution scan on Scryfall."
-        : null,
+    warning: stored.warning,
     source: {
       scryfallId: card.id,
       cardName: card.name,

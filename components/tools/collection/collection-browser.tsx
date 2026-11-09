@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useId, useState, useTransition, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, LibraryBig, Search, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, LibraryBig, ListChecks, Search, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { ColorPip } from "@/components/cards/color-pip";
@@ -24,6 +24,8 @@ import { FINISH_LABELS } from "@/lib/tools/collection/parse-import";
 import type { CollectionColour, CollectionPage, CollectionSort, CollectionType } from "@/lib/tools/collection/queries";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
+import { BulkCustomizeButton } from "@/components/tools/bulk-customize/bulk-customize-button";
+import { printingCustomizeHref, type BulkSource } from "@/lib/tools/bulk-customize/model";
 
 const COLOUR_OPTIONS: ChipOption<CollectionColour>[] = [
   { value: "W", label: "White", leading: <ColorPip color="W" size={16} decorative /> },
@@ -78,13 +80,32 @@ export function CollectionBrowser({
   page,
   query,
   collectionSize,
+  canCustomize = false,
 }: {
   page: CollectionPage;
   query: CollectionQueryState;
   collectionSize: number;
+  /** The viewer has the Bulk Customize tool: the grid can tick cards. */
+  canCustomize?: boolean;
 }) {
   const { patch, isPending } = useSearchParamPatch();
   const [editing, setEditing] = useState<CollectionCard | null>(null);
+  // Ticked rows survive a page turn or a filter (the browser stays mounted).
+  const [selecting, setSelecting] = useState(false);
+  const [ticked, setTicked] = useState<Map<string, CollectionCard>>(new Map());
+  const toggleTick = (card: CollectionCard) =>
+    setTicked((prev) => {
+      const next = new Map(prev);
+      if (next.has(card.id)) next.delete(card.id);
+      else next.set(card.id, card);
+      return next;
+    });
+  const stopSelecting = () => {
+    setSelecting(false);
+    setTicked(new Map());
+  };
+  const tickedSources: BulkSource[] = [...ticked.keys()].map((id) => ({ kind: "collection", id }));
+  const onlyTicked = ticked.size === 1 ? [...ticked.values()][0] : null;
   const ids = { q: useId(), type: useId(), sort: useId(), commanders: useId(), results: useId() };
 
   if (collectionSize === 0) {
@@ -206,16 +227,52 @@ export function CollectionBrowser({
               ? "No cards match."
               : `${n(page.total)} card${page.total === 1 ? "" : "s"}${filtered ? " match" : ""}${page.pages > 1 ? ` · page ${page.page} of ${page.pages}` : ""}`}
         </p>
-        {filtered ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => patch({ q: null, colours: null, type: null, commanders: null })}
-          >
-            Clear filters
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {filtered ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => patch({ q: null, colours: null, type: null, commanders: null })}
+            >
+              Clear filters
+            </Button>
+          ) : null}
+          {canCustomize ? (
+            <Button
+              variant={selecting ? "secondary" : "outline"}
+              size="sm"
+              aria-pressed={selecting}
+              onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+            >
+              <ListChecks aria-hidden />
+              {selecting ? "Done selecting" : "Select to customize"}
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {selecting ? (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-surface/95 p-3 backdrop-blur">
+          <span className="text-sm text-foreground" aria-live="polite">
+            {ticked.size === 0
+              ? "Tick the cards to make your own."
+              : `${n(ticked.size)} card${ticked.size === 1 ? "" : "s"} ticked`}
+          </span>
+          <div className="flex items-center gap-2">
+            {ticked.size > 0 ? (
+              <Button variant="ghost" size="sm" onClick={() => setTicked(new Map())}>
+                Clear
+              </Button>
+            ) : null}
+            <BulkCustomizeButton
+              sources={tickedSources}
+              oneCardHref={onlyTicked ? printingCustomizeHref(onlyTicked.scryfallId, onlyTicked.id) : null}
+              surface="collection"
+              onFinished={stopSelecting}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {page.cards.length > 0 ? (
         <div className="@container">
@@ -230,12 +287,33 @@ export function CollectionBrowser({
               <li key={card.id} className="min-w-0">
                 <button
                   type="button"
-                  onClick={() => setEditing(card)}
-                  aria-label={`${card.name}, ${card.quantity} ${card.quantity === 1 ? "copy" : "copies"}${printingLine(card) ? `, ${printingLine(card)}` : ""}. Change copies or remove.`}
-                  className="group flex w-full flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  onClick={() => (selecting ? toggleTick(card) : setEditing(card))}
+                  aria-pressed={selecting ? ticked.has(card.id) : undefined}
+                  aria-label={
+                    selecting
+                      ? `${card.name}${printingLine(card) ? `, ${printingLine(card)}` : ""}. Tick to customize.`
+                      : `${card.name}, ${card.quantity} ${card.quantity === 1 ? "copy" : "copies"}${printingLine(card) ? `, ${printingLine(card)}` : ""}. Change copies or remove.`
+                  }
+                  className={cn(
+                    "group flex w-full flex-col gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    selecting && ticked.has(card.id) && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                  )}
                 >
                   <span className="relative block">
                     <PrintingPicture imageUrl={card.imageUrl} name={card.name} className="transition-transform group-hover:-translate-y-0.5" />
+                    {selecting ? (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border",
+                          ticked.has(card.id)
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background/80 text-transparent",
+                        )}
+                      >
+                        <Check className="h-4 w-4" />
+                      </span>
+                    ) : null}
                     <span
                       aria-hidden
                       className="absolute right-2 top-2 rounded-full border border-border/60 bg-background/85 px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground backdrop-blur"

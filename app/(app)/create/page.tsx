@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
@@ -25,6 +25,7 @@ import { isDesignAiConfigured } from "@/lib/ai/provider";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { getDeckAiSeeds } from "@/lib/ai/generation-jobs";
 import type { DeckRemixContext } from "@/types/deck";
+import type { PrintingPrefill } from "@/lib/tools/bulk-customize/model";
 import { getCreatorLabMode } from "@/lib/creator/lab";
 import { canUseCreatorLab, resolveCreatorLayout } from "@/lib/creator/lab-shared";
 import { FlaskConical, Layers3 } from "lucide-react";
@@ -69,6 +70,10 @@ export default async function CreatePage({
     /** A Set Symbol Studio symbol to start the new card with, and as what. */
     setSymbol?: string;
     use?: string;
+    /** One real card to start from (Bulk Customize's one-card door). */
+    printing?: string;
+    /** …and the caller's collection row it came from. */
+    collectionRow?: string;
   }>;
 }) {
   const search = await searchParams;
@@ -145,6 +150,14 @@ export default async function CreatePage({
         deckVisibility: deckRemixSource.deck.visibility,
       }
     : null;
+  // /create?printing=<scryfallId>[&collectionRow=<id>] — one REAL card
+  // customized on its own (Bulk Customize from the Collection page or the
+  // tool's search): the creator pre-fills from the printing as a deck
+  // entry's Customize does. A collection row is honoured only when it is the
+  // caller's and holds that printing (RLS reads the caller's rows alone).
+  // Never beside a deck entry or a remix.
+  const printingPrefill = deckRemix || remixParam ? null : await printingPrefillFor(search.printing, search.collectionRow);
+
   // Back to that card on the deck once it is saved (TODO DK5.5): only a
   // page of THAT deck (lib/decks/return-to.ts deckReturnPath).
   const returnTo = deckRemix ? deckReturnPath(search.returnTo, deckRemix.deckSlug) : null;
@@ -281,6 +294,7 @@ export default async function CreatePage({
           key={
             deckRemix?.deckCardId ??
             remixParent?.id ??
+            (printingPrefill ? `printing:${printingPrefill.scryfallId}` : null) ??
             (walkthrough ? `walk:${walkthrough.template}/${walkthrough.colorKey}` : "new")
           }
           mode={remixParent ? "remix" : "create"}
@@ -288,7 +302,7 @@ export default async function CreatePage({
           userId={user.id}
           // A plain new card puts back one a guest built before signing in
           // (TODO HM3) — never a deck proxy, a remix or a frame preview.
-          guestDraft={!deckRemix && !remixParent && !framePreview && !initialSetSymbol ? "restore" : null}
+          guestDraft={!deckRemix && !printingPrefill && !remixParent && !framePreview && !initialSetSymbol ? "restore" : null}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
           myDecks={myDecks.map((deck) => ({
@@ -302,6 +316,7 @@ export default async function CreatePage({
           }))}
           canDesignForDeck={entitlements.effectiveTier === "pro"}
           deckRemix={deckRemix}
+          printingPrefill={printingPrefill}
           returnTo={returnTo}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
@@ -404,4 +419,26 @@ function SchemaUnseeded() {
       </SurfaceCard>
     </div>
   );
+}
+
+const PRINTING_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The one real card a `?printing=` asks to start from, or null. */
+async function printingPrefillFor(
+  printing: string | undefined,
+  collectionRow: string | undefined,
+): Promise<PrintingPrefill | null> {
+  if (!printing || !PRINTING_ID_RE.test(printing)) return null;
+  const scryfallId = printing.toLowerCase();
+  if (!collectionRow || !isUuid(collectionRow)) return { scryfallId, name: "this card", collectionRowId: null };
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("collection_cards")
+    .select("id, name, scryfall_id")
+    .eq("id", collectionRow)
+    .maybeSingle();
+  if (!data || data.scryfall_id.toLowerCase() !== scryfallId) {
+    return { scryfallId, name: "this card", collectionRowId: null };
+  }
+  return { scryfallId, name: data.name, collectionRowId: data.id };
 }

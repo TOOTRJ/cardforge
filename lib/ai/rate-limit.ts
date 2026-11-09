@@ -50,7 +50,10 @@ export type AiActionLabel =
   | "generate_deck_ideas"
   | "analyze_deck"
   | "build_collection_deck"
-  | "generate_set_icon";
+  | "generate_set_icon"
+  // Bulk Customize (beta tool, migration 0186): one row per AI picture a
+  // batch paints.
+  | "bulk_customize_art";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-

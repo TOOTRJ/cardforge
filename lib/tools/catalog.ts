@@ -25,7 +25,7 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol";
+export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -70,6 +70,20 @@ export const TOOL_CATALOG = [
       "Print-ready sheets with bleed, or an MPC file",
     ],
     icon: "tokens",
+    built: true,
+  },
+  {
+    slug: "bulk-customize",
+    name: "Bulk Customize",
+    tagline: "Turn a stack of real cards into your own versions in one go.",
+    description:
+      "Tick real cards in a deck, your collection or a search and customize them together: one frame, border, set symbol and watermark for all of them, with each card's own art, room for yours later, or new AI art in one style. You see what it costs before anything is made.",
+    highlights: [
+      "One look for every card: frame, border, set symbol, watermark",
+      "Keep each card's art, add your own later, or AI art in one style",
+      "The cost up front: cards, slots left and credits",
+    ],
+    icon: "customize",
     built: true,
   },
   {

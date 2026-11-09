@@ -212,6 +212,13 @@ const NOT_COUNTED: Record<string, string> = {
   "lib/ai/random-art.ts": "AI art: paid for in credits and capped by lib/ai/rate-limit.ts",
   "lib/tools/set-symbol/server.ts":
     "Set Symbol Studio's store: its upload and re-cut actions count first (lib/tools/set-symbol/actions.ts); its AI route is paid in credits and capped by lib/ai/rate-limit.ts",
+  "lib/scryfall/import-art.ts":
+    "a real card's art: its callers count it first (the import-art route, the Bulk Customize step — CALLERS_COUNT below)",
+};
+
+/** The callers of an exempt writer that count the upload themselves. */
+const CALLERS_COUNT: Record<string, string[]> = {
+  "lib/scryfall/import-art.ts": ["app/api/scryfall/import-art/route.ts", "lib/tools/bulk-customize/step.ts"],
 };
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -233,7 +240,6 @@ describe("every user-folder writer counts the upload", () => {
 
   it("finds the writers", () => {
     expect(writers.map((w) => w.rel).sort()).toEqual([
-      "app/api/scryfall/import-art/route.ts",
       "lib/ai/random-art.ts",
       "lib/cards/bake-core.ts",
       "lib/cards/remix-media.ts",
@@ -243,6 +249,7 @@ describe("every user-folder writer counts the upload", () => {
       "lib/media/user-storage.ts",
       "lib/pips/actions.ts",
       "lib/profile/upload-server.ts",
+      "lib/scryfall/import-art.ts",
       "lib/tools/set-symbol/server.ts",
     ]);
   });
@@ -251,6 +258,17 @@ describe("every user-folder writer counts the upload", () => {
     for (const { rel, src } of writers) {
       if (rel in NOT_COUNTED) continue;
       expect(src, rel).toMatch(/await checkUploadRateLimit\(/);
+    }
+  });
+
+  it("an exempt writer's callers count the upload before calling it", () => {
+    for (const [writer, callers] of Object.entries(CALLERS_COUNT)) {
+      const users = files.filter(({ src }) => src.includes(`from "@/${writer.replace(/\.ts$/, "")}"`)).map((f) => f.rel).sort();
+      expect(users, writer).toEqual([...callers].sort());
+      for (const rel of callers) {
+        const src = files.find((f) => f.rel === rel)?.src ?? "";
+        expect(src, rel).toMatch(/await checkUploadRateLimit\(/);
+      }
     }
   });
 });

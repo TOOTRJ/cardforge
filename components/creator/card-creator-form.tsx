@@ -196,6 +196,8 @@ import {
 import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
+import type { PrintingPrefill } from "@/lib/tools/bulk-customize/model";
+import { recordCollectionCustomizedAction } from "@/lib/tools/bulk-customize/record-actions";
 import {
   droppedFaceNotice,
   undrawableSymbolsNotice,
@@ -468,6 +470,12 @@ type CardCreatorFormProps = {
    *  from the entry's Scryfall card on mount, and on save the new card links
    *  back as the entry's proxy before returning to the deck. */
   deckRemix?: DeckRemixContext | null;
+  /** Set when one REAL card is customized outside a deck
+   *  (/create?printing=…, Bulk Customize's one-card door from the Collection
+   *  page or the tool's search): the form pre-fills from that printing on
+   *  mount, as a deck entry's does; a collection row's save records the new
+   *  card on the row (recordCollectionCustomizedAction). */
+  printingPrefill?: PrintingPrefill | null;
   /** Where a save returns to (TODO DK5.5): the deck page at the card being
    *  edited, already whitelisted by the page (lib/decks/return-to.ts
    *  deckReturnPath). Null: where a save always goes. */
@@ -808,6 +816,7 @@ export function CardCreatorForm({
   aiDecks = null,
   canDesignForDeck = false,
   deckRemix = null,
+  printingPrefill = null,
   returnTo = null,
   aiConfigured,
   pipOverrides = {},
@@ -1316,7 +1325,7 @@ export function CardCreatorForm({
   // (lib/creator/auto-tags-follow.ts). Never a deck-card proxy
   // (/create?deckCard=): it starts from the printing it copies, and its
   // "unchanged" baseline (the reset after the import) must not move.
-  const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix);
+  const autoTags = useAutoTagsFollow({ control, setValue, getValues }, mode === "create" && !deckRemix && !printingPrefill);
 
   // A restored guest card's picture uploads (TODO HM3; the hook is below,
   // after the follows it settles) — read by Save's reason here.
@@ -2061,7 +2070,7 @@ export function CardCreatorForm({
   // an import does: its frame, colour pair and part colour stand (the same
   // settling an import runs), and its tags keep following only if the guest
   // never touched them.
-  const guestDraftRole = mode === "create" && !deckRemix && !card ? guestDraft : null;
+  const guestDraftRole = mode === "create" && !deckRemix && !printingPrefill && !card ? guestDraft : null;
   const guestDraftControls = useGuestDraft({
     role: guestDraftRole,
     userId,
@@ -3395,15 +3404,19 @@ export function CardCreatorForm({
   // bailed. There is deliberately NO cleanup cancellation for the same
   // reason; a duplicate in-flight fetch is harmless, a dropped apply isn't.
   const deckRemixImportedRef = useRef(false);
+  // The printing the form starts from: a deck entry's, else one real card
+  // customized on its own (printingPrefill).
+  const prefillScryfallId = deckRemix?.scryfallId ?? printingPrefill?.scryfallId ?? null;
+  const prefillName = deckRemix?.entryName ?? printingPrefill?.name ?? "";
   useEffect(() => {
-    if (mode !== "create" || !deckRemix?.scryfallId) return;
+    if (mode !== "create" || !prefillScryfallId) return;
     if (deckRemixImportedRef.current) return;
     setDeckRemixImporting(true);
     (async () => {
       try {
         const response = await fetch(
           `/api/scryfall/named?${new URLSearchParams({
-            id: deckRemix.scryfallId as string,
+            id: prefillScryfallId,
           })}`,
         );
         const body = (await response.json().catch(() => null)) as
@@ -3417,7 +3430,7 @@ export function CardCreatorForm({
         if (!body || body.ok !== true) {
           toast.error(
             (body && "error" in body && body.error) ||
-              `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
+              `Couldn't load “${prefillName}” — starting from a blank card.`,
           );
           return;
         }
@@ -3433,7 +3446,7 @@ export function CardCreatorForm({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              scryfallId: deckRemix.scryfallId,
+              scryfallId: prefillScryfallId,
               mode: "art",
             }),
           });
@@ -3462,12 +3475,14 @@ export function CardCreatorForm({
         // an unchanged copy is just the real card, not a custom proxy.
         reset(getValues());
         toast.success(
-          `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`,
+          deckRemix
+            ? `Pre-filled from ${body.card.name} — change something to make it your custom proxy, then save to link it into “${deckRemix.deckTitle}”.`
+            : `Pre-filled from ${body.card.name} — change something to make it your own, then save.`,
         );
         toastImportNotice(substitutionNotice);
       } catch {
         toast.error(
-          `Couldn't load “${deckRemix.entryName}” — starting from a blank card.`,
+          `Couldn't load “${prefillName}” — starting from a blank card.`,
         );
       } finally {
         setDeckRemixImporting(false);
@@ -3476,7 +3491,7 @@ export function CardCreatorForm({
     // handleScryfallImport is recreated per render; the apply-once ref makes
     // listing it pure dependency churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, deckRemix]);
+  }, [mode, prefillScryfallId]);
 
   // Admin walk through the stepper (TODO 2.2): prefill ONCE from the combo's
   // reference printing (or the compare view's sample content) through the
@@ -4630,6 +4645,16 @@ export function CardCreatorForm({
             toast.success(`Linked into “${deckRemix.deckTitle}”.`);
           }
           linkedHome = returnTo ?? `/deck/${deckRemix.deckSlug}`;
+        }
+        // One real card customized from the Collection page: the row
+        // records the new card (migration 0186). The card IS saved; a
+        // record that didn't land is only logged.
+        if (printingPrefill?.collectionRowId) {
+          try {
+            await recordCollectionCustomizedAction(printingPrefill.collectionRowId, result.cardId);
+          } catch (error) {
+            console.error("[creator] collection record failed", error);
+          }
         }
 
         if (options.afterSave) {
