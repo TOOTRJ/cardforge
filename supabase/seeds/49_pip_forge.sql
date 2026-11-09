@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 49_pip_forge.sql — the Pip Forge beta tool (migration 0188), so a preview
+-- 49_pip_forge.sql — the Pip Forge beta tool (migration 0192), so a preview
 -- branch, the dev database and the local stack can open it:
 --
 --   dev_pro is a tester of Pip Forge (no end). dev_artist and dev_new stay

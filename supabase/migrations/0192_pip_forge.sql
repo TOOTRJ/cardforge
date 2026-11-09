@@ -1,4 +1,4 @@
--- 0188_pip_forge.sql — the Pip Forge beta tool's pips (tool `pip-forge`,
+-- 0192_pip_forge.sql — the Pip Forge beta tool's pips (tool `pip-forge`,
 -- lib/tools/catalog.ts; /dashboard/tools/pip-forge).
 --
 -- A forged pip is one glyph FLUX drew from its maker's words, cleaned for
@@ -29,7 +29,11 @@
 -- column alone) and delete a row.
 --
 -- The AI label `forge_pip` (one credit a pip) joins card_ai_calls' list —
--- rewritten WHOLE from 0186's, the latest that defines it.
+-- rewritten WHOLE from 0190's, the latest that defines it.
+--
+-- No tool_releases row: like every new tool, Pip Forge ships admin-only on
+-- production plus the testers an admin grants at /admin/tools, until an
+-- admin releases it (tester grants for previews live in the seed alone).
 --
 -- Grants are explicit (0097). Idempotent. Ships through a PR; never applied
 -- ad-hoc.
@@ -60,7 +64,7 @@ create index if not exists forged_pips_owner_recent_idx
   on public.forged_pips (owner_id, updated_at desc);
 
 comment on table public.forged_pips is
-  'Pip Forge beta tool (0188): a maker''s forged pips — the current pip file and its glyph (files: pip / glyph in set-covers), its disc colour, the colour card the AI wrote for it, and its 16 / 24 px legibility. Written by the server only; the owner reads, renames and deletes while has_tool_access(''pip-forge''). Never an override by itself (custom_pips holds a copy), never a card.';
+  'Pip Forge beta tool (0192): a maker''s forged pips — the current pip file and its glyph (files: pip / glyph in set-covers), its disc colour, the colour card the AI wrote for it, and its 16 / 24 px legibility. Written by the server only; the owner reads, renames and deletes while has_tool_access(''pip-forge''). Never an override by itself (custom_pips holds a copy), never a card.';
 
 alter table public.forged_pips enable row level security;
 
@@ -144,6 +148,7 @@ alter table public.card_ai_calls
       'analyze_deck',
       'build_collection_deck',
       'bulk_customize_art',
+      'draft_table_sheet',
       'forge_pip'
     ])
   );

@@ -22,7 +22,7 @@ import {
 // Pip Forge — the server's half: the stored truth. The pip and its glyph are
 // painted HERE (the pure lib/tools/pip-forge/glyph.ts), written into the
 // maker's own set-covers folder by the service role
-// (lib/media/user-storage.ts) and the row written by the service role (0188:
+// (lib/media/user-storage.ts) and the row written by the service role (0192:
 // no API role inserts).
 //
 //   set-covers/<user>/pip-<v>.png     the pip (256 px, the custom-pip format)

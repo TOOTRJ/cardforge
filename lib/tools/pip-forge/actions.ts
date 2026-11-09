@@ -42,7 +42,7 @@ import {
 //                through THE custom-pip write (lib/pips/write-pip.ts: the
 //                scan, the canonical object, the row, the re-bake) — the
 //                manager's upload path, never a second one;
-//   * rename / delete — the owner's row (RLS: 0188 grants the name alone).
+//   * rename / delete — the owner's row (RLS: 0192 grants the name alone).
 //
 // A write into storage counts as an upload (checkUploadRateLimit), as every
 // user-folder writer does.

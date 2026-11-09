@@ -701,3 +701,69 @@ body {
     --offset-bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * The Rule 0 table sheet on paper (beta tool `rule0-sheet`,
+ * components/tools/rule0/table-sheet.tsx)
+ *
+ * A page that holds a `.table-sheet` prints the sheet ALONE on one clean
+ * page: every element that is neither the sheet, inside it, nor an ancestor
+ * of it is not drawn (display: none — a hidden element would still take
+ * room and push a blank second page), the ancestors lose their frame, and
+ * the sheet itself is black on white with square corners: its own colour
+ * tokens redefined, so every class inside keeps working. The type is
+ * scaled down a step (root size) so an ordinary deck fits on one page.
+ * --------------------------------------------------------------------------- */
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html:has(.table-sheet) {
+    font-size: 11px;
+    background: #fff !important;
+  }
+  html:has(.table-sheet) body {
+    background: #fff !important;
+  }
+  html:has(.table-sheet) body *:not(.table-sheet):not(.table-sheet *):not(:has(.table-sheet)) {
+    display: none !important;
+  }
+  html:has(.table-sheet) body *:has(.table-sheet) {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    max-width: none !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+  .table-sheet {
+    --color-background: #fff;
+    --color-surface: #fff;
+    --color-elevated: #f2f2f2;
+    --color-border: #b8b8b8;
+    --color-border-strong: #808080;
+    --color-foreground: #111;
+    --color-muted: #3d3d3d;
+    --color-subtle: #555;
+    --color-gold: #7a5c00;
+    --color-gold-strong: #5c4500;
+    --color-primary-bright: #111;
+    color: #111;
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    gap: 1.25rem;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .table-sheet a {
+    text-decoration: none;
+  }
+  .table-sheet section,
+  .table-sheet li {
+    break-inside: avoid;
+  }
+}

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Pip Forge (beta tool `pip-forge`, migration 0188) — the shapes the browser
+// Pip Forge (beta tool `pip-forge`, migration 0192) — the shapes the browser
 // and the server agree on: what a maker sends to forge a pip, what a forged
 // pip is (its two files, its disc colour, its colour card) and the
 // six-colour wheel the card places the new colour on.

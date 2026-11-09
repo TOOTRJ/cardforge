@@ -7,7 +7,7 @@ import { PIP_FORGE_SLUG } from "@/lib/tools/pip-forge/model";
 import { toolBySlug } from "@/lib/tools/catalog";
 
 // ---------------------------------------------------------------------------
-// Pip Forge's migration (0188): the AI label added to the LATEST list (never
+// Pip Forge's migration (0192): the AI label added to the LATEST list (never
 // one dropped), forged_pips read / renamed / deleted by its owner only while
 // the tool is open to them and written by the server alone, grants stated
 // revoke-first, and the seed guarded. Found by NAME, never by number.
@@ -36,7 +36,7 @@ function listIn(text: string, constraint: string): string[] {
   return [...text.slice(at, text.indexOf(";", at)).matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 }
 
-describe("0188 pip forge", () => {
+describe("0192 pip forge", () => {
   it("exists, and the tool is built", () => {
     expect(file).not.toBe("");
     expect(toolBySlug(PIP_FORGE_SLUG)?.built).toBe(true);

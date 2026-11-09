@@ -54,7 +54,10 @@ export type AiActionLabel =
   // Bulk Customize (beta tool, migration 0186): one row per AI picture a
   // batch paints.
   | "bulk_customize_art"
-  // Pip Forge (beta tool, migration 0188): one pip and its colour card.
+  // The Rule 0 table sheet (beta tool, migration 0190): its AI draft of the
+  // game plan and win conditions.
+  | "draft_table_sheet"
+  // Pip Forge (beta tool, migration 0192): one pip and its colour card.
   | "forge_pip";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
@@ -250,6 +253,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit: one set symbol drawn by FLUX (the Set Symbol Studio beta
    *  tool) — its rarity looks and watermark are painted from it for free. */
   generate_set_icon: 1,
+  /** One credit: the Rule 0 table sheet's game plan and win conditions,
+   *  drafted from the deck's cards (the owner edits them after). */
+  draft_table_sheet: 1,
   /** One credit: one pip drawn by FLUX and its colour card (the Pip Forge
    *  beta tool) — recolours and using it as an override are free. */
   forge_pip: 1,
