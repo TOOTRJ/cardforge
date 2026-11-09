@@ -420,7 +420,10 @@ export function PipForge({
               <textarea
                 id={subjectId}
                 value={subject}
-                onChange={(event) => setSubject(event.target.value)}
+                onChange={(event) => {
+                  setSubject(event.target.value);
+                  setFormError(null);
+                }}
                 rows={3}
                 maxLength={SUBJECT_MAX}
                 placeholder="A key with an eye in its bow"
@@ -441,7 +444,10 @@ export function PipForge({
               <textarea
                 id={ideaId}
                 value={idea}
-                onChange={(event) => setIdea(event.target.value)}
+                onChange={(event) => {
+                  setIdea(event.target.value);
+                  setFormError(null);
+                }}
                 rows={2}
                 maxLength={IDEA_MAX}
                 placeholder="Secrets, memory and the price of a bargain"
