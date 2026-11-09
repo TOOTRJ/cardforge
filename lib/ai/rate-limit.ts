@@ -50,6 +50,7 @@ export type AiActionLabel =
   | "generate_deck_ideas"
   | "analyze_deck"
   | "build_collection_deck"
+  | "generate_set_icon"
   // Bulk Customize (beta tool, migration 0186): one row per AI picture a
   // batch paints.
   | "bulk_customize_art";
@@ -244,6 +245,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit: the AI picks a Commander deck from the user's collection
    *  (the Collection Deck Builder beta tool). */
   build_collection_deck: 1,
+  /** One credit: one set symbol drawn by FLUX (the Set Symbol Studio beta
+   *  tool) — its rarity looks and watermark are painted from it for free. */
+  generate_set_icon: 1,
 };
 
 export type CreditSpendResult =

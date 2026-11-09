@@ -201,6 +201,7 @@ describe("reference detection — every column, any depth, any URL form", () => 
     ["site_updates.body (Markdown, a full stop after the URL)", "card-art", (db, k) => db.site_updates.rows.push({ id: "s1", body: `Look: ![art](${pub("card-art", k)}).` })],
     ["card_exports.storage_path (a bare key)", "card-art", (db, k) => db.card_exports.rows.push({ id: "e1", storage_path: k })],
     ["token_kits.items.<key>.artUrl (the Token Kit)", "card-art", (db, k) => db.token_kits.rows.push({ id: "tk1", items: { "token|treasure": { artUrl: pub("card-art", k) } } })],
+    ["set_symbols.files.<variant> (Set Symbol Studio)", "set-covers", (db, k) => db.set_symbols.rows.push({ id: "ss1", files: { auto: pub("set-covers", k) } })],
     ["a /render-cdn/ path", "card-renders", (db, k) => db.messages.rows.push({ id: "m1", body: `see /render-cdn/${k}?v=3` })],
     ["a next/image URL (percent-encoded)", "profile-media", (db, k) => db.feedback.rows.push({ id: "f1", page_url: `https://pipglyph.com/_next/image?url=${encodeURIComponent(pub("profile-media", k))}&w=96` })],
     ["JSON-escaped slashes inside a string", "card-art", (db, k) => db.site_settings.rows.push({ key: "hero", value: JSON.stringify({ u: pub("card-art", k) }).replaceAll("/", "\\/") })],
@@ -301,6 +302,24 @@ describe("classify", () => {
     minAgeDays: MIN_AGE_DAYS,
   });
   const verdicts = (objects: Obj[], c = ctx()) => Object.fromEntries(classify(objects, c).map((o: Obj & { verdict: string }) => [`${o.bucket}/${o.path}`, o.verdict]));
+
+  it("a symbol's rarity files are kept while a card names its -auto file (Set Symbol Studio)", () => {
+    const v = "a1b2c3d4-0000-4000-8000-00000000abcd";
+    const w = "a1b2c3d4-0000-4000-8000-00000000ffff";
+    const files = ["auto", "common", "uncommon", "rare", "mythic", "plain"].map((variant) => obj("set-covers", `${U1}/sym-${v}-${variant}.png`, 30));
+    const other = ["common", "rare"].map((variant) => obj("set-covers", `${U1}/sym-${w}-${variant}.png`, 30));
+    expect(verdicts([...files, ...other], ctx([`${U1}/sym-${v}-auto.png`]))).toEqual({
+      [`set-covers/${U1}/sym-${v}-auto.png`]: "referenced",
+      [`set-covers/${U1}/sym-${v}-common.png`]: "referenced",
+      [`set-covers/${U1}/sym-${v}-uncommon.png`]: "referenced",
+      [`set-covers/${U1}/sym-${v}-rare.png`]: "referenced",
+      [`set-covers/${U1}/sym-${v}-mythic.png`]: "referenced",
+      // Plain is a card's own pick, never drawn in place of -auto.
+      [`set-covers/${U1}/sym-${v}-plain.png`]: "orphan",
+      [`set-covers/${U1}/sym-${w}-common.png`]: "orphan",
+      [`set-covers/${U1}/sym-${w}-rare.png`]: "orphan",
+    });
+  });
 
   it("the age floor: 7 days since the LAST change, in every bucket", () => {
     expect(

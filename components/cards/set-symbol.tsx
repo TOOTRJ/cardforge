@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
+import { setIconForRarity } from "@/lib/tools/set-symbol/naming";
 import type { Rarity } from "@/types/card";
 import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
@@ -147,7 +148,10 @@ export function SetSymbol({
   //    color), and only when it is one of our stored icons (migration 0127,
   //    lib/media/media-urls.ts): an older row could name any host. Anything
   //    else falls through to the preset / the default mark.
-  const drawableIcon = drawableMediaUrl("set-icon", iconUrl);
+  //    A Set Symbol Studio "follows the rarity" icon draws the rarity's own
+  //    file (lib/tools/set-symbol/naming.ts) — the same rule the card
+  //    renderers apply in drawableCardMedia.
+  const drawableIcon = drawableMediaUrl("set-icon", setIconForRarity(iconUrl, rarity));
   if (drawableIcon) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element */

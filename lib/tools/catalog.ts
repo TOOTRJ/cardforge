@@ -112,7 +112,7 @@ export const TOOL_CATALOG = [
       "Common, uncommon, rare and mythic colours from one symbol",
     ],
     icon: "set-symbol",
-    built: false,
+    built: true,
   },
 ] as const satisfies readonly ToolDefinition[];
 

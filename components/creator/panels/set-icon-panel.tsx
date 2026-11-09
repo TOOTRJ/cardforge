@@ -46,6 +46,8 @@ import type { FrameStyle, Rarity } from "@/types/card";
 import type { FormValues } from "@/lib/creator/form-types";
 import { CollectorSwitches } from "@/components/creator/panels/collector-panel";
 import { useGuestGate } from "@/components/creator/guest-pictures";
+import { StudioSetIconPicker } from "@/components/tools/set-symbol-studio/studio-symbol-picker";
+import { isRarityFollowingSetIcon } from "@/lib/tools/set-symbol/naming";
 
 // A curated set of recognizable Keyrune set-symbol codes (same list as the
 // picker). The full Keyrune library has hundreds; these cover popular
@@ -153,6 +155,8 @@ export function SetIconPanel({
                   Using the default <strong>PipGlyph mark</strong> — the Astral
                   Rose seal, tinted by rarity.
                 </>
+              ) : iconUrl && isRarityFollowingSetIcon(iconUrl) ? (
+                "Using your studio symbol — it takes the card's rarity."
               ) : iconUrl ? (
                 "Using your uploaded icon."
               ) : (
@@ -163,6 +167,12 @@ export function SetIconPanel({
               )}
             </span>
           </div>
+
+          {/* Set Symbol Studio (a beta tool): shown only to a viewer it is
+              open to — the picker draws nothing for anyone else. */}
+          {userId ? (
+            <StudioSetIconPicker current={iconUrl} onPick={(url) => apply({ iconUrl: url, iconCode: "" })} />
+          ) : null}
 
           {/* Preset Keyrune glyphs. */}
           <div className="flex flex-col gap-1.5">

@@ -50,6 +50,7 @@ export function emptyDb(): Db {
     site_updates: t(["id"], { id: "uuid", summary: "text", body: "text", link_href: "text" }),
     card_exports: t(["id"], { id: "uuid", file_url: "text", storage_path: "text" }),
     token_kits: t(["id"], { id: "uuid", owner_id: "uuid", items: "jsonb", settings: "jsonb" }),
+    set_symbols: t(["id"], { id: "uuid", owner_id: "uuid", files: "jsonb", cutout: "jsonb" }),
     messages: t(["id"], { id: "uuid", body: "text" }),
     feedback: t(["id"], { id: "uuid", page_url: "text" }),
     site_settings: t(["key"], { key: "text", value: "jsonb" }),

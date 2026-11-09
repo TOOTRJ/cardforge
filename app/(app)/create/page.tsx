@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { checkToolAccess } from "@/lib/tools/queries";
+import { getMySymbol } from "@/lib/tools/set-symbol/queries";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -65,6 +67,9 @@ export default async function CreatePage({
     face?: string | string[];
     /** Where a deck entry's save returns to (TODO DK5.5). */
     returnTo?: string;
+    /** A Set Symbol Studio symbol to start the new card with, and as what. */
+    setSymbol?: string;
+    use?: string;
     /** One real card to start from (Bulk Customize's one-card door). */
     printing?: string;
     /** …and the caller's collection row it came from. */
@@ -124,6 +129,13 @@ export default async function CreatePage({
   // proxy. The query proves the user owns the entry's deck; on save the new
   // card links back to the entry and we return to the deck. Ignored when
   // invalid (someone else's deck, deleted entry, malformed id).
+  // /create?setSymbol=<id>&use=icon|watermark — "Use on a card" in Set
+  // Symbol Studio (a beta tool): a NEW card starts with the symbol as its
+  // set icon (following its rarity) or its watermark. Only the viewer's own
+  // symbol, and only while the tool is open to them; anything else is
+  // ignored and the creator opens as always.
+  const initialSetSymbol = await studioSymbolStart(search.setSymbol, search.use, user.id);
+
   const deckRemixSource =
     deckCardParam && isUuid(deckCardParam)
       ? await getMyDeckCardWithDeck(deckCardParam)
@@ -290,7 +302,7 @@ export default async function CreatePage({
           userId={user.id}
           // A plain new card puts back one a guest built before signing in
           // (TODO HM3) — never a deck proxy, a remix or a frame preview.
-          guestDraft={!deckRemix && !printingPrefill && !remixParent && !framePreview ? "restore" : null}
+          guestDraft={!deckRemix && !printingPrefill && !remixParent && !framePreview && !initialSetSymbol ? "restore" : null}
           ownerUsername={profile?.username ?? null}
           gameSystems={[gameSystem]}
           myDecks={myDecks.map((deck) => ({
@@ -320,6 +332,7 @@ export default async function CreatePage({
           }
           profileOverrides={await getFrameProfileOverrides()}
           initialTag={initialTag}
+          initialSetSymbol={deckRemix || remixParent || framePreview ? null : initialSetSymbol}
           activeChallenge={await getCurrentChallenge()}
           capacity={await getCardCapacity()}
           defaultArtistCredit={profile?.display_name || profile?.username || ""}
@@ -330,6 +343,21 @@ export default async function CreatePage({
       </div>
     </PageContainer>
   );
+}
+
+async function studioSymbolStart(
+  id: string | undefined,
+  use: string | undefined,
+  userId: string,
+): Promise<{ setIconUrl: string | null; watermarkUrl: string | null } | null> {
+  if (!id || !isUuid(id)) return null;
+  const access = await checkToolAccess("set-symbol-studio");
+  if (!access) return null;
+  const symbol = await getMySymbol(userId, id);
+  if (!symbol) return null;
+  return use === "watermark"
+    ? { setIconUrl: null, watermarkUrl: symbol.files.watermark }
+    : { setIconUrl: symbol.files.auto, watermarkUrl: null };
 }
 
 function RemixSourceMissing({ reason }: { reason?: string } = {}) {

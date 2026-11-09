@@ -210,6 +210,8 @@ const NOT_COUNTED: Record<string, string> = {
   "lib/media/user-storage.ts": "the door itself",
   "lib/cards/bake-core.ts": "our own renders (card-renders): the save bake and the admin sweep",
   "lib/ai/random-art.ts": "AI art: paid for in credits and capped by lib/ai/rate-limit.ts",
+  "lib/tools/set-symbol/server.ts":
+    "Set Symbol Studio's store: its upload and re-cut actions count first (lib/tools/set-symbol/actions.ts); its AI route is paid in credits and capped by lib/ai/rate-limit.ts",
   "lib/scryfall/import-art.ts":
     "a real card's art: its callers count it first (the import-art route, the Bulk Customize step — CALLERS_COUNT below)",
 };
@@ -248,6 +250,7 @@ describe("every user-folder writer counts the upload", () => {
       "lib/pips/actions.ts",
       "lib/profile/upload-server.ts",
       "lib/scryfall/import-art.ts",
+      "lib/tools/set-symbol/server.ts",
     ]);
   });
 
