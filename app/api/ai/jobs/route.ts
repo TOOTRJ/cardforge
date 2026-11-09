@@ -266,12 +266,14 @@ export async function GET() {
     .lt("updated_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
   // Fill jobs belong to the creator form that started them — there is no
   // sensible background resume for one, so they are never offered here.
+  // Nor is a Bulk Customize batch: its dialog runs it (and waits out its
+  // rate-limited steps, which the background runner would drop).
   const { data } = await supabase
     .from("ai_generation_jobs")
     // Never `plan`: no API role can read it (migration 0163).
     .select(OWNER_JOB_COLUMNS)
     .eq("status", "generating")
-    .neq("kind", "card_fill")
+    .not("kind", "in", "(card_fill,bulk_customize)")
     .order("created_at", { ascending: false })
     .limit(5);
   const resumable = (data ?? []).find((row) => {

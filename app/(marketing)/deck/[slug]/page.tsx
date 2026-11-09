@@ -64,6 +64,7 @@ import { breadcrumbJsonLd, JsonLd } from "@/components/seo/json-ld";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
+import { getViewerTool } from "@/lib/tools/queries";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -223,7 +224,7 @@ export default async function DeckDetailPage({
     : null;
   // A clone's "remixed from" credit (TODO DK5.16), under its own boundary.
   const remixCredit = getDeckRemixCredit(deck.id);
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, bulkCustomize] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
@@ -232,6 +233,8 @@ export default async function DeckDetailPage({
     searchParams,
     // The owner's saved-card slots: the import's forecast (D2).
     isOwner ? getCardCapacity() : null,
+    // The Bulk Customize beta tool: the owner's selection gains Customize.
+    isOwner ? getViewerTool("bulk-customize") : null,
   ]);
 
   // The rows as this viewer's list shows them: a private card's title never
@@ -524,6 +527,7 @@ export default async function DeckDetailPage({
               deck={{ id: deck.id, slug: deck.slug, title: deck.title, format: deck.format, visibility: deck.visibility }}
               // The owner's cover picks in the card pop-up (TODO DK6.4).
               coverOwnerId={deck.owner_id}
+              bulkCustomize={bulkCustomize?.allowed === true}
               initialPrefs={viewPrefs}
               summary={{
                 format: deck.format,

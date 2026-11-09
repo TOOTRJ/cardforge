@@ -6,7 +6,7 @@ import { CollectionBrowser } from "@/components/tools/collection/collection-brow
 import { CollectionAdd } from "@/components/tools/collection/collection-add";
 import { CollectionBuild } from "@/components/tools/collection/collection-build";
 import { BuildableDecks } from "@/components/tools/collection/buildable-decks";
-import { openTool } from "@/lib/tools/queries";
+import { getViewerTool, openTool } from "@/lib/tools/queries";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import {
@@ -82,8 +82,10 @@ export default async function CollectionBuilderPage({ searchParams }: { searchPa
       commandersOnly: one(params.commanders) === "1",
       page: Math.max(1, Number.parseInt(one(params.page) ?? "1", 10) || 1),
     };
-    const page = await listCollectionPage(query);
-    body = <CollectionBrowser page={page} query={query} collectionSize={stats.cards} />;
+    const [page, customize] = await Promise.all([listCollectionPage(query), getViewerTool("bulk-customize")]);
+    body = (
+      <CollectionBrowser page={page} query={query} collectionSize={stats.cards} canCustomize={customize?.allowed === true} />
+    );
   }
 
   return (
