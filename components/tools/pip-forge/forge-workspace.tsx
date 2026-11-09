@@ -119,6 +119,13 @@ export function PipForge({
   const [status, setStatus] = useState("");
   const stageRef = useRef<HTMLDivElement | null>(null);
   const libraryHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  // Where the focus goes when the control that held it is gone: the pip's
+  // heading (a forge, a saved or dropped colour), the form's alert (a
+  // refusal), the library (a removal).
+  const pipHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const formAlertRef = useRef<HTMLParagraphElement | null>(null);
+  const focusSoon = (ref: React.RefObject<HTMLElement | null>) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => ref.current?.focus()));
 
   // The form
   const [subject, setSubject] = useState("");
@@ -162,15 +169,8 @@ export function PipForge({
   const subjectProblem = subject.trim() ? pipPromptProblem(subject) : null;
   const ideaIssue = ideaProblem(idea);
   const forge = async () => {
-    const problem = pipPromptProblem(subject);
-    if (problem) {
-      setFormError(PIP_PROMPT_PROBLEM_MESSAGES[problem]);
-      return;
-    }
-    if (ideaIssue) {
-      setFormError(IDEA_PROBLEM_MESSAGES[ideaIssue]);
-      return;
-    }
+    // The fields say their own problems; the button is off while they do.
+    if (pipPromptProblem(subject) || ideaIssue) return;
     setFormError(null);
     setForging(true);
     announce("Forging your pip. This takes up to a minute or two.");
@@ -189,16 +189,16 @@ export function PipForge({
         const message = body?.error ?? "The pip couldn't be forged. Try again.";
         if (body?.code === "INSUFFICIENT_CREDITS") upgrade.open("credits", "pip_forge");
         setFormError(message);
-        announce(message);
+        focusSoon(formAlertRef);
         return;
       }
       show(body.pip);
       announce(`${body.pip.name} is forged.`);
       toast.success(`${body.pip.name} is forged — and checked at card size.`);
+      focusSoon(pipHeadingRef);
     } catch {
-      const message = "We lost the answer from the AI service. If a credit was taken, it comes back within the hour.";
-      setFormError(message);
-      announce(message);
+      setFormError("We lost the answer from the AI service. If a credit was taken, it comes back within the hour.");
+      focusSoon(formAlertRef);
     } finally {
       setForging(false);
     }
@@ -221,6 +221,7 @@ export function PipForge({
       }
       setPips((prev) => [result.pip, ...prev.filter((p) => p.id !== result.pip.id)]);
       setTryDisc(null);
+      focusSoon(pipHeadingRef);
       announce(`${result.pip.name} has its new disc colour.`);
       toast.success("New disc colour saved. A pip you already use on your cards keeps its old colour until you use this one again.");
     });
@@ -242,24 +243,31 @@ export function PipForge({
     endRename();
     if (!next || next === pip.name) return;
     setPips((prev) => prev.map((p) => (p.id === pip.id ? { ...p, name: next } : p)));
-    void renamePipAction({ id: pip.id, name: next }).then((result) => {
-      if (!result.ok) {
-        toast.error(result.error);
-        setPips((prev) => prev.map((p) => (p.id === pip.id ? { ...p, name: pip.name } : p)));
-      }
-    });
+    void renamePipAction({ id: pip.id, name: next })
+      .catch(() => ({ ok: false as const, error: "The name couldn't be saved. Try again in a moment." }))
+      .then((result) => {
+        if (!result.ok) {
+          toast.error(result.error);
+          setPips((prev) => prev.map((p) => (p.id === pip.id ? { ...p, name: pip.name } : p)));
+        }
+      });
   };
   const remove = (pip: ForgedPip) => {
     if (!window.confirm(`Remove “${pip.name}” from your forge? If you use it as a custom pip, your cards keep it.`)) return;
     startSaving(async () => {
-      const result = await deletePipAction({ id: pip.id });
+      const result = await deletePipAction({ id: pip.id }).catch(() => ({
+        ok: false as const,
+        error: "That pip couldn't be removed. Try again in a moment.",
+      }));
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      const rest = pips.filter((p) => p.id !== pip.id);
-      setPips(rest);
-      setSelectedId(rest[0]?.id ?? null);
+      setPips((prev) => prev.filter((p) => p.id !== pip.id));
+      setSelectedId((current) => {
+        if (current !== pip.id) return current;
+        return pips.find((p) => p.id !== pip.id)?.id ?? null;
+      });
       setTryDisc(null);
       announce(`${pip.name} removed.`);
       toast.success("Pip removed.");
@@ -306,7 +314,13 @@ export function PipForge({
             </form>
           ) : (
             <div className="flex min-w-0 flex-col gap-0.5">
-              <h2 className="truncate font-display text-lg font-semibold text-foreground">{selected.name}</h2>
+              <h2
+                ref={pipHeadingRef}
+                tabIndex={-1}
+                className="truncate rounded-sm font-display text-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+              >
+                {selected.name}
+              </h2>
               <p className="line-clamp-2 text-xs text-muted">Forged from “{selected.prompt}”</p>
             </div>
           )}
@@ -328,6 +342,7 @@ export function PipForge({
               onChange={(next) => setTryDisc(next === selected.disc ? null : next)}
               allowAi={false}
               disabled={saving}
+              label={`${selected.name}'s disc colour`}
             />
             {tryDisc ? (
               <div className="flex flex-wrap gap-2">
@@ -335,7 +350,14 @@ export function PipForge({
                   {saving ? <Loader2 className="animate-spin" aria-hidden /> : <Palette aria-hidden />}
                   Save this colour
                 </Button>
-                <Button variant="ghost" onClick={() => setTryDisc(null)} disabled={saving}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setTryDisc(null);
+                    focusSoon(pipHeadingRef);
+                  }}
+                  disabled={saving}
+                >
                   Keep the current colour
                 </Button>
               </div>
@@ -371,8 +393,7 @@ export function PipForge({
     );
   })();
 
-  const formProblem =
-    (subjectProblem && subjectProblem !== "too_short" ? PIP_PROMPT_PROBLEM_MESSAGES[subjectProblem] : null) ?? formError;
+  const formProblem = subjectProblem && subjectProblem !== "too_short" ? PIP_PROMPT_PROBLEM_MESSAGES[subjectProblem] : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -399,10 +420,7 @@ export function PipForge({
               <textarea
                 id={subjectId}
                 value={subject}
-                onChange={(event) => {
-                  setSubject(event.target.value);
-                  setFormError(null);
-                }}
+                onChange={(event) => setSubject(event.target.value)}
                 rows={3}
                 maxLength={SUBJECT_MAX}
                 placeholder="A key with an eye in its bow"
@@ -423,10 +441,7 @@ export function PipForge({
               <textarea
                 id={ideaId}
                 value={idea}
-                onChange={(event) => {
-                  setIdea(event.target.value);
-                  setFormError(null);
-                }}
+                onChange={(event) => setIdea(event.target.value)}
                 rows={2}
                 maxLength={IDEA_MAX}
                 placeholder="Secrets, memory and the price of a bargain"
@@ -443,6 +458,16 @@ export function PipForge({
             <DiscPicker value={disc} onChange={setDisc} allowAi disabled={forging} />
 
             <div className="flex flex-col gap-2">
+              {formError ? (
+                <p
+                  ref={formAlertRef}
+                  tabIndex={-1}
+                  role="alert"
+                  className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                >
+                  {formError}
+                </p>
+              ) : null}
               <Button
                 type="submit"
                 size="lg"

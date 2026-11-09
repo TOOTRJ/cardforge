@@ -207,4 +207,18 @@ describe("glyphMask — shapes with holes that are NOT badges", () => {
     expect(mask.data[C * S + C]).toBe(0);
     expect(mask.data[C * S + C + 140]).toBe(255);
   });
+
+  it("keeps a THICK ring a ring (one round hole is never a badge's glyph)", () => {
+    const thick = (x: number, y: number) => r(x, y) < 160 && r(x, y) >= 70;
+    const mask = glyphMask(draw(S, thick))!;
+    expect(mask.data[C * S + C]).toBe(0);
+    expect(mask.data[C * S + C + 120]).toBe(255);
+  });
+
+  it("keeps an orb with a highlight an orb", () => {
+    const orb = (x: number, y: number) => r(x, y) < 160 && Math.hypot(x - C + 60, y - C + 60) >= 35;
+    const mask = glyphMask(draw(S, orb))!;
+    expect(mask.data[(C + 60) * S + C + 60]).toBe(255);
+    expect(mask.data[(C - 60) * S + C - 60]).toBe(0);
+  });
 });

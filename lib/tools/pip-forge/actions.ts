@@ -125,11 +125,10 @@ export async function setPipAsOverrideAction(input: unknown): Promise<UsePipResu
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = usePipSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Pick which symbol the pip replaces." };
-  const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
-
   const pip = await readOwnPip(access.userId, parsed.data.id);
   if (!pip) return { ok: false, error: "That pip is gone." };
+  const limit = await checkUploadRateLimit(access.userId);
+  if (!limit.ok) return uploadRateLimitFailure(limit);
   const bytes = await fetchOwnPipFile(access.userId, pip.files.pip, "pip");
   if (!bytes) return { ok: false, error: "The pip's picture couldn't be read. Try again in a moment." };
   // The stored pip IS the custom-pip format (256 px PNG): checked, never

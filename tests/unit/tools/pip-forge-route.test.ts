@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   imageCalls: 0,
   flagged: false,
   cardFails: false,
+  cardHangs: false,
   storeFails: false,
   spends: 0,
   settles: [] as string[],
@@ -104,7 +105,11 @@ vi.mock("@/lib/tools/pip-forge/colour-card", () => {
   class ColourCardError extends Error {}
   return {
     ColourCardError,
-    designColourCard: async () => {
+    designColourCard: async ({ signal }: { signal?: AbortSignal }) => {
+      if (state.cardHangs) {
+        // Answers only when the route ends the call.
+        return new Promise((_, reject) => signal?.addEventListener("abort", () => reject(new Error("aborted"))));
+      }
       if (state.cardFails) throw new ColourCardError("The colour card couldn't be written. Try again.");
       return { card: CARD, disc: "#8fcac0" };
     },
@@ -140,6 +145,7 @@ beforeEach(() => {
     imageCalls: 0,
     flagged: false,
     cardFails: false,
+    cardHangs: false,
     storeFails: false,
     spends: 0,
     settles: [],
@@ -227,5 +233,14 @@ describe("forge route", () => {
     expect(state.refunds).toHaveLength(1);
     expect(state.settles).toHaveLength(0);
     expect(state.removed).toBe(1);
+  });
+
+  it("a failed drawing ends the colour card's call and refunds at once", async () => {
+    state.drawings = ["fail"];
+    state.cardHangs = true;
+    const body = await (await post({ subject: "a crowned eye" })).json();
+    expect(body.ok).toBe(false);
+    expect(state.refunds).toHaveLength(1);
+    expect(state.settles).toHaveLength(0);
   });
 });

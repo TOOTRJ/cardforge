@@ -58,10 +58,14 @@ const GLYPH_CUT = { mode: "colour", tolerance: 40 } as const;
  *  (the shape with its holes filled) this close to a circle (intersection
  *  over union with the circle its box holds)… */
 const BADGE_ROUNDNESS = 0.95;
-/** …mostly ink (a bold ring is not a badge: its hole is most of it)… */
+/** …mostly ink (a thin ring is not a badge: its hole is most of it)… */
 const BADGE_INK = 0.6;
-/** …with holes of at least this share of its box. */
-const BADGE_HOLES = 0.03;
+/** …with holes of at least this share of its box — and never ONE round
+ *  hole: that is a thick ring's middle or an orb's highlight, a glyph as
+ *  drawn (a badge's cut-out glyph is a shape, or several). */
+const BADGE_HOLES = 0.08;
+/** A hole this full of its own box, near-square, is "round". */
+const ROUND_HOLE_FILL = 0.7;
 /** Holes under this share of the glyph's box are filled: under a pixel at
  *  16 px, they would only speckle. */
 const TINY_HOLE = 0.006;
@@ -96,8 +100,31 @@ export function glyphMask(source: RgbaImage): Mask | null {
         holeArea += 1;
       }
     }
+    // The enclosed holes' own boxes: one round hole alone is never a badge.
+    const holeBoxes = new Map<number, { n: number; x0: number; y0: number; x1: number; y1: number }>();
+    for (let p = 0; p < labels.length; p += 1) {
+      if (!inside[p]) continue;
+      const x = p % mask.width;
+      const y = (p - x) / mask.width;
+      const b = holeBoxes.get(labels[p]);
+      if (!b) holeBoxes.set(labels[p], { n: 1, x0: x, y0: y, x1: x, y1: y });
+      else {
+        b.n += 1;
+        if (x < b.x0) b.x0 = x;
+        if (x > b.x1) b.x1 = x;
+        if (y < b.y0) b.y0 = y;
+        if (y > b.y1) b.y1 = y;
+      }
+    }
+    const loneRoundHole = (() => {
+      if (holeBoxes.size !== 1) return false;
+      const b = [...holeBoxes.values()][0];
+      const w = b.x1 - b.x0 + 1;
+      const h = b.y1 - b.y0 + 1;
+      return b.n / (w * h) >= ROUND_HOLE_FILL && w / h > 0.8 && w / h < 1.25;
+    })();
     const aspect = box.width / box.height;
-    if (holeArea / boxArea >= BADGE_HOLES && aspect > 0.85 && aspect < 1.18) {
+    if (!loneRoundHole && holeArea / boxArea >= BADGE_HOLES && aspect > 0.85 && aspect < 1.18) {
       const cx = box.x + box.width / 2;
       const cy = box.y + box.height / 2;
       const rx = box.width / 2;

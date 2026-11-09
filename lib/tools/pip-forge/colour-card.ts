@@ -140,7 +140,9 @@ export function cardFromAnswer(answer: z.infer<typeof answerSchema>): { card: Co
 
 /**
  * The colour card for a pip of `subject`, steered by the maker's `idea`
- * (what the colour stands for; may be empty). Throws ColourCardError when
+ * (what the colour stands for; may be empty). The caller runs it inside
+ * `withAiTimeBudget` (structuredCall's second call only where the route can
+ * still finish) and passes a signal. Throws ColourCardError when
  * no keepable card came back in two tries, AiOutputError when the answer
  * couldn't be read, or the provider's error.
  */
@@ -148,14 +150,18 @@ export async function designColourCard(input: {
   subject: string;
   idea: string;
   disc: string | null;
+  /** Ends every call (the route's time limit, or the drawing failing). */
+  signal?: AbortSignal;
 }): Promise<{ card: ColourCard; disc: string | null }> {
   let avoid: string | null = null;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
+    input.signal?.throwIfAborted();
     const { object } = await structuredCall("pip-forge-colour", repairStructuredText(answerSchema), (experimental_repairText) =>
       generateObject({
         model: judgeModel(),
         schema: answerSchema,
         experimental_repairText,
+        abortSignal: input.signal,
         system: SYSTEM,
         prompt: [
           `The colour's pip shows: ${input.subject.trim().slice(0, 200)}.`,

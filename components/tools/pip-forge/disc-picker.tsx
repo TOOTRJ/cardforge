@@ -40,7 +40,6 @@ export function DiscPicker({
   label?: string;
 }) {
   const inputId = useId();
-  const labelId = useId();
   const isSwatch = DISC_SWATCHES.some((s) => s.hex === value);
   const custom = value !== AI_DISC && !isSwatch ? value : null;
   const options: ChipOption<string>[] = [
@@ -50,8 +49,8 @@ export function DiscPicker({
     ...DISC_SWATCHES.map((s) => ({ value: s.hex, label: s.label, leading: <Dot hex={s.hex} />, disabled })),
   ];
   return (
-    <div className="flex flex-col gap-2" role="group" aria-labelledby={labelId}>
-      <span id={labelId} className="text-xs font-semibold uppercase tracking-wider text-subtle">
+    <div className="flex flex-col gap-2">
+      <span aria-hidden className="text-xs font-semibold uppercase tracking-wider text-subtle">
         {label}
       </span>
       <ChipGroup ariaLabel={label} layout="wrap" value={custom ? CUSTOM : value} onChange={onChange} options={options} keepCase />
@@ -67,7 +66,7 @@ export function DiscPicker({
           }}
           className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent p-0.5"
         />
-        {custom ? <span>Your own colour: {custom}</span> : <span>Or pick your own colour</span>}
+        {custom ? <span>{label}: your own, {custom}</span> : <span>{label}: or pick your own</span>}
       </label>
     </div>
   );

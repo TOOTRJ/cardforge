@@ -20,7 +20,7 @@ import {
   designFailureKind,
   type AiFailureKind,
 } from "@/lib/ai/failure";
-import { AiOutputError } from "@/lib/ai/structured-output";
+import { AiOutputError, withAiTimeBudget } from "@/lib/ai/structured-output";
 import { scanImageBytes } from "@/lib/moderation/image-scan";
 import { AI_ART_BLOCKED_CATEGORIES } from "@/lib/moderation/image-scan-core";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -85,12 +85,14 @@ const LABEL = "forge_pip" as const;
 /** Where billing is off (previews, local) the credit charges nothing; this
  *  daily cap is what holds the picture spend there. */
 const BILLING_OFF_DAILY_LIMIT = 20;
-/** The pictures' budget inside the route's 180 s: the first drawing gets
- *  most of it; a second, simpler one starts only with enough left. The
- *  paint, the uploads and a refund fit in what remains. */
+/** Both AI calls end this long after the request started (the route's
+ * 180 s less the paint, the uploads, the row and a refund). The first
+ * drawing gets most of it; a second, simpler one starts only with enough
+ * left. The colour card's calls, all together, end within CARD_TIMEOUT_MS. */
+const AI_DEADLINE_MS = 145_000;
 const FIRST_IMAGE_BUDGET_MS = 100_000;
-const TOTAL_IMAGE_BUDGET_MS = 140_000;
 const SECOND_DRAWING_MIN_MS = 45_000;
+const CARD_TIMEOUT_MS = 90_000;
 const SCAN_TIMEOUT_MS = 10_000;
 
 const ILLEGIBLE_MESSAGE =
@@ -100,13 +102,13 @@ type Drawing =
   | { ok: true; clean: CleanGlyph; rung: number; attempt: number }
   | { ok: false; failure: AiFailureKind; message?: string; status?: number };
 
-async function drawGlyph(subject: string, started: number): Promise<Drawing> {
+async function drawGlyph(subject: string, deadline: number): Promise<Drawing> {
   const ladders = [[buildGlyphPrompt(subject), fallbackGlyphPrompt()], [simplerGlyphPrompt(subject)]];
   for (let attempt = 0; attempt < ladders.length; attempt += 1) {
-    const left = TOTAL_IMAGE_BUDGET_MS - (Date.now() - started);
+    const left = deadline - Date.now();
     if (attempt > 0 && left < SECOND_DRAWING_MIN_MS) break;
     const picture = await generateImageWithFallbacks(ladders[attempt], "square", {
-      budgetMs: attempt === 0 ? FIRST_IMAGE_BUDGET_MS : left,
+      budgetMs: attempt === 0 ? Math.min(FIRST_IMAGE_BUDGET_MS, left) : left,
     });
     if (!picture.ok) {
       console.error(`[pip-forge] image failed (${picture.failure}): ${picture.error.slice(0, 200)}`);
@@ -135,10 +137,11 @@ async function drawGlyph(subject: string, started: number): Promise<Drawing> {
 
 type Writing = { ok: true; card: ColourCard; disc: string | null } | { ok: false; failure: AiFailureKind; message?: string };
 
-async function writeCard(subject: string, idea: string, disc: string | null): Promise<Writing> {
+async function writeCard(subject: string, idea: string, disc: string | null, signal: AbortSignal): Promise<Writing> {
   try {
-    return { ok: true, ...(await designColourCard({ subject, idea, disc })) };
+    return { ok: true, ...(await designColourCard({ subject, idea, disc, signal })) };
   } catch (error) {
+    if (signal.aborted) return { ok: false, failure: "design_busy" };
     if (error instanceof AiOutputError) return { ok: false, failure: "design_unreadable" };
     if (error instanceof ColourCardError) return { ok: false, failure: "design_failed", message: error.message };
     const detail = error instanceof Error ? error.message : String(error);
@@ -148,6 +151,7 @@ async function writeCard(subject: string, idea: string, disc: string | null): Pr
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase isn't configured." }, { status: 503 });
   }
@@ -237,8 +241,23 @@ export async function POST(request: Request) {
 
   let version: string | null = null;
   try {
-    const started = Date.now();
-    const [drawing, writing] = await Promise.all([drawGlyph(subject, started), writeCard(subject, idea, chosenDisc)]);
+    // One clock for both calls, from the request's start; a failed drawing
+    // ends the card's call at once (its answer would be thrown away).
+    const deadline = startedAt + AI_DEADLINE_MS;
+    const stopCard = new AbortController();
+    const cardSignal = AbortSignal.any([
+      stopCard.signal,
+      AbortSignal.timeout(Math.max(1_000, Math.min(CARD_TIMEOUT_MS, deadline - Date.now()))),
+    ]);
+    const [drawing, writing] = await withAiTimeBudget(startedAt, maxDuration, () =>
+      Promise.all([
+        drawGlyph(subject, deadline).then((result) => {
+          if (!result.ok) stopCard.abort();
+          return result;
+        }),
+        writeCard(subject, idea, chosenDisc, cardSignal),
+      ]),
+    );
     if (!drawing.ok) return await refund(drawing.failure, drawing.message, drawing.status);
     if (!writing.ok) return await refund(writing.failure, writing.message);
 
