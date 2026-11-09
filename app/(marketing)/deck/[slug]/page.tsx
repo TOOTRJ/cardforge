@@ -65,6 +65,7 @@ import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { VISIBILITY_LABELS } from "@/types/card";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { getViewerTool } from "@/lib/tools/queries";
+import { PlayExportButton } from "@/components/tools/play-exports/play-export-button";
 import { deckCoverColors, deckCoverOf, defaultDeckCoverFor } from "@/lib/decks/cover";
 import { featuredCardsOf } from "@/lib/decks/featured";
 import { DeckHero, HeroChip } from "@/components/decks/deck-hero";
@@ -226,7 +227,7 @@ export default async function DeckDetailPage({
     : null;
   // A clone's "remixed from" credit (TODO DK5.16), under its own boundary.
   const remixCredit = getDeckRemixCredit(deck.id);
-  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, bulkCustomize, tableSheetTool] = await Promise.all([
+  const [items, likedByViewer, entitlements, cookieStore, requestHeaders, search, cardCapacity, bulkCustomize, playExports, tableSheetTool] = await Promise.all([
     listDeckPageCardsOnce(deck.id),
     user ? viewerLikesDeck(deck.id) : false,
     getEntitlements(),
@@ -237,6 +238,8 @@ export default async function DeckDetailPage({
     isOwner ? getCardCapacity() : null,
     // The Bulk Customize beta tool: the owner's selection gains Customize.
     isOwner ? getViewerTool("bulk-customize") : null,
+    // The play-exports beta tool: "Play online" for any viewer who has it.
+    user ? getViewerTool("play-exports") : null,
     // The Rule 0 table sheet beta tool: the owner's "Table sheet" link.
     isOwner ? getViewerTool(RULE0_TOOL_SLUG) : null,
   ]);
@@ -456,6 +459,9 @@ export default async function DeckDetailPage({
               />
             ) : null}
             {exportMenu}
+            {playExports?.allowed && copyEntries ? (
+              <PlayExportButton source={{ kind: "deck", deckId: deck.id }} label={deck.title} className="h-9" />
+            ) : null}
             {tableSheetTool?.allowed ? <TableSheetLink deckSlug={deck.slug} className="h-9" /> : null}
             {/* Copy deck (TODO DK5.16): the viewer's private copy — never
                 offered when it would be empty. */}

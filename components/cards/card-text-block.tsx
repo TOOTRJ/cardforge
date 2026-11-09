@@ -5,6 +5,7 @@ import { describeManaCost } from "@/lib/cards/card-display";
 import { flavorSegments } from "@/lib/cards/flavor-markup";
 import type { PipOverrides } from "@/lib/pips/override";
 import { cn } from "@/lib/utils";
+import type { CardTextFace } from "@/lib/cards/card-text-faces";
 
 // ---------------------------------------------------------------------------
 // CardTextBlock — one face of a card as TEXT, laid out the way the card and
@@ -16,21 +17,7 @@ import { cn } from "@/lib/utils";
 // back with a body of its own) inside "Card details".
 // ---------------------------------------------------------------------------
 
-export type CardTextFace = {
-  name: string;
-  cost: string | null;
-  typeLine: string;
-  /** The rarity's label; null where the card names none (an emblem). */
-  rarity: string | null;
-  /** Rules with CARDNAME / ~ already as the printed name (lib/cards/self-name.ts). */
-  rulesText: string | null;
-  flavorText: string | null;
-  /** "9/9", "Loyalty 3", "Defense 5" — what the picture prints, else null. */
-  stats: { value: string; label: string | null } | null;
-  artist: string | null;
-  /** A back face's colour in words ("Green") — the colour its body is drawn in. */
-  colorLine?: string | null;
-};
+export type { CardTextFace };
 
 export function CardTextBlock({
   face,
