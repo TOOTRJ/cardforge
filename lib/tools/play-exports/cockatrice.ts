@@ -45,11 +45,12 @@ export function cockatriceManaCost(cost: string | null | undefined): string {
   return cost.replace(/\{([^}]*)\}/g, (_, inner: string) => (/^[0-9WUBGRPSCX]+\/[0-9WUBGRPSCX]+$/i.test(inner) ? `{${inner.toUpperCase()}}` : inner.toUpperCase()));
 }
 
-/** A set code for the export: "PG" + four letters from its stem, so two
- *  exports' pictures never share a file name. */
-export function cockatriceSetCode(stem: string): string {
+/** A set code for the export: "PG" + four letters from what it exports
+ *  (the deck's id, the selection's cards), so two exports' sets and
+ *  pictures never share a name. */
+export function cockatriceSetCode(exportKey: string): string {
   let hash = 2166136261;
-  for (const ch of stem) {
+  for (const ch of exportKey) {
     hash ^= ch.codePointAt(0)!;
     hash = Math.imul(hash, 16777619) >>> 0;
   }
@@ -140,6 +141,11 @@ function cardXml(entry: CardEntry, setCode: string): string {
   ].join("\n");
 }
 
+/** The layout as Oracle (MTGJSON) names it: a modal card is `modal_dfc`. */
+function oracleLayout(layout: string): string {
+  return layout === "modal" ? "modal_dfc" : layout;
+}
+
 /** The card entries of one custom card (two for a double-faced card). */
 function entriesOf(card: PlayCustomCard, num: number): CardEntry[] {
   const colors = cardColors(card).join("");
@@ -151,7 +157,7 @@ function entriesOf(card: PlayCustomCard, num: number): CardEntry[] {
         name: card.front.name,
         text: card.front.rulesText ?? "",
         face: card.front,
-        layout: card.layout,
+        layout: oracleLayout(card.layout),
         side: "front",
         manacost: cockatriceManaCost(card.front.cost),
         picurl: card.front.image,
@@ -162,7 +168,7 @@ function entriesOf(card: PlayCustomCard, num: number): CardEntry[] {
         name: card.back.name,
         text: card.back.rulesText ?? "",
         face: card.back,
-        layout: card.layout,
+        layout: oracleLayout(card.layout),
         side: "back",
         manacost: cockatriceManaCost(card.back.cost),
         picurl: card.back.image,
@@ -242,7 +248,7 @@ const ZONE_OF: Record<PlayBoard, "main" | "side"> = {
 };
 
 export function buildCockatrice(exp: PlayExport, opts: { today: string }): CockatriceFiles {
-  const setCode = cockatriceSetCode(exp.fileStem);
+  const setCode = cockatriceSetCode(exp.exportKey);
   const entries = exp.cards.flatMap((card, i) => entriesOf(card, i + 1));
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',

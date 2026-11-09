@@ -119,6 +119,9 @@ export type PlayExport = {
   title: string;
   /** A file-name stem ("goblin-tribal"). */
   fileStem: string;
+  /** What the export is OF (the deck's id, the selection's card ids): the
+   *  seed of its Cockatrice set code, so two exports never share one. */
+  exportKey: string;
   source: "deck" | "cards";
   /** Every custom card once, in first-appearance order. */
   cards: PlayCustomCard[];
@@ -202,4 +205,15 @@ export function exportNameFor(name: string, taken: Set<string>, standsInFor: str
   for (let n = 2; clash(candidate); n += 1) candidate = `${base} (PipGlyph ${n})`;
   taken.add(candidate.toLowerCase());
   return candidate;
+}
+
+/** Six lower-case letters and digits from a text (FNV-1a), for names that
+ *  must differ between exports. */
+export function shortHash(text: string): string {
+  let hash = 2166136261;
+  for (const ch of text) {
+    hash ^= ch.codePointAt(0)!;
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash.toString(36).padStart(6, "0").slice(-6);
 }

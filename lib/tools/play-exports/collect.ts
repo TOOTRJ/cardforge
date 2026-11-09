@@ -54,7 +54,7 @@ export async function collectDeckExport(deckId: string, viewerId: string): Promi
   const baseUrl = getSiteBaseUrl();
   const usernames = await usernamesOf(items.flatMap((item) => (item.card ? [item.card.owner_id] : [])));
   return buildDeckExport(
-    { title: deck.title as string, fileStem: fileStemOf((deck.slug as string) || (deck.title as string)) },
+    { id: deck.id as string, title: deck.title as string, fileStem: fileStemOf((deck.slug as string) || (deck.title as string)) },
     items.map((item) => ({ entry: item.entry, card: (item.card as PlayCardRow | null) ?? null })),
     { baseUrl, usernames, cardBackUrl: `${baseUrl}${CARD_BACK_PATH}` },
   );

@@ -31,16 +31,30 @@ export type PlayExportDialogProps = {
 
 const TARGET_KEY = "pipglyph.play-export.target";
 
-const TARGET_OPTIONS: ChipOption<PlayTarget>[] = PLAY_TARGETS.map((target) => ({
-  value: target,
-  label: PLAY_TARGET_LABELS[target],
-  description: PLAY_GUIDES[target].file,
-}));
+/** The app chips; held (aria-disabled, the reason in each name) while a
+ *  file is being built, so the steps shown never belong to another app. */
+function targetOptions(working: boolean): ChipOption<PlayTarget>[] {
+  return PLAY_TARGETS.map((target) => ({
+    value: target,
+    label: PLAY_TARGET_LABELS[target],
+    description: PLAY_GUIDES[target].file,
+    disabled: working,
+    badge: working ? <span className="sr-only">(wait for the file being built)</span> : undefined,
+  }));
+}
+
+/** The progress a screen reader hears: the start, then each quarter — never
+ *  one announcement per picture. */
+function progressAnnouncement(done: number, total: number): string {
+  if (total === 0) return "Reading the cards.";
+  const quarter = Math.floor((done / total) * 4);
+  return quarter === 0 ? "Adding pictures." : `Pictures ${quarter * 25} percent done.`;
+}
 
 type Phase =
   | { kind: "idle" }
   | { kind: "working"; done: number; total: number }
-  | { kind: "done"; download: PlayDownload }
+  | { kind: "done"; download: PlayDownload; skipped: number }
   | { kind: "error"; message: string };
 
 function rememberedTarget(): PlayTarget {
@@ -66,7 +80,7 @@ function plural(count: number, one: string, many = `${one}s`): string {
 }
 
 /** The summary's lines: what went in, then what didn't and why. */
-export function summaryLines(summary: PlaySummary): { inside: string; warnings: string[] } {
+export function summaryLines(summary: PlaySummary, skipped = 0): { inside: string; warnings: string[] } {
   const parts: string[] = [];
   if (summary.customCards > 0) parts.push(`${plural(summary.customCards, "PipGlyph card")} with their text and pictures`);
   if (summary.realCards > 0) parts.push(`${plural(summary.realCards, "real card")} by name`);
@@ -94,6 +108,11 @@ export function summaryLines(summary: PlaySummary): { inside: string; warnings: 
   if (summary.hiddenEntries > 0) {
     warnings.push(`${plural(summary.hiddenEntries, "card")} you can't see in this deck ${summary.hiddenEntries === 1 ? "was" : "were"} left out.`);
   }
+  if (skipped > 0) {
+    warnings.push(
+      `${plural(skipped, "picked card")} ${skipped === 1 ? "isn't" : "aren't"} in the file: ${skipped === 1 ? "it is" : "they are"} another creator's and no longer public, or gone.`,
+    );
+  }
   if (summary.maybeboard > 0) warnings.push(`The maybeboard (${plural(summary.maybeboard, "card")}) stays out.`);
   return { inside: parts.length > 0 ? `Inside: ${parts.join(" and ")}.` : "", warnings };
 }
@@ -105,6 +124,7 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const abort = useRef<AbortController | null>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
+  const downloadButton = useRef<HTMLButtonElement>(null);
 
   // The result moves the focus to its heading: the download is done and
   // the next steps are there to read.
@@ -115,8 +135,9 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
   const working = phase.kind === "working";
 
   const pick = (next: PlayTarget) => {
+    if (working) return;
     setTarget(next);
-    if (phase.kind !== "working") setPhase({ kind: "idle" });
+    setPhase({ kind: "idle" });
     try {
       window.localStorage.setItem(TARGET_KEY, next);
     } catch {
@@ -125,6 +146,7 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
   };
 
   const start = async () => {
+    if (working) return;
     const controller = new AbortController();
     abort.current = controller;
     setPhase({ kind: "working", done: 0, total: 0 });
@@ -146,7 +168,7 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
       });
       if (controller.signal.aborted) return;
       saveBlob(download.blob, download.filename);
-      setPhase({ kind: "done", download });
+      setPhase({ kind: "done", download, skipped: result.skipped });
     } catch (error) {
       if (controller.signal.aborted) return;
       console.error("[play-exports] build failed:", error);
@@ -156,21 +178,24 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
     }
   };
 
-  const cancel = () => {
+  const stop = () => {
     abort.current?.abort();
     abort.current = null;
     setPhase({ kind: "idle" });
   };
 
+  // Cancel removes itself: the focus goes to Download, never <body>.
+  const cancel = () => {
+    stop();
+    downloadButton.current?.focus();
+  };
+
   const onDialogChange = (next: boolean) => {
-    if (!next) {
-      cancel();
-      setPhase({ kind: "idle" });
-    }
+    if (!next) stop();
     onOpenChange(next);
   };
 
-  const lines = phase.kind === "done" ? summaryLines(phase.download.summary) : null;
+  const lines = phase.kind === "done" ? summaryLines(phase.download.summary, phase.skipped) : null;
 
   return (
     <Dialog open={open} onOpenChange={onDialogChange}>
@@ -194,7 +219,7 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
           <ChipGroup
-            options={TARGET_OPTIONS}
+            options={targetOptions(working)}
             value={target}
             onChange={pick}
             size="md"
@@ -254,19 +279,24 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
         </div>
 
         <DialogFooter>
-          <p aria-live="polite" className="mr-auto self-center text-xs text-muted">
+          <p aria-hidden className="mr-auto self-center text-xs text-muted">
             {working
               ? phase.total > 0
                 ? `Adding pictures… ${phase.done} of ${phase.total}`
                 : "Reading the cards…"
               : ""}
           </p>
+          <p aria-live="polite" className="sr-only">
+            {working ? progressAnnouncement(phase.done, phase.total) : ""}
+          </p>
           {working ? (
             <Button type="button" variant="outline" onClick={cancel}>
               Cancel
             </Button>
           ) : null}
-          <Button type="button" onClick={start} disabled={working}>
+          {/* aria-disabled while building, never `disabled`: the focus the
+              press put here stays here. */}
+          <Button type="button" ref={downloadButton} onClick={start} aria-disabled={working || undefined}>
             {working ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
             {phase.kind === "done" ? "Download again" : `Download for ${PLAY_TARGET_LABELS[target]}`}
           </Button>

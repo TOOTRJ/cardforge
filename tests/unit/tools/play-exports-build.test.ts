@@ -10,7 +10,7 @@ import { BASE_URL, CTX, OTHER, OWNER, bake, cardId, cardRow, item, unchangedImpo
 // the stored display bakes only, never a private card's.
 // ---------------------------------------------------------------------------
 
-const DECK = { title: "Wolf Pack", fileStem: "wolf-pack" };
+const DECK = { id: "55555555-5555-4555-8555-555555555555", title: "Wolf Pack", fileStem: "wolf-pack" };
 const BOLT_ID = "33333333-3333-4333-8333-333333333333";
 
 describe("decideEntry", () => {
@@ -23,6 +23,16 @@ describe("decideEntry", () => {
   it("writes an unchanged import of the entry's printing by name", () => {
     const card = unchangedImport(BOLT_ID);
     expect(decideEntry(item({ name: "Lightning Bolt", scryfall_id: BOLT_ID }, card))).toEqual({ kind: "real", name: "Lightning Bolt" });
+  });
+
+  it("keeps a deck's edited import apart from the real card when the entry has no printing", () => {
+    const edited = cardRow({ title: "Lightning Bolt", import_scryfall_id: BOLT_ID, import_fingerprint: "v1:stale" });
+    expect(decideEntry(item({ name: "Lightning Bolt" }, edited))).toMatchObject({ kind: "custom", standsInFor: "Lightning Bolt" });
+    expect(decideEntry(item({ name: "Ember Wolf" }, cardRow()))).toMatchObject({ kind: "custom", standsInFor: null });
+  });
+
+  it("writes a pasted placeholder named like a sentinel by name", () => {
+    expect(decideEntry(item({ name: PRIVATE_CARD_NAME, source: "import" }))).toEqual({ kind: "real", name: PRIVATE_CARD_NAME });
   });
 
   it("writes a printing and a pasted name by name", () => {
@@ -129,6 +139,22 @@ describe("buildCardsExport", () => {
     expect(exp.source).toBe("cards");
     expect(exp.cards.map((card) => card.name)).toEqual(["Ember Wolf", "Lightning Bolt (PipGlyph)"]);
     expect(exp.lines.every((line) => line.kind === "custom" && line.quantity === 1)).toBe(true);
+  });
+
+  it("keeps an EDITED import apart from the real card too (Cockatrice would merge it)", () => {
+    const edited = cardRow({ title: "Lightning Bolt", import_scryfall_id: BOLT_ID, import_fingerprint: "v1:stale" });
+    const customized = cardRow({ title: "Sol Ring", source_scryfall_id: BOLT_ID });
+    const scratch = cardRow({ title: "Ember Wolf" });
+    const exp = buildCardsExport([edited, customized, scratch], CTX);
+    expect(exp.cards.map((card) => card.name)).toEqual(["Lightning Bolt (PipGlyph)", "Sol Ring (PipGlyph)", "Ember Wolf"]);
+  });
+
+  it("gives each selection its own file stem and export key", () => {
+    const a = buildCardsExport([cardRow()], CTX);
+    const b = buildCardsExport([cardRow()], CTX);
+    expect(a.fileStem).toMatch(/^pipglyph-cards-[a-z0-9]{6}$/);
+    expect(a.fileStem).not.toBe(b.fileStem);
+    expect(a.exportKey).not.toBe(b.exportKey);
   });
 });
 

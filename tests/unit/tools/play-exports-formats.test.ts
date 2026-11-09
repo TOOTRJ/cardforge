@@ -39,7 +39,7 @@ function fixtureDeck() {
   const secret = cardRow({ title: "Secret <Plan>", visibility: "private", card_type: "instant", subtypes: [], power: null, toughness: null, cost: "{U}", rules_text: "Counter target spell." });
   const token = cardRow({ title: "Wolf", card_type: "token", supertype: "Creature", subtypes: ["Wolf"], cost: null, rarity: "common" });
   return buildDeckExport(
-    { title: "Wolf Pack", fileStem: "wolf-pack" },
+    { id: "55555555-5555-4555-8555-555555555555", title: "Wolf Pack", fileStem: "wolf-pack" },
     [
       item({ name: "Sela, Ash & Ember", board: "commander" }, walker),
       item({ name: "Ember Wolf", quantity: 4 }, wolf),
@@ -75,8 +75,9 @@ describe("Cockatrice", () => {
     expect(cockatriceSimpleName('Ash: "Wolf"? // Ember')).toBe("Ash WolfEmber");
     expect(cockatriceSimpleName("Wear/Tear")).toBe("Wear Tear");
     expect(cockatricePicturePath("Ember Wolf", "PGABCD")).toBe("pictures/PGABCD/Ember Wolf_PGABCD.jpg");
-    expect(cockatriceSetCode("wolf-pack")).toMatch(/^PG[A-Z]{4}$/);
-    expect(cockatriceSetCode("wolf-pack")).toBe(cockatriceSetCode("wolf-pack"));
+    expect(cockatriceSetCode("deck-id")).toMatch(/^PG[A-Z]{4}$/);
+    expect(cockatriceSetCode("deck-id")).toBe(cockatriceSetCode("deck-id"));
+    expect(cockatriceSetCode("deck-id")).not.toBe(cockatriceSetCode("other-deck"));
     expect(tableRowOf("Land")).toBe(0);
     expect(tableRowOf("Creature")).toBe(2);
     expect(tableRowOf("Sorcery")).toBe(3);

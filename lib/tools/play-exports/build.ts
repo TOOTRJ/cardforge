@@ -4,7 +4,6 @@ import { manaValueOfCost } from "@/lib/cards/mana-value";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { buildCardUrl } from "@/lib/cards/utils";
 import { entryPrintingImage } from "@/lib/decks/entry-image";
-import { importEditStateOf } from "@/lib/cards/import-fingerprint";
 import { bringsCard, deckEntryStatus, type StatusCard } from "@/lib/decks/entry-status";
 import { GONE_CARD_NAME, PRIVATE_CARD_NAME } from "@/lib/decks/private-card-name";
 import type { Card, CardBackFace } from "@/types/card";
@@ -15,6 +14,7 @@ import {
   cleanCardName,
   costColors,
   exportNameFor,
+  shortHash,
   type ColorLetter,
   type PlayBoard,
   type PlayCustomCard,
@@ -207,6 +207,15 @@ function namedCustomCard(card: PlayCardRow, taken: Set<string>, standsInFor: str
   return { ...custom, back: { ...custom.back, name: backName } };
 }
 
+/** The real card a PipGlyph card may still be named after: a card with
+ *  import provenance (imported, or customized from a printing) — its title,
+ *  which an edit usually keeps ("Lightning Bolt"). Cockatrice merges a card
+ *  into the real one of the same name and plays the real text, so such a
+ *  card is kept apart (exportNameFor). Null for a card made from scratch. */
+function realNameOf(card: PlayCardRow): string | null {
+  return card.import_scryfall_id || card.source_scryfall_id ? card.title : null;
+}
+
 type Decided =
   | { kind: "custom"; card: PlayCardRow; standsInFor: string | null }
   | { kind: "real"; name: string }
@@ -220,7 +229,7 @@ export function decideEntry(item: PlayDeckItem): Decided {
   if (card) {
     // An unchanged import of the entry's own printing IS the real card.
     if (deckEntryStatus(entry, card) === "imported") return { kind: "real", name: entry.name };
-    return { kind: "custom", card, standsInFor: entry.scryfall_id ? entry.name : null };
+    return { kind: "custom", card, standsInFor: entry.scryfall_id ? entry.name : realNameOf(card) };
   }
   // A linked card the viewer can't read (private, another creator's that
   // is no longer public, gone): the real card it stands in for, by name,
@@ -228,7 +237,7 @@ export function decideEntry(item: PlayDeckItem): Decided {
   if (entry.card_id) return entry.scryfall_id && !hiddenName ? { kind: "real", name: entry.name } : { kind: "hidden" };
   if (entry.scryfall_id) return { kind: "real", name: entry.name };
   // A deleted card's entry (it came WITH its card): nothing to name.
-  if (bringsCard(entry.source) || hiddenName) return { kind: "hidden" };
+  if (bringsCard(entry.source)) return { kind: "hidden" };
   // A pasted name that matched no card: by name, for the client to find.
   return entry.name.trim() ? { kind: "real", name: entry.name.trim() } : { kind: "hidden" };
 }
@@ -239,7 +248,7 @@ function boardOf(board: string): PlayBoard | "maybe" {
 
 /** A deck's export, from its items as the viewer read them. */
 export function buildDeckExport(
-  deck: { title: string; fileStem: string },
+  deck: { id: string; title: string; fileStem: string },
   items: readonly PlayDeckItem[],
   ctx: BuildContext & { cardBackUrl: string },
 ): PlayExport {
@@ -295,6 +304,7 @@ export function buildDeckExport(
   return {
     title: deck.title,
     fileStem: deck.fileStem,
+    exportKey: deck.id,
     source: "deck",
     cards,
     lines: sorted,
@@ -310,14 +320,15 @@ export function buildCardsExport(
   ctx: BuildContext & { cardBackUrl: string },
 ): PlayExport {
   const taken = new Set<string>();
-  // An unchanged import still carries the real card's name: it is kept
-  // apart from it as a deck's custom version is.
-  const cards = cardsInOrder.map((card) =>
-    namedCustomCard(card, taken, importEditStateOf(card) === "unchanged" ? card.title : null, ctx),
-  );
+  // A card imported or customized from a printing may still carry the real
+  // card's name: it is kept apart from it as a deck's custom version is.
+  const cards = cardsInOrder.map((card) => namedCustomCard(card, taken, realNameOf(card), ctx));
   return {
     title: "My cards",
-    fileStem: "pipglyph-cards",
+    // Each selection its own file and set: a second export never replaces
+    // the first in Cockatrice's custom sets.
+    fileStem: `pipglyph-cards-${shortHash(cards.map((card) => card.id).join(","))}`,
+    exportKey: cards.map((card) => card.id).join(","),
     source: "cards",
     cards,
     lines: cards.map((card) => ({ kind: "custom", board: "main", quantity: 1, cardId: card.id })),
