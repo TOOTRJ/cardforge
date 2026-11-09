@@ -92,11 +92,12 @@ function samplePremultiplied(src: Float32Array, w: number, h: number, x: number,
 
 /**
  * The cut-out (`img`'s colours under `mask`'s coverage) cropped to the
- * shape, centred in a square with SYMBOL_MARGIN of air, resampled to
- * `size` × `size` (4 × 4 supersampling of premultiplied colour). Null
- * when the mask holds nothing.
+ * shape, centred in a square with `margin` of air on each side (a share of
+ * the side; SYMBOL_MARGIN for a set symbol, Pip Forge's glyph sits further
+ * in), resampled to `size` × `size` (4 × 4 supersampling of premultiplied
+ * colour). Null when the mask holds nothing.
  */
-export function fitSquare(img: RgbaImage, mask: Mask, size: number): RgbaImage | null {
+export function fitSquare(img: RgbaImage, mask: Mask, size: number, margin = SYMBOL_MARGIN): RgbaImage | null {
   const box = maskBounds(mask);
   if (!box) return null;
   const { width: w, height: h } = img;
@@ -108,7 +109,7 @@ export function fitSquare(img: RgbaImage, mask: Mask, size: number): RgbaImage |
     pre[p * 4 + 2] = img.data[p * 4 + 2] * a;
     pre[p * 4 + 3] = a;
   }
-  const side = Math.max(box.width, box.height) / (1 - 2 * SYMBOL_MARGIN);
+  const side = Math.max(box.width, box.height) / (1 - 2 * margin);
   const originX = box.x + box.width / 2 - side / 2;
   const originY = box.y + box.height / 2 - side / 2;
   const scale = side / size;
@@ -259,20 +260,22 @@ function alphaAt(img: RgbaImage, size: number): Float32Array {
 }
 
 /**
- * How well the shape survives at the size a card prints it (16 px, a
- * symbol on a 750 px card): the shape thresholded at 64 px against the
- * same shape after a trip through 16 px, as intersection over union.
- * 1 = nothing lost; under LEGIBILITY_WARN the studio says details vanish.
+ * How well the shape survives at the size a card prints it (`size` px —
+ * 16 for a set symbol on a 750 px card; Pip Forge asks 16 and 24 of a
+ * pip): the shape thresholded at 64 px against the same shape after a trip
+ * through `size` px, as intersection over union. 1 = nothing lost; under
+ * LEGIBILITY_WARN the studio says details vanish.
  */
-export function legibilityScore(fitted: RgbaImage): number {
-  const fine = alphaAt(fitted, 64);
-  const coarse = alphaAt(fitted, 16);
+export function legibilityScore(fitted: RgbaImage, size = 16): number {
+  const FINE = 64;
+  const fine = alphaAt(fitted, FINE);
+  const coarse = alphaAt(fitted, size);
   let inter = 0;
   let union = 0;
-  for (let y = 0; y < 64; y += 1) {
-    for (let x = 0; x < 64; x += 1) {
-      const a = fine[y * 64 + x] >= 0.5;
-      const b = coarse[Math.floor(y / 4) * 16 + Math.floor(x / 4)] >= 0.5;
+  for (let y = 0; y < FINE; y += 1) {
+    for (let x = 0; x < FINE; x += 1) {
+      const a = fine[y * FINE + x] >= 0.5;
+      const b = coarse[Math.floor((y * size) / FINE) * size + Math.floor((x * size) / FINE)] >= 0.5;
       if (a && b) inter += 1;
       if (a || b) union += 1;
     }

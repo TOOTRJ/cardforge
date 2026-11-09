@@ -5,14 +5,14 @@ import "server-only";
 import sharp from "sharp";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { scanImageUrl } from "@/lib/moderation/image-scan";
-import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
+import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import {
   checkUploadRateLimit,
   uploadRateLimitFailure,
   type UploadLimitFields,
 } from "@/lib/media/upload-rate-limit";
 import { deleteCustomPipRow, finishPipChange, removeCustomPipObject } from "@/lib/pips/remove-pip";
+import { writeCustomPip } from "@/lib/pips/write-pip";
 import {
   isCustomPipSymbol,
   type CustomPipSymbol,
@@ -26,11 +26,12 @@ import {
 // NORMALIZED to a 256×256 PNG (cover crop, transparency preserved) so every
 // stored pip is a uniform square the renderers can trust.
 //
-// Storage path is deterministic — custom-pips/{userId}/{symbol}.png with
-// upsert — so replacing a pip never orphans objects; the row's image_url
-// carries a ?v= cache-buster so CDNs pick up replacements. Objects are
-// written and removed with the service role, only inside the signed-in
-// user's folder (lib/media/user-storage.ts; no user write policy since 0126).
+// The write itself — staging, the scan, the canonical object, the row and the
+// re-bake — is THE custom-pip write, lib/pips/write-pip.ts (Pip Forge's
+// "Use as a pip" goes through it too). Storage path is deterministic —
+// custom-pips/{userId}/{symbol}.png with upsert — so replacing a pip never
+// orphans objects; objects are written and removed with the service role,
+// only inside the signed-in user's folder (lib/media/user-storage.ts).
 // ---------------------------------------------------------------------------
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -103,65 +104,11 @@ export async function saveCustomPipAction(
     return { ok: false, error: "That doesn't look like a valid image." };
   }
 
-  const name = `${symbol}.png`;
-  const pips = userFolder("custom-pips", user.id);
-  const supabase = await createClient();
-
-  // Moderate BEFORE touching the canonical object. The canonical path is
-  // deterministic and overwritten in place, so scanning after the upsert
-  // meant a flagged image had already replaced the owner's approved pip —
-  // and the rejection then deleted that object while the custom_pips row
-  // kept pointing at it. Stage the bytes under a pending name, scan THAT
-  // (versioned, so a cached copy of an older pending upload can't answer
-  // for the new bytes), and only then write the real object.
-  const pendingName = `${symbol}.pending.png`;
-  const { error: stageError } = await pips.upload(pendingName, pngBytes, {
-    cacheControl: "0",
-    contentType: "image/png",
-    upsert: true,
-  });
-  if (stageError) {
-    return { ok: false, error: stageError.message };
+  const written = await writeCustomPip(user.id, symbol, pngBytes);
+  if (!written.ok) {
+    return { ok: false, error: written.error };
   }
-  const pendingUrl = `${pips.publicUrl(pendingName)}?v=${Date.now()}`;
-
-  // NSFW auto-scan — fails open (a moderation hiccup never blocks uploads);
-  // a positive flag drops the staged bytes and leaves the current pip alone.
-  const scan = await scanImageUrl(pendingUrl);
-  if (scan.flagged) {
-    await pips.remove([pendingName]);
-    return {
-      ok: false,
-      error: "That image was flagged by our content filter and can't be used.",
-    };
-  }
-
-  const { error: uploadError } = await pips.upload(name, pngBytes, {
-    cacheControl: "3600",
-    contentType: "image/png",
-    upsert: true,
-  });
-  await pips.remove([pendingName]);
-  if (uploadError) {
-    return { ok: false, error: uploadError.message };
-  }
-
-  // Deterministic path + upsert means CDNs may hold the previous bytes —
-  // version the URL the same way bake-render.ts versions card renders.
-  const imageUrl = `${pips.publicUrl(name)}?v=${Date.now()}`;
-
-  const { error: upsertError } = await supabase
-    .from("custom_pips")
-    .upsert(
-      { owner_id: user.id, symbol, image_url: imageUrl },
-      { onConflict: "owner_id,symbol" },
-    );
-  if (upsertError) {
-    return { ok: false, error: upsertError.message };
-  }
-
-  finishPipChange(user.id, symbol);
-  return { ok: true, symbol, imageUrl };
+  return { ok: true, symbol, imageUrl: written.imageUrl };
 }
 
 export async function deleteCustomPipAction(

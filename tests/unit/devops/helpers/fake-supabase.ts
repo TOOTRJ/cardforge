@@ -51,6 +51,7 @@ export function emptyDb(): Db {
     card_exports: t(["id"], { id: "uuid", file_url: "text", storage_path: "text" }),
     token_kits: t(["id"], { id: "uuid", owner_id: "uuid", items: "jsonb", settings: "jsonb" }),
     set_symbols: t(["id"], { id: "uuid", owner_id: "uuid", files: "jsonb", cutout: "jsonb" }),
+    forged_pips: t(["id"], { id: "uuid", owner_id: "uuid", files: "jsonb", colour_card: "jsonb" }),
     messages: t(["id"], { id: "uuid", body: "text" }),
     feedback: t(["id"], { id: "uuid", page_url: "text" }),
     site_settings: t(["key"], { key: "text", value: "jsonb" }),

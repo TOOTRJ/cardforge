@@ -214,11 +214,16 @@ const NOT_COUNTED: Record<string, string> = {
     "Set Symbol Studio's store: its upload and re-cut actions count first (lib/tools/set-symbol/actions.ts); its AI route is paid in credits and capped by lib/ai/rate-limit.ts",
   "lib/scryfall/import-art.ts":
     "a real card's art: its callers count it first (the import-art route, the Bulk Customize step — CALLERS_COUNT below)",
+  "lib/pips/write-pip.ts":
+    "THE custom-pip write: its callers count it first (the manager's upload, Pip Forge's \"use as a pip\" — CALLERS_COUNT below)",
+  "lib/tools/pip-forge/server.ts":
+    "Pip Forge's store: its recolour and use actions count first (lib/tools/pip-forge/actions.ts); its AI route is paid in credits and capped by lib/ai/rate-limit.ts",
 };
 
 /** The callers of an exempt writer that count the upload themselves. */
 const CALLERS_COUNT: Record<string, string[]> = {
   "lib/scryfall/import-art.ts": ["app/api/scryfall/import-art/route.ts", "lib/tools/bulk-customize/step.ts"],
+  "lib/pips/write-pip.ts": ["lib/pips/actions.ts", "lib/tools/pip-forge/actions.ts"],
 };
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -247,9 +252,10 @@ describe("every user-folder writer counts the upload", () => {
       "lib/cards/upload-watermark-server.ts",
       "lib/media/upload-cover-server.ts",
       "lib/media/user-storage.ts",
-      "lib/pips/actions.ts",
+      "lib/pips/write-pip.ts",
       "lib/profile/upload-server.ts",
       "lib/scryfall/import-art.ts",
+      "lib/tools/pip-forge/server.ts",
       "lib/tools/set-symbol/server.ts",
     ]);
   });
