@@ -54,6 +54,9 @@ export type AiActionLabel =
   // Bulk Customize (beta tool, migration 0186): one row per AI picture a
   // batch paints.
   | "bulk_customize_art"
+  // The Rule 0 table sheet (beta tool, migration 0190): its AI draft of the
+  // game plan and win conditions.
+  | "draft_table_sheet"
   // Re-art deck (beta tool, migration 0191): one row per picture a run
   // paints in the deck's style.
   | "deck_reart_art";
@@ -251,6 +254,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit: one set symbol drawn by FLUX (the Set Symbol Studio beta
    *  tool) — its rarity looks and watermark are painted from it for free. */
   generate_set_icon: 1,
+  /** One credit: the Rule 0 table sheet's game plan and win conditions,
+   *  drafted from the deck's cards (the owner edits them after). */
+  draft_table_sheet: 1,
 };
 
 export type CreditSpendResult =

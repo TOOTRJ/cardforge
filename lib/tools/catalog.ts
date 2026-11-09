@@ -25,7 +25,7 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "reart";
+export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "table-sheet" | "reart";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -126,6 +126,20 @@ export const TOOL_CATALOG = [
       "Common, uncommon, rare and mythic colours from one symbol",
     ],
     icon: "set-symbol",
+    built: true,
+  },
+  {
+    slug: "rule0-sheet",
+    name: "Rule 0 Table Sheet",
+    tagline: "One page that tells the table what your deck is before you shuffle up.",
+    description:
+      "Turn any of your decks into a one-page summary for the pre-game talk: its bracket beside a Game Changers check, your game plan and win conditions, and every custom card and proxy named. Show it on screen, print it, or share the link and QR code.",
+    highlights: [
+      "Your bracket beside a Game Changers check",
+      "Every custom card and proxy, named and linked",
+      "Print it on one page, or share a link and QR code",
+    ],
+    icon: "table-sheet",
     built: true,
   },
 ] as const satisfies readonly ToolDefinition[];

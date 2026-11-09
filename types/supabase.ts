@@ -771,6 +771,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0190 — the Rule 0 table sheet beta tool.
+      deck_table_sheets: {
+        Row: {
+          deck_id: string;
+          owner_id: string;
+          game_plan: string | null;
+          /** One per line. */
+          win_conditions: string | null;
+          table_notes: string | null;
+          shared: boolean;
+          ai_drafted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          deck_id: string;
+          owner_id: string;
+          game_plan?: string | null;
+          win_conditions?: string | null;
+          table_notes?: string | null;
+          shared?: boolean;
+          ai_drafted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          deck_id?: string;
+          owner_id?: string;
+          game_plan?: string | null;
+          win_conditions?: string | null;
+          table_notes?: string | null;
+          shared?: boolean;
+          ai_drafted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       tool_releases: {
         Row: {
           slug: string;
@@ -3628,6 +3666,8 @@ export type Database = {
         Args: { p_slug: string };
         Returns: boolean;
       };
+      // Migration 0190 — a table sheet open to visitors.
+      deck_table_sheet_live: { Args: { p_deck: string }; Returns: boolean };
       // Migration 0185 — the Collection Deck Builder.
       collection_card_cap: { Args: Record<string, never>; Returns: number };
       collection_stats: {

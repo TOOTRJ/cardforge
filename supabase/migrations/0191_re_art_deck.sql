@@ -33,8 +33,8 @@
 --    cancelled when a step still in flight lands.
 --
 -- 4. card_ai_calls gains 'deck_reart_art' (one row per picture painted; one
---    credit each, two for a double-faced card). Rewritten whole from 0186's
---    list (0187–0190 do not redefine it).
+--    credit each, two for a double-faced card). Rewritten whole from 0190's
+--    list (0190 added 'draft_table_sheet'; 0187 does not redefine it).
 --
 -- Grants are explicit (0097). Idempotent. Ships through a PR; never applied
 -- ad-hoc.
@@ -314,6 +314,7 @@ alter table public.card_ai_calls
       'analyze_deck',
       'build_collection_deck',
       'bulk_customize_art',
+      'draft_table_sheet',
       'deck_reart_art'
     ])
   );
