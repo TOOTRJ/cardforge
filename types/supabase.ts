@@ -681,6 +681,7 @@ export type Database = {
           owner_id: string;
           style_version: number;
           job_id: string | null;
+          entry_id: string | null;
           art_url: string | null;
           back_art_url: string | null;
           made: boolean;
@@ -688,6 +689,8 @@ export type Database = {
           previous_art_position: Json | null;
           previous_back_art_url: string | null;
           previous_back_art_position: Json | null;
+          previous_artist_credit: string | null;
+          previous_back_artist_credit: string | null;
           painted_at: string;
         };
         Insert: {
@@ -696,6 +699,7 @@ export type Database = {
           owner_id: string;
           style_version: number;
           job_id?: string | null;
+          entry_id?: string | null;
           art_url?: string | null;
           back_art_url?: string | null;
           made?: boolean;
@@ -703,6 +707,8 @@ export type Database = {
           previous_art_position?: Json | null;
           previous_back_art_url?: string | null;
           previous_back_art_position?: Json | null;
+          previous_artist_credit?: string | null;
+          previous_back_artist_credit?: string | null;
           painted_at?: string;
         };
         Update: {
@@ -711,6 +717,7 @@ export type Database = {
           owner_id?: string;
           style_version?: number;
           job_id?: string | null;
+          entry_id?: string | null;
           art_url?: string | null;
           back_art_url?: string | null;
           made?: boolean;
@@ -718,6 +725,8 @@ export type Database = {
           previous_art_position?: Json | null;
           previous_back_art_url?: string | null;
           previous_back_art_position?: Json | null;
+          previous_artist_credit?: string | null;
+          previous_back_artist_credit?: string | null;
           painted_at?: string;
         };
         Relationships: [];

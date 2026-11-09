@@ -183,6 +183,16 @@ export function ReartStudio({
       toast.error("Save the deck's style first.");
       return;
     }
+    // A real card's price (and its card slot) is only known once its
+    // printing is read: it goes through the confirm, which prices it.
+    if (entry.kind === "printing") {
+      openConfirm({
+        title: `Paint ${entry.name}`,
+        description: "It becomes your own card, painted in the deck's saved style. Nothing is charged until you press Paint.",
+        input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility },
+      });
+      return;
+    }
     setBusy(entry.id);
     void startReartAction({ deckId: deck.id, entryIds: [entry.id], scope: "all", visibility })
       .then((result) => {
@@ -286,7 +296,20 @@ export function ReartStudio({
                       <span className="min-w-0 truncate text-foreground">{entry.name}</span>
                       <button
                         type="button"
-                        onClick={() => setSample((prev) => new Set([...prev].filter((x) => x !== id)))}
+                        data-sample-remove={id}
+                        onClick={() => {
+                          // The button removes itself: the focus goes to the
+                          // next one, else the one before, else the paint button.
+                          const at = sampleIds.indexOf(id);
+                          const next = sampleIds[at + 1] ?? sampleIds[at - 1] ?? null;
+                          setSample((prev) => new Set([...prev].filter((x) => x !== id)));
+                          requestAnimationFrame(() => {
+                            const target = next
+                              ? document.querySelector<HTMLElement>(`[data-sample-remove="${next}"]`)
+                              : document.getElementById("reart-paint-sample");
+                            target?.focus();
+                          });
+                        }}
                         className="shrink-0 rounded-sm text-xs text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
                       >
                         Remove<span className="sr-only"> {entry.name} from the sample</span>
@@ -299,6 +322,7 @@ export function ReartStudio({
             <p className="text-xs text-subtle">Tick “In the sample” on any card to change the picks.</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button
+                id="reart-paint-sample"
                 variant="secondary"
                 onClick={() => {
                   if (sampleBlocked || lockedReason) return;
@@ -418,6 +442,8 @@ export function ReartStudio({
                 paused={paused}
                 skipped={skipped}
                 noun="painted"
+                doing="Painting"
+                pausedNote="You can continue it later from this page; the cards painted so far are saved."
                 finishedAction={
                   <Button variant="secondary" onClick={() => setJob(null)}>
                     Done

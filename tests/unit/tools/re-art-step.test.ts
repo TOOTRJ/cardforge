@@ -17,6 +17,9 @@ const m = vi.hoisted(() => ({
   access: vi.fn(),
   styleAdmin: vi.fn(),
   paintedAdmin: vi.fn(),
+  paintedRows: vi.fn(),
+  madeForEntry: vi.fn(),
+  link: vi.fn(),
   writePainted: vi.fn(),
   customize: vi.fn(),
   update: vi.fn(),
@@ -44,11 +47,14 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/tools/re-art/server", () => ({
   readDeckStyleAdmin: m.styleAdmin,
   readPaintedCardAdmin: m.paintedAdmin,
+  readPaintedRowsForCardAdmin: m.paintedRows,
+  readMadeForEntryAdmin: m.madeForEntry,
   writePaintedCard: m.writePainted,
   reartBulkChoices: (style: { preset: string }, visibility: string) => ({ art: "ai", artStyle: style.preset, visibility }),
 }));
 vi.mock("@/lib/tools/bulk-customize/step", () => ({ customizeSourceStep: m.customize }));
 vi.mock("@/lib/cards/actions", () => ({ updateCardAction: m.update }));
+vi.mock("@/lib/decks/card-actions", () => ({ linkDeckCardAction: m.link }));
 vi.mock("@/lib/cards/faces", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/cards/faces")>()),
   rowHasBakedBack: m.bakedBack,
@@ -89,9 +95,27 @@ const OWN_CARD = {
   flavor_text: "Every hour is filed.",
   frame_style: { template: "m15" },
   back_face: null,
+  artist_credit: "Jane Painter",
   art_url: ART("mine.png"),
   art_position: { x: 0.5, y: 0.5, zoom: 1.2 },
 };
+
+const ROW = (over: Record<string, unknown> = {}) => ({
+  cardId: "card-1",
+  entryId: null,
+  styleVersion: 3,
+  artUrl: ART("ai-old.jpg"),
+  backArtUrl: null,
+  made: false,
+  previousArtUrl: ART("mine.png"),
+  previousArtPosition: null,
+  previousBackArtUrl: null,
+  previousBackArtPosition: null,
+  previousArtistCredit: "Jane Painter",
+  previousBackArtistCredit: null,
+  paintedAt: "",
+  ...over,
+});
 
 const run = (plan: unknown, step: JobStep = STEP) => runReartStep("u1", "job-1", plan, step, 0, DEPS);
 
@@ -100,6 +124,9 @@ beforeEach(() => {
   m.access.mockResolvedValue({ userId: "u1", via: "grant" });
   m.styleAdmin.mockResolvedValue(STYLE);
   m.paintedAdmin.mockResolvedValue(null);
+  m.paintedRows.mockResolvedValue([]);
+  m.madeForEntry.mockResolvedValue(null);
+  m.link.mockResolvedValue({ ok: true });
   m.writePainted.mockResolvedValue(true);
   m.rows.deck_cards = { id: ENTRY, name: "Archivist", board: "main", card_id: "card-1", scryfall_id: null };
   m.rows.cards = OWN_CARD;
@@ -139,15 +166,16 @@ describe("the step trusts nothing in the plan", () => {
 });
 
 describe("the maker's own card", () => {
-  it("gets its art edited — the art and its fit alone — under the Re-art label, one credit", async () => {
+  it("gets its ART edited — the picture, its fit and the AI's credit alone — under the Re-art label, one credit", async () => {
     const result = await run(planOf());
     expect(result).toMatchObject({ status: "done", card_id: "card-1" });
     expect(m.credited.mock.calls[0][2]).toBe(1);
     expect(m.credited.mock.calls[0][3]).toBe("deck_reart_art");
     const [cardId, payload] = m.update.mock.calls[0];
     expect(cardId).toBe("card-1");
-    expect(Object.keys(payload).sort()).toEqual(["art_position", "art_url"]);
+    expect(Object.keys(payload).sort()).toEqual(["art_position", "art_url", "artist_credit"]);
     expect(payload.art_url).toBe(ART("ai-new.jpg"));
+    expect(payload.artist_credit).toBe("AI");
   });
 
   it("paints the card's own subject in the deck's style", async () => {
@@ -167,28 +195,41 @@ describe("the maker's own card", () => {
       made: false,
       previousArtUrl: ART("mine.png"),
       previousArtPosition: OWN_CARD.art_position,
+      previousArtistCredit: "Jane Painter",
     });
     expect(m.discard).not.toHaveBeenCalled();
   });
 
   it("a re-roll replaces Re-art's own picture (discarded) and keeps the maker's earlier art", async () => {
-    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg") };
-    m.paintedAdmin.mockResolvedValue({
-      cardId: "card-1",
-      styleVersion: 3,
-      artUrl: ART("ai-old.jpg"),
-      backArtUrl: null,
-      made: false,
-      previousArtUrl: ART("mine.png"),
-      previousArtPosition: null,
-      previousBackArtUrl: null,
-      previousBackArtPosition: null,
-      paintedAt: "",
-    });
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg"), artist_credit: "AI" };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
     await run(planOf("own", true));
-    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("mine.png"), artUrl: ART("ai-new.jpg") });
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({
+      previousArtUrl: ART("mine.png"),
+      previousArtistCredit: "Jane Painter",
+      artUrl: ART("ai-new.jpg"),
+    });
     expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-old.jpg"));
     expect(m.discard).not.toHaveBeenCalledWith("u1", ART("mine.png"));
+  });
+
+  it("a card painted from ANOTHER deck keeps the maker's original as the art to put back (never the AI picture)", async () => {
+    // Deck B painted X over the original; this deck has no row yet.
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-x.jpg"), artist_credit: "AI" };
+    m.paintedRows.mockResolvedValue([ROW({ artUrl: ART("ai-x.jpg") })]);
+    await run(planOf());
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("mine.png"), previousArtistCredit: "Jane Painter" });
+    expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-x.jpg"));
+  });
+
+  it("art the maker set by hand since a paint becomes the art to put back", async () => {
+    m.rows.cards = { ...OWN_CARD, art_url: ART("hand.png"), artist_credit: "Me" };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
+    await run(planOf("own", true));
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("hand.png"), previousArtistCredit: "Me" });
+    expect(m.discard).not.toHaveBeenCalledWith("u1", ART("hand.png"));
   });
 
   it("is never painted (or charged) twice: in the style already → done, no charge", async () => {
@@ -201,13 +242,23 @@ describe("the maker's own card", () => {
 
   it("a two-faced card paints both faces for two credits", async () => {
     m.bakedBack.mockReturnValue(true);
-    m.rows.cards = { ...OWN_CARD, back_face: { title: "Back", card_type: "creature", art_url: ART("back.png") } };
+    m.rows.cards = {
+      ...OWN_CARD,
+      back_face: { title: "Back", card_type: "creature", subtypes: [], art_url: ART("back.png"), artist_credit: "Back Artist" },
+    };
     m.persist.mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-front.jpg") }).mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-back.jpg") });
     await run(planOf());
     expect(m.credited.mock.calls[0][2]).toBe(2);
     const payload = m.update.mock.calls[0][1];
-    expect(payload.back_face).toMatchObject({ title: "Back", art_url: ART("ai-back.jpg") });
-    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousBackArtUrl: ART("back.png") });
+    expect(payload.back_face).toMatchObject({ title: "Back", art_url: ART("ai-back.jpg"), artist_credit: "AI" });
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousBackArtUrl: ART("back.png"), previousBackArtistCredit: "Back Artist" });
+  });
+
+  it("a stored back the card action would refuse is found before anything is paid for", async () => {
+    m.bakedBack.mockReturnValue(true);
+    m.rows.cards = { ...OWN_CARD, back_face: { title: "Back", not_a_back_key: true } };
+    expect((await run(planOf())).status).toBe("failed");
+    expect(m.credited).not.toHaveBeenCalled();
   });
 
   it("a refused edit discards the new picture and fails (the wrapper refunds)", async () => {
@@ -225,6 +276,14 @@ describe("the maker's own card", () => {
     expect((await run(planOf())).status).toBe("failed");
     expect(m.credited).not.toHaveBeenCalled();
     expect(m.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("the deck's rules at step time", () => {
+  it("an entry moved to the maybeboard is not painted", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Archivist", board: "maybe", card_id: "card-1", scryfall_id: null };
+    expect((await run(planOf())).status).toBe("failed");
+    expect(m.credited).not.toHaveBeenCalled();
   });
 });
 
@@ -251,6 +310,16 @@ describe("a real card", () => {
     const [, , , options] = m.customize.mock.calls[0];
     await options.onSaved("made-1", { front: ART("ai-1.jpg"), back: null });
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ cardId: "made-1", styleVersion: 3, made: true, previousArtUrl: null });
+  });
+
+  it("a card an earlier run MADE whose link didn't land is linked again, never made twice", async () => {
+    m.madeForEntry.mockResolvedValue("made-0");
+    m.paintedAdmin.mockResolvedValue(ROW({ cardId: "made-0", made: true, artUrl: ART("ai-0.jpg") }));
+    const result = await run(planOf("printing"));
+    expect(m.link).toHaveBeenCalledWith(ENTRY, "made-0", { surface: "deck" });
+    expect(m.customize).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(result.status).toBe("done");
   });
 
   it("an entry another run already made is the own-card path (found in the style, no charge)", async () => {

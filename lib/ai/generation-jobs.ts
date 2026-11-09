@@ -638,6 +638,11 @@ async function claimJobStep(
     p_job_id: jobId,
     p_step_key: stepKey ?? null,
   });
+  if (error?.code === "23505") {
+    // Re-opening a finished Re-art run while another run of its deck is
+    // live (0191's one-live-run-per-deck index).
+    return { ok: false, error: "Another run of this deck is painting — wait for it, then try again." };
+  }
   if (error || !data) {
     return { ok: false, error: "Job not found." };
   }

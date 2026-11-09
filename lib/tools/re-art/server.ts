@@ -108,6 +108,8 @@ export async function saveDeckStyle(userId: string, deckId: string, style: Reart
 /** One card Re-art has painted on a deck (0191 deck_reart_cards). */
 export type PaintedCard = {
   cardId: string;
+  /** The entry a made card came from (null: an own card, or unknown). */
+  entryId: string | null;
   styleVersion: number;
   artUrl: string | null;
   backArtUrl: string | null;
@@ -116,11 +118,14 @@ export type PaintedCard = {
   previousArtPosition: Json | null;
   previousBackArtUrl: string | null;
   previousBackArtPosition: Json | null;
+  previousArtistCredit: string | null;
+  previousBackArtistCredit: string | null;
   paintedAt: string;
 };
 
 type PaintedRow = {
   card_id: string;
+  entry_id: string | null;
   style_version: number;
   art_url: string | null;
   back_art_url: string | null;
@@ -129,15 +134,18 @@ type PaintedRow = {
   previous_art_position: Json | null;
   previous_back_art_url: string | null;
   previous_back_art_position: Json | null;
+  previous_artist_credit: string | null;
+  previous_back_artist_credit: string | null;
   painted_at: string;
 };
 
 const PAINTED_COLUMNS =
-  "card_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, painted_at";
+  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at";
 
 function paintedOf(row: PaintedRow): PaintedCard {
   return {
     cardId: row.card_id,
+    entryId: row.entry_id,
     styleVersion: row.style_version,
     artUrl: row.art_url,
     backArtUrl: row.back_art_url,
@@ -146,6 +154,8 @@ function paintedOf(row: PaintedRow): PaintedCard {
     previousArtPosition: row.previous_art_position,
     previousBackArtUrl: row.previous_back_art_url,
     previousBackArtPosition: row.previous_back_art_position,
+    previousArtistCredit: row.previous_artist_credit,
+    previousBackArtistCredit: row.previous_back_artist_credit,
     paintedAt: row.painted_at,
   };
 }
@@ -170,6 +180,34 @@ export async function readPaintedCardAdmin(userId: string, deckId: string, cardI
   return paintedOf(data as PaintedRow);
 }
 
+/** Every deck's row for one of the caller's cards (a card can be in several
+ *  decks): which pictures on it are Re-art's, and what was there before. */
+export async function readPaintedRowsForCardAdmin(userId: string, cardId: string): Promise<PaintedCard[]> {
+  if (!isAdminConfigured()) return [];
+  const { data } = await createAdminClient()
+    .from("deck_reart_cards")
+    .select(PAINTED_COLUMNS)
+    .eq("card_id", cardId)
+    .eq("owner_id", userId);
+  return ((data ?? []) as PaintedRow[]).map(paintedOf);
+}
+
+/** The card a Re-art run MADE from this deck entry, if any (a link that
+ *  didn't land is linked again, never made twice). */
+export async function readMadeForEntryAdmin(userId: string, deckId: string, entryId: string): Promise<string | null> {
+  if (!isAdminConfigured()) return null;
+  const { data } = await createAdminClient()
+    .from("deck_reart_cards")
+    .select("card_id")
+    .eq("deck_id", deckId)
+    .eq("entry_id", entryId)
+    .eq("owner_id", userId)
+    .eq("made", true)
+    .limit(1)
+    .maybeSingle();
+  return data?.card_id ?? null;
+}
+
 /** Records (or replaces) a painted card. False when the write failed. */
 export async function writePaintedCard(
   userId: string,
@@ -187,6 +225,7 @@ export async function writePaintedCard(
         owner_id: userId,
         style_version: painted.styleVersion,
         job_id: jobId,
+        entry_id: painted.entryId,
         art_url: painted.artUrl,
         back_art_url: painted.backArtUrl,
         made: painted.made,
@@ -194,6 +233,8 @@ export async function writePaintedCard(
         previous_art_position: painted.previousArtPosition,
         previous_back_art_url: painted.previousBackArtUrl,
         previous_back_art_position: painted.previousBackArtPosition,
+        previous_artist_credit: painted.previousArtistCredit,
+        previous_back_artist_credit: painted.previousBackArtistCredit,
         painted_at: new Date().toISOString(),
       },
       { onConflict: "deck_id,card_id" },
@@ -277,6 +318,11 @@ export async function planReartRun(
     skipped.push({ name: "A card", reason: "Not in this deck any more." });
   }
 
+  // Cards a run MADE from an entry whose link didn't land: the step links
+  // them again (never makes them twice) — priced as what they are.
+  const madeByEntry = new Map(
+    [...painted.values()].filter((row) => row.made && row.entryId).map((row) => [row.entryId!, row]),
+  );
   const own: ReartPlannedEntry[] = [];
   const printings: DeckItem<DeckPageCard>[] = [];
   const seenCards = new Set<string>();
@@ -314,6 +360,23 @@ export async function planReartRun(
         cardId: card.id,
         repaint: Boolean(explicit),
         notes: twoFaces ? ["Two faces: two pictures."] : [],
+      });
+      continue;
+    }
+    const made = madeByEntry.get(entry.id);
+    if (made) {
+      if (!explicit && !styleChanged && made.styleVersion === version && made.artUrl) {
+        inStyle += 1;
+        continue;
+      }
+      own.push({
+        entryId: entry.id,
+        name: entry.name,
+        kind: "own",
+        credits: REART_CREDITS_PER_FACE * (made.backArtUrl ? 2 : 1),
+        cardId: made.cardId,
+        repaint: Boolean(explicit),
+        notes: ["Made by an earlier run — linked to its entry again."],
       });
       continue;
     }

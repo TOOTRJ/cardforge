@@ -24,6 +24,8 @@ import { z } from "zod";
 import { STYLE_PRESETS, SURPRISE_PRESET_ID, stylePresetById } from "@/lib/ai/presets";
 import { BULK_AI_ART_CREDITS_PER_FACE, BULK_VISIBILITY_VALUES, type BulkVisibility } from "@/lib/tools/bulk-customize/model";
 import type { DeckBoard } from "@/types/deck";
+import type { CardBackFace } from "@/types/card";
+import type { Json } from "@/types/supabase";
 
 /** The tool's slug in the catalog (lib/tools/catalog.ts) and in SQL
  *  (`has_tool_access`, 0191's policies). */
@@ -355,7 +357,10 @@ export const reartRunSchema = z
     /** The run is a sample (said in the run's history). */
     sample: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine((run) => !run.sample || (run.entryIds !== undefined && run.entryIds.length <= REART_SAMPLE_MAX), {
+    message: `A sample is up to ${REART_SAMPLE_MAX} named cards.`,
+  });
 
 export type ReartRunInput = z.input<typeof reartRunSchema>;
 
@@ -400,4 +405,31 @@ export function reartStateLabel(entry: Pick<ReartStudioEntry, "kind" | "state" |
   if (entry.state === "kept") return "Kept its own art";
   if (entry.state === "earlier") return "Painted in an earlier style";
   return entry.kind === "printing" ? "Real card — becomes yours" : "Your card — not painted yet";
+}
+
+/**
+ * A stored back face resent with new art: the picture, its fit and its
+ * credit replaced, every other key as stored. A null keeps the key OUT (the
+ * back's schema takes a text or nothing, never null).
+ */
+export function withBackArt(
+  back: CardBackFace,
+  artUrl: string | null,
+  artPosition: Json | null,
+  artistCredit: string | null,
+): CardBackFace {
+  const { art_url: _url, art_position: _position, artist_credit: _credit, ...rest } = back as CardBackFace & {
+    art_url?: unknown;
+    art_position?: unknown;
+    artist_credit?: unknown;
+  };
+  void _url;
+  void _position;
+  void _credit;
+  return {
+    ...rest,
+    ...(artUrl ? { art_url: artUrl } : {}),
+    ...(artUrl && artPosition ? { art_position: artPosition } : {}),
+    ...(artistCredit ? { artist_credit: artistCredit } : {}),
+  } as CardBackFace;
 }

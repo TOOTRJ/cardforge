@@ -25,6 +25,7 @@ import {
   reartStepKey,
   reartStyleProblem,
   reartStyleSchema,
+  withBackArt,
   type ReartCost,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
@@ -275,6 +276,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     })
     .select(OWNER_JOB_COLUMNS)
     .single();
+  if (error?.code === "23505") {
+    // 0191's one-live-run-per-deck index: another start won the race.
+    return { ok: false, code: "BUSY", error: "Another run of this deck has just started — wait for it, then try again." };
+  }
   if (error || !jobRow) {
     console.error("[re-art] job insert failed:", error?.message);
     return { ok: false, error: "Couldn't start the run — try again." };
@@ -334,13 +339,15 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   const result = await updateCardAction(card.id, {
     art_url: painted.previousArtUrl,
     art_position: painted.previousArtPosition ?? fitArtToWindow(),
+    artist_credit: painted.previousArtistCredit ?? null,
     ...(restoreBack && back
       ? {
-          back_face: {
-            ...back,
-            art_url: painted.previousBackArtUrl ?? null,
-            art_position: painted.previousBackArtPosition ?? fitArtToWindow(),
-          },
+          back_face: withBackArt(
+            back,
+            painted.previousBackArtUrl,
+            (painted.previousBackArtPosition ?? fitArtToWindow()) as Json,
+            painted.previousBackArtistCredit,
+          ),
         }
       : {}),
   });
@@ -353,6 +360,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   if (restoreBack && painted.backArtUrl) await discardGeneratedArt(access.userId, painted.backArtUrl);
   await writePaintedCard(access.userId, deck.id, null, {
     cardId: card.id,
+    entryId: painted.entryId,
     styleVersion: painted.styleVersion,
     artUrl: null,
     backArtUrl: null,
@@ -361,6 +369,8 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     previousArtPosition: null,
     previousBackArtUrl: null,
     previousBackArtPosition: null,
+    previousArtistCredit: null,
+    previousBackArtistCredit: null,
   });
   await recordToolEvent({ slug: REART_TOOL_SLUG, userId: access.userId, event: "restore", access: access.via });
   revalidatePath(toolHref(REART_TOOL_SLUG));

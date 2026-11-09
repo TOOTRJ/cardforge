@@ -166,3 +166,19 @@ describe("a run's request", () => {
     expect(reartRunSchema.safeParse({ deckId: id, extra: 1 }).success).toBe(false);
   });
 });
+
+describe("a back face resent with new art", () => {
+  it("replaces the picture, fit and credit, and keeps a null OUT of the back (its schema takes no null)", async () => {
+    const { withBackArt } = await import("@/lib/tools/re-art/model");
+    const back = { title: "B", card_type: "creature" as const, subtypes: [], art_url: "x", art_position: { x: 1 }, artist_credit: "AI" };
+    const restored = withBackArt(back as never, null, null, null);
+    expect(restored).toEqual({ title: "B", card_type: "creature", subtypes: [] });
+    expect(withBackArt(back as never, "y", { x: 0.5 } as never, "Me")).toMatchObject({ art_url: "y", art_position: { x: 0.5 }, artist_credit: "Me" });
+  });
+
+  it("a sample names at most three cards", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    expect(reartRunSchema.safeParse({ deckId: id, sample: true, entryIds: [id, id, id, id] }).success).toBe(false);
+    expect(reartRunSchema.safeParse({ deckId: id, sample: true }).success).toBe(false);
+  });
+});

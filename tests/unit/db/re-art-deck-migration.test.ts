@@ -83,6 +83,12 @@ describe("0191 re-art deck", () => {
     expect(sql).toContain("revoke all on function public.deck_reart_cards_check_owner() from public, anon, authenticated;");
   });
 
+  it("keeps ONE live run per deck (no card painted or charged by two runs at once)", () => {
+    expect(sql).toMatch(
+      /create unique index if not exists ai_generation_jobs_one_live_reart_per_deck\s+on public\.ai_generation_jobs \(owner_id, \(request->>'deck_id'\)\)\s+where kind = 'deck_reart' and status = 'generating';/,
+    );
+  });
+
   it("goes with its deck and its card, and the words fit the model's limit", () => {
     expect(sql).toContain("deck_id uuid primary key references public.decks (id) on delete cascade");
     expect(sql).toContain("card_id uuid not null references public.cards (id) on delete cascade");
@@ -93,5 +99,28 @@ describe("0191 re-art deck", () => {
     expect(seed).toMatch(/raise exception/);
     expect(seed).toContain(`'${REART_TOOL_SLUG}'`);
     expect(seed).not.toMatch(/password\s*[:=]/i);
+  });
+});
+
+describe("0191's patch_job_step", () => {
+  it("keeps a cancelled job cancelled, and otherwise is 0106's body (the step merged, its charge settled)", () => {
+    const at = sql.indexOf("create or replace function public.patch_job_step(");
+    expect(at).toBeGreaterThan(0);
+    const body = sql.slice(at, sql.indexOf("$$;", at));
+    expect(body).toContain("when v_job.status = 'cancelled' then 'cancelled'");
+    expect(body).toContain("public.settle_spend(v_spend_ref)");
+    expect(body).toContain("security invoker");
+    expect(sql).toContain("revoke all on function public.patch_job_step(uuid, text, jsonb) from public, anon, authenticated;");
+    expect(sql).toContain("grant execute on function public.patch_job_step(uuid, text, jsonb) to service_role;");
+    // Nothing else of 0106's body changed.
+    const before = readFileSync(join(dir, files.find((f) => /^\d{4}_settle_spend\.sql$/.test(f))!), "utf8");
+    const old = before.slice(before.indexOf("create or replace function public.patch_job_step("));
+    const strip = (text: string) =>
+      text
+        .slice(0, text.indexOf("$$;"))
+        .replace(/--[^\n]*/g, "")
+        .replace("when v_job.status = 'cancelled' then 'cancelled'", "")
+        .replace(/\s+/g, " ");
+    expect(strip(sql.slice(at))).toBe(strip(old));
   });
 });

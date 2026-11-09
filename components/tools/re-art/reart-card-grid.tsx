@@ -172,10 +172,12 @@ export function ReartCardGrid({
                         ) : (
                           <Wand2 className="h-3.5 w-3.5" aria-hidden />
                         )}
-                        {entry.state ? "Re-roll" : "Paint this one"}
-                        <span className="text-muted">
-                          · {entry.credits} credit{entry.credits === 1 ? "" : "s"}
-                        </span>
+                        {entry.state ? "Re-roll" : entry.kind === "printing" ? "Paint this one…" : "Paint this one"}
+                        {entry.kind === "own" ? (
+                          <span className="text-muted">
+                            · {entry.credits} credit{entry.credits === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
                         <span className="sr-only"> — {entry.name}</span>
                       </button>
                       {entry.canRestore ? (

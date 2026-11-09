@@ -21,6 +21,12 @@ const m = vi.hoisted(() => ({
   gateway: vi.fn(),
   open: vi.fn(),
   cancel: vi.fn(),
+  deck: vi.fn(),
+  painted: vi.fn(),
+  update: vi.fn(),
+  writePainted: vi.fn(),
+  discard: vi.fn(),
+  card: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -32,6 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
       const chain = {
         select: () => chain,
         eq: () => chain,
+        maybeSingle: async () => ({ data: m.card(), error: null }),
         filter: async () => ({ data: m.open(), error: null }),
         insert: (row: unknown) => {
           m.insert(row);
@@ -60,18 +67,18 @@ vi.mock("@/lib/ai/rate-limit", () => ({
   getFreshCreditBalance: m.balance,
 }));
 vi.mock("@/lib/ai/provider", () => ({ isGatewayConfigured: m.gateway }));
-vi.mock("@/lib/ai/random-art", () => ({ discardGeneratedArt: vi.fn() }));
-vi.mock("@/lib/cards/actions", () => ({ updateCardAction: vi.fn() }));
+vi.mock("@/lib/ai/random-art", () => ({ discardGeneratedArt: m.discard }));
+vi.mock("@/lib/cards/actions", () => ({ updateCardAction: m.update }));
 vi.mock("@/lib/tools/re-art/server", () => ({
   planReartRun: m.plan,
   saveDeckStyle: m.saveStyle,
-  getOwnedDeck: vi.fn(),
-  readPaintedCards: vi.fn(),
-  writePaintedCard: vi.fn(),
+  getOwnedDeck: m.deck,
+  readPaintedCards: m.painted,
+  writePaintedCard: m.writePainted,
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
-import { startReartAction } from "@/lib/tools/re-art/actions";
+import { restoreReartArtAction, startReartAction } from "@/lib/tools/re-art/actions";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -179,5 +186,55 @@ describe("startReartAction", () => {
     m.gateway.mockReturnValue(false);
     expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(false);
     expect(m.plan).not.toHaveBeenCalled();
+  });
+});
+
+describe("restoreReartArtAction", () => {
+  const CARD = "00000000-0000-4000-8000-0000000000c1";
+  const ART = (n: string) => `https://x.supabase.co/storage/v1/object/public/card-art/u1/${n}`;
+  const row = {
+    cardId: CARD,
+    entryId: null,
+    styleVersion: 2,
+    artUrl: ART("ai-front.jpg"),
+    backArtUrl: ART("ai-back.jpg"),
+    made: false,
+    previousArtUrl: ART("mine.png"),
+    previousArtPosition: { x: 0.5, y: 0.5, zoom: 1 },
+    previousBackArtUrl: null,
+    previousBackArtPosition: null,
+    previousArtistCredit: "Jane Painter",
+    previousBackArtistCredit: null,
+    paintedAt: "",
+  };
+
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "S", visibility: "private" });
+    m.painted.mockResolvedValue(new Map([[CARD, row]]));
+    m.card.mockReturnValue({
+      id: CARD,
+      owner_id: "u1",
+      art_url: ART("ai-front.jpg"),
+      back_face: { title: "Back", card_type: "creature", subtypes: [], art_url: ART("ai-back.jpg"), artist_credit: "AI" },
+    });
+    m.update.mockResolvedValue({ ok: true, cardId: CARD, slug: "c" });
+    m.writePainted.mockResolvedValue(true);
+  });
+
+  it("puts back the art, its fit and its credit; a back that had no art gets none (no null in the back)", async () => {
+    expect(await restoreReartArtAction(DECK, CARD)).toEqual({ ok: true });
+    const payload = m.update.mock.calls[0][1];
+    expect(payload).toMatchObject({ art_url: ART("mine.png"), artist_credit: "Jane Painter" });
+    expect(payload.back_face).toEqual({ title: "Back", card_type: "creature", subtypes: [] });
+    expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-front.jpg"));
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: null, previousArtUrl: null, styleVersion: 2 });
+  });
+
+  it("refuses a card whose art changed since, and a card Re-art made", async () => {
+    m.card.mockReturnValue({ id: CARD, owner_id: "u1", art_url: ART("hand.png"), back_face: null });
+    expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
+    m.painted.mockResolvedValue(new Map([[CARD, { ...row, made: true }]]));
+    expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
+    expect(m.update).not.toHaveBeenCalled();
   });
 });

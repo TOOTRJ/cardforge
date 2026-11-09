@@ -22,6 +22,8 @@ export function BulkProgress({
   skipped,
   finishedAction,
   noun = "made",
+  doing = "Making",
+  pausedNote = "Closing ends this batch; the cards made so far stay saved.",
 }: {
   runner: ReturnType<typeof useBulkRunner>;
   total: number;
@@ -34,6 +36,10 @@ export function BulkProgress({
   finishedAction?: ReactNode;
   /** The past tense the count says ("made", "painted"). */
   noun?: string;
+  /** The present tense ("Making", "Painting"). */
+  doing?: string;
+  /** What a paused batch says about leaving it. */
+  pausedNote?: string;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -50,7 +56,7 @@ export function BulkProgress({
           <span role="status" className="text-foreground">
             {settled || paused
               ? `${doneCount} of ${total} ${noun}${failedCount ? ` · ${failedCount} didn't` : ""}${paused ? " · paused" : ""}`
-              : `Making ${doneCount + failedCount + 1 > total ? total : doneCount + failedCount + 1} of ${total}…`}
+              : `${doing} ${doneCount + failedCount + 1 > total ? total : doneCount + failedCount + 1} of ${total}…`}
           </span>
           {waitSeconds > 0 ? (
             <span className="text-xs text-muted">Waiting {waitSeconds}s for Scryfall&apos;s art limit…</span>
@@ -90,7 +96,7 @@ export function BulkProgress({
             ) : step.status === "failed" ? (
               <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-label="Didn't make it" />
             ) : step.status === "running" ? (
-              <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted" aria-label="Making" />
+              <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted" aria-label={doing} />
             ) : (
               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-border" aria-label="Waiting" />
             )}
@@ -125,7 +131,7 @@ export function BulkProgress({
       ) : settled || paused ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           {paused ? (
-            <p className="mr-auto text-xs text-muted">Closing ends this batch; the cards made so far stay saved.</p>
+            <p className="mr-auto text-xs text-muted">{pausedNote}</p>
           ) : null}
           {paused ? (
             <Button variant="outline" onClick={runner.retryFailed}>

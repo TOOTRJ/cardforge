@@ -30,15 +30,20 @@ import {
   reartStepKey,
   reartStyleSchema,
   sameReartStyle,
+  withBackArt,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
   readDeckStyleAdmin,
+  readMadeForEntryAdmin,
   readPaintedCardAdmin,
+  readPaintedRowsForCardAdmin,
   reartBulkChoices,
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
+import { linkDeckCardAction } from "@/lib/decks/card-actions";
+import { backFaceSchema } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // One step of a Re-art run (`ai_generation_jobs.kind` 'deck_reart', migration
@@ -114,6 +119,7 @@ type OwnCard = {
   color_identity: string[] | null;
   rules_text: string | null;
   flavor_text: string | null;
+  artist_credit: string | null;
   frame_style: unknown;
   back_face: unknown;
   art_url: string | null;
@@ -121,7 +127,7 @@ type OwnCard = {
 };
 
 const OWN_CARD_COLUMNS =
-  "id, owner_id, title, card_type, supertype, subtypes, cost, color_identity, rules_text, flavor_text, frame_style, back_face, art_url, art_position";
+  "id, owner_id, title, card_type, supertype, subtypes, cost, color_identity, rules_text, flavor_text, artist_credit, frame_style, back_face, art_url, art_position";
 
 /** The prompt of a real card's picture: the card's own subject, the deck's
  *  style block. */
@@ -182,11 +188,25 @@ export async function runReartStep(
     .eq("decks.owner_id", userId)
     .maybeSingle();
   if (!entry) return failed(step, "This card is no longer in your deck.");
+  if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
+
+  let cardId = entry.card_id;
+  // A real card a Re-art run already MADE from this entry whose link didn't
+  // land (or that the maker unlinked since): linked again, never made (or
+  // charged) a second time.
+  if (!cardId) {
+    const made = await readMadeForEntryAdmin(userId, plan.deck_id, entry.id);
+    if (made) {
+      const linked = await linkDeckCardAction(entry.id, made, { surface: "deck" });
+      if (!linked.ok) return failed(step, "This card was made earlier but couldn't be linked to its entry — link it from the deck page.");
+      cardId = made;
+    }
+  }
 
   // An entry that is (now) linked to a card: the own-card path — a real
   // card another run already made lands here too, and is found in style.
-  if (entry.card_id) {
-    return paintOwnCard(userId, jobId, step, plan, style, stored.version, entry.card_id, planned.repaint, deps);
+  if (cardId) {
+    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, deps);
   }
   if (planned.kind !== "printing" || !entry.scryfall_id) {
     return failed(step, "This entry has no card to re-art any more.");
@@ -203,9 +223,10 @@ export async function runReartStep(
       aiLabel: "deck_reart_art",
       artPrompt: (payload, face) => payloadPrompt(payload, face, style),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
-      onSaved: async (cardId, art) => {
+      onSaved: async (newCardId, art) => {
         const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
-          cardId,
+          cardId: newCardId,
+          entryId: entry.id,
           styleVersion: stored.version,
           artUrl: art.front,
           backArtUrl: art.back,
@@ -214,6 +235,8 @@ export async function runReartStep(
           previousArtPosition: null,
           previousBackArtUrl: null,
           previousBackArtPosition: null,
+          previousArtistCredit: null,
+          previousBackArtistCredit: null,
         });
         return recorded ? null : "Saved, but the tool may offer to paint it again.";
       },
@@ -222,8 +245,21 @@ export async function runReartStep(
   );
 }
 
+type Previous = Pick<
+  PaintedCard,
+  | "made"
+  | "previousArtUrl"
+  | "previousArtPosition"
+  | "previousBackArtUrl"
+  | "previousBackArtPosition"
+  | "previousArtistCredit"
+  | "previousBackArtistCredit"
+>;
+
 /**
- * The maker's own card gets its new picture: an edit of its art alone.
+ * The maker's own card gets its new picture: an edit of its ART — the
+ * picture, its fit and the artist credit that goes with it (the AI's, as
+ * every AI picture's) — and nothing else.
  */
 async function paintOwnCard(
   userId: string,
@@ -234,9 +270,8 @@ async function paintOwnCard(
   version: number,
   cardId: string,
   repaint: boolean,
-  _deps: BulkStepDeps,
+  deps: BulkStepDeps,
 ): Promise<JobStep> {
-  void _deps;
   const supabase = await createClient();
   const { data } = await supabase.from("cards").select(OWN_CARD_COLUMNS).eq("id", cardId).maybeSingle();
   const card = data as OwnCard | null;
@@ -262,6 +297,11 @@ async function paintOwnCard(
 
   const back = (card.back_face ?? null) as CardBackFace | null;
   const twoFaces = Boolean(back) && rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face });
+  // The back is resent as stored with its art changed: a stored back the
+  // card action would refuse today is found BEFORE anything is paid for.
+  if (twoFaces && !backFaceSchema.safeParse(back).success) {
+    return failed(step, "This card's back face needs a fix in its editor before it can be re-arted.");
+  }
   const credits = REART_CREDITS_PER_FACE * (twoFaces ? 2 : 1);
   const frameStyle = (card.frame_style ?? {}) as ArtFace["style"] & { template?: string };
   const frontFace: ArtFace = {
@@ -272,6 +312,33 @@ async function paintOwnCard(
     cost: card.cost,
     style: frameStyle,
   };
+
+  // What "Put the old art back" goes back to. A card can be in several
+  // decks: when the picture on it now is one Re-art painted (from ANY
+  // deck), the art before Re-art is that row's previous — never the AI
+  // picture, and never lost (an unreferenced original would be swept).
+  // Otherwise the maker's current art is the one to keep.
+  const rows = await readPaintedRowsForCardAdmin(userId, card.id);
+  const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
+  const previous: Previous = source
+    ? {
+        made: source.made,
+        previousArtUrl: source.previousArtUrl,
+        previousArtPosition: source.previousArtPosition,
+        previousBackArtUrl: source.previousBackArtUrl,
+        previousBackArtPosition: source.previousBackArtPosition,
+        previousArtistCredit: source.previousArtistCredit,
+        previousBackArtistCredit: source.previousBackArtistCredit,
+      }
+    : {
+        made: false,
+        previousArtUrl: card.art_url,
+        previousArtPosition: (card.art_position ?? null) as Json | null,
+        previousBackArtUrl: twoFaces ? (back?.art_url ?? null) : null,
+        previousBackArtPosition: twoFaces ? ((back?.art_position ?? null) as Json | null) : null,
+        previousArtistCredit: card.artist_credit ?? null,
+        previousBackArtistCredit: twoFaces ? (back?.artist_credit ?? null) : null,
+      };
 
   return withCreditedStep(userId, jobId, credits, "deck_reart_art", step, async () => {
     const attempt = (step.attempts ?? 0) + 1;
@@ -318,20 +385,24 @@ async function paintOwnCard(
     if (!front.ok) return { ...failed(step, front.error), failure: front.failure, attempts: attempt };
     let backUrl: string | null = null;
     if (twoFaces) {
-      const painted2 = await paint("back");
-      if (!painted2.ok) {
+      const paintedBack = await paint("back");
+      if (!paintedBack.ok) {
         await discard();
-        return { ...failed(step, painted2.error), failure: painted2.failure, attempts: attempt };
+        return { ...failed(step, paintedBack.error), failure: paintedBack.failure, attempts: attempt };
       }
-      backUrl = painted2.url;
+      backUrl = paintedBack.url;
     }
 
-    // The edit: the art and its fit, nothing else (a two-faced card's back
-    // is resent as stored with only its art changed).
+    // The edit: the art, its fit and the AI's credit — nothing else (a
+    // two-faced card's back is resent as stored with only those changed).
+    const aiCredit = await deps.artistCredit();
     const result = await updateCardAction(card.id, {
       art_url: front.url,
       art_position: fitArtToWindow(),
-      ...(backUrl && back ? { back_face: { ...back, art_url: backUrl, art_position: fitArtToWindow() } } : {}),
+      artist_credit: aiCredit ?? null,
+      ...(backUrl && back
+        ? { back_face: withBackArt(back, backUrl, fitArtToWindow() as unknown as Json, aiCredit ?? null) }
+        : {}),
     });
     if (!result.ok) {
       await discard();
@@ -339,39 +410,22 @@ async function paintOwnCard(
       return { ...failed(step, error), failure: "save_failed", attempts: attempt };
     }
 
-    // What to keep for "Put the old art back": the picture the card had
-    // before Re-art first painted it — unless the maker has given it other
-    // art since, which is then the one to go back to.
-    const stillOurs = Boolean(painted?.artUrl && painted.artUrl === card.art_url);
-    const backStillOurs = Boolean(painted?.backArtUrl && painted.backArtUrl === (back?.art_url ?? null));
-    const previous: Pick<PaintedCard, "made" | "previousArtUrl" | "previousArtPosition" | "previousBackArtUrl" | "previousBackArtPosition"> =
-      painted && stillOurs
-        ? painted
-        : {
-            made: false,
-            previousArtUrl: card.art_url,
-            previousArtPosition: (card.art_position ?? null) as Json | null,
-            previousBackArtUrl: twoFaces ? (back?.art_url ?? null) : null,
-            previousBackArtPosition: twoFaces ? ((back?.art_position ?? null) as Json | null) : null,
-          };
     const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
       cardId: card.id,
+      entryId: painted?.entryId ?? null,
       styleVersion: version,
       artUrl: front.url,
       backArtUrl: backUrl,
-      made: previous.made,
-      previousArtUrl: previous.previousArtUrl,
-      previousArtPosition: previous.previousArtPosition,
-      previousBackArtUrl: previous.previousBackArtUrl,
-      previousBackArtPosition: previous.previousBackArtPosition,
+      ...previous,
     });
-    // The picture this one replaced, when Re-art painted it: no card holds
-    // it any more (never the maker's own earlier art, which is kept).
-    if (painted && stillOurs && painted.artUrl && painted.artUrl !== previous.previousArtUrl) {
-      await discardGeneratedArt(userId, painted.artUrl);
+    // The picture(s) this one replaced, when Re-art painted them: no card
+    // holds them any more (never the maker's own earlier art, which is kept).
+    if (source?.artUrl && source.artUrl !== previous.previousArtUrl) {
+      await discardGeneratedArt(userId, source.artUrl);
     }
-    if (painted && backStillOurs && painted.backArtUrl && twoFaces && painted.backArtUrl !== previous.previousBackArtUrl) {
-      await discardGeneratedArt(userId, painted.backArtUrl);
+    const replacedBack = twoFaces ? (back?.art_url ?? null) : null;
+    if (replacedBack && rows.some((row) => row.backArtUrl === replacedBack) && replacedBack !== previous.previousBackArtUrl) {
+      await discardGeneratedArt(userId, replacedBack);
     }
     return {
       ...step,
