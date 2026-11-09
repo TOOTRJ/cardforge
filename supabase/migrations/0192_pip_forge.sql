@@ -29,7 +29,7 @@
 -- column alone) and delete a row.
 --
 -- The AI label `forge_pip` (one credit a pip) joins card_ai_calls' list —
--- rewritten WHOLE from 0190's, the latest that defines it.
+-- rewritten WHOLE from 0191's, the latest that defines it.
 --
 -- No tool_releases row: like every new tool, Pip Forge ships admin-only on
 -- production plus the testers an admin grants at /admin/tools, until an
@@ -149,6 +149,7 @@ alter table public.card_ai_calls
       'build_collection_deck',
       'bulk_customize_art',
       'draft_table_sheet',
+      'deck_reart_art',
       'forge_pip'
     ])
   );

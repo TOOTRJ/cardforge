@@ -57,6 +57,9 @@ export type AiActionLabel =
   // The Rule 0 table sheet (beta tool, migration 0190): its AI draft of the
   // game plan and win conditions.
   | "draft_table_sheet"
+  // Re-art deck (beta tool, migration 0191): one row per picture a run
+  // paints in the deck's style.
+  | "deck_reart_art"
   // Pip Forge (beta tool, migration 0192): one pip and its colour card.
   | "forge_pip";
 

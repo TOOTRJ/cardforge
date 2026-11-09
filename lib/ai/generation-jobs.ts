@@ -131,6 +131,7 @@ import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateTakesBackBody } from "@/lib/cards/dfc";
 import { runBulkCustomizeStep, type BulkCustomizeJobPlan } from "@/lib/tools/bulk-customize/step";
+import { runReartStep, type ReartJobPlan } from "@/lib/tools/re-art/step";
 
 /** A remix step priced for both faces whose double-faced frames aren't
  *  available any more (a tick withdrawn since the plan): refused, refunded. */
@@ -265,7 +266,7 @@ export type JobStep = {
 export type GenerationJobRow = {
   id: string;
   owner_id: string;
-  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill" | "bulk_customize";
+  kind: "deck" | "deck_remix" | "card" | "card_remix" | "card_fill" | "bulk_customize" | "deck_reart";
   /** "done" = every step succeeded; "done_with_errors" = finished with a mix
    *  of successes and failures (retryable); "failed" = nothing succeeded. */
   status: "generating" | "done" | "done_with_errors" | "failed" | "cancelled";
@@ -277,6 +278,7 @@ export type GenerationJobRow = {
     | CardRemixJobPlan
     | CardFillJobPlan
     | BulkCustomizeJobPlan
+    | ReartJobPlan
     | null;
   steps: JobStep[];
   deck_id: string | null;
@@ -555,7 +557,10 @@ async function executeJobStep(
     job.kind === "card_fill" ||
     // A Bulk Customize batch has no deck of its own (each card links to
     // the entry it came from).
-    job.kind === "bulk_customize";
+    job.kind === "bulk_customize" ||
+    // Nor a Re-art run (its deck is in its plan; the job row names none, so
+    // no deck surface takes it for a deck generation).
+    job.kind === "deck_reart";
   if (!job.plan || (!isCardKind && !job.deck_id)) {
     return { ...step, status: "failed", error: "Job has no plan — recreate it." };
   }
@@ -602,6 +607,13 @@ async function executeJobStep(
         gameSystemId: activeGameSystemId,
         artistCredit: aiArtistCredit,
       });
+    case "deck_reart":
+      // The Re-art deck beta tool (migration 0191): one card of the deck a
+      // step, built on the Bulk Customize core.
+      return runReartStep(userId, job.id, job.plan, step, stepIndex, {
+        gameSystemId: activeGameSystemId,
+        artistCredit: aiArtistCredit,
+      });
     default:
       return { ...step, status: "failed", error: "Unknown job kind." };
   }
@@ -626,6 +638,11 @@ async function claimJobStep(
     p_job_id: jobId,
     p_step_key: stepKey ?? null,
   });
+  if (error?.code === "23505") {
+    // Re-opening a finished Re-art run while another run of its deck is
+    // live (0191's one-live-run-per-deck index).
+    return { ok: false, error: "Another run of this deck is painting — wait for it, then try again." };
+  }
   if (error || !data) {
     return { ok: false, error: "Job not found." };
   }

@@ -4,12 +4,8 @@ import { isHubType, TYPE_HUB_MIN_CARDS } from "@/lib/cards/hubs";
 import {
   VISIBILITY_LABELS,
   CARD_TYPE_LABELS,
-  COLOR_IDENTITY_LABELS,
-  RARITY_LABELS,
   isColorIdentity,
   type CardType,
-  type ColorIdentity,
-  type Rarity,
 } from "@/types/card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -27,12 +23,11 @@ import {
 import { CardHeroPreview } from "@/components/cards/card-hero-preview";
 import { getPipOverrides } from "@/lib/pips/queries";
 import type { PipOverrides } from "@/lib/pips/override";
-import { CardTextBlock, type CardTextFace } from "@/components/cards/card-text-block";
+import { CardTextBlock } from "@/components/cards/card-text-block";
+import { cardTextFacesOf, colorWords } from "@/lib/cards/card-text-faces";
 import { ColorPips, pipColorOfIdentity, toPipColor, type PipColor } from "@/components/cards/color-pip";
 import { manaValueOfCost } from "@/lib/cards/mana-value";
 import { cardPageRulesText } from "@/lib/cards/page-rules-text";
-import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
-import { secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { frameAnchorId } from "@/lib/frames/frame-gallery";
 import { CardComments } from "@/components/cards/card-comments";
@@ -92,8 +87,7 @@ import {
 } from "@/lib/decks/queries";
 import { listDeckTileArt } from "@/lib/decks/tile-art";
 import { DECK_GRID_SIZES, DeckGrid, DeckTile } from "@/components/decks/deck-tile";
-import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
-import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
+import { buildTypeLine, describeManaCost, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
 import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
@@ -114,7 +108,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { downloadDiffersFromGallery } from "@/lib/cards/layout-version";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
-import type { CardBackFace, FrameStyle, FaceContent } from "@/types/card";
+import type { CardBackFace, FrameStyle } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
 import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { aiProvenanceOf, aiProvenanceSentence, type AiProvenance } from "@/lib/cards/ai-provenance";
@@ -1432,45 +1426,7 @@ export function collectorLineText(card: {
   return parts.length ? parts.join(" · ") : null;
 }
 
-/** One face's text, as its picture prints it — the front's from the row,
- *  a back's from `back_face` (TODO CP2b). The stats follow the same rules
- *  as the picture: the P/T only where the frame draws it and the type prints
- *  one (lib/cards/pt-drawn.ts, printsPowerToughness: a Treasure token with a
- *  stray P/T, a saga whose type says Creature, a station card with no tier
- *  print none — the stored values are untouched). */
-function faceStats(
-  drawsPt: boolean,
-  face: {
-    card_type: string | null;
-    supertype: string | null;
-    subtypes: string[] | null;
-    power: string | null;
-    toughness: string | null;
-    loyalty: string | null;
-    defense: string | null;
-  },
-): CardTextFace["stats"] {
-  if (
-    drawsPt &&
-    printsPowerToughness({
-      cardType: face.card_type as CardType | null,
-      supertype: face.supertype,
-      subtypes: face.subtypes ?? [],
-      power: face.power,
-      toughness: face.toughness,
-    })
-  ) {
-    return { value: `${face.power ?? "?"}/${face.toughness ?? "?"}`, label: "Power and toughness" };
-  }
-  if (face.loyalty != null) return { value: `Loyalty ${face.loyalty}`, label: null };
-  if (face.defense != null) return { value: `Defense ${face.defense}`, label: null };
-  return null;
-}
-
-/** The colour words of a stored colour list ("Blue, Red"), and its pips. */
-function colorWords(colors: readonly string[]): string {
-  return colors.map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c).join(", ");
-}
+/** The colour pips of a stored colour list. */
 function colorPipsOf(colors: readonly string[]): PipColor[] {
   const pips = colors.flatMap((c) => {
     const pip = isColorIdentity(c) ? pipColorOfIdentity(c) : toPipColor(c);
@@ -1527,25 +1483,9 @@ export function CardDetails({
   pipOverrides?: PipOverrides | null;
 }) {
   const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
-  const faceContent = (card.face_content ?? null) as FaceContent | null;
-  const front: CardTextFace = {
-    name: card.title,
-    cost: card.cost,
-    typeLine: buildTypeLine({
-      supertype: card.supertype,
-      cardType: card.card_type as CardType | null,
-      subtypes: card.subtypes ?? [],
-      printedTypes: card.printed_types,
-    }),
-    // An emblem has no rarity (CR 114): none for its stored "common".
-    rarity: cardTypeHasRarity(card.card_type) && card.rarity ? RARITY_LABELS[card.rarity as Rarity] ?? card.rarity : null,
-    // Its text or its rows, CARDNAME / ~ as the name the title bar prints
-    // (TODO 6.2) — the meta description's and the JSON-LD's one answer.
-    rulesText: cardPageRulesText({ ...card, rules_text: card.rules_text ?? null }),
-    flavorText: card.flavor_text ?? null,
-    stats: faceStats(frontDrawsPowerToughness(frontTemplate, { rulesText: card.rules_text ?? null, faceContent }), card),
-    artist: card.artist_credit?.trim() || null,
-  };
+  // The faces as text — the ONE answer the exports read too
+  // (lib/cards/card-text-faces.ts).
+  const { front, back: backFace, secondPart, partWords } = cardTextFacesOf(card);
 
   // The facts the text block doesn't hold. The card's colour is its frame
   // colour as the creator models it — not MTG's Commander colour identity
@@ -1586,80 +1526,6 @@ export function CardDetails({
     rows.push(["Updated", <time key="updated" dateTime={card.updated_at}>{formatShortDate(card.updated_at)}</time>]);
   }
 
-  // The back face with a body of its own (lib/cards/faces.ts): its text
-  // under the front's — never a legacy back's (the page flips to it, but
-  // the bake and the downloads are the front's). Its colour is its own,
-  // else the front's — the colour its body is drawn in (backPreviewData).
-  const back = rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })
-    ? ((card.back_face as CardBackFace | null) ?? null)
-    : null;
-  const backFace: CardTextFace | null = back
-    ? {
-        name: back.title?.trim() || "Back face",
-        cost: back.cost ?? null,
-        typeLine: buildTypeLine({
-          supertype: back.supertype,
-          cardType: back.card_type ?? null,
-          subtypes: back.subtypes ?? [],
-          printedTypes: back.printed_types,
-        }),
-        rarity: null,
-        // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
-        rulesText: backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null) ?? null,
-        flavorText: back.flavor_text ?? null,
-        // Its body's own P/T slot (a land back body has none).
-        stats: faceStats(secondFaceDrawsPowerToughness(frontTemplate, back.frame_style?.template), {
-          card_type: back.card_type ?? null,
-          supertype: back.supertype ?? null,
-          subtypes: back.subtypes ?? null,
-          power: back.power ?? null,
-          toughness: back.toughness ?? null,
-          loyalty: back.loyalty ?? null,
-          defense: back.defense ?? null,
-        }),
-        artist: back.artist_credit?.trim() || null,
-        colorLine: colorWords(back.color_identity ?? colors) || "Colorless",
-      }
-    : null;
-
-  // A two-part card that is ONE picture — split, aftermath, adventure, flip,
-  // Prepare (templatePaintsSecondFace): the second part the frame draws is a
-  // block of its own in its words ("Right half"), in step with the picture —
-  // its name, cost, type line and rules (with ~ as its own name); never a
-  // flavour or an artist (no second part prints one), its P/T only where the
-  // frame draws one (flip).
-  const second =
-    !back && templatePaintsSecondFace(frontTemplate ?? undefined)
-      ? ((card.back_face as CardBackFace | null) ?? null)
-      : null;
-  const partWords = second ? secondPartWordsOfCard(card.card_type as CardType | null, frontTemplate) : null;
-  const secondPart: CardTextFace | null =
-    second && partWords && (second.title?.trim() || second.cost?.trim() || second.rules_text?.trim())
-      ? {
-          name: second.title?.trim() || partWords.second,
-          cost: second.cost ?? null,
-          typeLine: buildTypeLine({
-            supertype: second.supertype,
-            cardType: second.card_type ?? null,
-            subtypes: second.subtypes ?? [],
-            printedTypes: second.printed_types,
-          }),
-          rarity: null,
-          rulesText: backRulesTextWithSelfName(second, card.frame_style as { selfName?: string } | null) ?? null,
-          flavorText: null,
-          stats: faceStats(getFrameProfile(template).secondFace?.pt != null, {
-            card_type: second.card_type ?? null,
-            supertype: second.supertype ?? null,
-            subtypes: second.subtypes ?? null,
-            power: second.power ?? null,
-            toughness: second.toughness ?? null,
-            loyalty: null,
-            defense: null,
-          }),
-          artist: null,
-        }
-      : null;
-
   return (
     <section aria-labelledby="card-details-heading" className="flex flex-col gap-3">
       <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
@@ -1668,7 +1534,7 @@ export function CardDetails({
       <CardTextBlock
         face={front}
         pipOverrides={pipOverrides}
-        label={back ? "Front face" : secondPart && partWords ? partWords.first : "Card text"}
+        label={backFace ? "Front face" : secondPart && partWords ? partWords.first : "Card text"}
       />
       {backFace ? (
         <CardTextBlock face={backFace} pipOverrides={pipOverrides} label="Back face" testId="card-back-details" />

@@ -28,6 +28,8 @@ import {
   type DashboardCard,
 } from "@/components/creator/dashboard-card-tile";
 import { DashboardBulkBar } from "@/components/creator/dashboard-bulk-bar";
+import { PlayExportButton } from "@/components/tools/play-exports/play-export-button";
+import { MAX_PLAY_SELECTION } from "@/lib/tools/play-exports/model";
 import { PrintSelectionDialog } from "@/components/cards/print-selection-dialog";
 import { AddToDeckDialog } from "@/components/decks/add-to-deck-dialog";
 import { isFramePreviewCard } from "@/components/creator/frame-preview-card-badge";
@@ -151,6 +153,9 @@ type MyCardsBrowserProps = {
   /** card id → how many of the viewer's decks hold it (a card in none is
    *  absent). Null = couldn't be read: the chips claim no number. */
   deckCounts?: Record<string, number> | null;
+  /** The viewer has the play-exports beta tool: the selection gains
+   *  "Play online" (components/tools/play-exports). */
+  playExports?: boolean;
 };
 
 export function MyCardsBrowser({
@@ -163,6 +168,7 @@ export function MyCardsBrowser({
   initialSort,
   canPrint = false,
   deckCounts = null,
+  playExports = false,
 }: MyCardsBrowserProps) {
   const upgrade = useUpgradeModal();
   const router = useRouter();
@@ -575,6 +581,15 @@ export function MyCardsBrowser({
           }
           onPrint={() => (canPrint ? setPrintOpen(true) : upgrade.open("batch_export"))}
           printLocked={!canPrint}
+          playExport={
+            playExports ? (
+              <PlayExportButton
+                source={{ kind: "cards", cardIds: selectedIds.slice(0, MAX_PLAY_SELECTION) }}
+                label={selectedIds.length === 1 ? "1 card" : `${selectedIds.length} cards`}
+                disabledReason={selectedIds.length > MAX_PLAY_SELECTION ? `Pick ${MAX_PLAY_SELECTION} cards or fewer.` : null}
+              />
+            ) : null
+          }
         />
       ) : null}
 

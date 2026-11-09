@@ -122,6 +122,7 @@ export function DeckOwnerTools({
   capacity = null,
   defaultCoverSrc = null,
   openImport = false,
+  children,
 }: {
   deck: Deck;
   userId: string;
@@ -132,6 +133,8 @@ export function DeckOwnerTools({
    *  card is what takes one). */
   capacity?: CardCapacity | null;
   openImport?: boolean;
+  /** Beta tools' doors beside the owner's controls (Re-art deck). */
+  children?: React.ReactNode;
 }) {
   const [details, setDetails] = useState(false);
   const [importRequest, setImportRequest] = useState<{ nonce: number; mode: ImportMode } | null>(null);
@@ -196,6 +199,7 @@ export function DeckOwnerTools({
         <Pencil className="h-4 w-4" aria-hidden /> Edit details
       </Button>
       <DeleteDeckDialog deckId={deck.id} deckTitle={deck.title} triggerVariant="ghost" />
+      {children}
       {/* The greyed AI tools and the one line that says why, kept together
           on their own row (TODO DK1). */}
       <div className="flex basis-full flex-wrap items-center gap-2 2xl:basis-auto">

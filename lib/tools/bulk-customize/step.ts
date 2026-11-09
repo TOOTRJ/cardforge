@@ -14,7 +14,7 @@ import { createCardAction, type CreateCardResult } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { withCreditedStep } from "@/lib/ai/credited-step";
-import { logAiCall } from "@/lib/ai/rate-limit";
+import { logAiCall, type AiActionLabel } from "@/lib/ai/rate-limit";
 import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
 import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { artPromptLadder } from "@/lib/ai/art-prompt-safety";
@@ -31,6 +31,7 @@ import {
   bulkChoicesSchema,
   bulkSourceSchema,
   type BulkChoices,
+  type BulkSource,
 } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard, type BulkCardPayload } from "@/lib/tools/bulk-customize/planner";
 import { importPatchOf, resolveBulkSources, writeCollectionCustomized } from "@/lib/tools/bulk-customize/server";
@@ -155,6 +156,46 @@ export async function runBulkCustomizeStep(
   const entry = plan.entries[stepIndex];
   if (!entry || step.key !== bulkStepKey(stepIndex)) return failed(step, "Missing card plan.");
 
+  return customizeSourceStep(userId, jobId, step, { source: entry.source, choices: plan.choices, aiLabel: "bulk_customize_art" }, deps);
+}
+
+/** What a tool built on Bulk Customize hands its one-card core (Re-art
+ *  deck: lib/tools/re-art/step.ts). The caller has checked its own gate and
+ *  read its own plan; the core re-reads the source, re-plans and re-prices. */
+export type CustomizeSourceOptions = {
+  source: BulkSource;
+  choices: BulkChoices;
+  /** The AI label the pictures are logged and charged under (card_ai_calls
+   *  + the ledger's reason). */
+  aiLabel: AiActionLabel;
+  /** A picture's prompt; default: the batch's one style (aiArtPrompt). */
+  artPrompt?: (payload: BulkCardPayload, face: "front" | "back") => { prompt: string; style: string };
+  /** A planned card the caller refuses before anything is stored or paid
+   *  (Re-art: an emblem). Its sentence, or null. */
+  refusePlanned?: (payload: BulkCardPayload) => string | null;
+  /** After the card is saved and recorded on its source: the caller's own
+   *  record. A note when it didn't land (never a failed step: the card
+   *  exists). */
+  onSaved?: (cardId: string, art: { front: string | null; back: string | null }) => Promise<string | null>;
+};
+
+/**
+ * One real card made the maker's own — the Bulk Customize step's body,
+ * shared with the tools built on it. Re-reads the source from the caller's
+ * own rows, re-fetches the printing on their quota, re-plans the card and
+ * re-prices its art; saves through createCardAction and links through
+ * linkDeckCardAction (recordCustomized).
+ */
+export async function customizeSourceStep(
+  userId: string,
+  jobId: string,
+  step: JobStep,
+  options: CustomizeSourceOptions,
+  deps: BulkStepDeps,
+): Promise<JobStep> {
+  const plan = { choices: options.choices };
+  const entry = { source: options.source };
+
   // The source, from the caller's own rows again.
   const { resolved } = await resolveBulkSources(userId, [entry.source]);
   const source = resolved[0];
@@ -196,6 +237,8 @@ export async function runBulkCustomizeStep(
     removeWatermark: entitlements.removeWatermark,
   });
   if (!planned.ok) return failed(step, planned.message);
+  const refusal = options.refusePlanned?.(planned.payload);
+  if (refusal) return failed(step, refusal);
 
   // The saved-card limit before any picture is stored or paid for (the
   // card action and the database check it again at the insert).
@@ -207,7 +250,9 @@ export async function runBulkCustomizeStep(
   const gameSystemId = await deps.gameSystemId();
   if (!gameSystemId) return failed(step, "No game system configured.");
 
+  let savedArt: { front: string | null; back: string | null } = { front: null, back: null };
   const save = async (art: { front?: string; back?: string; artist?: string; backArtist?: string }) => {
+    savedArt = { front: art.front ?? null, back: art.back ?? null };
     const { visibility, back_face, ...rest } = planned.payload;
     const result = await createCardAction(
       {
@@ -235,6 +280,7 @@ export async function runBulkCustomizeStep(
 
   const done = async (result: Extract<CreateCardResult, { ok: true }>, extra: Partial<JobStep> = {}): Promise<JobStep> => {
     const note = await recordCustomized(userId, source, result.cardId);
+    const own = options.onSaved ? await options.onSaved(result.cardId, savedArt) : null;
     return {
       ...step,
       ...CLEARED,
@@ -244,7 +290,7 @@ export async function runBulkCustomizeStep(
       label: planned.title,
       error: undefined,
       // The record's note (a link that didn't land) beside the save's own.
-      note: [extra.note, note].filter(Boolean).join(" ") || null,
+      note: [extra.note, note, own].filter(Boolean).join(" ") || null,
       ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
     };
   };
@@ -292,7 +338,7 @@ export async function runBulkCustomizeStep(
   }
 
   // ---- New AI art, priced again here and reserved before any call ----
-  return withCreditedStep(userId, jobId, planned.credits, "bulk_customize_art", step, async () => {
+  return withCreditedStep(userId, jobId, planned.credits, options.aiLabel, step, async () => {
     const attempt = (step.attempts ?? 0) + 1;
     const frontFace: ArtFace = {
       template: planned.payload.frame_style.template ?? null,
@@ -306,8 +352,10 @@ export async function runBulkCustomizeStep(
     const painted: string[] = [];
     const models: string[] = [];
     const paint = async (face: "front" | "back"): Promise<{ ok: true; url: string } | { ok: false; error: string; failure: AiFailureKind }> => {
-      const { prompt, style } = aiArtPrompt(planned.payload, plan.choices, face);
-      await logAiCall(userId, "bulk_customize_art");
+      const { prompt, style } = options.artPrompt
+        ? options.artPrompt(planned.payload, face)
+        : aiArtPrompt(planned.payload, plan.choices, face);
+      await logAiCall(userId, options.aiLabel);
       const title = face === "back" ? (planned.payload.back_face?.title ?? planned.payload.title) : planned.payload.title;
       const image = await generateImageWithFallbacks(
         artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),

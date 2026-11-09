@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   Globe2,
@@ -67,6 +67,9 @@ type DashboardBulkBarProps = {
   printLocked?: boolean;
   /** Visibility + delete — false on cards the viewer doesn't own. */
   ownedActions?: boolean;
+  /** The play-exports beta tool's "Play online" (shown only where the
+   *  viewer has the tool). */
+  playExport?: ReactNode;
 };
 
 export function DashboardBulkBar({
@@ -77,6 +80,7 @@ export function DashboardBulkBar({
   onAddToDeck,
   printLocked = false,
   ownedActions = true,
+  playExport = null,
 }: DashboardBulkBarProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -186,6 +190,7 @@ export function DashboardBulkBar({
                 ) : null}
               </Button>
             ) : null}
+            {playExport}
             {ownedActions ? (
               <>
                 <Button

@@ -25,7 +25,7 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "table-sheet";
+export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "play" | "table-sheet" | "reart";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -87,6 +87,20 @@ export const TOOL_CATALOG = [
     built: true,
   },
   {
+    slug: "re-art-deck",
+    name: "Re-art deck",
+    tagline: "Give every card of a deck new art in one shared style.",
+    description:
+      "Pick one of your decks and define its look once: a style and a few words about its world. Try it on a few cards first, then paint the whole deck in that style. Real cards become your own versions with the new art, your own cards get new art on them, and any card can be re-rolled or given its old art back.",
+    highlights: [
+      "One style for the whole deck, kept the same on every card",
+      "Try it on three cards before you paint the deck",
+      "Re-roll any card, or put its old art back",
+    ],
+    icon: "reart",
+    built: true,
+  },
+  {
     slug: "pip-forge",
     name: "Pip Forge",
     tagline: "Describe a symbol and get a crisp custom mana pip.",
@@ -112,6 +126,20 @@ export const TOOL_CATALOG = [
       "Common, uncommon, rare and mythic colours from one symbol",
     ],
     icon: "set-symbol",
+    built: true,
+  },
+  {
+    slug: "play-exports",
+    name: "Play Exports",
+    tagline: "Playtest your cards in Cockatrice, Draftmancer or Tabletop Simulator.",
+    description:
+      "Turn a deck or a pick of your cards into the files Cockatrice, Draftmancer and Tabletop Simulator load: your custom cards with their text and pictures, and real cards by name so each app plays them from its own database.",
+    highlights: [
+      "Cockatrice: a custom set with pictures and a matching deck file",
+      "Draftmancer: a custom card list for drafting your cards",
+      "Tabletop Simulator: a deck you drop into a game",
+    ],
+    icon: "play",
     built: true,
   },
   {
