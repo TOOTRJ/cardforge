@@ -88,6 +88,7 @@ export const URL_SOURCES = [
     note: "a Scryfall printing image (cards.scryfall.io — the only value 0127 accepts); a row from before 0127 could hold anything, so it is read like every other column",
   },
   { table: "custom_pips", columns: ["image_url"], note: "custom-pips `{uid}/{symbol}.png`" },
+  { table: "custom_symbols", columns: ["image_url"], note: "new mana symbols' pictures, custom-pips `{uid}/sym-<uuid>.png` (removed symbols too: their cards still draw them)" },
   { table: "challenges", columns: ["hero_image_url"], note: "admin-set hero image" },
   { table: "ai_generation_jobs", columns: ["request", "plan", "steps"], note: "a step's fill.art_url before a card claims it" },
   { table: "card_idea_batches", columns: ["request", "ideas"], note: "idea payloads" },
@@ -505,10 +506,11 @@ const UUID_TEXT = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
  *  `{word}-{uuid}.ext` (`ai-`, `wm-`, `remix-`, `avatar-`, `banner-`, and the
  *  dev seed's `icon-` / `back-`), `{cardId}.png` / `{cardId}.thumb.webp` and
  *  the back face's `{cardId}.back.png` / `{cardId}.back.thumb.webp` (bakes,
- *  RENDER_NAME_SUFFIXES), and a custom pip's `{symbol}.png` /
- *  `{symbol}.pending.png`. */
+ *  RENDER_NAME_SUFFIXES), a custom pip's `{symbol}.png` /
+ *  `{symbol}.pending.png`, and a new mana symbol's `sym-{uuid}.png`
+ *  (migration 0193). */
 const SERVER_NAME = new RegExp(`^(?:[a-z]+-)?${UUID_TEXT}(?:\\.back)?(?:\\.thumb)?\\.[a-z0-9]{2,5}$`);
-const PIP_NAME = /^[wubrgc](?:\.pending)?\.png$/;
+const PIP_NAME = new RegExp(`^(?:[wubrgc](?:\\.pending)?|sym-${UUID_TEXT})\\.png$`);
 
 /**
  * False for a user-folder object whose name the server doesn't make today —

@@ -151,6 +151,7 @@ describe("names the server makes (the dry run's review list)", () => {
       ["card-renders", `${CARD_LIVE}.back.thumb.webp`],
       ["custom-pips", "W.png"],
       ["custom-pips", "C.pending.png"],
+      ["custom-pips", `sym-${uuid}.png`],
     ]) {
       expect(isServerMintedName(bucket, `${U1}/${name}`), `${bucket}/${name}`).toBe(true);
     }
@@ -163,6 +164,8 @@ describe("names the server makes (the dry run's review list)", () => {
       ["profile-media", "avatar.png"],
       ["custom-pips", "X.png"],
       ["custom-pips", `${CARD_LIVE}.png`],
+      ["custom-pips", "sym-0f1e2d3c-4b5a-4968-8776-655443322110.jpg"],
+      ["custom-pips", "sym-abc.png"],
       ["card-art", "W.png"],
       ["card-renders", `${CARD_LIVE}.front.png`],
       ["card-renders", `${CARD_LIVE}.back.back.png`],
@@ -193,6 +196,7 @@ describe("reference detection — every column, any depth, any URL form", () => 
     ["decks.cover_url (an AI cover lives in card-art)", "card-art", (db, k) => db.decks.rows.push({ id: "d1", cover_url: pub("card-art", k) })],
     ["deck_cards.image_url (a PipGlyph card's bake)", "card-renders", (db, k) => db.deck_cards.rows.push({ id: "dc1", image_url: pub("card-renders", k) })],
     ["custom_pips.image_url", "custom-pips", (db, k) => db.custom_pips.rows.push({ id: "cp1", symbol: "W", image_url: `${pub("custom-pips", k)}?v=9` })],
+    ["custom_symbols.image_url (a new mana symbol)", "custom-pips", (db, k) => db.custom_symbols.rows.push({ id: "cs1", code: "ABC", image_url: `${pub("custom-pips", k)}?v=4` })],
     ["challenges.hero_image_url", "card-art", (db, k) => db.challenges.rows.push({ id: "ch1", hero_image_url: pub("card-art", k) })],
     ["ai_generation_jobs.steps[].fill.art_url", "card-art", (db, k) => db.ai_generation_jobs.rows.push({ id: "j1", steps: [{ status: "done", fill: { art_url: pub("card-art", k) } }] })],
     ["card_idea_batches.ideas (nested)", "card-art", (db, k) => db.card_idea_batches.rows.push({ id: "i1", ideas: { concepts: [{ fields: { art_url: pub("card-art", k) } }] } })],

@@ -2433,6 +2433,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0193: new mana symbols ({*CODE}); deleted_at = removed but
+      // kept for the cards that still name it.
+      custom_symbols: {
+        Row: {
+          base_color: string | null;
+          code: string;
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          image_url: string;
+          mana_value: number;
+          name: string;
+          owner_id: string;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          base_color?: string | null;
+          code: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          image_url: string;
+          mana_value?: number;
+          name: string;
+          owner_id: string;
+          source?: string;
+          updated_at?: string;
+        };
+        Update: {
+          base_color?: string | null;
+          code?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          image_url?: string;
+          mana_value?: number;
+          name?: string;
+          owner_id?: string;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       feedback: {
         Row: {
           admin_note: string | null;
