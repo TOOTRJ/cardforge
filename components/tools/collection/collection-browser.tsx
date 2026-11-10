@@ -6,8 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Check, ChevronLeft, ChevronRight, LibraryBig, ListChecks, Search, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
-import { ColorPip } from "@/components/cards/color-pip";
+import { ChipGroup } from "@/components/ui/chip-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { inputClass } from "@/components/ui/field-classes";
@@ -24,17 +23,9 @@ import { FINISH_LABELS } from "@/lib/tools/collection/parse-import";
 import type { CollectionColour, CollectionPage, CollectionSort, CollectionType } from "@/lib/tools/collection/queries";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
+import { COLOUR_OPTIONS } from "./colour-options";
 import { BulkCustomizeButton } from "@/components/tools/bulk-customize/bulk-customize-button";
 import { printingCustomizeHref, type BulkSource } from "@/lib/tools/bulk-customize/model";
-
-const COLOUR_OPTIONS: ChipOption<CollectionColour>[] = [
-  { value: "W", label: "White", leading: <ColorPip color="W" size={16} decorative /> },
-  { value: "U", label: "Blue", leading: <ColorPip color="U" size={16} decorative /> },
-  { value: "B", label: "Black", leading: <ColorPip color="B" size={16} decorative /> },
-  { value: "R", label: "Red", leading: <ColorPip color="R" size={16} decorative /> },
-  { value: "G", label: "Green", leading: <ColorPip color="G" size={16} decorative /> },
-  { value: "C", label: "Colourless", leading: <ColorPip color="C" size={16} decorative /> },
-];
 
 const TYPE_LABELS: Record<CollectionType, string> = {
   creature: "Creatures",

@@ -10,6 +10,7 @@ import {
   type CollectionCardRow,
 } from "./card-row";
 import { COLLECTION_CARD_CAP, COLLECTION_PAGE_SIZE } from "./limits";
+import type { ScoringCard } from "./commander-scores";
 import { isScryfallPrintingImage } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
@@ -119,8 +120,10 @@ export async function listCollectionPage(query: CollectionQuery): Promise<Collec
   };
 }
 
-/** Every commander the user owns (legal ones first), for the builder. */
-export async function listOwnedCommanders(): Promise<CollectionCard[]> {
+/** Every commander the user owns (legal ones first), for the builder. A
+ *  failed read is an empty list — unless `throwOnError` (the ranking
+ *  route, which must not answer "ranked" over nothing). */
+export async function listOwnedCommanders(options: { throwOnError?: boolean } = {}): Promise<CollectionCard[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("collection_cards")
@@ -130,6 +133,7 @@ export async function listOwnedCommanders(): Promise<CollectionCard[]> {
     .order("name")
     .limit(1000);
   if (error) {
+    if (options.throwOnError) throw new Error(`commanders read failed: ${error.message}`);
     console.error("[collection] commanders read failed:", error.message);
     return [];
   }
@@ -170,6 +174,49 @@ export async function listBuilderPool(commander: CollectionCard): Promise<{ card
     if (rows.length < READ_PAGE) return { cards, truncated: false };
   }
   return { cards, truncated: cards.length >= BUILDER_POOL_MAX };
+}
+
+/** What the commander scores read of every card the user may play — only the
+ *  columns they need (the whole collection, so no picture or set columns),
+ *  in pages. Throws when a page can't be read (the route answers 503 — a
+ *  ranking from half a collection would mislead). */
+export async function listScoringCards(): Promise<ScoringCard[]> {
+  const supabase = await createClient();
+  const cards: ScoringCard[] = [];
+  // Keyset pages (after the last id read), never offsets: a page costs the
+  // same however deep into the collection it is.
+  let after: string | null = null;
+  for (let read = 0; read < COLLECTION_CARD_CAP; read += READ_PAGE) {
+    let request = supabase
+      .from("collection_cards")
+      .select("id, name, type_line, oracle_text, color_identity, commander_legal")
+      .eq("commander_legal", true)
+      .order("id")
+      .limit(READ_PAGE);
+    if (after) request = request.gt("id", after);
+    const { data, error } = await request;
+    if (error) throw new Error(`scoring read failed: ${error.message}`);
+    const rows = (data ?? []) as Array<{
+      id: string;
+      name: string;
+      type_line: string | null;
+      oracle_text: string | null;
+      color_identity: string[] | null;
+      commander_legal: boolean;
+    }>;
+    for (const r of rows) {
+      cards.push({
+        name: r.name,
+        typeLine: r.type_line,
+        oracleText: r.oracle_text,
+        colorIdentity: r.color_identity ?? [],
+        commanderLegal: r.commander_legal,
+      });
+    }
+    if (rows.length < READ_PAGE) return cards;
+    after = rows[rows.length - 1].id;
+  }
+  return cards;
 }
 
 /** Rows by id (the caller's own only — RLS). */
