@@ -36,6 +36,28 @@ describe("deck types", () => {
     expect(commanderBracket(9)).toBeNull();
   });
 
+  // Wizards' rules (2025-02-11 checklists; 2025-10-21 removed the tutor
+  // limits and set the turns; 2026-02-09 changed no bracket rule): the AI is
+  // told the Game Changer caps and never a tutor limit the brackets dropped.
+  it("tells the AI the brackets' current rules", () => {
+    const guidance = (level: number) => commanderBracket(level)!.guidance;
+    expect(guidance(1)).toMatch(/No Game Changers/);
+    expect(guidance(2)).toMatch(/No Game Changers/);
+    expect(guidance(3)).toMatch(/At most three Game Changers \(the commander counts\)/);
+    expect(guidance(4)).toMatch(/any Game Changers/);
+    for (const level of [1, 2, 3]) expect(guidance(level)).toMatch(/no mass land denial/i);
+    expect(guidance(1)).toMatch(/no extra-turn cards/);
+    for (const level of [2, 3]) expect(guidance(level)).toMatch(/extra-turn cards only in low numbers, never chained or looped/);
+    expect(guidance(1)).toMatch(/nine or more turns/);
+    expect(guidance(2)).toMatch(/eight or more turns/);
+    expect(guidance(3)).toMatch(/six or more turns/);
+    for (const b of COMMANDER_BRACKETS) {
+      expect(b.guidance).not.toMatch(/tutors? only|no tutors|narrow (tutors|ones)/i);
+      expect(b.guidance).not.toMatch(/precon/i);
+    }
+    expect(commanderBracket(2)!.blurb).not.toMatch(/precon/i);
+  });
+
   it("surprise-me picks deterministically from the lists", () => {
     const seed = randomDeckSeed(() => 0);
     expect(seed.deckType.key).toBe(DECK_TYPES[0].key);
