@@ -32,6 +32,8 @@ import { SIMILAR_DECKS_CACHE_SECONDS, SIMILAR_DECKS_TAG } from "@/lib/decks/simi
 import { profileMediaSrc } from "@/lib/media/media-urls";
 import { TRENDING_RANGES, type TrendingRange } from "@/lib/cards/trending";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
+import { readOwnerSymbolsOf } from "@/lib/pips/queries";
+import { costNamesCustomSymbol, type OwnerSymbols } from "@/lib/symbols/symbol-token";
 
 // ---------------------------------------------------------------------------
 // Narrowers — keep enum-typed text columns honest (types/deck.ts convention).
@@ -593,6 +595,11 @@ export type DeckItem<C = Card> = {
    *  linked at THEIR card page). Null for the owner's own cards and for an
    *  entry with no readable card. */
   cardOwner: { username: string | null } | null;
+  /** The card OWNER's own mana symbols (new pips PR 4) — set only when the
+   *  card's cost names one (`{*CODE}`): what each counts in the deck's mana
+   *  value and colours, and the pictures its cost draws in the list. Absent
+   *  = the cost names none (or the owner's symbols could not be read). */
+  ownerSymbols?: OwnerSymbols;
 };
 
 /** Every entry of a deck, in list order. Paged past PostgREST's 1000-row
@@ -749,7 +756,9 @@ async function readDeckEntryRows(
  *  (canLinkIntoDeck), each other creator's handle. Both deck reads name the
  *  deck by its id — its link (lib/decks/deck-link.ts): a visitor reads an
  *  UNLISTED deck's rows by it, never in a list (0151). */
-async function readDeckItems<C extends { id: string; owner_id: string; visibility: string }>(
+async function readDeckItems<
+  C extends { id: string; owner_id: string; visibility: string; cost?: string | null; back_face?: unknown },
+>(
   deckId: string,
   readCards: CardReader<C>,
 ): Promise<DeckItem<C>[]> {
@@ -792,8 +801,15 @@ async function readDeckItems<C extends { id: string; owner_id: string; visibilit
       for (const maker of makers ?? []) usernameOf.set(maker.id, maker.username ?? null);
     }
 
+    // The makers' own mana symbols, one read for every owner whose card's
+    // cost names one (PR 4): what they count and how the list draws them.
+    const symbolsOf = await readOwnerSymbolsOf(
+      [...cardById.values()].filter((card) => costNamesCustomSymbol(card)).map((card) => card.owner_id),
+    );
+
     return entries.map((row) => {
       const card = row.card_id ? (cardById.get(row.card_id) ?? null) : null;
+      const ownerSymbols = card && costNamesCustomSymbol(card) ? symbolsOf.get(card.owner_id) : undefined;
       return {
         entry: narrowDeckCard(row),
         card,
@@ -801,6 +817,7 @@ async function readDeckItems<C extends { id: string; owner_id: string; visibilit
           card && card.owner_id !== deckOwnerId
             ? { username: usernameOf.get(card.owner_id) ?? null }
             : null,
+        ...(ownerSymbols ? { ownerSymbols } : {}),
       };
     });
   } catch {

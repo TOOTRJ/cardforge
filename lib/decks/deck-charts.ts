@@ -9,6 +9,7 @@ import {
   type DeckAnalytics,
   type TypeBucket,
 } from "@/lib/decks/analytics";
+import { customSymbolCodeOfInner, symbolMeaningOf, type SymbolMeanings } from "@/lib/symbols/symbol-token";
 import {
   DECK_RARITY_KEYS,
   deckRarityKey,
@@ -61,11 +62,22 @@ const WUBRG: readonly ManaColor[] = ["W", "U", "B", "R", "G"];
  *  each colour it names ({R/G}: one red, one green — either pays it), a
  *  Phyrexian or two-generic hybrid for its colour ({G/P}, {2/W}); {C} is
  *  colourless mana a card asks for by name. Generic, X and snow ask for no
- *  colour. A split card's " // " cost reads both halves. */
-export function costColorSymbols(cost: string | null | undefined): Record<ManaColor, number> {
+ *  colour. A split card's " // " cost reads both halves. An owner's own
+ *  symbol (`{*CODE}`) counts for the base colour its maker declared, given
+ *  the card owner's `meanings` (none for a colourless one, or without them). */
+export function costColorSymbols(
+  cost: string | null | undefined,
+  meanings?: SymbolMeanings | null,
+): Record<ManaColor, number> {
   const out: Record<ManaColor, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   if (!cost) return out;
   for (const match of cost.matchAll(/\{([^}]+)\}/g)) {
+    const code = customSymbolCodeOfInner(match[1]);
+    if (code) {
+      const color = symbolMeaningOf(code, meanings)?.baseColor;
+      if (color) out[color] += 1;
+      continue;
+    }
     const parts = new Set(match[1].toUpperCase().split("/"));
     for (const color of MANA_COLORS) if (parts.has(color)) out[color] += 1;
   }
@@ -217,7 +229,7 @@ export function computeDeckCharts(items: readonly ChartItem[]): DeckCharts {
     const rarity = deckRarityKey(row.rarity);
     rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + quantity);
 
-    const cost = costColorSymbols(row.fields.cost);
+    const cost = costColorSymbols(row.fields.cost, row.item.ownerSymbols?.meanings);
     for (const color of MANA_COLORS) symbols[color] += cost[color] * quantity;
     const card = row.item.card as (TextCard & ViewItem["card"]) | null;
     for (const color of manaProduced({ typeLine: row.fields.typeLine, colors: row.fields.colors, texts: cardTexts(card) })) {

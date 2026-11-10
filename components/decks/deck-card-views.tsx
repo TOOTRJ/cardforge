@@ -374,7 +374,7 @@ function EntryRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean
         </span>
         {row.fields.cost ? (
           <span className={cn("shrink-0", ui.editing && "hidden sm:inline-flex")}>
-            <ManaCostGlyphs cost={row.fields.cost} size="sm" />
+            <ManaCostGlyphs cost={row.fields.cost} size="sm" overrides={row.item.ownerSymbols?.pictures} />
           </span>
         ) : null}
         {pictures.twoFaces && thumb === pictures.proxy ? <TwoFacesMark /> : null}
@@ -565,7 +565,7 @@ function TableRow({ row, showProxies, ui }: { row: ViewRow; showProxies: boolean
           {pictures.twoFaces && showsProxy ? <TwoFacesMark /> : null}
         </span>
       </td>
-      <td className="px-3 py-1.5">{row.fields.cost ? <ManaCostGlyphs cost={row.fields.cost} size="sm" /> : <span className="text-subtle">—</span>}</td>
+      <td className="px-3 py-1.5">{row.fields.cost ? <ManaCostGlyphs cost={row.fields.cost} size="sm" overrides={row.item.ownerSymbols?.pictures} /> : <span className="text-subtle">—</span>}</td>
       <td className="px-3 py-1.5 font-mono text-xs tabular-nums text-muted">{row.fields.manaValue ?? "—"}</td>
       <td className="max-w-[16rem] truncate px-3 py-1.5 text-xs text-muted">{row.fields.typeLine ?? "—"}</td>
       <td className="px-3 py-1.5 text-xs text-muted">{colorText(row)}</td>

@@ -1,4 +1,5 @@
 import { manaValueSlot, TYPE_BUCKET_PLURALS, TYPE_BUCKETS, typeBucketFor, type TypeBucket } from "@/lib/decks/analytics";
+import type { OwnerSymbols } from "@/lib/symbols/symbol-token";
 import {
   effectiveEntryFields,
   effectiveEntryRarity,
@@ -160,7 +161,9 @@ export type ViewEntry = {
 
 export type ViewCard = EffectiveEntryCard & { title: string };
 
-export type ViewItem = { entry: ViewEntry; card: ViewCard | null };
+/** `ownerSymbols`: the card owner's own mana symbols (DeckItem's) — what a
+ *  `{*CODE}` in its cost counts and the picture it draws. */
+export type ViewItem = { entry: ViewEntry; card: ViewCard | null; ownerSymbols?: OwnerSymbols };
 
 export type DeckRow<I extends ViewItem = ViewItem> = {
   item: I;
@@ -191,7 +194,7 @@ export type DeckRow<I extends ViewItem = ViewItem> = {
 export function deckRowOf<I extends ViewItem>(item: I, viewerIsOwner: boolean): DeckRow<I> {
   const { entry, card } = item;
   const status = deckEntryStatus(entry, card);
-  const fields = effectiveEntryFields(entry, card, status);
+  const fields = effectiveEntryFields(entry, card, status, item.ownerSymbols?.meanings);
   const isPrivate = isPrivateForViewer(entry, card, viewerIsOwner);
   return {
     item,

@@ -8,7 +8,8 @@ import {
   isCustomPipSymbol,
   type PipOverrides,
 } from "@/lib/pips/override";
-import { customSymbolKey, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+import { customSymbolKey, type OwnerSymbols, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+import { chunkIds } from "@/lib/supabase/select-all-rows";
 import { isSymbolBaseColor, SYMBOL_CODE_RE, SYMBOL_MANA_VALUE_MAX } from "@/lib/symbols/symbols";
 
 // ---------------------------------------------------------------------------
@@ -110,4 +111,62 @@ export function symbolMeaningsFromRows(
     meanings[row.code] = { manaValue, baseColor: row.base_color };
   }
   return meanings;
+}
+
+/**
+ * The symbols of SEVERAL owners in one read (PR 4) — a deck's cards by many
+ * makers, an export's: what each symbol means and its picture, by owner.
+ * Pass only the owners whose cards name a symbol (costNamesCustomSymbol):
+ * the read is skipped when there are none. An owner with no symbols, or a
+ * failed read (logged), is absent from the map — their `{*CODE}` then counts
+ * 0 and draws the placeholder, as everywhere without a map.
+ */
+export async function readOwnerSymbolsOf(ownerIds: Iterable<string>): Promise<Map<string, OwnerSymbols>> {
+  const out = new Map<string, OwnerSymbols>();
+  const ids = Array.from(new Set(ownerIds)).filter(Boolean);
+  if (ids.length === 0 || !isSupabaseConfigured()) return out;
+  try {
+    const supabase = await createClient();
+    const rows: Array<OwnerSymbolRow & { owner_id: string }> = [];
+    for (const chunk of chunkIds(ids)) {
+      const { data, error } = await supabase
+        .from("custom_symbols")
+        .select("owner_id, code, image_url, mana_value, base_color")
+        .in("owner_id", chunk);
+      if (error || !data) {
+        console.error("[custom-symbols] the owners' symbols could not be read", error?.message);
+        return out;
+      }
+      rows.push(...(data as Array<OwnerSymbolRow & { owner_id: string }>));
+    }
+    return ownerSymbolsFromRows(rows);
+  } catch (error) {
+    console.error("[custom-symbols] the owners' symbols could not be read", error);
+    return out;
+  }
+}
+
+/** readOwnerSymbolsOf's map from its rows: each owner's meanings
+ *  (symbolMeaningsFromRows' rules) and pictures (the owner's own stored
+ *  objects only, as getPipOverrides). */
+export function ownerSymbolsFromRows(
+  rows: readonly (OwnerSymbolRow & { owner_id: string })[],
+): Map<string, OwnerSymbols> {
+  const byOwner = new Map<string, Array<OwnerSymbolRow & { owner_id: string }>>();
+  for (const row of rows) {
+    const list = byOwner.get(row.owner_id) ?? [];
+    list.push(row);
+    byOwner.set(row.owner_id, list);
+  }
+  const out = new Map<string, OwnerSymbols>();
+  for (const [ownerId, list] of byOwner) {
+    const pictures: Record<`*${string}`, string> = {};
+    for (const row of list) {
+      if (SYMBOL_CODE_RE.test(row.code) && isAllowedMediaUrl("pip", row.image_url, ownerId)) {
+        pictures[customSymbolKey(row.code)] = row.image_url;
+      }
+    }
+    out.set(ownerId, { meanings: symbolMeaningsFromRows(list), pictures });
+  }
+  return out;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { OwnSymbolsProvider, type OwnSymbolChoice } from "@/components/cards/own-symbols";
 import { aiFieldClaims, fillWrittenParts, recordAiOrigins, type AiFieldOrigins } from "@/lib/cards/ai-provenance";
 import {
   memo,
@@ -491,6 +492,10 @@ type CardCreatorFormProps = {
    *  their base colours, and a code that isn't one of them is a field error.
    *  Absent: nothing about them is checked here (the card actions are). */
   symbolMeanings?: SymbolMeanings;
+  /** The signed-in user's live symbols the cost picker and the rules
+   *  toolbar OFFER (PR 4: lib/symbols/queries.ts listOwnSymbolChoices —
+   *  only while the `custom-symbols` tool is open to them). */
+  ownSymbols?: readonly OwnSymbolChoice[];
   /** Pre-seeded tag (e.g. a challenge entry tag from /create?tag=…). Merged
    *  into the Tags field — including into a restored draft — so a "Start
    *  designing" CTA always produces an entry that counts. Create mode only. */
@@ -827,6 +832,7 @@ export function CardCreatorForm({
   aiConfigured,
   pipOverrides = {},
   symbolMeanings,
+  ownSymbols,
   initialTag = null,
   initialSetSymbol = null,
   capacity = null,
@@ -6203,6 +6209,7 @@ export function CardCreatorForm({
     // region opens that field's panel beside it (below it on phones). Same
     // form state, panels, dialogs, save rules and AI as the stepper.
     return (
+      <OwnSymbolsProvider symbols={ownSymbols}>
       <FormProvider {...methods}>
         <GuestPicturesProvider value={guestDraftControls.pictures}>
         <GuestGateProvider value={guestGate}>
@@ -6265,11 +6272,13 @@ export function CardCreatorForm({
         </GuestGateProvider>
         </GuestPicturesProvider>
       </FormProvider>
+      </OwnSymbolsProvider>
     );
   }
 
   return (
-    <FormProvider {...methods}>
+    <OwnSymbolsProvider symbols={ownSymbols}>
+      <FormProvider {...methods}>
       <GuestPicturesProvider value={guestDraftControls.pictures}>
       <GuestGateProvider value={guestGate}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
@@ -6414,6 +6423,7 @@ export function CardCreatorForm({
       </GuestGateProvider>
       </GuestPicturesProvider>
     </FormProvider>
+      </OwnSymbolsProvider>
   );
 }
 

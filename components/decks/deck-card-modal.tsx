@@ -106,7 +106,7 @@ export function DeckCardModal({
   // Its PipGlyph card is gone (D3): another creator's card that went
   // private (the owner reads all of their own), or a deleted one.
   const unavailable = deckEntryUnavailable(entry, card, canManage);
-  const fields = effectiveEntryFields(entry, card, status);
+  const fields = effectiveEntryFields(entry, card, status, item.ownerSymbols?.meanings);
   // Another creator's card (D3): their handle, and THEIR card page.
   const maker = item.cardOwner?.username ?? null;
   const editor = useDeckEditor();
@@ -243,7 +243,7 @@ export function DeckCardModal({
           </DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-2">
             {fields.typeLine ?? "Card"}
-            {fields.cost ? <ManaCostGlyphs cost={fields.cost} size="sm" /> : null}
+            {fields.cost ? <ManaCostGlyphs cost={fields.cost} size="sm" overrides={item.ownerSymbols?.pictures} /> : null}
             {maker ? (
               <Link
                 href={`/profile/${maker}`}

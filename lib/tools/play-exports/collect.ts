@@ -1,5 +1,7 @@
 import "server-only";
 
+import { readOwnerSymbolsOf } from "@/lib/pips/queries";
+import { costNamesCustomSymbol, type OwnerSymbols } from "@/lib/symbols/symbol-token";
 import { narrowCard } from "@/lib/cards/narrow";
 import { viaDeckLink } from "@/lib/decks/deck-link";
 import { publicDeckItems } from "@/lib/decks/private-card-name";
@@ -53,10 +55,13 @@ export async function collectDeckExport(deckId: string, viewerId: string): Promi
   const items = publicDeckItems(await listDeckCards(deck.id), isOwner);
   const baseUrl = getSiteBaseUrl();
   const usernames = await usernamesOf(items.flatMap((item) => (item.card ? [item.card.owner_id] : [])));
+  // The deck read already carries each card owner's own symbols (PR 4).
+  const symbols = new Map<string, OwnerSymbols>();
+  for (const item of items) if (item.card && item.ownerSymbols) symbols.set(item.card.owner_id, item.ownerSymbols);
   return buildDeckExport(
     { id: deck.id as string, title: deck.title as string, fileStem: fileStemOf((deck.slug as string) || (deck.title as string)) },
     items.map((item) => ({ entry: item.entry, card: (item.card as PlayCardRow | null) ?? null })),
-    { baseUrl, usernames, cardBackUrl: `${baseUrl}${CARD_BACK_PATH}` },
+    { baseUrl, usernames, symbols, cardBackUrl: `${baseUrl}${CARD_BACK_PATH}` },
   );
 }
 
@@ -78,9 +83,12 @@ export async function collectCardsExport(
   );
   const ordered = ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
   const baseUrl = getSiteBaseUrl();
-  const usernames = await usernamesOf(ordered.map((card) => card.owner_id));
+  const [usernames, symbols] = await Promise.all([
+    usernamesOf(ordered.map((card) => card.owner_id)),
+    readOwnerSymbolsOf(ordered.filter((card) => costNamesCustomSymbol(card)).map((card) => card.owner_id)),
+  ]);
   return {
-    export: buildCardsExport(ordered, { baseUrl, usernames, cardBackUrl: `${baseUrl}${CARD_BACK_PATH}` }),
+    export: buildCardsExport(ordered, { baseUrl, usernames, symbols, cardBackUrl: `${baseUrl}${CARD_BACK_PATH}` }),
     skipped: cardIds.length - ordered.length,
   };
 }
