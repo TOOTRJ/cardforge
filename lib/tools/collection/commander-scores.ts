@@ -49,7 +49,10 @@ import {
 // ---------------------------------------------------------------------------
 
 /** What a score reads of a card (the columns `listScoringCards` selects). */
-export type ScoringCard = Pick<CollectionCard, "name" | "typeLine" | "oracleText" | "colorIdentity" | "commanderLegal">;
+export type ScoringCard = Pick<CollectionCard, "name" | "typeLine" | "oracleText" | "colorIdentity" | "commanderLegal"> & {
+  /** The collection row (the suggestions cite cards by it). */
+  id?: string;
+};
 
 export type ScoredRole = "ramp" | "draw" | "removal" | "wipe";
 

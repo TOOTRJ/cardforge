@@ -49,6 +49,15 @@ import {
 import { COMMANDER_DECK_SIZE } from "@/lib/tools/collection/limits";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
+import { CommanderSuggestions } from "./commander-suggestions";
+import {
+  clearLastSuggestions,
+  readLastSuggestions,
+  writeLastSuggestions,
+  type CommanderSuggestion,
+  type StoredSuggestions,
+  type SuggestResult,
+} from "@/lib/tools/collection/suggestions";
 import { COLOUR_OPTIONS, identityMatchesColours } from "./colour-options";
 
 const n = (value: number) => value.toLocaleString("en-US");
@@ -158,6 +167,10 @@ export function CollectionBuild({
   const [working, setWorking] = useState<DraftSource | null>(null);
   const [scores, setScores] = useState<ScoresState>({ status: "loading" });
   const [kept, setKept] = useState<StoredAiDraft | null>(null);
+  /** "Suggest a commander"'s answer (fresh, or kept in this browser). */
+  const [suggestions, setSuggestions] = useState<StoredSuggestions | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const ids = {
     heading: useId(),
     filter: useId(),
@@ -170,8 +183,10 @@ export function CollectionBuild({
     tribe: useId(),
     bracket: useId(),
     choiceHint: useId(),
+    suggestions: useId(),
+    suggestReason: useId(),
   };
-  useLeaveWarning(working === "ai");
+  useLeaveWarning(working === "ai" || suggesting);
   const hasCommanders = collectionSize > 0 && commanders.length > 0;
 
   // The free scores: one read of the collection, after the page is up.
@@ -196,7 +211,10 @@ export function CollectionBuild({
     if (!hasCommanders) return;
     let live = true;
     queueMicrotask(() => {
-      if (live) setKept(readLastAiDraft(viewerId, { collectionSize, commanderIds: new Set(legal.map((c) => c.id)) }));
+      if (!live) return;
+      const context = { collectionSize, commanderIds: new Set(legal.map((c) => c.id)) };
+      setKept(readLastAiDraft(viewerId, context));
+      setSuggestions(readLastSuggestions(viewerId, context));
     });
     return () => {
       live = false;
@@ -206,6 +224,15 @@ export function CollectionBuild({
   // "Change commander" unfolds the list in its place: the focus goes to the
   // list's heading, not <body>, when the button it was on goes away.
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const suggestionsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const draftButtonRef = useRef<HTMLButtonElement>(null);
+  /** Where the focus goes once the next render is on screen. */
+  const focusNext = useRef<"suggestions" | "draft" | null>(null);
+  useEffect(() => {
+    if (focusNext.current === "suggestions") suggestionsHeadingRef.current?.focus();
+    if (focusNext.current === "draft") draftButtonRef.current?.focus();
+    focusNext.current = null;
+  });
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusListOnOpen = useRef(false);
   useEffect(() => {
@@ -367,6 +394,50 @@ export function CollectionBuild({
     }
   };
 
+  const suggest = async () => {
+    if (suggesting || working) return;
+    setSuggesting(true);
+    setSuggestError(null);
+    try {
+      const response = await fetch("/api/tools/collection-builder/suggest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deckType: choice.deckType, bracket: choice.bracket, colours }),
+      });
+      const body = (await response.json()) as { ok: boolean; result?: SuggestResult; error?: string; credits?: number | null };
+      if (typeof body.credits === "number") setBalance(body.credits);
+      if (!body.ok || !body.result) {
+        setSuggestError(body.error ?? "The suggestions didn't finish. Try again.");
+        return;
+      }
+      const stored: StoredSuggestions = { savedAt: new Date().toISOString(), collectionSize, result: body.result };
+      // Paid for: kept in this browser for a week.
+      writeLastSuggestions(viewerId, stored);
+      setSuggestions(stored);
+      focusNext.current = "suggestions";
+    } catch {
+      setSuggestError("The suggestions didn't answer. If a credit was taken it comes back by itself.");
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const buildFromSuggestion = (suggestion: CommanderSuggestion) => {
+    const target = commanders.find((c) => c.id === suggestion.commanderId);
+    if (!target || working) return;
+    pick(target);
+    setDeckType(suggestion.deckType ?? "");
+    setChoiceNote(null);
+    // To the bar: the next press builds it.
+    focusNext.current = "draft";
+  };
+
+  const dismissSuggestions = () => {
+    clearLastSuggestions(viewerId);
+    setSuggestions(null);
+    listHeadingRef.current?.focus();
+  };
+
   const restoreKept = () => {
     if (!kept) return;
     setCommanderId(kept.commanderId);
@@ -408,6 +479,10 @@ export function CollectionBuild({
       ? `Your collection has too few ${pickedType.label} cards in these colours for the AI to build around — try the free draft or another deck type.`
       : null;
   const aiBlocked = draftBlocked ?? aiOff ?? themeTooThin;
+  const suggestBlocked =
+    legal.length < 3
+      ? `With ${n(legal.length)} commander${legal.length === 1 ? "" : "s"} there's nothing to rank — pick one below.`
+      : aiOff;
   const tribeOptions = support?.tribes ?? [];
   const fitsTypes = commander ? commanderDeckTypes(commander) : [];
   const bracketLevel = bracket === "" ? null : bracket;
@@ -470,6 +545,7 @@ export function CollectionBuild({
           </div>
           <div className="flex flex-wrap gap-2 sm:shrink-0">
             <Button
+              ref={draftButtonRef}
               variant="secondary"
               onClick={draftBlocked ? undefined : draftWithRules}
               aria-disabled={draftBlocked || working ? true : undefined}
@@ -656,6 +732,17 @@ export function CollectionBuild({
               >
                 Your commanders <span className="font-normal text-muted">({n(commanders.length)})</span>
               </h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={suggestBlocked ? undefined : suggest}
+                aria-disabled={suggestBlocked || suggesting || working ? true : undefined}
+                aria-describedby={ids.suggestReason}
+                className={cn((suggestBlocked || suggesting || working) && "opacity-50")}
+              >
+                <Sparkles aria-hidden />
+                {suggesting ? "Suggesting…" : "Suggest a commander · 1 credit"}
+              </Button>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
                 {commanders.length > 8 ? (
                   <div className="flex min-w-0 flex-col gap-1 sm:w-56">
@@ -710,7 +797,33 @@ export function CollectionBuild({
                   : "Your commanders couldn't be ranked right now — they're listed by name."}
               </p>
             ) : null}
+            <p id={ids.suggestReason} className="text-xs text-subtle">
+              {suggestBlocked ??
+                `"Suggest a commander" asks the AI which of your commanders your cards support best${
+                  pickedType || colours.length ? " — for the deck type and colours picked" : ""
+                }.`}
+            </p>
+            <p role="status" className="text-sm text-muted empty:hidden">
+              {suggesting ? "The AI is reading your commanders and cards. This takes up to a minute." : ""}
+            </p>
+            {suggestError ? (
+              <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
+                {suggestError}
+              </p>
+            ) : null}
           </div>
+
+          {suggestions ? (
+            <CommanderSuggestions
+              result={suggestions.result}
+              savedAt={suggestions.savedAt}
+              headingId={ids.suggestions}
+              headingRef={suggestionsHeadingRef}
+              onBuild={buildFromSuggestion}
+              onDismiss={dismissSuggestions}
+            />
+          ) : null}
 
           <fieldset className="min-w-0">
             <legend className="sr-only">Commander</legend>

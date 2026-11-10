@@ -38,6 +38,7 @@ const LABELS: Record<string, string> = {
   draft_table_sheet: "Table sheet AI draft",
   deck_reart_art: "Re-art deck AI art",
   forge_pip: "Pip Forge pip",
+  suggest_collection_commander: "Commander suggestions",
   analyze_deck: "Deck analysis",
   // The image-to-image restyle: "Restyle with AI" in the UI (TODO DK2.3).
   remix_card: "AI restyle",

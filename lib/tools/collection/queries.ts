@@ -206,6 +206,7 @@ export async function listScoringCards(): Promise<ScoringCard[]> {
     }>;
     for (const r of rows) {
       cards.push({
+        id: r.id,
         name: r.name,
         typeLine: r.type_line,
         oracleText: r.oracle_text,

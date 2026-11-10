@@ -92,6 +92,7 @@ function draftFor(card: CollectionCard): CommanderDraft {
 }
 
 let scoresBody: unknown;
+let suggestBody: unknown;
 const fetchMock = vi.fn();
 
 // Node's own (flag-less, broken) localStorage shadows happy-dom's: a plain
@@ -117,6 +118,7 @@ beforeEach(() => {
   scoresBody = { ok: true, scores: Object.fromEntries(COMMANDERS.map((c, i) => [c.id, support(i + 1)])) };
   fetchMock.mockImplementation(async (url: string) => {
     if (url.includes("commander-scores")) return { json: async () => scoresBody };
+    if (url.includes("suggest")) return { json: async () => suggestBody };
     return { json: async () => ({ ok: true, draft: draftFor(COMMANDERS[0]), credits: 4 }) };
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -449,6 +451,86 @@ describe("deck type, creature type and bracket", () => {
       fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
     });
     expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ deckType: null, tribe: null, bracket: 2 }));
+  });
+});
+
+describe("Suggest a commander", () => {
+  const suggestButton = () => screen.getByRole("button", { name: /Suggest a commander|Suggesting/ });
+  const answer = () => ({
+    ok: true,
+    credits: 3,
+    result: {
+      overview: "Your collection leans red.",
+      suggestions: [COMMANDERS[4], COMMANDERS[7], COMMANDERS[9]].map((c, i) => ({
+        commanderId: c.id,
+        name: c.name,
+        imageUrl: null,
+        colorIdentity: ["R"],
+        deckType: i === 0 ? "tokens" : null,
+        pitch: `Deck ${i}.`,
+        why: `Because ${i}.`,
+        gaps: i === 0 ? "thin on removal" : "",
+        keyCards: [{ id: "k", name: "Goblin Matron" }],
+        support: support(10 + i),
+      })),
+    },
+  });
+
+  it("asks once, shows the AI's ranking beside the code's numbers, and keeps it a week", async () => {
+    suggestBody = answer();
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    const call = fetchMock.mock.calls.find(([url]) => String(url).includes("suggest"))!;
+    expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({ deckType: null, bracket: null, colours: [] });
+    const heading = screen.getByRole("heading", { name: "Suggested for your collection" });
+    expect(document.activeElement).toBe(heading);
+    expect(screen.getByText("Your collection leans red.")).toBeTruthy();
+    expect(screen.getByText("Deck 0.")).toBeTruthy();
+    expect(screen.getByText(/10 of your cards are in its colours · 5 fit its plan/)).toBeTruthy();
+    expect(screen.getByText(/Short of: thin on removal/)).toBeTruthy();
+    expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeTruthy();
+  });
+
+  it("Build this picks the commander and its deck type, and hands the focus to the bar", async () => {
+    suggestBody = answer();
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[4].name}$`) }));
+    });
+    expect((radios().find((r) => r.value === COMMANDERS[4].id) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(document.activeElement).toBe(draftButton());
+  });
+
+  it("is offered back after a reload, and Dismiss forgets it", async () => {
+    window.localStorage.setItem(
+      "pipglyph.collection-builder.last-suggestions.v1:viewer-1",
+      JSON.stringify({ savedAt: new Date().toISOString(), collectionSize: 71, result: answer().result }),
+    );
+    renderBuild();
+    await settle();
+    expect(screen.getByRole("heading", { name: "Suggested for your collection" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("heading", { name: "Suggested for your collection" })).toBeNull();
+    expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeNull();
+  });
+
+  it("with fewer than three commanders, the button says why and asks nothing", async () => {
+    renderBuild({ commanders: COMMANDERS.slice(0, 2) });
+    await settle();
+    expect(suggestButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(suggestButton())).toMatch(/With 2 commanders there's nothing to rank/);
+    fireEvent.click(suggestButton());
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("suggest"))).toBe(false);
   });
 });
 
