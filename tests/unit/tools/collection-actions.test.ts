@@ -20,6 +20,7 @@ const m = vi.hoisted(() => ({
   event: vi.fn(),
   scryfallRate: vi.fn(),
   spend: vi.fn(),
+  bracketCards: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -37,6 +38,7 @@ vi.mock("@/lib/tools/collection/queries", () => ({
   listCollectionCardsById: m.rowsById,
 }));
 vi.mock("@/lib/ai/provider", () => ({ isDesignAiConfigured: () => true, designModel: vi.fn() }));
+vi.mock("@/lib/tools/collection/bracket-cards", () => ({ getBracketCards: m.bracketCards }));
 vi.mock("@/lib/ai/rate-limit", () => ({
   checkAiRateLimit: vi.fn(async () => ({ ok: true })),
   getFreshCreditBalance: vi.fn(async () => 5),
@@ -126,6 +128,35 @@ describe("the AI route refuses before the charge", () => {
     expect(m.spend).not.toHaveBeenCalled();
   });
 
+  it("a deck type the collection can't begin to fill (below half its floor)", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    const commander = row({ name: "Krenko", typeLine: "Legendary Creature — Goblin", canBeCommander: true });
+    m.oneRow.mockResolvedValue(commander);
+    const cards = Array.from({ length: 60 }, (_, i) => row({ name: `Filler ${i}` }));
+    cards.push(...Array.from({ length: 9 }, (_, i) => row({ name: `Enchantment ${i}`, typeLine: "Enchantment" })));
+    m.pool.mockResolvedValue({ cards, truncated: false });
+    const response = await POST(
+      new Request("http://x/api", { method: "POST", body: JSON.stringify({ commanderId: commander.id, deckType: "enchantress" }) }),
+    );
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.code).toBe("THEME_TOO_THIN");
+    expect(body.error).toMatch(/9 Enchantress cards/);
+    expect(m.spend).not.toHaveBeenCalled();
+    expect(m.bracketCards).not.toHaveBeenCalled();
+  });
+
+  it("Stax below Bracket 3, before reading anything", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    const response = await POST(
+      new Request("http://x/api", { method: "POST", body: JSON.stringify({ commanderId: UUID, deckType: "stax", bracket: 2 }) }),
+    );
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/Bracket 3 and up/);
+    expect(m.oneRow).not.toHaveBeenCalled();
+    expect(m.spend).not.toHaveBeenCalled();
+  });
+
   it("a card that can't lead", async () => {
     m.access.mockResolvedValue(ACCESS);
     m.oneRow.mockResolvedValue(row({ name: "Grunt" }));
@@ -142,8 +173,13 @@ describe("saving a draft", () => {
     m.access.mockResolvedValue(ACCESS);
   });
 
-  const save = (cardIds: string[], basics: Array<{ name: string; count: number }> = [], retry = false) =>
-    actions.saveCollectionDeckAction({ commanderId: commander.id, cardIds, basics, title: "Goblins", visibility: "public", retry });
+  const save = (
+    cardIds: string[],
+    basics: Array<{ name: string; count: number }> = [],
+    retry = false,
+    choice: Record<string, unknown> = {},
+  ) =>
+    actions.saveCollectionDeckAction({ commanderId: commander.id, cardIds, basics, title: "Goblins", visibility: "public", retry, ...choice });
 
   /** The decks table as the action reads it: the new deck's card_count, and
    *  the delete that removes an empty one. */
@@ -166,7 +202,7 @@ describe("saving a draft", () => {
     const result = await save([goblin.id], [{ name: "Mountain", count: 30 }]);
     expect(result).toEqual({ ok: true, slug: "goblins", title: "Goblins", placeholders: 0 });
     expect(m.createDeck).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Goblins", format: "commander", visibility: "public" }),
+      expect.objectContaining({ title: "Goblins", format: "commander", visibility: "public", deck_type: null, bracket: null }),
       { reuseRecentTwin: false },
     );
     expect(del).not.toHaveBeenCalled();
@@ -275,3 +311,43 @@ describe("finishing a replace import", () => {
     expect(or).toHaveBeenCalledWith(`import_batch.is.null,import_batch.neq.${UUID}`);
   });
 });
+
+describe("the deck type and bracket a draft was built with", () => {
+  const commander = row({ name: "Krenko, Mob Boss", typeLine: "Legendary Creature — Goblin Warrior", canBeCommander: true });
+
+  it("are saved in the deck's own columns (the creature type's tribe key when no deck type)", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    const goblin = row({ name: "Goblin Guide" });
+    m.rowsById.mockResolvedValue([commander, goblin]);
+    m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
+    m.commit.mockResolvedValue({ ok: true, added: 2, merged: 0, placeholders: 0 });
+    const maybeSingle = vi.fn(async () => ({ data: { card_count: 2 }, error: null }));
+    m.createClient.mockResolvedValue({ from: vi.fn(() => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle }) }) }) })) });
+    await actions.saveCollectionDeckAction({
+      commanderId: commander.id,
+      cardIds: [goblin.id],
+      basics: [],
+      title: "Goblins",
+      visibility: "public",
+      tribe: "Goblin",
+      bracket: 2,
+    });
+    expect(m.createDeck).toHaveBeenCalledWith(expect.objectContaining({ deck_type: "goblins", bracket: 2 }), expect.anything());
+  });
+
+  it("the free draft reads the bracket's lists only when a bracket is picked", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    m.oneRow.mockResolvedValue(commander);
+    m.pool.mockResolvedValue({ cards: [commander, row({ name: "Goblin Guide" })], truncated: false });
+    m.bracketCards.mockResolvedValue({ gameChangers: new Set(), massLandDenial: new Set(), extraTurns: new Set() });
+    const plain = await actions.draftCollectionDeckAction({ commanderId: commander.id });
+    expect(plain.ok).toBe(true);
+    expect(m.bracketCards).not.toHaveBeenCalled();
+    const bracketed = await actions.draftCollectionDeckAction({ commanderId: commander.id, deckType: "tokens", bracket: 2 });
+    expect(m.bracketCards).toHaveBeenCalledTimes(1);
+    expect(bracketed.ok && bracketed.draft.bracket).toBe(2);
+    expect(bracketed.ok && bracketed.draft.gameChangers).toBe(0);
+    expect(bracketed.ok && bracketed.draft.focus?.[0].label).toBe("Tokens");
+  });
+});
+

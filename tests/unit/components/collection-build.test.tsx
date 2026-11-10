@@ -55,7 +55,16 @@ function commander(i: number, over: Partial<CollectionCard> = {}): CollectionCar
 const COMMANDERS = Array.from({ length: 20 }, (_, i) => commander(i + 1));
 
 function support(score: number): CommanderSupport {
-  return { inColours: score, fit: Math.round(score / 2), roles: { ramp: 1, draw: 1, removal: 1, wipe: 0 }, lands: 2, score };
+  return {
+    inColours: score,
+    fit: Math.round(score / 2),
+    roles: { ramp: 1, draw: 1, removal: 1, wipe: 0 },
+    lands: 2,
+    score,
+    // The least supported commanders hold the most token cards.
+    deckTypes: { tokens: 21 - score },
+    tribes: score === 20 ? [{ tribe: "goblin", count: 14 }] : [],
+  };
 }
 
 function draftFor(card: CollectionCard): CommanderDraft {
@@ -83,6 +92,7 @@ function draftFor(card: CollectionCard): CommanderDraft {
 }
 
 let scoresBody: unknown;
+let suggestBody: unknown;
 const fetchMock = vi.fn();
 
 // Node's own (flag-less, broken) localStorage shadows happy-dom's: a plain
@@ -108,6 +118,7 @@ beforeEach(() => {
   scoresBody = { ok: true, scores: Object.fromEntries(COMMANDERS.map((c, i) => [c.id, support(i + 1)])) };
   fetchMock.mockImplementation(async (url: string) => {
     if (url.includes("commander-scores")) return { json: async () => scoresBody };
+    if (url.includes("suggest")) return { json: async () => suggestBody };
     return { json: async () => ({ ok: true, draft: draftFor(COMMANDERS[0]), credits: 4 }) };
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -314,7 +325,7 @@ describe("the AI draft this browser keeps", () => {
     window.localStorage.setItem(lastAiDraftKey("viewer-1"), JSON.stringify(value));
     renderBuild();
     await settle();
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Dismiss\s*the kept AI build$/ }));
     expect(window.localStorage.getItem(lastAiDraftKey("viewer-1"))).toBeNull();
     expect(screen.queryByText(/You have an unsaved AI build for/)).toBeNull();
     // The button went with the notice: the focus goes to the heading.
@@ -356,6 +367,59 @@ describe("the AI draft this browser keeps", () => {
     expect(screen.getByText(/AI's pick/)).toBeTruthy();
   });
 
+  it("restores the pickers from a kept draft's choice, cleaned of what no longer validates", async () => {
+    window.localStorage.setItem(
+      lastAiDraftKey("viewer-1"),
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        commanderId: COMMANDERS[19].id,
+        collectionSize: 71,
+        truncated: false,
+        draft: draftFor(COMMANDERS[19]),
+        choice: { deckType: "storm", tribe: "goblin", bracket: 9 },
+      }),
+    );
+    m.save.mockResolvedValue({ ok: true, slug: "d", title: "T", placeholders: 0 });
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Show it" }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Bracket") as HTMLSelectElement).value).toBe("");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
+    });
+    // A type renamed since or a bracket out of range is never sent; the
+    // creature type the draft was built with is.
+    expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ deckType: null, tribe: "goblin", bracket: null }));
+  });
+
+  it("keeps a kept draft's creature type for the save even while the scores are still loading", async () => {
+    scoresBody = { ok: false };
+    window.localStorage.setItem(
+      lastAiDraftKey("viewer-1"),
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        commanderId: COMMANDERS[3].id,
+        collectionSize: 71,
+        truncated: false,
+        draft: draftFor(COMMANDERS[3]),
+        choice: { tribe: "goblin" },
+      }),
+    );
+    m.save.mockResolvedValue({ ok: true, slug: "d", title: "T", placeholders: 0 });
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Show it" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
+    });
+    expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ tribe: "goblin" }));
+  });
+
   it("is not offered for a collection that changed", async () => {
     window.localStorage.setItem(
       lastAiDraftKey("viewer-1"),
@@ -372,3 +436,200 @@ describe("the AI draft this browser keeps", () => {
     expect(screen.queryByText(/You have an unsaved AI build for/)).toBeNull();
   });
 });
+
+describe("deck type, creature type and bracket", () => {
+  const select = (label: string) => screen.getByLabelText(label) as HTMLSelectElement;
+
+  it("a deck type ranks the commanders best for it, and its counts show in the picker", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    // Commander 20 is the best supported overall …
+    expect(radios()[0].value).toBe(COMMANDERS[19].id);
+    const tokens = [...select("Deck type").options].find((o) => o.value === "tokens") as HTMLOptionElement;
+    expect(tokens.textContent).toBe("Tokens — 1 card (wants 20)");
+    fireEvent.change(select("Deck type"), { target: { value: "tokens" } });
+    // … but Commander 01 holds the most token cards.
+    expect(radios()[0].value).toBe(COMMANDERS[0].id);
+    expect(select("Sort").selectedOptions[0].textContent).toBe("Best for Tokens");
+  });
+
+  it("the AI build says so when the collection can't begin to fill the type", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    fireEvent.change(select("Deck type"), { target: { value: "tokens" } });
+    expect(aiButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(aiButton())).toMatch(/too few Tokens cards/);
+    // The free draft still goes.
+    expect(draftButton().getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("Stax and Combo can't be picked below Bracket 3, and a lower bracket sets the type back", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    fireEvent.change(select("Deck type"), { target: { value: "stax" } });
+    fireEvent.change(select("Bracket"), { target: { value: "2" } });
+    expect(select("Deck type").value).toBe("");
+    expect(screen.getByText(/Stax is a deck type for Bracket 3 and up/)).toBeTruthy();
+    const stax = [...select("Deck type").options].find((o) => o.value === "stax") as HTMLOptionElement;
+    expect(stax.disabled).toBe(true);
+    expect(stax.textContent).toMatch(/Bracket 3\+$/);
+  });
+
+  it("a commander's creature types are offered, and the draft asks for the choice", async () => {
+    m.draft.mockResolvedValue({ ok: true, draft: draftFor(COMMANDERS[19]), truncated: false });
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    const tribe = select("Creature type");
+    expect([...tribe.options].map((o) => o.textContent)).toEqual(["None", "Goblin — 14 creatures (aim for 20+)"]);
+    fireEvent.change(tribe, { target: { value: "goblin" } });
+    fireEvent.change(select("Bracket"), { target: { value: "3" } });
+    await act(async () => {
+      fireEvent.click(draftButton());
+    });
+    expect(m.draft).toHaveBeenCalledWith({ commanderId: COMMANDERS[19].id, deckType: null, tribe: "goblin", bracket: 3 });
+  });
+
+  it("saves the deck with the choice it was built with", async () => {
+    m.draft.mockResolvedValue({ ok: true, draft: draftFor(COMMANDERS[19]), truncated: false });
+    m.save.mockResolvedValue({ ok: true, slug: "d", title: "T", placeholders: 0 });
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    fireEvent.change(select("Bracket"), { target: { value: "2" } });
+    await act(async () => {
+      fireEvent.click(draftButton());
+    });
+    // Moving the picker after the draft doesn't relabel it.
+    fireEvent.change(select("Bracket"), { target: { value: "4" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
+    });
+    expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ deckType: null, tribe: null, bracket: 2 }));
+  });
+});
+
+describe("Suggest a commander", () => {
+  const suggestButton = () => screen.getByRole("button", { name: /Suggest a commander|Suggesting/ });
+  const answer = () => ({
+    ok: true,
+    credits: 3,
+    result: {
+      overview: "Your collection leans red.",
+      suggestions: [COMMANDERS[4], COMMANDERS[7], COMMANDERS[9]].map((c, i) => ({
+        commanderId: c.id,
+        name: c.name,
+        imageUrl: null,
+        colorIdentity: ["R"],
+        deckType: i === 0 ? "tokens" : null,
+        pitch: `Deck ${i}.`,
+        why: `Because ${i}.`,
+        gaps: i === 0 ? "thin on removal" : "",
+        keyCards: [{ id: "k", name: "Goblin Matron" }],
+        support: support(10 + i),
+      })),
+    },
+  });
+
+  it("asks once, shows the AI's ranking beside the code's numbers, and keeps it a week", async () => {
+    suggestBody = answer();
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    const call = fetchMock.mock.calls.find(([url]) => String(url).includes("suggest"))!;
+    expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({ deckType: null, bracket: null, colours: [] });
+    const heading = screen.getByRole("heading", { name: "Suggested for your collection" });
+    expect(document.activeElement).toBe(heading);
+    expect(screen.getByText("Your collection leans red.")).toBeTruthy();
+    expect(screen.getByText("Deck 0.")).toBeTruthy();
+    expect(screen.getByText(/10 of your cards are in its colours · 5 fit its plan/)).toBeTruthy();
+    expect(screen.getByText(/Short of: thin on removal/)).toBeTruthy();
+    expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeTruthy();
+  });
+
+  it("Build this picks the commander and its deck type, and hands the focus to the bar", async () => {
+    suggestBody = answer();
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[4].name}$`) }));
+    });
+    expect((radios().find((r) => r.value === COMMANDERS[4].id) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(document.activeElement).toBe(draftButton());
+  });
+
+  it("is offered back after a reload, and Dismiss forgets it", async () => {
+    window.localStorage.setItem(
+      "pipglyph.collection-builder.last-suggestions.v1:viewer-1",
+      JSON.stringify({ savedAt: new Date().toISOString(), collectionSize: 71, result: answer().result }),
+    );
+    renderBuild();
+    await settle();
+    expect(screen.getByRole("heading", { name: "Suggested for your collection" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Dismiss\s*the suggestions$/ }));
+    expect(screen.queryByRole("heading", { name: "Suggested for your collection" })).toBeNull();
+    expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeNull();
+  });
+
+  it("Build this keeps a deck type the bracket doesn't allow out, and keeps the player's own when none is suggested", async () => {
+    const body = answer();
+    body.result.suggestions[0].deckType = "stax";
+    body.result.suggestions[1].deckType = null;
+    suggestBody = body;
+    renderBuild();
+    await settle();
+    fireEvent.change(screen.getByLabelText("Bracket"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Deck type"), { target: { value: "tokens" } });
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[4].name}$`) }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(screen.getByText(/The AI suggested Stax, a deck type for Bracket 3 and up/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[7].name}$`) }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(document.activeElement).toBe(draftButton());
+  });
+
+  it("a draft waits while a suggestion is being made", async () => {
+    let finish: (value: unknown) => void = () => {};
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("commander-scores")) return { json: async () => scoresBody };
+      if (url.includes("suggest")) return new Promise((resolve) => (finish = resolve));
+      return { json: async () => ({ ok: false }) };
+    });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    expect(draftButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(draftButton())).toContain("Wait for the suggestions to finish.");
+    fireEvent.click(draftButton());
+    expect(m.draft).not.toHaveBeenCalled();
+    await act(async () => {
+      finish({ json: async () => answer() });
+    });
+  });
+
+  it("with fewer than three commanders, the button says why and asks nothing", async () => {
+    renderBuild({ commanders: COMMANDERS.slice(0, 2) });
+    await settle();
+    expect(suggestButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(suggestButton())).toMatch(/With 2 commanders there's nothing to rank/);
+    fireEvent.click(suggestButton());
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("suggest"))).toBe(false);
+  });
+});
+

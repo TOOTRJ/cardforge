@@ -25,6 +25,21 @@ import {
 } from "@/lib/tools/collection/builder";
 import { describeSupport, type CommanderSupport } from "@/lib/tools/collection/commander-scores";
 import {
+  COLLECTION_DECK_TYPES,
+  DECK_TYPE_GROUP_LABELS,
+  TYPAL_FLOOR,
+  collectionDeckType,
+  commanderDeckTypes,
+  deckTypeFitsBracket,
+  refusalFloor,
+  tribeLabel,
+  type BuildChoice,
+  type CollectionDeckType,
+  type CollectionDeckTypeId,
+  type DeckTypeGroup,
+} from "@/lib/tools/collection/archetypes";
+import { COMMANDER_BRACKETS, commanderBracket } from "@/lib/decks/deck-types";
+import {
   LAST_AI_DRAFT_DAYS,
   clearLastAiDraft,
   readLastAiDraft,
@@ -34,6 +49,15 @@ import {
 import { COMMANDER_DECK_SIZE } from "@/lib/tools/collection/limits";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
+import { CommanderSuggestions } from "./commander-suggestions";
+import {
+  clearLastSuggestions,
+  readLastSuggestions,
+  writeLastSuggestions,
+  type CommanderSuggestion,
+  type StoredSuggestions,
+  type SuggestResult,
+} from "@/lib/tools/collection/suggestions";
 import { COLOUR_OPTIONS, identityMatchesColours } from "./colour-options";
 
 const n = (value: number) => value.toLocaleString("en-US");
@@ -47,6 +71,11 @@ type DraftSource = "rules" | "ai";
  *  (lib/tools/collection/commander-scores.ts); until they arrive, or when
  *  they can't be read, the list keeps its name order. */
 export type CommanderSort = "best" | "colours" | "name";
+
+/** "Best supported by your cards", or — with a deck type picked — best for
+ *  that type. */
+const sortLabel = (key: CommanderSort, type: CollectionDeckType | null) =>
+  key === "best" && type ? `Best for ${type.label}` : SORT_LABELS[key];
 
 const SORT_LABELS: Record<CommanderSort, string> = {
   best: "Best supported by your cards",
@@ -119,6 +148,14 @@ export function CollectionBuild({
   const [filter, setFilter] = useState("");
   const [colours, setColours] = useState<CollectionColour[]>([]);
   const [sort, setSort] = useState<CommanderSort>("best");
+  // What the deck is built around (all optional): sent with a draft or an
+  // AI build, saved on the deck (decks.deck_type / bracket).
+  const [deckType, setDeckType] = useState<CollectionDeckTypeId | "">("");
+  const [tribe, setTribe] = useState("");
+  const [bracket, setBracket] = useState<number | "">("");
+  const [choiceNote, setChoiceNote] = useState<string | null>(null);
+  /** The choice the draft on screen was made with (the pickers may move on). */
+  const [draftChoice, setDraftChoice] = useState<BuildChoice>({});
   const [expanded, setExpanded] = useState(false);
   /** With a draft on screen the list folds away behind "Change commander". */
   const [listOpen, setListOpen] = useState(true);
@@ -130,6 +167,10 @@ export function CollectionBuild({
   const [working, setWorking] = useState<DraftSource | null>(null);
   const [scores, setScores] = useState<ScoresState>({ status: "loading" });
   const [kept, setKept] = useState<StoredAiDraft | null>(null);
+  /** "Suggest a commander"'s answer (fresh, or kept in this browser). */
+  const [suggestions, setSuggestions] = useState<StoredSuggestions | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const ids = {
     heading: useId(),
     filter: useId(),
@@ -138,8 +179,14 @@ export function CollectionBuild({
     listHeading: useId(),
     grid: useId(),
     reason: useId(),
+    deckType: useId(),
+    tribe: useId(),
+    bracket: useId(),
+    choiceHint: useId(),
+    suggestions: useId(),
+    suggestReason: useId(),
   };
-  useLeaveWarning(working === "ai");
+  useLeaveWarning(working === "ai" || suggesting);
   const hasCommanders = collectionSize > 0 && commanders.length > 0;
 
   // The free scores: one read of the collection, after the page is up.
@@ -164,7 +211,10 @@ export function CollectionBuild({
     if (!hasCommanders) return;
     let live = true;
     queueMicrotask(() => {
-      if (live) setKept(readLastAiDraft(viewerId, { collectionSize, commanderIds: new Set(legal.map((c) => c.id)) }));
+      if (!live) return;
+      const context = { collectionSize, commanderIds: new Set(legal.map((c) => c.id)) };
+      setKept(readLastAiDraft(viewerId, context));
+      setSuggestions(readLastSuggestions(viewerId, context));
     });
     return () => {
       live = false;
@@ -174,6 +224,18 @@ export function CollectionBuild({
   // "Change commander" unfolds the list in its place: the focus goes to the
   // list's heading, not <body>, when the button it was on goes away.
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const suggestionsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const draftButtonRef = useRef<HTMLButtonElement>(null);
+  /** A focus hand-off: state (with a counter), so asking again always
+   *  renders and lands — never a request left waiting for some later,
+   *  unrelated render to move the focus. */
+  const [focusRequest, setFocusRequest] = useState<{ to: "suggestions" | "draft"; n: number } | null>(null);
+  useEffect(() => {
+    if (!focusRequest) return;
+    if (focusRequest.to === "suggestions") suggestionsHeadingRef.current?.focus();
+    if (focusRequest.to === "draft") draftButtonRef.current?.focus();
+  }, [focusRequest]);
+  const requestFocus = (to: "suggestions" | "draft") => setFocusRequest((prev) => ({ to, n: (prev?.n ?? 0) + 1 }));
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusListOnOpen = useRef(false);
   useEffect(() => {
@@ -194,15 +256,18 @@ export function CollectionBuild({
       if (ready && sort !== "name") {
         const sa = support(a);
         const sb = support(b);
+        // With a deck type picked, "best" is best FOR it (theme first):
+        // the most cards of the type in its colours, then the score.
+        const onType = (x: CommanderSupport | undefined) => (deckType && x ? (x.deckTypes[deckType] ?? 0) : 0);
         const diff =
           sort === "best"
-            ? (sb?.score ?? -1) - (sa?.score ?? -1) || (sb?.inColours ?? -1) - (sa?.inColours ?? -1)
+            ? onType(sb) - onType(sa) || (sb?.score ?? -1) - (sa?.score ?? -1) || (sb?.inColours ?? -1) - (sa?.inColours ?? -1)
             : (sb?.inColours ?? -1) - (sa?.inColours ?? -1);
         if (diff !== 0) return diff;
       }
       return byName(a, b);
     });
-  }, [commanders, scores, sort]);
+  }, [commanders, scores, sort, deckType]);
 
   if (!hasCommanders) {
     return (
@@ -244,6 +309,24 @@ export function CollectionBuild({
     setCommanderId(card.id);
     setDraft(null);
     setError(null);
+    if (tribe && !(ready?.[card.id]?.tribes ?? []).some((t) => t.tribe === tribe)) setTribe("");
+  };
+
+  const choice: BuildChoice = {
+    deckType: deckType || null,
+    tribe: tribe || null,
+    bracket: bracket === "" ? null : bracket,
+  };
+
+  const pickBracket = (value: number | "") => {
+    setBracket(value);
+    const type = collectionDeckType(deckType);
+    if (type && value !== "" && !deckTypeFitsBracket(type, value)) {
+      setDeckType("");
+      setChoiceNote(`${type.label} is a deck type for Bracket ${type.minBracket} and up, so the deck type is back to Any.`);
+    } else {
+      setChoiceNote(null);
+    }
   };
 
   const showDraft = (next: CommanderDraft, from: DraftSource, wasTruncated: boolean) => {
@@ -254,15 +337,16 @@ export function CollectionBuild({
   };
 
   const draftWithRules = async () => {
-    if (!commanderId || working) return;
+    if (!commanderId || working || suggesting) return;
     setWorking("rules");
     setError(null);
     try {
-      const result = await draftCollectionDeckAction({ commanderId });
+      const result = await draftCollectionDeckAction({ commanderId, ...choice });
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setDraftChoice(choice);
       showDraft(result.draft, "rules", result.truncated);
     } catch {
       setError("The draft didn't finish. Try again.");
@@ -272,14 +356,14 @@ export function CollectionBuild({
   };
 
   const draftWithAi = async () => {
-    if (!commanderId || working) return;
+    if (!commanderId || working || suggesting) return;
     setWorking("ai");
     setError(null);
     try {
       const response = await fetch("/api/tools/collection-builder/ai-build", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ commanderId }),
+        body: JSON.stringify({ commanderId, ...choice }),
       });
       const body = (await response.json()) as {
         ok: boolean;
@@ -294,6 +378,7 @@ export function CollectionBuild({
         return;
       }
       const wasTruncated = Boolean(body.truncated);
+      setDraftChoice(choice);
       showDraft(body.draft, "ai", wasTruncated);
       // Paid for: kept in this browser for a week, so a reload can't lose it.
       writeLastAiDraft(viewerId, {
@@ -302,6 +387,7 @@ export function CollectionBuild({
         collectionSize,
         truncated: wasTruncated,
         draft: body.draft,
+        choice,
       });
       setKept(null);
     } catch {
@@ -311,10 +397,79 @@ export function CollectionBuild({
     }
   };
 
+  const suggest = async () => {
+    if (suggesting || working) return;
+    setSuggesting(true);
+    setSuggestError(null);
+    try {
+      const response = await fetch("/api/tools/collection-builder/suggest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deckType: choice.deckType, bracket: choice.bracket, colours }),
+      });
+      const body = (await response.json()) as { ok: boolean; result?: SuggestResult; error?: string; credits?: number | null };
+      if (typeof body.credits === "number") setBalance(body.credits);
+      if (!body.ok || !body.result) {
+        setSuggestError(body.error ?? "The suggestions didn't finish. Try again.");
+        return;
+      }
+      const stored: StoredSuggestions = { savedAt: new Date().toISOString(), collectionSize, result: body.result };
+      // Paid for: kept in this browser for a week.
+      writeLastSuggestions(viewerId, stored);
+      setSuggestions(stored);
+      requestFocus("suggestions");
+    } catch {
+      setSuggestError("The suggestions didn't answer. If a credit was taken it comes back by itself.");
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const buildFromSuggestion = (suggestion: CommanderSuggestion) => {
+    const target = commanders.find((c) => c.id === suggestion.commanderId);
+    if (!target || working) return;
+    pick(target);
+    // The suggested type, when it is one and the picked bracket allows it;
+    // none suggested keeps the player's own pick.
+    const type = collectionDeckType(suggestion.deckType);
+    if (type && deckTypeFitsBracket(type, bracket === "" ? null : bracket)) {
+      setDeckType(type.id);
+      setChoiceNote(null);
+    } else if (type) {
+      setChoiceNote(`The AI suggested ${type.label}, a deck type for Bracket ${type.minBracket} and up, so the deck type stays as it was.`);
+    }
+    // To the bar: the next press builds it.
+    requestFocus("draft");
+  };
+
+  const dismissSuggestions = () => {
+    clearLastSuggestions(viewerId);
+    setSuggestions(null);
+    listHeadingRef.current?.focus();
+  };
+
   const restoreKept = () => {
-    if (!kept) return;
+    // Not while something else is running: a draft that lands mid-suggestion
+    // would fold the list the answer arrives in.
+    if (!kept || working || suggesting) return;
     setCommanderId(kept.commanderId);
     setError(null);
+    // A kept choice is cleaned before it's used (a type renamed since, a
+    // creature type no longer offered): the save must send what validates.
+    const keptChoice = kept.choice ?? {};
+    const keptType = collectionDeckType(keptChoice.deckType)?.id ?? null;
+    // The draft was built with this creature type: it is saved with it
+    // whenever it is well formed; the picker shows it only while the
+    // commander's creature types (the scores) offer it.
+    const keptTribe =
+      typeof keptChoice.tribe === "string" && /^[a-z][a-z'-]{1,29}$/.test(keptChoice.tribe) ? keptChoice.tribe : null;
+    const keptBracket =
+      typeof keptChoice.bracket === "number" && keptChoice.bracket >= 1 && keptChoice.bracket <= 5 ? keptChoice.bracket : null;
+    const offered = (ready?.[kept.commanderId]?.tribes ?? []).some((t) => t.tribe === keptTribe);
+    setDeckType(keptType ?? "");
+    setTribe(keptTribe && offered ? keptTribe : "");
+    setBracket(keptBracket ?? "");
+    setDraftChoice({ deckType: keptType, tribe: keptTribe, bracket: keptBracket });
     showDraft(kept.draft, "ai", kept.truncated);
     setKept(null);
   };
@@ -334,9 +489,40 @@ export function CollectionBuild({
       : null;
   // A button that can't act yet stays reachable and says why (aria-disabled,
   // never `disabled`, which would drop it from the keyboard's path).
-  const draftBlocked = !commander ? "Pick a commander first." : null;
-  const aiBlocked = draftBlocked ?? aiOff;
+  const draftBlocked = !commander
+    ? "Pick a commander first."
+    : suggesting
+      ? "Wait for the suggestions to finish."
+      : null;
   const support = commander && ready ? ready[commander.id] : undefined;
+  const pickedType = collectionDeckType(deckType);
+  const typeCount = pickedType && support ? (support.deckTypes[pickedType.id] ?? 0) : null;
+  // The route refuses a type the collection can't begin to fill (below half
+  // its floor) before charging; the button says so first.
+  const themeTooThin =
+    pickedType && typeCount !== null && typeCount < refusalFloor(pickedType.floor)
+      ? `Your collection has too few ${pickedType.label} cards in these colours for the AI to build around — try the free draft or another deck type.`
+      : null;
+  const aiBlocked = draftBlocked ?? aiOff ?? themeTooThin;
+  const suggestBlocked =
+    legal.length < 3
+      ? `With ${n(legal.length)} commander${legal.length === 1 ? "" : "s"} there's nothing to rank — pick one below.`
+      : aiOff;
+  const tribeOptions = support?.tribes ?? [];
+  const fitsTypes = commander ? commanderDeckTypes(commander) : [];
+  const bracketLevel = bracket === "" ? null : bracket;
+  const typeOptionLabel = (type: CollectionDeckType) => {
+    const count = support ? (support.deckTypes[type.id] ?? 0) : null;
+    return [
+      type.label,
+      count !== null ? ` — ${n(count)} card${count === 1 ? "" : "s"}${count < type.floor ? ` (wants ${type.floor})` : ""}` : "",
+      deckTypeFitsBracket(type, bracketLevel) ? "" : ` — Bracket ${type.minBracket}+`,
+    ].join("");
+  };
+  const typesByGroup = (Object.keys(DECK_TYPE_GROUP_LABELS) as DeckTypeGroup[]).map((group) => ({
+    group,
+    types: COLLECTION_DECK_TYPES.filter((t) => t.group === group),
+  }));
   const supportFor = (card: CollectionCard) => (ready && card.commanderLegal ? ready[card.id] : undefined);
 
   return (
@@ -357,7 +543,8 @@ export function CollectionBuild({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface/40 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             {commander ? (
               <>
@@ -383,30 +570,130 @@ export function CollectionBuild({
           </div>
           <div className="flex flex-wrap gap-2 sm:shrink-0">
             <Button
+              ref={draftButtonRef}
               variant="secondary"
               onClick={draftBlocked ? undefined : draftWithRules}
-              aria-disabled={draftBlocked || working ? true : undefined}
+              aria-disabled={draftBlocked || working || suggesting ? true : undefined}
               aria-describedby={draftBlocked ? ids.reason : undefined}
-              className={cn("flex-1 sm:flex-none", (draftBlocked || working) && "opacity-50")}
+              className={cn("flex-1 sm:flex-none", (draftBlocked || working || suggesting) && "opacity-50")}
             >
               <Hammer aria-hidden />
               {working === "rules" ? "Drafting…" : draft ? "Draft again" : "Draft a deck"}
             </Button>
             <Button
               onClick={aiBlocked ? undefined : draftWithAi}
-              aria-disabled={aiBlocked || working ? true : undefined}
+              aria-disabled={aiBlocked || working || suggesting ? true : undefined}
               aria-describedby={aiBlocked ? ids.reason : undefined}
-              className={cn("flex-1 sm:flex-none", (aiBlocked || working) && "opacity-50")}
+              className={cn("flex-1 sm:flex-none", (aiBlocked || working || suggesting) && "opacity-50")}
             >
               <Sparkles aria-hidden />
               {working === "ai" ? "Building with AI…" : "Build with AI · 1 credit"}
             </Button>
           </div>
         </div>
+        <div className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={ids.deckType} className="text-xs font-medium text-muted">
+              Deck type
+            </label>
+            <select
+              id={ids.deckType}
+              value={deckType}
+              aria-describedby={ids.choiceHint}
+              onChange={(event) => {
+                setDeckType(event.target.value as CollectionDeckTypeId | "");
+                setChoiceNote(null);
+              }}
+              className={inputClass(false)}
+            >
+              <option value="">Any — follow the commander</option>
+              {typesByGroup.map(({ group, types }) => (
+                <optgroup key={group} label={DECK_TYPE_GROUP_LABELS[group]}>
+                  {types.map((type) => (
+                    <option key={type.id} value={type.id} disabled={!deckTypeFitsBracket(type, bracketLevel)}>
+                      {typeOptionLabel(type)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            {tribeOptions.length > 0 ? (
+              <>
+                <label htmlFor={ids.tribe} className="text-xs font-medium text-muted">
+                  Creature type
+                </label>
+                <select
+                  id={ids.tribe}
+                  value={tribe}
+                  onChange={(event) => setTribe(event.target.value)}
+                  className={inputClass(false)}
+                >
+                  <option value="">None</option>
+                  {tribeOptions.map((t) => (
+                    <option key={t.tribe} value={t.tribe}>
+                      {`${tribeLabel(t.tribe)} — ${n(t.count)} creature${t.count === 1 ? "" : "s"}${t.count < TYPAL_FLOOR ? ` (aim for ${TYPAL_FLOOR}+)` : ""}`}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-medium text-muted">Creature type</span>
+                <p className="py-2 text-xs leading-5 text-subtle">
+                  {!commander
+                    ? "Pick a commander to see the creature types you could build around."
+                    : scores.status === "ready"
+                      ? "No creature type has 10 or more creatures in these colours yet."
+                      : "Counting your creature types…"}
+                </p>
+              </>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={ids.bracket} className="text-xs font-medium text-muted">
+              Bracket
+            </label>
+            <select
+              id={ids.bracket}
+              value={bracket === "" ? "" : String(bracket)}
+              onChange={(event) => pickBracket(event.target.value === "" ? "" : Number(event.target.value))}
+              className={inputClass(false)}
+            >
+              <option value="">Any bracket</option>
+              {COMMANDER_BRACKETS.map((b) => (
+                <option key={b.level} value={String(b.level)}>{`${b.level} · ${b.name}`}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div id={ids.choiceHint} className="flex flex-col gap-1 text-xs leading-5 text-muted empty:hidden">
+          {pickedType ? (
+            <p>
+              {pickedType.label}: {pickedType.summary}
+              {typeCount !== null
+                ? ` You own ${n(typeCount)} ${pickedType.label} card${typeCount === 1 ? "" : "s"} in these colours — a ${pickedType.label} deck wants about ${pickedType.floor}.`
+                : ""}
+            </p>
+          ) : null}
+          {commander && fitsTypes.length > 0 ? (
+            <p>
+              {commander.name}&apos;s own text plays into{" "}
+              {fitsTypes.map((id) => collectionDeckType(id)?.label).filter(Boolean).join(", ")}.
+            </p>
+          ) : null}
+          {bracketLevel ? <p>Bracket {bracketLevel}: {commanderBracket(bracketLevel)?.blurb}</p> : null}
+        </div>
+        {/* Always mounted: a status region added with its text is often not announced. */}
+        <p role="status" className="text-xs text-ember empty:hidden">
+          {choiceNote ?? ""}
+        </p>
+        </div>
         <p className="text-xs text-subtle">
           &ldquo;Draft a deck&rdquo; is free and follows the rules. &ldquo;Build with AI&rdquo; reads your cards and plans around
           your commander{balance !== null ? ` — you have ${n(balance)} credit${balance === 1 ? "" : "s"}` : ""}.
-          {draftBlocked || aiOff ? <span id={ids.reason}> {draftBlocked ?? aiOff}</span> : null}
+          {draftBlocked || aiOff || themeTooThin ? <span id={ids.reason}> {draftBlocked ?? aiOff ?? themeTooThin}</span> : null}
         </p>
         <p role="status" className="text-sm text-muted empty:hidden">
           {working === "ai" ? "The AI is choosing from your cards. This takes up to a minute." : working === "rules" ? "Drafting…" : ""}
@@ -428,11 +715,16 @@ export function CollectionBuild({
               </span>
             </p>
             <div className="flex shrink-0 gap-2">
-              <Button size="sm" onClick={restoreKept}>
+              <Button
+                size="sm"
+                onClick={restoreKept}
+                aria-disabled={working || suggesting ? true : undefined}
+                className={cn((working || suggesting) && "opacity-50")}
+              >
                 Show it
               </Button>
               <Button size="sm" variant="ghost" onClick={dismissKept}>
-                Dismiss
+                Dismiss<span className="sr-only"> the kept AI build</span>
               </Button>
             </div>
           </div>
@@ -469,6 +761,17 @@ export function CollectionBuild({
               >
                 Your commanders <span className="font-normal text-muted">({n(commanders.length)})</span>
               </h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={suggestBlocked ? undefined : suggest}
+                aria-disabled={suggestBlocked || suggesting || working ? true : undefined}
+                aria-describedby={ids.suggestReason}
+                className={cn((suggestBlocked || suggesting || working) && "opacity-50")}
+              >
+                <Sparkles aria-hidden />
+                {suggesting ? "Suggesting…" : "Suggest a commander · 1 credit"}
+              </Button>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
                 {commanders.length > 8 ? (
                   <div className="flex min-w-0 flex-col gap-1 sm:w-56">
@@ -497,7 +800,7 @@ export function CollectionBuild({
                     >
                       {(Object.keys(SORT_LABELS) as CommanderSort[]).map((key) => (
                         <option key={key} value={key}>
-                          {SORT_LABELS[key]}
+                          {sortLabel(key, pickedType)}
                         </option>
                       ))}
                     </select>
@@ -523,7 +826,33 @@ export function CollectionBuild({
                   : "Your commanders couldn't be ranked right now — they're listed by name."}
               </p>
             ) : null}
+            <p id={ids.suggestReason} className="text-xs text-subtle">
+              {suggestBlocked ??
+                `"Suggest a commander" asks the AI which of your commanders your cards support best${
+                  pickedType || colours.length ? " — for the deck type and colours picked" : ""
+                }.`}
+            </p>
+            <p role="status" className="text-sm text-muted empty:hidden">
+              {suggesting ? "The AI is reading your commanders and cards. This takes up to a minute." : ""}
+            </p>
+            {suggestError ? (
+              <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
+                {suggestError}
+              </p>
+            ) : null}
           </div>
+
+          {suggestions ? (
+            <CommanderSuggestions
+              result={suggestions.result}
+              savedAt={suggestions.savedAt}
+              headingId={ids.suggestions}
+              headingRef={suggestionsHeadingRef}
+              onBuild={buildFromSuggestion}
+              onDismiss={dismissSuggestions}
+            />
+          ) : null}
 
           <fieldset className="min-w-0">
             <legend className="sr-only">Commander</legend>
@@ -555,7 +884,9 @@ export function CollectionBuild({
                           off
                             ? `${card.name} (not legal in Commander)`
                             : cardSupport
-                              ? `${card.name}, ${n(cardSupport.fit)} of your cards fit its plan`
+                              ? pickedType
+                                ? `${card.name}, ${n(cardSupport.deckTypes[pickedType.id] ?? 0)} of your ${pickedType.label} cards in its colours`
+                                : `${card.name}, ${n(cardSupport.fit)} of your cards fit its plan`
                               : card.name
                         }
                         onChange={() => pick(card)}
@@ -567,7 +898,9 @@ export function CollectionBuild({
                         <span className="text-[11px] leading-4 text-subtle">Not legal in Commander</span>
                       ) : cardSupport ? (
                         <span aria-hidden className="text-[11px] leading-4 text-subtle">
-                          {n(cardSupport.fit)} fit · {n(cardSupport.inColours)} cards
+                          {pickedType
+                            ? `${n(cardSupport.deckTypes[pickedType.id] ?? 0)} ${pickedType.label}`
+                            : `${n(cardSupport.fit)} fit · ${n(cardSupport.inColours)} cards`}
                         </span>
                       ) : null}
                     </label>
@@ -614,6 +947,7 @@ export function CollectionBuild({
           source={source}
           truncated={truncated}
           onSaved={source === "ai" ? () => clearLastAiDraft(viewerId) : undefined}
+          choice={draftChoice}
         />
       ) : null}
     </div>
@@ -629,12 +963,15 @@ function DraftReview({
   source,
   truncated,
   onSaved,
+  choice = {},
 }: {
   draft: CommanderDraft;
   source: DraftSource;
   truncated: boolean;
   /** Called once the draft is a deck (the AI draft this browser kept goes). */
   onSaved?: () => void;
+  /** The deck type / creature type / bracket it was built with (saved on the deck). */
+  choice?: BuildChoice;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // A new draft takes the focus — it lands under the build bar, and a
@@ -699,6 +1036,9 @@ function DraftReview({
           title,
           visibility,
           retry,
+          deckType: choice.deckType ?? null,
+          tribe: choice.tribe ?? null,
+          bracket: choice.bracket ?? null,
         });
       } catch {
         setSaveError("The connection dropped before the deck was saved. Press Save deck again — it won't make a second one.");
@@ -726,6 +1066,20 @@ function DraftReview({
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
             {source === "ai" ? "Built with AI" : "Drafted by the rules"}
           </span>
+          {(draft.focus ?? []).map((f) => (
+            <span key={f.label} className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+              {f.label} · {f.inDeck} in the deck
+            </span>
+          ))}
+          {draft.gameChangers !== undefined && draft.gameChangers !== null ? (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+              {draft.bracket ? `Built for Bracket ${draft.bracket} · ` : ""}
+              {draft.gameChangers} Game Changer{draft.gameChangers === 1 ? "" : "s"}
+              {draft.bracketFloor && draft.bracketFloor > 2 ? ` · its cards need Bracket ${draft.bracketFloor} or higher` : ""}
+            </span>
+          ) : draft.bracket ? (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">Built for Bracket {draft.bracket}</span>
+          ) : null}
         </div>
         <p className="text-sm text-muted">
           <span className={cn("font-semibold tabular-nums", over > 0 ? "text-danger" : "text-foreground")}>

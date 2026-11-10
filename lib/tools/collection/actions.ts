@@ -36,6 +36,8 @@ import {
 } from "./schemas";
 import { COLLECTION_FULL_MESSAGE, resolveImportLines, ScryfallUnavailableError, writeCollectionRows } from "./server";
 import { getCollectionCard, listBuilderPool, listCollectionCardsById } from "./queries";
+import { choiceError, deckTypeKeyFor, draftPlanFor } from "./archetypes";
+import { getBracketCards } from "./bracket-cards";
 
 // ---------------------------------------------------------------------------
 // The Collection Deck Builder's server actions (migration 0185). Every one
@@ -271,18 +273,28 @@ export async function draftCollectionDeckAction(payload: unknown): Promise<Draft
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = draftSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, error: "Pick a commander first." };
-  const commander = await getCollectionCard(parsed.data.commanderId);
+  const { commanderId, ...choice } = parsed.data;
+  const refused = choiceError(choice);
+  if (refused) return { ok: false, error: refused };
+  const commander = await getCollectionCard(commanderId);
   if (!commander) return { ok: false, error: "That commander isn't in your collection any more." };
   const why = commanderReason(commander);
   if (why) return { ok: false, error: `${commander.name} ${why}.` };
-  const pool = await listBuilderPool(commander);
-  const draft = draftCommanderDeck({ commander, collection: pool.cards });
+  const [pool, lists] = await Promise.all([listBuilderPool(commander), choice.bracket ? getBracketCards() : null]);
+  const draft = draftCommanderDeck({ commander, collection: pool.cards, plan: draftPlanFor(choice, lists) });
   await recordToolEvent({
     slug: COLLECTION_TOOL_SLUG,
     userId: access.userId,
     event: "draft",
     access: access.via,
-    props: { pool: draft.poolSize, total: draft.total, colours: commander.colorIdentity.join("") || "C" },
+    props: {
+      pool: draft.poolSize,
+      total: draft.total,
+      colours: commander.colorIdentity.join("") || "C",
+      ...(choice.deckType ? { deck_type: choice.deckType } : {}),
+      ...(choice.tribe ? { tribe: choice.tribe } : {}),
+      ...(choice.bracket ? { bracket: choice.bracket } : {}),
+    },
   });
   return { ok: true, draft, truncated: pool.truncated };
 }
@@ -302,7 +314,7 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = saveDeckSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "That deck couldn't be saved." };
-  const { commanderId, cardIds, basics, title, visibility } = parsed.data;
+  const { commanderId, cardIds, basics, title, visibility, deckType, tribe, bracket } = parsed.data;
 
   const rows = await listCollectionCardsById([commanderId, ...cardIds]);
   const byId = new Map(rows.map((r) => [r.id, r]));
@@ -348,6 +360,11 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
     {
       title,
       format: "commander",
+      // What the draft was built around (owner decision 7): the deck type
+      // (or the creature type's tribe key) and the bracket, in the deck's
+      // own columns.
+      deck_type: deckTypeKeyFor({ deckType, tribe }),
+      bracket: bracket ?? null,
       visibility,
       description: `Built from my collection around ${commander.name}.`,
     },

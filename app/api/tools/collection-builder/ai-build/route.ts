@@ -20,7 +20,9 @@ import { checkToolAccess } from "@/lib/tools/queries";
 import { recordToolEvent } from "@/lib/tools/events";
 import { aiBuildCommanderDeck } from "@/lib/tools/collection/ai-build";
 import { AI_MIN_POOL, aiCandidates } from "@/lib/tools/collection/ai-candidates";
-import { commanderReason } from "@/lib/tools/collection/builder";
+import { commanderReason, eligiblePool } from "@/lib/tools/collection/builder";
+import { choiceError, draftPlanFor, refusalFloor } from "@/lib/tools/collection/archetypes";
+import { getBracketCards } from "@/lib/tools/collection/bracket-cards";
 import { COLLECTION_TOOL_SLUG } from "@/lib/tools/collection/limits";
 import { getCollectionCard, listBuilderPool } from "@/lib/tools/collection/queries";
 import { draftSchema } from "@/lib/tools/collection/schemas";
@@ -65,7 +67,10 @@ export async function POST(request: Request) {
   }
 
   // Everything that can refuse without the AI refuses BEFORE the charge.
-  const commander = await getCollectionCard(parsed.data.commanderId);
+  const { commanderId, ...choice } = parsed.data;
+  const refused = choiceError(choice);
+  if (refused) return NextResponse.json({ ok: false, error: refused }, { status: 400 });
+  const commander = await getCollectionCard(commanderId);
   if (!commander) {
     return NextResponse.json({ ok: false, error: "That commander isn't in your collection any more." }, { status: 404 });
   }
@@ -73,8 +78,27 @@ export async function POST(request: Request) {
   if (why) {
     return NextResponse.json({ ok: false, error: `${commander.name} ${why}.` }, { status: 400 });
   }
-  const pool = await listBuilderPool(commander);
-  if (aiCandidates(commander, pool.cards).length < AI_MIN_POOL) {
+  const [pool, bracketCards] = await Promise.all([listBuilderPool(commander), choice.bracket ? getBracketCards() : null]);
+  const plan = draftPlanFor(choice, bracketCards);
+  // A deck type (or creature type) the collection can't begin to fill is
+  // refused before the charge — below HALF its floor; below the floor the
+  // build runs and the draft says what's short.
+  const eligible = plan ? eligiblePool(commander, pool.cards, plan) : null;
+  for (const part of [plan?.type, plan?.tribe]) {
+    if (!part || !eligible) continue;
+    const have = eligible.filter((card) => part.matches(card)).length;
+    if (have < refusalFloor(part.floor)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "THEME_TOO_THIN",
+          error: `Your collection has ${have} ${part.label} card${have === 1 ? "" : "s"} in ${commander.name}'s colours — too few to build a ${part.label} deck around (it wants about ${part.floor}). Pick another deck type, or draft one for free.`,
+        },
+        { status: 400 },
+      );
+    }
+  }
+  if (aiCandidates(commander, pool.cards, { plan }).length < AI_MIN_POOL) {
     return NextResponse.json(
       {
         ok: false,
@@ -109,7 +133,7 @@ export async function POST(request: Request) {
 
   try {
     const draft = await withAiTimeBudget(startedAt, maxDuration, () =>
-      aiBuildCommanderDeck({ commander, collection: pool.cards }),
+      aiBuildCommanderDeck({ commander, collection: pool.cards, choice, bracketCards }),
     );
     // The draft is what the user paid for: settled, so the reconcile sweep
     // leaves the charge alone.
@@ -124,6 +148,9 @@ export async function POST(request: Request) {
         total: draft.total,
         ai_picks: draft.picks.filter((p) => p.fromAi).length,
         colours: commander.colorIdentity.join("") || "C",
+        ...(choice.deckType ? { deck_type: choice.deckType } : {}),
+        ...(choice.tribe ? { tribe: choice.tribe } : {}),
+        ...(choice.bracket ? { bracket: choice.bracket } : {}),
       },
     });
     return NextResponse.json({ ok: true, draft, truncated: pool.truncated, credits: await getFreshCreditBalance() });

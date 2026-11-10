@@ -1,5 +1,5 @@
 import type { CollectionCard } from "./card-row";
-import { cardThemes, eligiblePool, isLand, roleOf, type DeckRole } from "./builder";
+import { cardThemes, eligiblePool, isLand, roleOf, type DeckRole, type DraftPlan } from "./builder";
 
 // ---------------------------------------------------------------------------
 // What the AI build is shown (pure, tested): a balanced slice of the user's
@@ -27,6 +27,10 @@ export const AI_ROLE_QUOTAS: Record<"ramp" | "draw" | "removal" | "wipe", number
   wipe: 12,
 };
 
+/** With a deck type or creature type picked, this many on-type spells are
+ *  kept first (the type's whole point), before the role quotas. */
+export const AI_THEME_QUOTA = 110;
+
 /** Candidates are shuffled within runs of this many, in ranking order: a
  *  model favours what it reads first, so each build sees a fresh order of
  *  equally good cards, while the best still come before the rest. */
@@ -46,20 +50,29 @@ function shuffledWithinTiers<T>(items: readonly T[], tier: number, random: () =>
 }
 
 /**
- * The cards one AI build is shown, spells then lands. With `random` the
- * order is shuffled within ranking tiers (each build); without it, the
- * ranking's order (the route's pool-size check, tests).
+ * The cards one AI build is shown, spells then lands — under the plan's
+ * bracket rules and ranking when there is one. With `random` the order is
+ * shuffled within ranking tiers (each build); without it, the ranking's
+ * order (the route's pool-size check, tests).
  */
 export function aiCandidates(
   commander: CollectionCard,
   collection: readonly CollectionCard[],
-  random?: () => number,
+  options: { random?: () => number; plan?: DraftPlan | null } = {},
 ): CollectionCard[] {
-  const pool = eligiblePool(commander, collection);
+  const { random, plan = null } = options;
+  const pool = eligiblePool(commander, collection, plan);
   const spells = pool.filter((c) => !isLand(c));
   const lands = pool.filter((c) => isLand(c)).slice(0, AI_MAX_LANDS);
 
   const kept = new Set<string>();
+  const onPlan = (card: CollectionCard) => !!(plan?.type?.matches(card) || plan?.tribe?.matches(card));
+  if (plan?.type || plan?.tribe) {
+    for (const card of spells) {
+      if (kept.size >= AI_THEME_QUOTA) break;
+      if (onPlan(card)) kept.add(card.id);
+    }
+  }
   for (const [role, quota] of Object.entries(AI_ROLE_QUOTAS) as Array<[DeckRole, number]>) {
     let taken = 0;
     for (const card of spells) {
@@ -104,7 +117,11 @@ export function candidateId(index: number): string {
  * the model may overrule), the text cut short (the gist is enough; the
  * prompt stays small).
  */
-export function aiCandidateLines(candidates: readonly CollectionCard[]): string {
+export function aiCandidateLines(
+  candidates: readonly CollectionCard[],
+  /** Marks a Game Changer ("… | Game Changer") where a bracket caps them. */
+  isGameChanger?: (card: CollectionCard) => boolean,
+): string {
   return candidates
     .map((c, i) => {
       const themes = isLand(c) ? [] : cardThemes(c);
@@ -115,6 +132,7 @@ export function aiCandidateLines(candidates: readonly CollectionCard[]): string 
         oneLine(c.typeLine, 60),
         `role: ${ROLE_HINT[roleOf(c)]}`,
         `themes: ${themes.length ? themes.join(", ") : "—"}`,
+        ...(isGameChanger?.(c) ? ["Game Changer"] : []),
         oneLine(c.oracleText, 160),
       ].join(" | ");
     })

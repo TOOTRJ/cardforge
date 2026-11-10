@@ -125,9 +125,9 @@ describe("rankCommanders / describeSupport", () => {
 
   it("says the numbers in words", () => {
     expect(
-      describeSupport({ inColours: 142, fit: 31, roles: { ramp: 9, draw: 12, removal: 6, wipe: 2 }, lands: 20, score: 70 }),
+      describeSupport({ inColours: 142, fit: 31, roles: { ramp: 9, draw: 12, removal: 6, wipe: 2 }, lands: 20, score: 70, deckTypes: {}, tribes: [] }),
     ).toBe("142 of your cards are in its colours · 31 fit its plan · ramp 9/10 · card draw 12/10 · removal 6/8 · sweepers 2/3");
-    expect(describeSupport({ inColours: 1, fit: 0, roles: { ramp: 0, draw: 0, removal: 0, wipe: 0 }, lands: 0, score: 0 })).toMatch(
+    expect(describeSupport({ inColours: 1, fit: 0, roles: { ramp: 0, draw: 0, removal: 0, wipe: 0 }, lands: 0, score: 0, deckTypes: {}, tribes: [] })).toMatch(
       /^1 of your cards is in its colours/,
     );
   });
@@ -173,6 +173,20 @@ describe("the plan the scores count (stricter than the drafter's weighting)", ()
       ]),
     );
     expect(s.fit).toBe(1);
+  });
+});
+
+describe("deck types and creature types per commander", () => {
+  it("counts each deck type's cards in its colours and lists creature types from 10 up", () => {
+    const goblins = Array.from({ length: 11 }, (_, i) => card(`Goblin ${i}`, "Creature — Goblin", "", ["R"]));
+    const makers = Array.from({ length: 4 }, (_, i) => card(`Maker ${i}`, "Sorcery", "Create two 1/1 red Goblin creature tokens.", ["R"]));
+    const elves = Array.from({ length: 12 }, (_, i) => card(`Elf ${i}`, "Creature — Elf", "", ["G"]));
+    const mauler = card("Taurean Mauler", "Creature — Shapeshifter", "Changeling", []);
+    const s = scoreCommander(KRENKO, prepareScoringCards([...goblins, ...makers, ...elves, mauler]));
+    expect(s.deckTypes.tokens).toBe(4);
+    expect(s.deckTypes.enchantress).toBeUndefined();
+    // Goblins 11 + the changeling; elves are off colour; shapeshifter < 10.
+    expect(s.tribes).toEqual([{ tribe: "goblin", count: 12 }]);
   });
 });
 

@@ -233,7 +233,7 @@ describe("the AI's picks", () => {
     const plain = aiCandidates(krenko, collection);
     let seed = 7;
     const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-    const shuffled = aiCandidates(krenko, collection, random);
+    const shuffled = aiCandidates(krenko, collection, { random });
     expect(new Set(shuffled.map((c) => c.id))).toEqual(new Set(plain.map((c) => c.id)));
     expect(shuffled.map((c) => c.id)).not.toEqual(plain.map((c) => c.id));
     // The first 40 stay the first 40.
