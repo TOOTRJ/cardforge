@@ -137,7 +137,7 @@ describe("the rules toolbar", () => {
     for (const page of ["app/(app)/create/page.tsx", "app/(app)/card/[username]/edit/page.tsx"]) {
       // Read beside the pips and the meanings (one Promise.all), never a
       // serial await in the JSX.
-      expect(read(page)).toMatch(/await Promise\.all\(\[\s*getPipOverrides\(user\.id\),\s*getSymbolMeanings\(user\.id\),\s*listOwnSymbolChoices\(user\.id\),\s*\]\)/);
+      expect(read(page)).toMatch(/await Promise\.all\(\[\s*getPipOverrides\(user\.id\),\s*getSymbolMeanings\(user\.id\),\s*listOwnSymbolChoices\(user\.id\),[\s\S]*?\]\)/);
       expect(read(page)).toContain("ownSymbols={ownSymbols}");
     }
     const queries = read("lib/symbols/queries.ts");

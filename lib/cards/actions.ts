@@ -104,6 +104,8 @@ import {
 } from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
 import { unknownSymbolFieldError } from "@/lib/symbols/card-check";
+import { adoptRemixSymbols, type RemixSymbolCopy } from "@/lib/symbols/remix-copy";
+import type { RemixSymbolsNotice } from "@/lib/symbols/remix";
 import { EXACT_COPY_CODE, EXACT_COPY_MESSAGE, isExactCopyOfImport } from "@/lib/cards/exact-copy";
 import { readExactCopyIds } from "@/lib/cards/exact-copy-read";
 import {
@@ -150,6 +152,10 @@ type CreateCardSuccess = {
    *  join it — the deck is at its 500 entries, or is gone. The card IS
    *  saved; the creator says why the deck didn't take it. */
   deckEntryError?: string;
+  /** Set only on a remix of another maker's card that names their symbols:
+   *  which were copied into the remixer's set, and which codes the remixer
+   *  already had (theirs is used) — the creator says so (new pips PR 5). */
+  remixSymbols?: RemixSymbolsNotice;
 };
 
 type UpdateCardSuccess = {
@@ -648,13 +654,27 @@ export async function createCardAction(
   const languageFields = languageForcesPrivate({ saved: insert, visibility: insert.visibility });
   if (languageFields.length > 0) insert.visibility = "private";
 
+  // A remix of another maker's card brings the parent owner's symbols it
+  // names into the remixer's set (new pips PR 5, lib/symbols/remix-copy.ts):
+  // `{*CODE}` means the CARD OWNER's symbol, and the remix is theirs. A code
+  // they already have stays theirs (said in `remixSymbols`). Taken back
+  // below when the card itself isn't saved.
+  let remixSymbols: Extract<RemixSymbolCopy, { ok: true }> | null = null;
+  if (parent && parent.owner_id !== user.id) {
+    const copied = await adoptRemixSymbols(user.id, parent, insert);
+    if (!copied.ok) return { ok: false, formError: copied.error, code: copied.code };
+    remixSymbols = copied;
+  }
+
   // The owner's own mana symbols (PR 3, lib/symbols/card-check.ts): a
   // `{*CODE}` the maker has no symbol for would draw a blank disc for every
-  // viewer — refused on its field, on the row as written (every caller). A
-  // remix names its PARENT's codes, which are the parent owner's: refused
-  // until the remixer has symbols with those codes.
+  // viewer — refused on its field, on the row as written (every caller; a
+  // remix's carried codes are the remixer's own by now).
   const unknownSymbol = await unknownSymbolFieldError(supabase, user.id, insert, null);
-  if (unknownSymbol) return { ok: false, fieldErrors: { [unknownSymbol.field]: unknownSymbol.message } };
+  if (unknownSymbol) {
+    await remixSymbols?.undo();
+    return { ok: false, fieldErrors: { [unknownSymbol.field]: unknownSymbol.message } };
+  }
 
   const insertRow = (values: CardInsert) => supabase.from("cards").insert(values).select("id, slug").single();
   let { data: row, error } = await insertRow(insert);
@@ -662,6 +682,7 @@ export async function createCardAction(
   if (error && namesImportProvenance(insert) && isMissingImportProvenanceColumn(error)) {
     ({ data: row, error } = await insertRow(withoutImportProvenance(insert)));
   }
+  if (error || !row) await remixSymbols?.undo();
 
   // The database enforces the cap too (migration 0104) — the pre-check above
   // can lose a race between two saves, the trigger can't.
@@ -787,6 +808,7 @@ export async function createCardAction(
     slug: row.slug,
     ...(languageFields.length > 0 ? { forcedPrivate: { reason: "profanity" as const, fields: languageFields } } : {}),
     ...(deckEntryError ? { deckEntryError } : {}),
+    ...(remixSymbols?.notice ? { remixSymbols: remixSymbols.notice } : {}),
   };
 }
 

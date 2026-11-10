@@ -208,7 +208,8 @@ Rules and gotchas:
   storage writes into the caller's own folder via
   `lib/media/user-storage.ts` (users have no storage write policy since
   0126; card renders through `lib/cards/bake-core.ts`, which takes an
-  owner + card ids, never a path), and a card's render pointer
+  owner + card ids, never a path), a remix's copies of its parent owner's
+  symbols (`lib/symbols/remix-copy.ts`), and a card's render pointer
   (`cards_guard_render_columns`, 0126: an API role may only CLEAR
   `rendered_*` / `layout_version`; draw one only if `isStoredRenderUrl()`)
   only; every non-cron caller checks auth itself.
@@ -1384,8 +1385,16 @@ Rules and gotchas:
   tool is open to them (`listOwnSymbolChoices` → `OwnSymbolsProvider`); a
   list of OTHER people's cards reads each card owner's symbols in ONE batch
   (`readOwnerSymbolsOf` → `DeckItem.ownerSymbols`, the play exports'
-  `BuildContext.symbols`) — never a code's letters as colours.
-  `docs/FRAMES.md` "The owner's own symbols".
+  `BuildContext.symbols`) — never a code's letters as colours. PR 5: a
+  remix of ANOTHER maker's card brings the parent owner's symbols it names
+  (codes the remix AND its parent name, `remixedSymbolCodes`) into the
+  remixer's set before the save's symbol check (`adoptRemixSymbols`,
+  `lib/symbols/remix-copy.ts`: a new picture in their folder, one upload
+  counted, the row written by the service role whatever their tool access;
+  kept REMOVED at 20 live, refused at 60 rows, all taken back when the card
+  isn't saved); a code the remixer already has stays THEIRS, and the
+  creator shows the remix that way (`withRemixParentSymbols`) and says so
+  (`remixSymbolsMessage`). `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes
