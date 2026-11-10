@@ -11628,13 +11628,17 @@ the card job and the per-field fills tell the designer the maker's LIVE
 symbols — code, name, mana value, colour (`designSymbolsFor`,
 `ownSymbolPromptLines`) — and it may use them in a card's cost and rules
 text (never a back face or second part, whose lints read no symbols); the
-lint counts them as declared and the autofix takes their colour. Never
-another user's symbols, never a removed one. Any other `{*CODE}` still in
-a design after the judge is replaced — a cost's by `{1}`, a rules text's by
-`{C}`, elsewhere dropped (`withoutUnknownSymbols`, `lib/ai/own-symbols.ts`)
-— and the step refuses a code deleted since the plan before it paints
-(`generatedCardSaveRefusal`), so no save is refused after a paid picture. A
-maker without the tool or without symbols gets main's prompt and payloads.
+lint counts them as declared and the autofix takes their colour (a split
+card's whole colour too). Never another user's symbols, never a removed
+one. Any other `{*CODE}` still in a design after the judge — and any code
+at all on a back face or second part — is replaced: a cost's by `{1}`, a
+rules text's by `{C}`, elsewhere dropped (`withoutUnknownSymbols`,
+`lib/ai/own-symbols.ts`). The card job's step refuses a code deleted for
+good since the plan before it paints (`generatedCardSaveRefusal`; a
+removed symbol is still the maker's), so a generated card is never refused
+after its paid picture for a symbol (the deck remix, paused, builds its own
+payload and is not covered). A maker without the tool or without symbols
+gets main's prompt and payloads.
 
 ## Text sizes on the M15-era family
 

@@ -1390,10 +1390,11 @@ Rules and gotchas:
   them (`designSymbolsFor` → `DesignBatchInput.ownSymbols`, the card job and
   the fills; never another user's, never a removed one) and may use them on
   the front face / first part; none = main's prompt and payloads. Every
-  other `{*CODE}` a design holds after the judge is replaced
-  (`withoutUnknownSymbols`, `lib/ai/own-symbols.ts`), and the step refuses
-  one deleted since the plan BEFORE the paid picture
-  (`generatedCardSaveRefusal`). `docs/FRAMES.md` "The owner's own symbols".
+  other `{*CODE}` a design holds after the judge is replaced — on a back
+  face or second part every code (`withoutUnknownSymbols`,
+  `lib/ai/own-symbols.ts`) — and the card job's step refuses one deleted for
+  good since the plan BEFORE the paid picture (`generatedCardSaveRefusal`;
+  the paused deck remix builds its own payload and is not covered). `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes

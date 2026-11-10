@@ -46,6 +46,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { batchPrompt, designCards } from "@/lib/ai/card-design";
 import { autofixCard, lintCardDesign } from "@/lib/ai/mtg-rules";
+import { autofixLayoutParts } from "@/lib/ai/layout-design";
 import { designSymbolMeanings, ownSymbolPromptLines, withoutUnknownSymbols, type DesignOwnSymbol } from "@/lib/ai/own-symbols";
 import { designSymbolsFor } from "@/lib/symbols/queries";
 
@@ -117,6 +118,29 @@ describe("the last-resort replacement", () => {
     expect(out.back_face).toEqual({ cost: "{1}", rules_text: "Add {C}." });
     const plain = design({ cost: "{1}{R}" });
     expect(withoutUnknownSymbols(plain, null)).toBe(plain);
+  });
+
+  it("a back face or second part keeps no code at all — the maker's own included", () => {
+    const card = design({ cost: "{1}{*FIRE}", back_face: { cost: "{*FIRE}", rules_text: "Add {*FIRE}." }, second_part: { cost: "{U}{*FIRE}" } });
+    const out = withoutUnknownSymbols(card, meanings) as typeof card & { back_face?: unknown; second_part?: unknown };
+    expect(out.cost).toBe("{1}{*FIRE}");
+    expect(out.back_face).toEqual({ cost: "{1}", rules_text: "Add {C}." });
+    expect(out.second_part).toEqual({ cost: "{1}{U}" });
+  });
+
+  it("a split card's autofix keeps the front's colours when its cost holds the maker's symbol", () => {
+    const split = {
+      ...design({ cost: "{R}{*FIRE}", card_type: "instant", subtypes: [], power: null, toughness: null, color_identity: ["blue"] }),
+      second_part: { title: "Ice", cost: "{U}", card_type: "instant", supertype: null, subtypes: [], rules_text: "Tap target creature.", power: null, toughness: null },
+    };
+    const fixed = autofixLayoutParts(split as never, "split", meanings) as { color_identity: string[] };
+    expect(fixed.color_identity).toEqual(["red", "blue", "multicolor"]);
+    // Main's call (no meanings): the cost doesn't parse and its red is lost.
+    expect((autofixLayoutParts(split as never, "split") as { color_identity: string[] }).color_identity).toEqual(["blue"]);
+  });
+
+  it("the prompt quotes a symbol's name as JSON", () => {
+    expect(ownSymbolPromptLines([{ ...FIRE, name: 'Say "hi"' }])[1]).toBe('- {*FIRE} "Say \\"hi\\"": mana value 3, red.');
   });
 
   it("the autofix counts a symbol's declared colour", () => {
@@ -205,7 +229,7 @@ describe("wiring", () => {
     expect(jobs.match(/designSymbolsFor\((?:user\.id|userId)\)/g)).toHaveLength(4);
     expect(jobs.match(/\.\.\.\(ownSymbols\.length > 0 \? \{ ownSymbols \} : \{\}\)/g)).toHaveLength(4);
     // The step refuses an unknown code before the paid picture.
-    expect(jobs).toMatch(/hasCustomSymbol\(JSON\.stringify\(payload\)\)\) \{\s*const unknown = await unknownSymbolFieldError/);
+    expect(jobs).toMatch(/if \(hasCustomSymbol\(JSON\.stringify\(payload\)\)\) \{\s*const unknown = await unknownSymbolFieldError/);
     expect(read("lib/ai/card-fill.ts")).toContain("...(input.ownSymbols && input.ownSymbols.length > 0 ? { ownSymbols: input.ownSymbols } : {})");
     expect(read("lib/ai/card-design.ts")).toContain("...(options.ownSymbols && options.ownSymbols.length > 0 ? { ownSymbols: options.ownSymbols } : {})");
   });

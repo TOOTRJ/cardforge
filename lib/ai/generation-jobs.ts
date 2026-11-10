@@ -2487,11 +2487,11 @@ async function generatedCardSaveRefusal(userId: string, payload: Record<string, 
   const kindError = frameKindGateError(template, cardFieldsFace(payload as CardKindFields));
   if (kindError) return kindError;
   // A `{*CODE}` the maker has no symbol for (new pips PR 6): the design was
-  // linted against the symbols they had at PLAN time, and one deleted since
-  // would fail the save after the picture — refused here instead, unpainted.
-  // (No read unless the card names a code. A remix's codes are its parent's:
-  // the save itself judges those.)
-  if (!payload.parent_card_id && hasCustomSymbol(JSON.stringify(payload))) {
+  // linted against the symbols they had at PLAN time, and one deleted for
+  // good since (a removed one is still theirs) would fail the save after the
+  // picture — refused here instead, unpainted. No read unless the card names
+  // a code.
+  if (hasCustomSymbol(JSON.stringify(payload))) {
     const unknown = await unknownSymbolFieldError(await createClient(), userId, payload, null);
     if (unknown) return unknown.message;
   }

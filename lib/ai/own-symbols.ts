@@ -41,12 +41,16 @@ export function ownSymbolPromptLines(symbols: readonly DesignOwnSymbol[] | null 
     "The maker's OWN mana symbols — beyond the standard symbols you MAY use these and no other {*…} symbol, written exactly as shown, in a card's cost or rules text (never a back face or second part). Each counts as its mana value and colour; use one only where it suits the design:",
     ...symbols.map(
       (symbol) =>
-        `- {*${symbol.code.toUpperCase()}} "${symbol.name}": mana value ${symbol.manaValue}, ${
+        `- {*${symbol.code.toUpperCase()}} ${JSON.stringify(symbol.name)}: mana value ${symbol.manaValue}, ${
           symbol.baseColor ? SYMBOL_BASE_COLOR_LABELS[symbol.baseColor].toLowerCase() : "colorless"
         }.`,
     ),
   ];
 }
+
+/** The keys of a design's other face / part (lib/ai/dfc-design.ts,
+ *  lib/ai/layout-design.ts): symbols are the front's alone. */
+const PARTS_WITHOUT_SYMBOLS: ReadonlySet<string> = new Set(["back_face", "second_part"]);
 
 const knownIn = (inner: string, meanings: SymbolMeanings | null | undefined) => {
   const code = customSymbolCodeOfInner(inner.slice(1, -1));
@@ -68,9 +72,9 @@ function withoutUnknownIn(text: string, field: string, meanings: SymbolMeanings 
 }
 
 /**
- * The last resort after the judge (and the autofix): every `{*CODE}` the
- * designer was NOT given, anywhere in the design — a back face, a second
- * part, a chapter row — is replaced (a cost's by `{1}`, a rules text's by
+ * The last resort after the judge: every `{*CODE}` the designer was NOT
+ * given, anywhere in the design — a chapter row too, and ANY code on a back
+ * face or a second part (never told any) — is replaced (a cost's by `{1}`, a rules text's by
  * `{C}`, elsewhere dropped). A design that names none comes back as it is
  * (the same object).
  */
@@ -89,7 +93,9 @@ export function withoutUnknownSymbols<T>(design: T, meanings: SymbolMeanings | n
     let changed = false;
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(design as Record<string, unknown>)) {
-      const next = withoutUnknownSymbols(value, meanings, key);
+      // A back face or a second part is told no symbols (its lint reads
+      // none): every code there goes, the maker's own too.
+      const next = withoutUnknownSymbols(value, PARTS_WITHOUT_SYMBOLS.has(key) ? null : meanings, key);
       if (next !== value) changed = true;
       out[key] = next;
     }

@@ -325,7 +325,7 @@ function autofixDesign(
   const fixFront = (front: DesignedCard) => (symbolMeanings ? autofixCard(front, { symbolMeanings }) : autofixCard(front));
   if (!layout) return fixFront(card);
   if (isAiDfcKind(layout)) return autofixDfcParts(fixFront(autofixDfcFront(card, layout)), layout, dfcFrame);
-  return autofixLayoutParts(fixFront(autofixLayoutFront(card, layout)), layout);
+  return autofixLayoutParts(fixFront(autofixLayoutFront(card, layout)), layout, symbolMeanings);
 }
 
 // ---------------------------------------------------------------------------
