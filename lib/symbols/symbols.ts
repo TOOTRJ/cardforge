@@ -90,6 +90,19 @@ export function symbolToken(code: string): string {
 /** Every code a text names, uppercase, each once, in first-seen order. */
 export const symbolCodesIn = customSymbolCodesIn;
 
+/** A card's field names a code the card's owner has no symbol for (PR 3):
+ *  the creator's field error and both card actions' refusal say this. A
+ *  removed symbol is still the owner's (it keeps drawing), so never named
+ *  here. */
+export function unknownSymbolsMessage(codes: readonly string[]): string {
+  const tokens = codes.map(symbolToken);
+  if (tokens.length === 1) {
+    return `${tokens[0]} isn't one of your mana symbols. Make it in New mana symbols first, or take it out.`;
+  }
+  const list = `${tokens.slice(0, -1).join(", ")} and ${tokens[tokens.length - 1]}`;
+  return `${list} aren't your mana symbols. Make them in New mana symbols first, or take them out.`;
+}
+
 export function isSymbolBaseColor(value: unknown): value is SymbolBaseColor {
   return typeof value === "string" && (SYMBOL_BASE_COLORS as readonly string[]).includes(value);
 }

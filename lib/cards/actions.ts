@@ -103,6 +103,7 @@ import {
   allStrongLanguageMessage,
 } from "@/lib/cards/bulk-visibility-copy";
 import { languageForcesPrivate, type ForcedPrivateNotice } from "@/lib/moderation/profanity";
+import { unknownSymbolFieldError } from "@/lib/symbols/card-check";
 import { EXACT_COPY_CODE, EXACT_COPY_MESSAGE, isExactCopyOfImport } from "@/lib/cards/exact-copy";
 import { readExactCopyIds } from "@/lib/cards/exact-copy-read";
 import {
@@ -646,6 +647,14 @@ export async function createCardAction(
   // import) gets the same rule.
   const languageFields = languageForcesPrivate({ saved: insert, visibility: insert.visibility });
   if (languageFields.length > 0) insert.visibility = "private";
+
+  // The owner's own mana symbols (PR 3, lib/symbols/card-check.ts): a
+  // `{*CODE}` the maker has no symbol for would draw a blank disc for every
+  // viewer — refused on its field, on the row as written (every caller). A
+  // remix names its PARENT's codes, which are the parent owner's: refused
+  // until the remixer has symbols with those codes.
+  const unknownSymbol = await unknownSymbolFieldError(supabase, user.id, insert, null);
+  if (unknownSymbol) return { ok: false, fieldErrors: { [unknownSymbol.field]: unknownSymbol.message } };
 
   const insertRow = (values: CardInsert) => supabase.from("cards").insert(values).select("id, slug").single();
   let { data: row, error } = await insertRow(insert);
@@ -1260,6 +1269,11 @@ export async function updateCardAction(
       fieldErrors: { "back_face.title": SECOND_FACE_NAME_ERROR },
     };
   }
+
+  // The owner's own mana symbols (PR 3): only a code the edit ADDS — one the
+  // stored card never named — is asked about (lib/symbols/card-check.ts).
+  const unknownSymbol = await unknownSymbolFieldError(supabase, user.id, update, existing);
+  if (unknownSymbol) return { ok: false, fieldErrors: { [unknownSymbol.field]: unknownSymbol.message } };
 
   // The stored bake shows the card as it was before this edit, and the
   // re-bake below only lands seconds after the response: in the SAME write,

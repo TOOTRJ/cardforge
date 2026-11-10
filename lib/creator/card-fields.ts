@@ -6,6 +6,7 @@
 import { sagaCreatureTextAfterRows, splitSagaCreatureText } from "@/lib/cards/saga-creature";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { symbolMeaningOf, type SymbolMeanings } from "@/lib/symbols/symbol-token";
 import {
   hasTokenTypeWord,
   normalizeCardFinish,
@@ -504,7 +505,11 @@ export function normalizeColorSelection(
   return colors.includes("colorless") ? ["colorless"] : [];
 }
 
-export function deriveColorIdentity(cost: string): ColorIdentity[] {
+/** The colours a cost's symbols are, in the order they appear. A card
+ *  owner's own symbol (`{*CODE}`) is its declared base colour, read through
+ *  `meanings` (the owner's symbols, lib/symbols/symbol-token.ts) — none for
+ *  a colourless one, an unknown code, or with no map. */
+export function deriveColorIdentity(cost: string, meanings?: SymbolMeanings | null): ColorIdentity[] {
   const found: ColorIdentity[] = [];
   const add = (key: string) => {
     const name = COST_COLOR_NAME[key];
@@ -516,6 +521,10 @@ export function deriveColorIdentity(cost: string): ColorIdentity[] {
       add(token.left);
       add(token.right);
     } else if (token.kind === "phyrexian") add(token.color);
+    else if (token.kind === "custom") {
+      const color = symbolMeaningOf(token.code, meanings)?.baseColor;
+      if (color) add(color);
+    }
   }
   return found;
 }

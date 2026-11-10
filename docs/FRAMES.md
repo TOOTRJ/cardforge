@@ -11592,6 +11592,20 @@ never a badge: no public or unlisted card named a code at merge; a private
 one is re-baked by the platform to draw what its text says.
 Verification-neutral. The parity case is `m15/g/creature-short@symbol-placeholder`.
 
+**What a symbol means** (new pips PR 3). Its maker declares a mana value
+(0–20) and a base colour or none; nothing is guessed from the picture. A
+card reads its OWNER's meanings (`getSymbolMeanings`, one read with the
+pictures, removed symbols included): the card page's mana value
+(`manaValueOfCost(cost, meanings)`), the creator's "switch the frame to the
+cost's colour" prompt (`deriveColorIdentity(cost, meanings)`) and the AI
+lint's cost grammar and colour check (`parseManaCost` /
+`deriveColorLetters`). With no map a `{*CODE}` counts 0 and no colour —
+what every reader did before. A code the owner has no symbol for is
+refused where it is added (the creator's field, both card actions); a
+removed symbol is still the owner's. Decks and exports read the map in a
+later PR (until then a `{*CODE}` counts 0 there). Nothing here changes a
+drawing: no layout bump.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in

@@ -94,7 +94,7 @@ describe("the card page's AI provenance", () => {
   it("the page wires the tag into the header and the line into Card details", () => {
     const source = readFileSync(join(process.cwd(), "components/cards/card-detail-content.tsx"), "utf8");
     expect(source).toContain("<AiProvenanceTags provenance={aiProvenance} />");
-    expect(source).toContain("<CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />");
+    expect(source).toContain("<CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} symbolMeanings={symbolMeanings} />");
   });
 
   it("no renderer or bake reads it (page data, not card art)", () => {

@@ -16,7 +16,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
-import { getPipOverrides } from "@/lib/pips/queries";
+import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
 import { isModerationLocked, MODERATION_LOCKED_REMIX_MESSAGE } from "@/lib/moderation/lock";
@@ -320,6 +320,7 @@ export default async function CreatePage({
           returnTo={returnTo}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
+          symbolMeanings={await getSymbolMeanings(user.id)}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
           framePreview={
             framePreview

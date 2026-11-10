@@ -393,6 +393,7 @@ import {
   useSecondPartColorFollow,
 } from "@/components/creator/panels/anatomy-panel";
 import { cardFormSchemaFor } from "@/lib/creator/form-schema";
+import { customSymbolCodesIn, type SymbolMeanings } from "@/lib/symbols/symbol-token";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
@@ -485,6 +486,11 @@ type CardCreatorFormProps = {
   /** The signed-in user's custom pip icons (server-fetched; {} when none).
    *  Drives the cost picker icons, the live preview, and the pip dialog. */
   pipOverrides?: PipOverrides;
+  /** What the signed-in user's own mana symbols mean (`{*CODE}`, PR 3:
+   *  lib/pips/queries.ts getSymbolMeanings) — the cost's colour prompt reads
+   *  their base colours, and a code that isn't one of them is a field error.
+   *  Absent: nothing about them is checked here (the card actions are). */
+  symbolMeanings?: SymbolMeanings;
   /** Pre-seeded tag (e.g. a challenge entry tag from /create?tag=…). Merged
    *  into the Tags field — including into a restored draft — so a "Start
    *  designing" CTA always produces an entry that counts. Create mode only. */
@@ -820,6 +826,7 @@ export function CardCreatorForm({
   returnTo = null,
   aiConfigured,
   pipOverrides = {},
+  symbolMeanings,
   initialTag = null,
   initialSetSymbol = null,
   capacity = null,
@@ -1103,6 +1110,18 @@ export function CardCreatorForm({
     }),
     [mode, verifiedFrameKeys, card],
   );
+  // …and the owner's own symbols (PR 3): an edit never asks about a code
+  // its stored card already named.
+  const formSymbols = useMemo(
+    () =>
+      symbolMeanings
+        ? {
+            meanings: symbolMeanings,
+            opened: new Set(mode === "edit" && card ? customSymbolCodesIn(JSON.stringify(card)) : []),
+          }
+        : null,
+    [symbolMeanings, mode, card],
+  );
   const formResolver = useMemo(
     () =>
       zodResolver(
@@ -1111,9 +1130,10 @@ export function CardCreatorForm({
           // the saga creature frame, TODO 4.5d — card-fields openedForFrame.)
           mode === "edit" ? (values: FormValues) => openedForFrame(defaults, card, values.frame_style?.template) : null,
           formBackBody,
+          formSymbols,
         ),
       ),
-    [mode, defaults, card, formBackBody],
+    [mode, defaults, card, formBackBody, formSymbols],
   );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
@@ -5629,6 +5649,7 @@ export function CardCreatorForm({
                   <PipsPanel
                     frameTemplate={watched.frame_style?.template}
                     pipOverrides={pipOverrides}
+                    symbolMeanings={symbolMeanings}
                     frameLocked={isRevise}
                   />
                 ) : null}

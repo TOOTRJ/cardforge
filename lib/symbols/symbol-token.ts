@@ -72,3 +72,41 @@ export function customSymbolCodesIn(text: string | null | undefined): string[] {
   for (const match of text.matchAll(CUSTOM_SYMBOL_IN_TEXT_RE)) seen.add(match[1].toUpperCase());
   return [...seen];
 }
+
+// ---------------------------------------------------------------------------
+// What a symbol MEANS (PR 3): the mana value and base colour its maker
+// declared (0193's `mana_value` / `base_color`). A card's cost reads the
+// CARD OWNER's meanings — the same owner whose picture it draws — keyed by
+// code, removed symbols included (a card that names one keeps drawing it,
+// so it keeps counting it). A code with no meaning (unknown, or no map at
+// hand) counts 0 and no colour, as an unknown symbol always has.
+// ---------------------------------------------------------------------------
+
+/** A base colour as a cost letter (null = colourless). */
+export type SymbolColorLetter = "W" | "U" | "B" | "R" | "G";
+
+export type SymbolMeaning = {
+  /** A whole number, 0–20. */
+  manaValue: number;
+  baseColor: SymbolColorLetter | null;
+};
+
+/** The card owner's symbols by CODE (upper case). */
+export type SymbolMeanings = Readonly<Record<string, SymbolMeaning>>;
+
+/** What `{*code}` means on a card of the owner whose map this is, or null
+ *  for a code the map doesn't hold. */
+export function symbolMeaningOf(code: string, meanings: SymbolMeanings | null | undefined): SymbolMeaning | null {
+  if (!meanings) return null;
+  const key = code.toUpperCase();
+  return Object.hasOwn(meanings, key) ? meanings[key] : null;
+}
+
+/** The codes a text names that the owner's map doesn't hold, upper case,
+ *  each once. Every code is unknown without a map. */
+export function unknownSymbolCodesIn(
+  text: string | null | undefined,
+  meanings: SymbolMeanings | null | undefined,
+): string[] {
+  return customSymbolCodesIn(text).filter((code) => !symbolMeaningOf(code, meanings));
+}

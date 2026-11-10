@@ -409,3 +409,8 @@ instead. Each bullet: what the header says, and what is true now.
   redefines the function with `(bits + 0.5) / 4294967296.0`, in (0, 1),
   and nothing else changed (`tests/unit/db/discover-shuffle-migration.test.ts`
   holds every live shuffle to that range).
+- **0193 (`custom_symbol_in_use`: "names {*CODE} (cost, rules text, rows,
+  back face / second part)")** — since 0195 it also reads the card's
+  `title` and `nickname`: a `~` in rules text draws the name (layout v76),
+  so a symbol a card reaches only through its name is kept as removed,
+  never deleted for good.
