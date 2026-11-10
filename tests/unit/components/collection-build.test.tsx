@@ -321,6 +321,41 @@ describe("the AI draft this browser keeps", () => {
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Pick your commander" }));
   });
 
+  it("shows the AI's reason under each of its picks", async () => {
+    const base = draftFor(COMMANDERS[3]);
+    const value = {
+      savedAt: new Date().toISOString(),
+      commanderId: COMMANDERS[3].id,
+      collectionSize: 71,
+      truncated: false,
+      draft: {
+        ...base,
+        picks: [
+          {
+            cardId: "p1",
+            scryfallId: "s1",
+            name: "Goblin Matron",
+            role: "core",
+            manaValue: 3,
+            typeLine: "Creature — Goblin",
+            manaCost: "{2}{R}",
+            imageUrl: null,
+            fromAi: true,
+            aiWhy: "Finds the Goblin you need.",
+          },
+        ],
+      },
+    };
+    window.localStorage.setItem(lastAiDraftKey("viewer-1"), JSON.stringify(value));
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Show it" }));
+    });
+    expect(screen.getByText("Finds the Goblin you need.")).toBeTruthy();
+    expect(screen.getByText(/AI's pick/)).toBeTruthy();
+  });
+
   it("is not offered for a collection that changed", async () => {
     window.localStorage.setItem(
       lastAiDraftKey("viewer-1"),

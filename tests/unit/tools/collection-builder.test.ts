@@ -12,7 +12,13 @@ import {
   splitBasics,
   uniqueByCard,
 } from "@/lib/tools/collection/builder";
-import { AI_MAX_SPELLS, aiCandidateLines, aiCandidates, picksFromIndexes } from "@/lib/tools/collection/ai-candidates";
+import {
+  AI_MAX_SPELLS,
+  AI_ROLE_QUOTAS,
+  aiCandidateLines,
+  aiCandidates,
+  picksFromIds,
+} from "@/lib/tools/collection/ai-candidates";
 import { COMMANDER_DECK_SIZE } from "@/lib/tools/collection/limits";
 
 // ---------------------------------------------------------------------------
@@ -199,12 +205,55 @@ describe("the AI's picks", () => {
     expect(draft.total).toBeLessThanOrEqual(COMMANDER_DECK_SIZE);
   });
 
-  it("the candidates are numbered; numbers off the list or twice are dropped", () => {
+  it("the candidates carry lettered ids; ids off the list are dropped and counted, twice is once", () => {
     const collection = [krenko, ...filler(5)];
     const candidates = aiCandidates(krenko, collection);
     expect(candidates).toHaveLength(5);
-    expect(aiCandidateLines(candidates).split("\n")[0]).toMatch(/^0 \| Filler/);
-    expect(picksFromIndexes([1, 1, 99, -1, 0], candidates)).toEqual([candidates[1].id, candidates[0].id]);
+    const first = aiCandidateLines(candidates).split("\n")[0];
+    // A lettered id and a labelled mana value: a bare "1" can't be read as either.
+    expect(first).toMatch(/^c0 \| Filler [\d-]+ \| mv3 \| Creature — Human \| role: — \| themes: — \|/);
+    expect(picksFromIds(["c1", "c1", "c99", "x", "C0", " c2 "], candidates)).toEqual({
+      rowIds: [candidates[1].id, candidates[0].id, candidates[2].id],
+      unknown: 2,
+    });
+  });
+
+  it("keeps room for each role the deck needs, however many creatures rank above them", () => {
+    const creatures = filler(AI_MAX_SPELLS + 100).map((c) => ({ ...c, oracleText: "Other Goblins you control get +1/+1.", typeLine: "Creature — Goblin" }));
+    const ramp = Array.from({ length: 40 }, (_, i) => card({ name: `Rock ${i}`, typeLine: "Artifact", oracleText: "{T}: Add {C}.", colorIdentity: [] }));
+    const bolts = Array.from({ length: 5 }, (_, i) => card({ name: `Bolt ${i}`, typeLine: "Instant", oracleText: "This spell deals 3 damage to any target." }));
+    const candidates = aiCandidates(krenko, [krenko, ...creatures, ...ramp, ...bolts]);
+    expect(candidates).toHaveLength(AI_MAX_SPELLS);
+    expect(candidates.filter((c) => c.name.startsWith("Rock"))).toHaveLength(AI_ROLE_QUOTAS.ramp);
+    expect(candidates.filter((c) => c.name.startsWith("Bolt"))).toHaveLength(5);
+  });
+
+  it("a build's shuffle keeps the same cards, reordered only within ranking tiers", () => {
+    const collection = [krenko, ...filler(120)];
+    const plain = aiCandidates(krenko, collection);
+    let seed = 7;
+    const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    const shuffled = aiCandidates(krenko, collection, random);
+    expect(new Set(shuffled.map((c) => c.id))).toEqual(new Set(plain.map((c) => c.id)));
+    expect(shuffled.map((c) => c.id)).not.toEqual(plain.map((c) => c.id));
+    // The first 40 stay the first 40.
+    expect(new Set(shuffled.slice(0, 40).map((c) => c.id))).toEqual(new Set(plain.slice(0, 40).map((c) => c.id)));
+  });
+
+  it("the AI's reasons ride on its picks, and its shortfalls join the warnings", () => {
+    const collection = [krenko, ...filler(40)];
+    const preferred = [collection[1].id, collection[2].id];
+    const draft = draftCommanderDeck({
+      commander: krenko,
+      collection,
+      preferred,
+      reasons: new Map([[collection[1].id, "Makes a Goblin every turn."]]),
+      shortfalls: ["only 2 removal spells in red", "  ", "only 2 removal spells in red"],
+    });
+    expect(draft.picks.find((p) => p.cardId === collection[1].id)?.aiWhy).toBe("Makes a Goblin every turn.");
+    expect(draft.picks.find((p) => p.cardId === collection[2].id)?.aiWhy).toBeUndefined();
+    expect(draft.warnings[0]).toBe("The AI: only 2 removal spells in red");
+    expect(draft.warnings.filter((w) => w.startsWith("The AI:"))).toHaveLength(1);
   });
 
   it("a huge collection shows the model the best spells and still its lands", () => {

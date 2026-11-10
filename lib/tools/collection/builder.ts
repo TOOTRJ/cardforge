@@ -96,6 +96,8 @@ export type DraftPick = {
   imageUrl: string | null;
   /** The AI's pick (vs the rules' fill). */
   fromAi?: boolean;
+  /** The AI's one-line reason for its pick. */
+  aiWhy?: string;
 };
 
 export type DraftBasic = { name: BasicLandName; count: number; scryfallId: string; imageUrl: string };
@@ -274,7 +276,7 @@ function landHelps(card: CollectionCard, identity: readonly string[]): boolean {
   return identity.length === 0;
 }
 
-function toPick(card: CollectionCard, role: DeckRole, fromAi = false): DraftPick {
+function toPick(card: CollectionCard, role: DeckRole, fromAi = false, aiWhy?: string): DraftPick {
   return {
     cardId: card.id,
     scryfallId: card.scryfallId,
@@ -285,6 +287,7 @@ function toPick(card: CollectionCard, role: DeckRole, fromAi = false): DraftPick
     manaCost: card.manaCost,
     imageUrl: card.imageUrl,
     ...(fromAi ? { fromAi: true } : {}),
+    ...(fromAi && aiWhy ? { aiWhy } : {}),
   };
 }
 
@@ -324,6 +327,10 @@ export function draftCommanderDeck(input: {
   /** Collection row ids the AI chose, best first. Unknown or ineligible ids
    *  are dropped. */
   preferred?: readonly string[];
+  /** The AI's one-line reason per preferred id. */
+  reasons?: ReadonlyMap<string, string>;
+  /** What the AI said the collection is thin on (shown with the warnings). */
+  shortfalls?: readonly string[];
   strategy?: string | null;
 }): CommanderDraft {
   const { commander } = input;
@@ -337,11 +344,11 @@ export function draftCommanderDeck(input: {
 
   const chosen: DraftPick[] = [];
   const taken = new Set<string>();
-  const take = (card: CollectionCard, fromAi = false) => {
+  const take = (card: CollectionCard, fromAi = false, aiWhy?: string) => {
     const key = cardKey(card.name);
     if (taken.has(key)) return false;
     taken.add(key);
-    chosen.push(toPick(card, roleOf(card), fromAi));
+    chosen.push(toPick(card, roleOf(card), fromAi, aiWhy));
     return true;
   };
 
@@ -356,7 +363,7 @@ export function draftCommanderDeck(input: {
     if (!card) continue;
     const land = isLand(card);
     if (land ? lands() >= LAND_TARGET : nonlands() >= nonlandTarget) continue;
-    take(card, true);
+    take(card, true, input.reasons?.get(id));
   }
 
   // 2. The role quotas, then the plan, from the rules' ranking.
@@ -400,6 +407,10 @@ export function draftCommanderDeck(input: {
   }
 
   const warnings: string[] = [];
+  for (const note of input.shortfalls ?? []) {
+    const text = `The AI: ${note.trim()}`;
+    if (note.trim() && !warnings.includes(text)) warnings.push(text);
+  }
   const short = Math.max(0, COMMANDER_DECK_SIZE - total);
   if (short > 0) {
     warnings.push(

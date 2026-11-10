@@ -72,7 +72,8 @@ describe("the kept AI draft", () => {
   });
 
   it("drops what isn't a draft, or a draft of another shape the review can't draw", () => {
-    const { curve: _curve, ...noCurve } = DRAFT;
+    const noCurve: Partial<CommanderDraft> = { ...DRAFT };
+    delete noCurve.curve;
     for (const raw of [
       "not json",
       JSON.stringify({ savedAt: "x" }),

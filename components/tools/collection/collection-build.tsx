@@ -794,6 +794,9 @@ function DraftReview({
                             {pick.typeLine}
                             {pick.fromAi ? " · AI's pick" : ""}
                           </p>
+                          {pick.aiWhy ? (
+                            <p className={cn("text-xs leading-5 text-muted", out && "line-through")}>{pick.aiWhy}</p>
+                          ) : null}
                         </div>
                         <Button
                           variant="ghost"

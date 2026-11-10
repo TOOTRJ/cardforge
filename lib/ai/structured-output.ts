@@ -320,6 +320,16 @@ export function retryFitsBudget(firstAttemptMs: number, now: number = Date.now()
   return left >= firstAttemptMs * AI_RETRY_DURATION_FACTOR + budget.tailMs;
 }
 
+/** An AbortSignal that fires when the route's budget, less its tail, runs
+ *  out — for a call made late in a route (a retry), so a slow answer is
+ *  cut off while the refund still has time to run. Undefined when no
+ *  budget is in force. */
+export function budgetAbortSignal(now: number = Date.now()): AbortSignal | undefined {
+  const budget = budgetStore.getStore();
+  if (!budget) return undefined;
+  return AbortSignal.timeout(Math.max(1, budget.deadline - budget.tailMs - now));
+}
+
 /** What a client is shown for an AI error: the plain message for an
  *  unreadable answer, else `fallback(message)` (the caller's own wording). */
 export function aiErrorMessage(error: unknown, fallback: (message: string) => string, generic: string): string {
