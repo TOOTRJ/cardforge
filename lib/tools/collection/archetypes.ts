@@ -125,6 +125,8 @@ export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
     matches: textHas(
       // CREATURE tokens: a Treasure, Clue or Food maker is an Artifacts card.
       /\bcreates?\b[^.]*\bcreature tokens?\b/i,
+      // A copy of a creature is a creature token too.
+      /\bcreates?\b[^.]*\btokens? that'?s a copy of (?:target |a |an |another |that )?(?:creature|this creature|it)\b/i,
       /\b(?:creature )?tokens? you control\b/i,
       /\bcreatures you control get \+\d+\/\+\d+/i,
       /\btwice that many\b[^.]*\btokens?\b|\bwould create one or more\b[^.]*\btokens?\b/i,
@@ -411,7 +413,9 @@ export function cardFitsTribe(card: Card, tribe: string): boolean {
   if (/\bCreature\b/.test(frontType(card)) && isChangeling(card)) return true;
   // The type named in rules text — singular or plural ("Elf", "Elves"),
   // capitalised as Oracle prints a type, never "non-Human".
-  const forms = tribeForms(key).map((f) => escapeRe(f.charAt(0).toUpperCase() + f.slice(1)));
+  // Each part capitalised, as Oracle prints a hyphenated type ("Assembly-Worker").
+  const capitalise = (f: string) => f.replace(/(^|-)([a-z])/g, (_m, dash: string, ch: string) => dash + ch.toUpperCase());
+  const forms = tribeForms(key).map((f) => escapeRe(capitalise(f)));
   return new RegExp(`(?<![-\\w])(?:${forms.join("|")})\\b`).test(textOf(card));
 }
 
@@ -421,6 +425,9 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   wolf: "wolves",
   werewolf: "werewolves",
   mouse: "mice",
+  ox: "oxen",
+  fungus: "fungi",
+  octopus: "octopi",
 };
 
 /** A creature type's singular and plural ("elf", "elves"; "ally", "allies";

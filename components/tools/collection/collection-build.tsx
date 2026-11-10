@@ -446,16 +446,16 @@ export function CollectionBuild({
     // creature type no longer offered): the save must send what validates.
     const keptChoice = kept.choice ?? {};
     const keptType = collectionDeckType(keptChoice.deckType)?.id ?? null;
+    // The draft was built with this creature type: it is saved with it
+    // whenever it is well formed; the picker shows it only while the
+    // commander's creature types (the scores) offer it.
     const keptTribe =
-      typeof keptChoice.tribe === "string" &&
-      /^[a-z][a-z'-]{1,29}$/.test(keptChoice.tribe) &&
-      (ready?.[kept.commanderId]?.tribes ?? []).some((t) => t.tribe === keptChoice.tribe)
-        ? keptChoice.tribe
-        : null;
+      typeof keptChoice.tribe === "string" && /^[a-z][a-z'-]{1,29}$/.test(keptChoice.tribe) ? keptChoice.tribe : null;
     const keptBracket =
       typeof keptChoice.bracket === "number" && keptChoice.bracket >= 1 && keptChoice.bracket <= 5 ? keptChoice.bracket : null;
+    const offered = (ready?.[kept.commanderId]?.tribes ?? []).some((t) => t.tribe === keptTribe);
     setDeckType(keptType ?? "");
-    setTribe(keptTribe ?? "");
+    setTribe(keptTribe && offered ? keptTribe : "");
     setBracket(keptBracket ?? "");
     setDraftChoice({ deckType: keptType, tribe: keptTribe, bracket: keptBracket });
     showDraft(kept.draft, "ai", kept.truncated);
