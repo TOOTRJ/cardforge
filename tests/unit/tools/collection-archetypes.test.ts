@@ -97,6 +97,7 @@ describe("the deck types", () => {
   it.each([
     ["tokens", "Create a Treasure token.", "Artifact", false],
     ["tokens", "Create a 1/1 white Soldier creature token.", "Sorcery", true],
+    ["tokens", "Create a token that's a copy of target creature you control.", "Instant", true],
     ["group-hug", "Target player draws three cards.", "Sorcery", false],
     ["group-hug", "Target opponent draws a card. You gain 2 life.", "Sorcery", true],
     ["mill", "You mill four cards.", "Sorcery", false],
@@ -142,6 +143,8 @@ describe("the deck types", () => {
     expect(cardFitsTribe(card("E", { typeLine: "Sorcery", oracleText: "Elves you control get +1/+1." }), "elf")).toBe(true);
     expect(cardFitsTribe(card("F", { typeLine: "Sorcery", oracleText: "Allies you control gain lifelink." }), "ally")).toBe(true);
     expect(cardFitsTribe(card("G", { typeLine: "Instant", oracleText: "Destroy target non-Human creature." }), "human")).toBe(false);
+    expect(cardFitsTribe(card("H", { typeLine: "Artifact", oracleText: "Assembly-Worker creatures you control get +1/+1." }), "assembly-worker")).toBe(true);
+    expect(cardFitsTribe(card("I", { typeLine: "Enchantment", oracleText: "Fungi you control have hexproof." }), "fungus")).toBe(true);
   });
 
   it("the AI refuses below half a floor", () => {
