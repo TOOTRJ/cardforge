@@ -25,16 +25,18 @@ export const CUSTOM_SYMBOL_IN_TEXT_RE = /\{\*([A-Za-z][A-Za-z0-9]{0,5})\}/g;
 
 const ONE_IN_TEXT_RE = new RegExp(CUSTOM_SYMBOL_IN_TEXT_RE.source);
 
-/** The tokenizer's inner text of a custom symbol (upper-cased, braces
- *  dropped): `*CODE`. */
-const INNER_RE = /^\*([A-Z][A-Z0-9]{0,5})$/;
+/** A token's inside AS TYPED (braces dropped): `*code`, ASCII only — never
+ *  upper-cased first: `"ß".toUpperCase()` is "SS" and "ﬁ" is "FI", which the
+ *  text pattern above (the layout's scope, the bake's picture filter) would
+ *  not see. */
+const INNER_RE = /^\*([A-Za-z][A-Za-z0-9]{0,5})$/;
 
 /** A custom symbol's suffix: `*` then the code in lower case. */
 const SUFFIX_RE = /^\*([a-z][a-z0-9]{0,5})$/;
 
-/** The code an upper-cased token's inside names (`*ABC` → "ABC"), or null. */
+/** The code a token's inside, as typed, names (`*abc` → "ABC"), or null. */
 export function customSymbolCodeOfInner(inner: string): string | null {
-  return INNER_RE.exec(inner)?.[1] ?? null;
+  return INNER_RE.exec(inner)?.[1].toUpperCase() ?? null;
 }
 
 /** The suffix a custom symbol carries through the layout and the renderers. */

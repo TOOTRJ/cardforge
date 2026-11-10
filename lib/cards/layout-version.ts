@@ -1802,8 +1802,9 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            Until v76 the tokenizer read it as an unknown symbol and
 //            neither renderer drew anything there. Any template, a card
 //            scope alone (customSymbolsChanged): a card whose cost, rules
-//            text, rows or back face names `{*CODE}`; every other card bakes
-//            byte-identical. CUSTOM_SYMBOLS_LAYOUT_VERSION below — the ONE
+//            text, rows or back face names `{*CODE}` — or whose name or
+//            nickname does (a `~` draws it into the rules); every other card
+//            bakes byte-identical. CUSTOM_SYMBOLS_LAYOUT_VERSION below — the ONE
 //            constant. "sweep" in the table — no badge — for a scope with no
 //            public or unlisted card in it at merge (owner 2026-11-09: no
 //            existing card changes); a private one that names a code is
@@ -3061,16 +3062,27 @@ export function v75WalkerRowsChanged(card: ScopeCard): boolean {
 /**
  * Whether layout v76 (the owner's own mana symbols) changed a card's bake:
  * its cost, rules text, rows (`face_content`) or back face names a custom
- * symbol, `{*CODE}` (hasCustomSymbol — the renderers' own reading, and what
- * 0193's in-use check reads). Any template: a frame that draws no rules text
- * is re-baked to the same pixels (read wider than drawn). A row without the
- * columns → affected.
+ * symbol, `{*CODE}` (hasCustomSymbol — the renderers' own reading) — or its
+ * name or nickname does, which a `~` / CARDNAME in the rules draws as text
+ * the rules tokenizer then reads (withSelfNames runs before either layout;
+ * the back face's name rides its JSON). Any template: a frame that draws no
+ * rules text, or a name no `~` names, is re-baked to the same pixels (read
+ * wider than drawn). A row without the columns → affected.
  */
 export function customSymbolsChanged(card: ScopeCard): boolean {
-  if (card.cost === undefined || card.rules_text === undefined || card.face_content === undefined || card.back_face === undefined) {
+  if (
+    card.cost === undefined ||
+    card.rules_text === undefined ||
+    card.face_content === undefined ||
+    card.back_face === undefined ||
+    card.title === undefined ||
+    card.nickname === undefined
+  ) {
     return true;
   }
   return (
+    hasCustomSymbol(card.title) ||
+    hasCustomSymbol(card.nickname) ||
     hasCustomSymbol(card.cost) ||
     hasCustomSymbol(card.rules_text) ||
     (card.face_content != null && hasCustomSymbol(JSON.stringify(card.face_content))) ||
@@ -3569,7 +3581,8 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // LIVE_RENDER_SCOPES.)
   [WALKER_BADGES_LAYOUT_VERSION]: v75WalkerRowsChanged,
   // v76 — the owner's own mana symbols: on any template, a card whose cost,
-  // rules text, rows or back face names `{*CODE}` — customSymbolsChanged.
+  // rules text, rows, back face, name or nickname names `{*CODE}` —
+  // customSymbolsChanged.
   [CUSTOM_SYMBOLS_LAYOUT_VERSION]: customSymbolsChanged,
 };
 

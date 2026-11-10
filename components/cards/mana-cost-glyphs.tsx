@@ -167,7 +167,8 @@ export function tokenize(cost: string): Token[] {
     // A custom symbol only as `{*CODE}` exactly — the shape the layout's
     // card scope and the bake's picture filter read (CUSTOM_SYMBOL_IN_TEXT_RE);
     // `{ *abc }` stays the unknown token it always was.
-    const code = customSymbolCodeOfInner(match[1].toUpperCase());
+    // Read as typed, never upper-cased first ({*ß} is no code).
+    const code = customSymbolCodeOfInner(match[1]);
     out.push(code ? { kind: "custom", code } : classifyInner(match[1].toUpperCase().trim()));
     cursor = (match.index ?? 0) + match[0].length;
   }

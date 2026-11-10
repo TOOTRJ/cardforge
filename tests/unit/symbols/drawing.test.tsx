@@ -46,14 +46,14 @@ describe("the syntax", () => {
   });
 
   it("anything else stays what it always was — never a symbol", () => {
-    for (const text of ["{* abc}", "{ *abc }", "{*}", "{*1A}", "{*ABCDEFG}", "{*A-B}"]) {
+    for (const text of ["{* abc}", "{ *abc }", "{*}", "{*1A}", "{*ABCDEFG}", "{*A-B}", "{*ß}", "{*ﬁre}", "{*ſ}", "{*ı}"]) {
       expect(tokenize(text)[0].kind, text).not.toBe("custom");
       expect(hasCustomSymbol(text), text).toBe(false);
     }
     for (const suffix of ["w", "tap", "2w", "*", "*1a", "*abcdefg"]) expect(customSymbolCodeOfSuffix(suffix), suffix).toBeNull();
     // …nor through its suffix: an unknown `*…` never carries a code (the
     // rules text finds a pip's picture by its suffix).
-    for (const text of ["{* abc}", "{ *abc }", "{*ABCDEFG}", "{*A-B}"]) {
+    for (const text of ["{* abc}", "{ *abc }", "{*ABCDEFG}", "{*A-B}", "{*ß}", "{*ﬁre}"]) {
       const suffix = tokenSuffix(tokenize(text)[0]) ?? "";
       expect(customSymbolCodeOfSuffix(suffix), text).toBeNull();
       expect(pipOverrideForSuffix(suffix, { "*A": PIC, "*ABC": PIC }), text).toBeNull();
@@ -133,6 +133,9 @@ describe("only the symbols a card names", () => {
     expect(cardNamesSymbol({ face_content: { saga: { chapters: [{ text: "{*ABC}" }] } } }, "ABC")).toBe(true);
     expect(cardNamesSymbol({ back_face: { cost: "{*ABC}" } }, "ABC")).toBe(true);
     expect(cardNamesSymbol({ cost: "{*ABCD}", rules_text: "{*AB}" }, "ABC")).toBe(false);
+    // …and a name a `~` in the rules draws (layout v76's scope).
+    expect(cardNamesSymbol({ title: "Bolt {*ABC}", rules_text: "~ deals 3." }, "ABC")).toBe(true);
+    expect(cardNamesSymbol({ nickname: "The {*abc}" }, "ABC")).toBe(true);
   });
 });
 

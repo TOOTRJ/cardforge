@@ -33,6 +33,8 @@ const at = (over: Record<string, unknown> = {}) => ({
   visibility: "public",
   layout_version: V - 1,
   rendered_image_url: png,
+  title: "Bolt",
+  nickname: null,
   cost: "{2}{G}",
   rules_text: "Flying",
   face_content: null,
@@ -64,6 +66,12 @@ describe("v76 — the owner's own mana symbols", () => {
       { face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "Add {*AE1}." }] } } },
       { back_face: { title: "Back", cost: "{*MOON}" } },
       { back_face: { title: "Back", rules_text: "{*MOON}, {T}: Scry 1." } },
+      // A name the rules draw through `~` / CARDNAME (withSelfNames runs
+      // before the layout); read wider than drawn: any name that holds one.
+      { title: "Bolt {*ABC}", rules_text: "~ deals 3 damage to any target." },
+      { title: "Bolt {*ABC}" },
+      { nickname: "The {*ABC}", rules_text: "CARDNAME deals 3 damage." },
+      { back_face: { title: "Back {*ABC}", rules_text: "~ transforms." } },
     ]) {
       for (const template of ["m15", "saga", "split", "retro", "m15borderless", "agclassic"]) {
         const row = at({ ...over, frame_style: { template } });
@@ -84,7 +92,9 @@ describe("v76 — the owner's own mana symbols", () => {
       { cost: "{*ABCDEFG}" },
       { rules_text: "A star * in the rules, {*_x}." },
       { flavor_text: "{*ABC} in the flavour prints as typed." },
-      { title: "{*ABC}" },
+      { title: "Bolt {*ABCDEFG}", rules_text: "~ deals 3 damage." },
+      // Never upper-cased into a code: "ß" → "SS", "ﬁ" → "FI".
+      { cost: "{*ß}", rules_text: "Add {*ﬁre}." },
       { back_face: { title: "Back", rules_text: "Flying" } },
     ]) {
       const row = at(over);
@@ -99,8 +109,11 @@ describe("v76 — the owner's own mana symbols", () => {
     expect(customSymbolsChanged({ cost: null, face_content: null, back_face: null })).toBe(true);
     expect(customSymbolsChanged({ cost: null, rules_text: null, back_face: null })).toBe(true);
     expect(customSymbolsChanged({ cost: null, rules_text: null, face_content: null })).toBe(true);
-    expect(customSymbolsChanged({ cost: null, rules_text: null, face_content: null, back_face: null })).toBe(false);
-    for (const column of ["cost", "rules_text", "face_content", "back_face"]) {
+    const all = { cost: null, rules_text: null, face_content: null, back_face: null, title: "x", nickname: null };
+    expect(customSymbolsChanged(all)).toBe(false);
+    expect(customSymbolsChanged({ ...all, title: undefined })).toBe(true);
+    expect(customSymbolsChanged({ ...all, nickname: undefined })).toBe(true);
+    for (const column of ["cost", "rules_text", "face_content", "back_face", "title", "nickname"]) {
       expect(SCOPE_CARD_COLUMNS as readonly string[]).toContain(column);
     }
   });

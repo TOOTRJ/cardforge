@@ -11563,7 +11563,8 @@ A card's maker can invent mana symbols beyond the six (the beta tool
 cost or a rules-style text (rules, walker / saga / station rows, a back
 face or second part). ONE reading, `lib/symbols/symbol-token.ts`: the
 cost tokenizer's `{ kind: "custom", code }` (only `{*CODE}` exactly —
-`{ *abc }` or `{*ABCDEFG}` stay the unknown tokens they always were, and
+`{ *abc }`, `{*ABCDEFG}` or `{*ß}` (read as typed, never upper-cased into
+`SS`) stay the unknown tokens they always were, and
 an unknown `*…` keeps its star alone as its label, so its suffix never
 reads as a code), the suffix `*code` it carries through the rules layout
 and both renderers, and the key `*CODE` in the CARD OWNER's pip map
@@ -11585,7 +11586,8 @@ the response (`lib/symbols/rebake.ts`, capped like a custom pip's).
 **Rollout.** Until v76 neither renderer drew anything for `{*CODE}`.
 `CUSTOM_SYMBOLS_LAYOUT_VERSION`, card-scoped on any template
 (`customSymbolsChanged`: a cost, rules text, rows or back face that names
-a code); every other card bakes byte-identical. `"sweep"` in the table,
+a code — or a name or nickname that does, which a `~` in the rules draws as
+text the tokenizer then reads); every other card bakes byte-identical. `"sweep"` in the table,
 never a badge: no public or unlisted card named a code at merge; a private
 one is re-baked by the platform to draw what its text says.
 Verification-neutral. The parity case is `m15/g/creature-short@symbol-placeholder`.

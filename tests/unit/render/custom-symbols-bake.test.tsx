@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { MANA_GEM_BG } from "@/lib/cards/mana-gem";
 import { renderCardImage } from "@/lib/render/card-image";
@@ -13,6 +13,19 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // was drawn at all. Flat stand-in masters (tests/stubs/stand-in-frames.ts):
 // text and pips are the only ink.
 // ---------------------------------------------------------------------------
+
+// Every picture the bake resolves (fetch or decode), recorded.
+const resolved = vi.hoisted(() => [] as string[]);
+vi.mock("@/lib/render/art-source", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/render/art-source")>();
+  return {
+    ...actual,
+    resolveRenderableImage: (url: string | null | undefined, ...rest: unknown[]) => {
+      if (url) resolved.push(url);
+      return (actual.resolveRenderableImage as (...a: unknown[]) => unknown)(url, ...rest);
+    },
+  };
+});
 
 const HD_W = 1500;
 const COST = [700, 60, 1460, 230] as const;
@@ -131,10 +144,14 @@ describe("the owner's own symbols on the bake (layout v76)", () => {
     expect(inkBox(without, COST, isPlaceholder)).toBeNull();
   }, 60_000);
 
-  it("a symbol the card doesn't name is never fetched — an unfetchable one breaks nothing", async () => {
+  it("resolves only the symbols the card names — never the rest of the owner's set", async () => {
+    const other = `${magenta}#other`;
+    resolved.length = 0;
     const r = await bake(
-      card({ cost: "{1}{*ABC}", pipOverrides: { "*ABC": magenta, "*NOPE": "https://unreachable.test/nope.png" } } as Partial<CardPreviewData>),
+      card({ cost: "{1}{*ABC}", pipOverrides: { G: magenta, "*ABC": magenta, "*NOPE": other } } as Partial<CardPreviewData>),
     );
     expect(inkBox(r, COST, isMagenta)).not.toBeNull();
+    expect(resolved).toContain(magenta);
+    expect(resolved).not.toContain(other);
   }, 60_000);
 });

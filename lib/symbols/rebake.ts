@@ -23,13 +23,32 @@ const REBAKE_SWEEP_CAP = 40;
 const SCANNED = 400;
 
 /** True when a card row's drawn text names `{*code}` (any case): its cost,
- *  rules text, rows and back face — what 0193's in-use check reads. */
+ *  rules text, rows and back face, and its name and nickname (a `~` in the
+ *  rules draws them as text — lib/cards/self-name.ts) — layout v76's scope
+ *  (customSymbolsChanged). Wider than 0193's in-use check, which reads no
+ *  name: a symbol a card only reaches through `~` can be deleted for good,
+ *  and that card then draws the placeholder — the same as the check's
+ *  documented race. */
 export function cardNamesSymbol(
-  row: { cost?: string | null; rules_text?: string | null; face_content?: unknown; back_face?: unknown },
+  row: {
+    cost?: string | null;
+    rules_text?: string | null;
+    face_content?: unknown;
+    back_face?: unknown;
+    title?: string | null;
+    nickname?: string | null;
+  },
   code: string,
 ): boolean {
   const upper = code.toUpperCase();
-  const texts = [row.cost, row.rules_text, JSON.stringify(row.face_content ?? null), JSON.stringify(row.back_face ?? null)];
+  const texts = [
+    row.title,
+    row.nickname,
+    row.cost,
+    row.rules_text,
+    JSON.stringify(row.face_content ?? null),
+    JSON.stringify(row.back_face ?? null),
+  ];
   return texts.some((text) => customSymbolCodesIn(text).includes(upper));
 }
 
@@ -41,7 +60,7 @@ export function rebakeCardsNamingSymbol(ownerId: string, code: string): void {
       const supabase = await createClient();
       const { data, error } = await supabase
         .from("cards")
-        .select("id, cost, rules_text, face_content, back_face")
+        .select("id, title, nickname, cost, rules_text, face_content, back_face")
         .eq("owner_id", ownerId)
         .order("updated_at", { ascending: false })
         .limit(SCANNED);
