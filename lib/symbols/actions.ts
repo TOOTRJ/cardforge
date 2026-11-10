@@ -14,6 +14,7 @@ import {
 } from "@/lib/media/upload-rate-limit";
 import { scanImageBytes } from "@/lib/moderation/image-scan";
 import { BLOCKED_CATEGORIES } from "@/lib/moderation/image-scan-core";
+import { containsProfanity } from "@/lib/moderation/profanity";
 import { recordToolEvent } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
 import { PIP_FORGE_SLUG } from "@/lib/tools/pip-forge/model";
@@ -25,6 +26,7 @@ import {
   SYMBOL_PICTURE_PX,
 } from "@/lib/symbols/write-symbol";
 import { SYMBOL_COLUMNS, symbolFromRow, type SymbolRow } from "@/lib/symbols/queries";
+import { rebakeCardsNamingSymbol } from "@/lib/symbols/rebake";
 import {
   CUSTOM_SYMBOLS_SLUG,
   LIVE_SYMBOL_CAP,
@@ -58,9 +60,17 @@ import {
 // It is not a lock: a card saved naming the code in that same instant can
 // still name a deleted symbol, which the renderers draw as a placeholder.
 //
-// Nothing is revalidated: the manager follows each action's answer, and no
-// other page draws a symbol yet (PR 2 adds the renderers and their re-bake).
-// A revalidated tool page would also count as an `open` on every write.
+// A symbol's name and code are read by anyone (a card that uses one draws for
+// every viewer), so neither may hold strong language (owner decision 7,
+// 2026-11-09: lib/moderation/profanity.ts, the card detector): refused with a
+// field error — a symbol has no private mode to fall back to.
+//
+// Nothing is revalidated: the manager follows each action's answer, and the
+// renderers read the owner's symbols on every render (lib/pips/queries.ts).
+// A revalidated tool page would also count as an `open` on every write. What
+// a write leaves STORED — a card baked with the placeholder or the old
+// picture — is re-baked after the response (lib/symbols/rebake.ts) when a
+// symbol is made or its picture replaced.
 // ---------------------------------------------------------------------------
 
 const NO_ACCESS = "New mana symbols isn't open to your account right now.";
@@ -195,6 +205,17 @@ function detailsFrom(formData: FormData) {
   });
 }
 
+/** Strong language in a symbol's public words → the field's error. */
+function strongLanguageIn(words: { code?: string; name: string }): { error: string; field: "code" | "name" } | null {
+  if (words.code !== undefined && containsProfanity(words.code)) {
+    return { error: "Pick another code — a symbol's code is public, so it can't hold strong language.", field: "code" };
+  }
+  if (containsProfanity(words.name)) {
+    return { error: "Pick another name — a symbol's name is public, so it can't hold strong language.", field: "name" };
+  }
+  return null;
+}
+
 function fieldOf(path: PropertyKey[] | undefined): "code" | "name" | "manaValue" | "baseColor" | undefined {
   const key = path?.[0];
   return key === "code" || key === "name" || key === "manaValue" || key === "baseColor" ? key : undefined;
@@ -244,6 +265,8 @@ export async function createSymbolAction(formData: FormData): Promise<SymbolResu
     const issue = details.error.issues[0];
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
+  const strong = strongLanguageIn(details.data);
+  if (strong) return { ok: false, ...strong };
   const full = await roomFor(access.userId, details.data.code);
   if (full) return { ok: false, error: full, field: full.includes("code") ? "code" : undefined };
 
@@ -256,6 +279,7 @@ export async function createSymbolAction(formData: FormData): Promise<SymbolResu
 
   const result = await insertSymbol(access.userId, details.data, picture.png, "upload");
   if (result.ok) {
+    rebakeCardsNamingSymbol(access.userId, result.symbol.code);
     await recordToolEvent({
       slug: CUSTOM_SYMBOLS_SLUG,
       userId: access.userId,
@@ -283,6 +307,8 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
     const issue = parsed.error.issues[0];
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
+  const strong = strongLanguageIn(parsed.data);
+  if (strong) return { ok: false, ...strong };
   const full = await roomFor(access.userId, parsed.data.code);
   if (full) return { ok: false, error: full, field: full.includes("code") ? "code" : undefined };
 
@@ -307,6 +333,7 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
   };
   const result = await insertSymbol(access.userId, details, Buffer.from(bytes), "forge");
   if (result.ok) {
+    rebakeCardsNamingSymbol(access.userId, result.symbol.code);
     await recordToolEvent({
       slug: CUSTOM_SYMBOLS_SLUG,
       userId: access.userId,
@@ -328,6 +355,8 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
     const issue = parsed.error.issues[0];
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
+  const strong = strongLanguageIn({ name: parsed.data.name });
+  if (strong) return { ok: false, ...strong };
   const before = await readOwnSymbol(access.userId, parsed.data.id);
   if (!before) return { ok: false, error: "That symbol is gone." };
   if (before.deletedAt) return { ok: false, error: "Restore the symbol to change it." };
@@ -395,6 +424,7 @@ export async function replaceSymbolPictureAction(formData: FormData): Promise<Sy
   if (!symbol) return { ok: false, error: "The picture couldn't be saved. Try again in a moment." };
   const old = ownSymbolFileName(access.userId, before.imageUrl);
   if (old && old !== stored.fileName) await removeSymbolPictures(access.userId, [old]);
+  rebakeCardsNamingSymbol(access.userId, symbol.code);
   await recordToolEvent({
     slug: CUSTOM_SYMBOLS_SLUG,
     userId: access.userId,

@@ -88,6 +88,15 @@ const PICKS: readonly Pick[] = [
     from: "m15/g/creature-long@flavor-upright",
     why: "flavour's upright *…* spans: roman words inside the italic, glued pieces of a word, no stars (v71)",
   },
+  {
+    from: "m15/g/creature-short",
+    as: "@symbol-placeholder",
+    // The parity rows carry no owner's map: every code is one with no
+    // picture. A picture draws through the custom pip's <img>, as {W}…{C}
+    // always did (tests/unit/render/custom-symbols-bake.test.tsx).
+    why: "v76: the owner's own symbol with no picture — the placeholder disc (plain, colourless, nothing on it) in the cost beside real pips and inline in rules text, glued to its punctuation",
+    row: () => ({ cost: "{1}{*ABC}{G}", rules_text: "{*abc}, {T}: Add {G}{*ABC}.\nFlying" }),
+  },
   { from: "m15/g/creature-long@collector", why: "the collector line and the © slot's mark" },
   { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
   // --- the nickname (TODO 6.3): the plate, its rim and the name on it -------

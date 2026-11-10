@@ -1,4 +1,5 @@
 import type { Token } from "@/components/cards/mana-cost-glyphs";
+import { customSymbolCodeOfSuffix, customSymbolCodesIn, customSymbolKey } from "@/lib/symbols/symbol-token";
 
 // ---------------------------------------------------------------------------
 // Custom pip overrides — shared pure helpers (client + server safe).
@@ -12,13 +13,21 @@ import type { Token } from "@/components/cards/mana-cost-glyphs";
 // rules-text pips. Generic numbers, X, hybrids, phyrexians, and the
 // utility symbols keep the standard glyphs — extend CUSTOM_PIP_SYMBOLS +
 // the matches below to grow the set.
+//
+// The owner's own symbols (beta tool `custom-symbols`, layout v76) ride the
+// same map under `*CODE` keys (lib/symbols/symbol-token.ts): `{*CODE}` draws
+// that entry's picture, and a placeholder disc where there is none
+// (lib/cards/mana-gem.ts `kind: "blank"`).
 // ---------------------------------------------------------------------------
 
 export const CUSTOM_PIP_SYMBOLS = ["W", "U", "B", "R", "G", "C"] as const;
 
 export type CustomPipSymbol = (typeof CUSTOM_PIP_SYMBOLS)[number];
 
-export type PipOverrides = Partial<Record<CustomPipSymbol, string>>;
+export type PipOverrides = Partial<Record<CustomPipSymbol, string>> & {
+  /** An owner's own symbol's picture, keyed `*CODE`. */
+  [symbol: `*${string}`]: string | undefined;
+};
 
 export const CUSTOM_PIP_SYMBOL_LABELS: Record<CustomPipSymbol, string> = {
   W: "White",
@@ -44,6 +53,7 @@ export function pipOverrideForToken(
   overrides: PipOverrides | null | undefined,
 ): string | null {
   if (!overrides) return null;
+  if (token.kind === "custom") return overrides[customSymbolKey(token.code)] ?? null;
   if (token.kind !== "solid") return null;
   if (token.label !== token.color) return null;
   if (!isCustomPipSymbol(token.color)) return null;
@@ -69,6 +79,31 @@ export function pipOverrideForSuffix(
   overrides: PipOverrides | null | undefined,
 ): string | null {
   if (!overrides) return null;
+  const code = customSymbolCodeOfSuffix(suffix);
+  if (code) return overrides[customSymbolKey(code)] ?? null;
   const symbol = SUFFIX_TO_SYMBOL[suffix];
   return symbol ? overrides[symbol] ?? null : null;
+}
+
+/**
+ * The entries of an owner's map a card can draw: the six pips, and only the
+ * `*CODE` symbols `text` (the card's data, serialized — every face, row and
+ * part) names. The bake fetches every picture it is handed
+ * (lib/render/card-image.tsx withRenderableImages): an owner with twenty
+ * symbols would otherwise fetch twenty for a card that names none. A code
+ * not in the map is left out (it draws its placeholder).
+ */
+export function pipOverridesNamedIn(
+  overrides: PipOverrides | null | undefined,
+  text: string,
+): PipOverrides | null | undefined {
+  if (!overrides) return overrides;
+  const named = new Set(customSymbolCodesIn(text).map(customSymbolKey));
+  const kept: PipOverrides = {};
+  for (const [key, url] of Object.entries(overrides) as [keyof PipOverrides, string | undefined][]) {
+    if (url === undefined) continue;
+    if (key.startsWith("*") && !named.has(key as `*${string}`)) continue;
+    kept[key] = url;
+  }
+  return kept;
 }

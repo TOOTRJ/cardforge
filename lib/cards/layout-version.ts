@@ -1,5 +1,6 @@
 import { hasZeroedKernPair } from "@/lib/cards/display-kerning";
 import { hasFlavorMarkup } from "@/lib/cards/flavor-markup";
+import { hasCustomSymbol } from "@/lib/symbols/symbol-token";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
@@ -1793,6 +1794,22 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //              750 px bake, at the stored HD bake's px ÷ 2 — the preview's
 //              size. No stored bake is 750 px, so it re-bakes nothing
 //              (LIVE_RENDER_SCOPES: the visual matrix's 750 px cases only).
+//   v76 — the card owner's own mana symbols (beta tool `custom-symbols`,
+//            migration 0193; owner 2026-11-09): `{*CODE}` in a cost or a
+//            rules-style text draws the owner's symbol's picture at a plain
+//            pip's size and place, or — a code the owner has no symbol by —
+//            a placeholder, a plain colourless disc with the pip's shadow.
+//            Until v76 the tokenizer read it as an unknown symbol and
+//            neither renderer drew anything there. Any template, a card
+//            scope alone (customSymbolsChanged): a card whose cost, rules
+//            text, rows or back face names `{*CODE}` — or whose name or
+//            nickname does (a `~` draws it into the rules); every other card
+//            bakes byte-identical. CUSTOM_SYMBOLS_LAYOUT_VERSION below — the ONE
+//            constant. "sweep" in the table — no badge — for a scope with no
+//            public or unlisted card in it at merge (owner 2026-11-09: no
+//            existing card changes); a private one that names a code is
+//            re-baked by the platform to draw what its text says.
+//            Verification-neutral: no slot, master or plate moves.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -2123,7 +2140,14 @@ export const WALKER_BADGES_LAYOUT_VERSION = 75;
  *  with v75 (a walker body added later is born on the new rail). */
 export const V75_WALKER_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
 
-export const CARD_LAYOUT_VERSION = WALKER_BADGES_LAYOUT_VERSION;
+/** The card owner's own mana symbols drawn (beta tool `custom-symbols`,
+ *  owner 2026-11-09): ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the card scope and the rollout below read this constant — so a bump that
+ *  merges first moves it in one place (this constant and the test's `V`
+ *  move together). Frozen once it ships. */
+export const CUSTOM_SYMBOLS_LAYOUT_VERSION = 76;
+
+export const CARD_LAYOUT_VERSION = CUSTOM_SYMBOLS_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2300,6 +2324,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (v53 is not here: any template — a card scope, v53Changed.)
   // (v71 is not here: any template — a card scope, flavorMarkupChanged.)
   // (v72 is not here: any template — a card scope, kerningGuardsChanged.)
+  // (v76 is not here: any template — a card scope, customSymbolsChanged.)
   // The station frame on print's band rule (4.27a, PR 2): the pair's tier
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
@@ -2592,6 +2617,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   COST_ROW_PRINT_LAYOUT_VERSION,
   FLAVOR_MARKUP_LAYOUT_VERSION,
   DISPLAY_KERNING_LAYOUT_VERSION,
+  CUSTOM_SYMBOLS_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -3031,6 +3057,37 @@ export function v75WalkerRowsChanged(card: ScopeCard): boolean {
   if (typeof card.rules_text === "string" && card.rules_text.trim()) return true;
   const content = card.face_content && typeof card.face_content === "object" ? (card.face_content as { loyalty?: { abilities?: unknown } }) : null;
   return Array.isArray(content?.loyalty?.abilities) && content.loyalty.abilities.length > 0;
+}
+
+/**
+ * Whether layout v76 (the owner's own mana symbols) changed a card's bake:
+ * its cost, rules text, rows (`face_content`) or back face names a custom
+ * symbol, `{*CODE}` (hasCustomSymbol — the renderers' own reading) — or its
+ * name or nickname does, which a `~` / CARDNAME in the rules draws as text
+ * the rules tokenizer then reads (withSelfNames runs before either layout;
+ * the back face's name rides its JSON). Any template: a frame that draws no
+ * rules text, or a name no `~` names, is re-baked to the same pixels (read
+ * wider than drawn). A row without the columns → affected.
+ */
+export function customSymbolsChanged(card: ScopeCard): boolean {
+  if (
+    card.cost === undefined ||
+    card.rules_text === undefined ||
+    card.face_content === undefined ||
+    card.back_face === undefined ||
+    card.title === undefined ||
+    card.nickname === undefined
+  ) {
+    return true;
+  }
+  return (
+    hasCustomSymbol(card.title) ||
+    hasCustomSymbol(card.nickname) ||
+    hasCustomSymbol(card.cost) ||
+    hasCustomSymbol(card.rules_text) ||
+    (card.face_content != null && hasCustomSymbol(JSON.stringify(card.face_content))) ||
+    (card.back_face != null && hasCustomSymbol(JSON.stringify(card.back_face)))
+  );
 }
 
 /**
@@ -3523,6 +3580,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v75WalkerRowsChanged. (Its 750 px part never reaches a stored bake:
   // LIVE_RENDER_SCOPES.)
   [WALKER_BADGES_LAYOUT_VERSION]: v75WalkerRowsChanged,
+  // v76 — the owner's own mana symbols: on any template, a card whose cost,
+  // rules text, rows, back face, name or nickname names `{*CODE}` —
+  // customSymbolsChanged.
+  [CUSTOM_SYMBOLS_LAYOUT_VERSION]: customSymbolsChanged,
 };
 
 /**
@@ -3652,6 +3713,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [CUSTOM_SYMBOLS_LAYOUT_VERSION]: "sweep", // the card owner's own mana symbols ({*CODE}: the symbol's picture, else a placeholder disc; owner 2026-11-09) — where both renderers drew nothing; card-scoped to texts that name a code (no public or unlisted card at merge), never a badge
   [WALKER_BADGES_LAYOUT_VERSION]: "sweep", // the walker's loyalty badges on print (4.19's badge rail, owner 2026-10-28): the badge at the frame's edge at the print's size with the colon, the long minus, a static ability's text at the print's margin — a correction of what both renderers drew against every walker print, card-scoped to walkers that draw ability rows, never a badge; plus 3.37 (d), the long name at the 750 px live render, which re-bakes nothing (LIVE_RENDER_SCOPES)
   [ADVENTURE_NYX_LAYOUT_VERSION]: "sweep", // the adventure's left-page paper toned onto print (4.26a) and the Nyx Constellation's lower half re-sourced from Card Conjurer onto print, its type band with its bar (4.17f) — corrections of two looks against their own prints after the owner's before / after sheet, never a badge
   [DISPLAY_KERNING_LAYOUT_VERSION]: "sweep", // Beleren's collision-guard kerns at 0 (K→y, R→j, f→l, f→i… — 21 pairs): the letters set tight as every print sets them, no more "K ylox" / "Snuff ler" — a correction of what both renderers printed; card-scoped to the names, type words and credits that hold a pair, never a badge
