@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
   uploads: [] as Array<{ bucket: string; key: string; bytes: Buffer; upsert: unknown }>,
   removes: [] as string[][],
   events: [] as Array<{ event: string; props?: unknown }>,
+  rebakes: [] as string[],
   rows: [] as Array<Record<string, unknown>>,
   /** What the next write of each kind answers. */
   insertError: null as null | { message: string; code?: string },
@@ -37,6 +38,11 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
+vi.mock("@/lib/symbols/rebake", () => ({
+  rebakeCardsNamingSymbol: (ownerId: string, code: string) => {
+    state.rebakes.push(`${ownerId}:${code}`);
+  },
+}));
 vi.mock("@/lib/tools/events", () => ({
   recordToolEvent: async (input: { event: string; props?: unknown }) => {
     state.events.push({ event: input.event, props: input.props });
@@ -183,6 +189,7 @@ beforeEach(() => {
   state.insertError = null;
   state.deleteError = null;
   state.log.length = 0;
+  state.rebakes.length = 0;
 });
 
 describe("making a symbol", () => {
@@ -219,6 +226,27 @@ describe("making a symbol", () => {
       image_url: expect.stringMatching(new RegExp(`^${ORIGIN}/storage/v1/object/public/custom-pips/${USER}/sym-[0-9a-f-]{36}\\.png\\?v=\\d+$`)),
     });
     expect(state.events).toEqual([{ event: "create", props: { source: "upload", mana_value: 2, coloured: true } }]);
+    // A card that named {*ABC} before it existed drew the placeholder: re-baked.
+    expect(state.rebakes).toEqual([`${USER}:ABC`]);
+  });
+
+  it("strong language in a code or a name is refused on its field, before any upload", async () => {
+    const code = await createSymbolAction(await form({ ...NEW, code: "FUCK" }));
+    expect(code).toMatchObject({ ok: false, field: "code", error: expect.stringContaining("public") });
+    const name = await createSymbolAction(await form({ ...NEW, name: "Shit storm" }));
+    expect(name).toMatchObject({ ok: false, field: "name", error: expect.stringContaining("public") });
+    const forged = await createSymbolFromForgedPipAction({
+      forgedPipId: "44444444-4444-4444-8444-444444444444",
+      code: "Q",
+      name: "fucking pip",
+      manaValue: 1,
+      baseColor: "",
+    });
+    expect(forged).toMatchObject({ ok: false, field: "name" });
+    // A mild word is fine (owner policy 2026-10-28).
+    expect(await createSymbolAction(await form({ ...NEW, name: "Hell bloom" }))).toMatchObject({ ok: true });
+    expect(state.checks).toBe(1);
+    expect(state.uploads).toHaveLength(1);
   });
 
   it("a taken code or a full set is refused before the upload is counted", async () => {
@@ -302,6 +330,17 @@ describe("changing a symbol", () => {
     const update = state.log.find((e) => called(e.calls, "update"));
     expect(payloadOf(update!.calls, "update")).toEqual({ name: "New", mana_value: 3, base_color: null });
     expect(called(update!.calls, "is", "deleted_at")).toBe(true);
+    // A name or a meaning draws nothing new.
+    expect(state.rebakes).toEqual([]);
+  });
+
+  it("a rename to strong language is refused on the name, nothing written", async () => {
+    state.rows = [row()];
+    expect(await updateSymbolAction({ id: SYMBOL_ID, name: "Cunt", manaValue: 1, baseColor: "" })).toMatchObject({
+      ok: false,
+      field: "name",
+    });
+    expect(state.log.some((e) => called(e.calls, "update"))).toBe(false);
   });
 
   it("a removed symbol must be restored first", async () => {
@@ -316,6 +355,7 @@ describe("changing a symbol", () => {
     expect(state.uploads).toHaveLength(1);
     expect(state.uploads[0].key).not.toContain(OLD_FILE);
     expect(state.removes).toEqual([[`${USER}/${OLD_FILE}`]]);
+    expect(state.rebakes).toEqual([`${USER}:ABC`]);
   });
 });
 

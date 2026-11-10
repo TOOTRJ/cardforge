@@ -3,6 +3,7 @@ import { canonicalHybridPair } from "@/lib/cards/mana-order";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
 import { SNOW_FLAKE_MITRE, drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
 import { frameUrl } from "@/lib/frames/frame-url";
+import { customSymbolCodeOfInner, customSymbolSuffix } from "@/lib/symbols/symbol-token";
 import {
   previewDiscShadowCss,
   styledSuffix,
@@ -24,6 +25,8 @@ import {
 //   {W/P} … {C/P}                    — phyrexian
 //   {G/U/P} {G/W/P} …                — two-colour phyrexian
 //   {T} {Q} {S} {E}                  — tap, untap, snow, energy
+//   {*ABC}                           — the card owner's own symbol (its
+//                                      picture, else a placeholder disc)
 //
 // Anything unknown falls back to a generic-cost gem labeled with the first
 // two characters of the inner content so nothing gets silently dropped.
@@ -42,8 +45,9 @@ type ManaCostGlyphsProps = {
    *  set, it wins over `size`. */
   disc?: { size: string; gap: string; px: number };
   /** The card OWNER's custom pip icons. Pure color pips ({W}…{C}) with an
-   *  entry render the uploaded image instead of the mana-font glyph; all
-   *  other tokens (and all callers that omit this) keep the standard look. */
+   *  entry render the uploaded image instead of the mana-font glyph, and so
+   *  does an owner's own symbol ({*CODE}, its `*CODE` entry; without one, a
+   *  placeholder disc); all other tokens keep the standard look. */
   overrides?: PipOverrides | null;
   /** Vertical nudge of the whole cost (a CSS length, e.g. a `cqw` string;
    *  negative = up) — a frame profile's `costDy` (CardPreview only). */
@@ -85,6 +89,9 @@ export type Token =
   | { kind: "hybrid"; left: ColorKey; right: ColorKey; label?: string; phyrexian?: true }
   | { kind: "phyrexian"; color: ColorKey }
   | { kind: "symbol"; symbol: "T" | "Q" | "S" | "E" }
+  /** The card owner's own symbol, `{*CODE}` (lib/symbols/symbol-token.ts):
+   *  their picture, or a placeholder disc when they have none by that code. */
+  | { kind: "custom"; code: string }
   | { kind: "text"; value: string };
 
 const HYBRID_PATTERN = /^([WUBRG])\/([WUBRG])$/;
@@ -141,6 +148,10 @@ function classifyInner(inner: string): Token {
     };
   }
 
+  // An unknown `*…` (`{*ABCDEFG}`, `{ *abc }`) keeps its star alone: "*A"
+  // would read as the owner's symbol A wherever a pip is carried by its
+  // suffix (the rules text). Drawn as before v76: not at all.
+  if (inner.startsWith("*")) return { kind: "solid", color: "C", label: "*" };
   return { kind: "solid", color: "C", label: inner.slice(0, 2) };
 }
 
@@ -153,8 +164,12 @@ export function tokenize(cost: string): Token[] {
       const text = cost.slice(cursor, match.index).trim();
       if (text) out.push({ kind: "text", value: text });
     }
-    const inner = match[1].toUpperCase().trim();
-    out.push(classifyInner(inner));
+    // A custom symbol only as `{*CODE}` exactly — the shape the layout's
+    // card scope and the bake's picture filter read (CUSTOM_SYMBOL_IN_TEXT_RE);
+    // `{ *abc }` stays the unknown token it always was.
+    // Read as typed, never upper-cased first ({*ß} is no code).
+    const code = customSymbolCodeOfInner(match[1]);
+    out.push(code ? { kind: "custom", code } : classifyInner(match[1].toUpperCase().trim()));
     cursor = (match.index ?? 0) + match[0].length;
   }
 
@@ -172,6 +187,7 @@ export function tokenize(cost: string): Token[] {
 //   hybrid:      {W/U} → "wu", {2/W} → "2w", {G/U/P} → "gup"
 //   phyrexian:   {W/P} → "wp"
 //   symbol:      {T} → "tap", {Q} → "untap", {S} → "s", {E} → "e"
+//   custom:      {*ABC} → "*abc" (never a mana-font class)
 // ---------------------------------------------------------------------------
 
 export function tokenSuffix(token: Token): string | null {
@@ -191,6 +207,8 @@ export function tokenSuffix(token: Token): string | null {
       if (token.symbol === "S") return "s";
       if (token.symbol === "E") return "e";
       return null;
+    case "custom":
+      return customSymbolSuffix(token.code);
     case "text":
       return null;
   }
@@ -281,6 +299,28 @@ export function CardPip({
   }
   if (!drawsManaGem(suffix, symbols)) return null;
   const gem = manaGemSpec(suffix, pipPx, symbols);
+  if (gem.kind === "blank") {
+    // An owner's own symbol with no picture (layout v76): the bake's plain
+    // colourless disc, nothing on it, with the disc's shadow.
+    const boxShadow = previewDiscShadowCss(symbols, gem.discPx, pipPx);
+    const disc = emOf(gem.discPx, pipPx);
+    return (
+      <span
+        aria-hidden
+        data-pip={gem.suffix}
+        style={{
+          display: "inline-block",
+          verticalAlign: "middle",
+          width: disc,
+          height: disc,
+          borderRadius: "50%",
+          backgroundColor: gem.bg,
+          flexShrink: 0,
+          ...(boxShadow ? { boxShadow } : {}),
+        }}
+      />
+    );
+  }
   if (gem.kind === "image") {
     // A style's own symbol image (the 1993 frame's five colour symbols):
     // the whole pip in the disc's box, as the bake's ManaGem draws it — the
@@ -502,6 +542,10 @@ export function ManaCostGlyphs({
         }
         if (overrideSrc) {
           return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
+        }
+        if (token.kind === "custom") {
+          // An owner's symbol with no picture here: mana-font's plain disc.
+          return <i key={`g-${i}`} aria-hidden data-pip={tokenSuffix(token) ?? undefined} className={cn("ms ms-cost", symbols.previewShadowClass)} />;
         }
         const classSuffix = offCardSuffix(token);
         if (!classSuffix) return null;

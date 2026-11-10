@@ -24,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 import { z } from "zod";
+import { CUSTOM_SYMBOL_IN_TEXT_RE, customSymbolCodesIn } from "@/lib/symbols/symbol-token";
 
 export const CUSTOM_SYMBOLS_SLUG = "custom-symbols" as const;
 
@@ -41,8 +42,8 @@ export const SYMBOL_MANA_VALUE_MAX = 20;
 export const SYMBOL_CODE_RE = /^[A-Z][A-Z0-9]{0,5}$/;
 
 /** A symbol as written in text: `{*code}`, any case. Global — use with
- *  matchAll / replace. */
-export const SYMBOL_IN_TEXT_RE = /\{\*([A-Za-z][A-Za-z0-9]{0,5})\}/g;
+ *  matchAll / replace. (The renderers' module, lib/symbols/symbol-token.ts.) */
+export const SYMBOL_IN_TEXT_RE = CUSTOM_SYMBOL_IN_TEXT_RE;
 
 export const SYMBOL_BASE_COLORS = ["W", "U", "B", "R", "G"] as const;
 export type SymbolBaseColor = (typeof SYMBOL_BASE_COLORS)[number];
@@ -87,12 +88,7 @@ export function symbolToken(code: string): string {
 }
 
 /** Every code a text names, uppercase, each once, in first-seen order. */
-export function symbolCodesIn(text: string | null | undefined): string[] {
-  if (!text) return [];
-  const seen = new Set<string>();
-  for (const match of text.matchAll(SYMBOL_IN_TEXT_RE)) seen.add(match[1].toUpperCase());
-  return [...seen];
-}
+export const symbolCodesIn = customSymbolCodesIn;
 
 export function isSymbolBaseColor(value: unknown): value is SymbolBaseColor {
   return typeof value === "string" && (SYMBOL_BASE_COLORS as readonly string[]).includes(value);

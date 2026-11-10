@@ -22,6 +22,7 @@
 import { hybridHalves, inlineManaTintKey } from "@/lib/cards/rules-text";
 import { SNOW_FLAKE_BOX, SNOW_FLAKE_PATH } from "@/lib/cards/snow-flake-path";
 import { manaGlyphPx, styledSuffix, symbolImagePath, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { isCustomSymbolSuffix } from "@/lib/symbols/symbol-token";
 
 /** The disc's colour per tint key — mana-font's `.ms-cost` backgrounds. */
 export const MANA_GEM_BG: Readonly<Record<string, string>> = {
@@ -175,6 +176,18 @@ export const SNOW_FLAKE_MITRE = 2.5;
 
 export type ManaGemSpec =
   | {
+      /** A PLACEHOLDER (layout v76): the card owner's own symbol (`{*CODE}`,
+       *  suffix `*code`) with no picture in their map — a plain colourless
+       *  disc with nothing on it, at a plain pip's size and with its shadow.
+       *  The picture itself, when there is one, is the owner's override
+       *  (lib/pips/override.ts), drawn before this is asked. */
+      kind: "blank";
+      suffix: string;
+      /** The pip's diameter, whole px: always a plain pip's. */
+      discPx: number;
+      bg: string;
+    }
+  | {
       /** A whole pip as ONE image — the disc and its drawing (a style's
        *  `symbolImages`: the 1993 frame's five colour symbols, TODO 4.10c).
        *  Drawn in the disc's box, round, like an owner's custom pip. */
@@ -246,6 +259,8 @@ function snowFlakeSpec(discPx: number): SnowFlakeSpec {
  *  always is. */
 export function manaGemSpec(symbol: string, pipPx: number, symbols: SymbolStyleSpec): ManaGemSpec {
   const suffix = styledSuffix(symbols, symbol);
+  // An owner's own symbol with no picture: the placeholder disc.
+  if (isCustomSymbolSuffix(suffix)) return { kind: "blank", suffix, discPx: pipPx, bg: MANA_GEM_BG.c };
   // A style's own image for the symbol (the 1993 frame's five colours): a
   // whole pip, always a plain pip's disc.
   const imagePath = symbolImagePath(symbols, suffix);
@@ -336,10 +351,16 @@ export function manaGlyphSuffixes(): string[] {
 }
 
 /** True when a card draws anything for `symbol` in `symbols`' style: a split
- *  disc always, a one-colour pip only with a glyph. */
+ *  disc always, an owner's own symbol always (its picture, else the
+ *  placeholder — layout v76), a one-colour pip only with a glyph. */
 export function drawsManaGem(symbol: string, symbols: SymbolStyleSpec): boolean {
   const suffix = styledSuffix(symbols, symbol);
-  return symbolImagePath(symbols, suffix) != null || hybridHalves(suffix) != null || hasManaGlyph(suffix);
+  return (
+    isCustomSymbolSuffix(suffix) ||
+    symbolImagePath(symbols, suffix) != null ||
+    hybridHalves(suffix) != null ||
+    hasManaGlyph(suffix)
+  );
 }
 
 /** The symbol images a card's text asks `symbols` for — the public paths of
