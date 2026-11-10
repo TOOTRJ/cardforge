@@ -3,9 +3,9 @@ import type { LanguageModel } from "ai";
 // ---------------------------------------------------------------------------
 // The model + sampling options of every TEXT call (generateObject).
 //
-// Claude Sonnet 5.5 (the design default since Sonnet 4.5's retirement on
-// 2026-11-30) and Haiku 5.5 answer a request that sets `temperature`, `top_p` or `top_k`
-// with a 400 ("`temperature` is deprecated for this model"), and so do Opus
+// Claude Sonnet 5.5 and Haiku 5.5 (the design and judge defaults since
+// Sonnet 4.5's retirement on 2026-11-30) answer a request that sets
+// `temperature`, `top_p` or `top_k` with a 400 ("`temperature` is deprecated for this model"), and so do Opus
 // 4.7 / 4.8, every Claude 5 model, Fable and Mythos. The AI Gateway drops the
 // field today before it reaches Anthropic, but that is the gateway's rewrite,
 // not a contract (its fallbacks are Bedrock and Vertex) — so a call never

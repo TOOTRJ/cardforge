@@ -21,7 +21,7 @@ import type { LanguageModel } from "ai";
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_DESIGN_MODEL = "anthropic/claude-sonnet-5.5";
-export const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-4.5";
+export const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-5.5";
 
 /**
  * True when the AI Gateway itself is reachable — an explicit key, or the

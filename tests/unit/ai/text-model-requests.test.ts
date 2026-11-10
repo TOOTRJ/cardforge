@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // The text AI's models and what every call sends (Sonnet 4.5 retires on
 // 2026-11-30). The defaults are the gateway ids of Claude Sonnet 5.5 (design)
-// and Claude Haiku 4.5 (judge); the 5.x models answer a request that carries
+// and Claude Haiku 5.5 (judge); the 5.x models answer a request that carries
 // temperature / top_p / top_k with a 400, so no call may send one to them,
 // and none sends thinking options, a forced tool choice or an assistant
 // prefill. `generateObject` is mocked: it records the options and throws, so
@@ -50,11 +50,11 @@ afterEach(() => {
 });
 
 describe("the default text models", () => {
-  it("design on Claude Sonnet 5.5 and judge on Claude Haiku 4.5, as AI Gateway ids", () => {
+  it("design on Claude Sonnet 5.5 and judge on Claude Haiku 5.5, as AI Gateway ids", () => {
     expect(DEFAULT_DESIGN_MODEL).toBe("anthropic/claude-sonnet-5.5");
-    expect(DEFAULT_JUDGE_MODEL).toBe("anthropic/claude-haiku-4.5");
+    expect(DEFAULT_JUDGE_MODEL).toBe("anthropic/claude-haiku-5.5");
     expect(designModel()).toBe("anthropic/claude-sonnet-5.5");
-    expect(judgeModel()).toBe("anthropic/claude-haiku-4.5");
+    expect(judgeModel()).toBe("anthropic/claude-haiku-5.5");
   });
 
   it("an env override still wins, a bare Claude id gaining its provider", () => {
@@ -120,7 +120,7 @@ function expectCleanRequest(call: Record<string, unknown> | undefined, model: st
   expect(call, "generateObject was called").toBeDefined();
   expect(call!.model).toBe(model);
   for (const key of FORBIDDEN_KEYS) expect(call, key).not.toHaveProperty(key);
-  // A temperature only where the model takes one (Haiku 4.5 does, 5.x don't).
+  // A temperature only where the model takes one (Claude 4.6 and older do, 5.x don't).
   if (acceptsSamplingParams(model)) expect(typeof call!.temperature).toBe("number");
   else expect(call).not.toHaveProperty("temperature");
   expect(typeof call!.system).toBe("string");
