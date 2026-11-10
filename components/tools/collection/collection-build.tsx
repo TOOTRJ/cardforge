@@ -449,7 +449,9 @@ export function CollectionBuild({
   };
 
   const restoreKept = () => {
-    if (!kept) return;
+    // Not while something else is running: a draft that lands mid-suggestion
+    // would fold the list the answer arrives in.
+    if (!kept || working || suggesting) return;
     setCommanderId(kept.commanderId);
     setError(null);
     // A kept choice is cleaned before it's used (a type renamed since, a
@@ -487,7 +489,11 @@ export function CollectionBuild({
       : null;
   // A button that can't act yet stays reachable and says why (aria-disabled,
   // never `disabled`, which would drop it from the keyboard's path).
-  const draftBlocked = !commander ? "Pick a commander first." : null;
+  const draftBlocked = !commander
+    ? "Pick a commander first."
+    : suggesting
+      ? "Wait for the suggestions to finish."
+      : null;
   const support = commander && ready ? ready[commander.id] : undefined;
   const pickedType = collectionDeckType(deckType);
   const typeCount = pickedType && support ? (support.deckTypes[pickedType.id] ?? 0) : null;
@@ -709,7 +715,12 @@ export function CollectionBuild({
               </span>
             </p>
             <div className="flex shrink-0 gap-2">
-              <Button size="sm" onClick={restoreKept}>
+              <Button
+                size="sm"
+                onClick={restoreKept}
+                aria-disabled={working || suggesting ? true : undefined}
+                className={cn((working || suggesting) && "opacity-50")}
+              >
                 Show it
               </Button>
               <Button size="sm" variant="ghost" onClick={dismissKept}>

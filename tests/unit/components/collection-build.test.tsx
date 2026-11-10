@@ -615,6 +615,7 @@ describe("Suggest a commander", () => {
       fireEvent.click(suggestButton());
     });
     expect(draftButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(draftButton())).toContain("Wait for the suggestions to finish.");
     fireEvent.click(draftButton());
     expect(m.draft).not.toHaveBeenCalled();
     await act(async () => {
