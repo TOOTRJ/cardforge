@@ -21,6 +21,7 @@ const OLD_FILE = "sym-33333333-3333-4333-8333-333333333333.png";
 const state = vi.hoisted(() => ({
   access: true as boolean,
   forgeAccess: true as boolean,
+  forgePx: 256,
   limited: false,
   flagged: false,
   checks: 0,
@@ -85,13 +86,14 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 vi.mock("@/lib/tools/pip-forge/server", async () => {
-  const png = await sharp({ create: { width: 256, height: 256, channels: 4, background: "#336699" } }).png().toBuffer();
+  const pngOf = (px: number) =>
+    sharp({ create: { width: px, height: px, channels: 4, background: "#336699" } }).png().toBuffer();
   return {
     readOwnPip: async (_u: string, id: string) =>
       id === "44444444-4444-4444-8444-444444444444"
         ? { id, name: "Cipher", files: { pip: "https://x/pip.png", glyph: "https://x/glyph.png" } }
         : null,
-    fetchOwnPipFile: async () => new Uint8Array(png),
+    fetchOwnPipFile: async () => new Uint8Array(await pngOf(state.forgePx)),
     decodePng: async (bytes: Uint8Array) => {
       const meta = await sharp(bytes).metadata();
       return { width: meta.width, height: meta.height };
@@ -169,6 +171,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", ORIGIN);
   state.access = true;
   state.forgeAccess = true;
+  state.forgePx = 256;
   state.limited = false;
   state.flagged = false;
   state.checks = 0;
@@ -272,6 +275,22 @@ describe("making a symbol", () => {
     expect(result).toMatchObject({ ok: true, symbol: { code: "Q", source: "forge", baseColor: null } });
     expect(state.checks).toBe(1);
     expect(state.uploads[0].key).toMatch(/\/sym-[0-9a-f-]{36}\.png$/);
+  });
+});
+
+describe("from a forged pip, refused", () => {
+  const input = { forgedPipId: "44444444-4444-4444-8444-444444444444", code: "Q", name: "Cipher", manaValue: 1, baseColor: "" };
+
+  it("a file that isn't the forge's 256 px pip is refused, never resized", async () => {
+    state.forgePx = 300;
+    expect(await createSymbolFromForgedPipAction(input)).toMatchObject({ ok: false, error: expect.stringContaining("couldn't be read") });
+    expect(state.uploads).toEqual([]);
+  });
+
+  it("a pip that isn't the caller's (readOwnPip finds none) stores nothing", async () => {
+    const result = await createSymbolFromForgedPipAction({ ...input, forgedPipId: "55555555-5555-4555-8555-555555555555" });
+    expect(result).toMatchObject({ ok: false, error: "That forged pip is gone." });
+    expect(state.uploads).toEqual([]);
   });
 });
 

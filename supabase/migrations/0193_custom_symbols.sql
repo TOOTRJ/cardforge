@@ -17,13 +17,17 @@
 -- prepareUploadBytes, the image scan). `image_url` passes 0127's media guard
 -- as kind 'pip' — the owner's own custom-pips objects only.
 --
--- A code is never re-pointed: (owner_id, code) is unique across EVERY row,
--- removed ones too, and the code can't change after insert. "Remove" is a
--- TOMBSTONE (`deleted_at`) whenever one of the owner's cards still names
--- {*CODE} — the row stays readable, so those cards keep drawing it and the
--- maker can restore it — and a real delete only when no card does: the
--- delete trigger below refuses an API role's delete of a symbol a card names
--- (`custom_symbol_in_use`), so the app's choice can't race a save.
+-- A code is never re-pointed while a card names it: (owner_id, code) is
+-- unique across EVERY row, removed ones too, and the code can't change after
+-- insert. "Remove" is a TOMBSTONE (`deleted_at`) whenever one of the owner's
+-- cards still names {*CODE} — the row stays readable, so those cards keep
+-- drawing it and the maker can restore it — and a real delete only when no
+-- card does: the delete trigger below refuses an API role's delete of a
+-- symbol a card names (`custom_symbol_in_use`). That check is not a lock: a
+-- card saved naming the code in the same instant as its delete (or from a
+-- tab opened before it) can still name a code that is gone, so the renderers
+-- draw an unknown code as a placeholder (PR 2), and a symbol made later with
+-- that code is the one the card then draws.
 --
 -- Caps: 20 live symbols per owner and 60 rows in all, tombstones included
 -- (lib/symbols/symbols.ts LIVE_SYMBOL_CAP / SYMBOL_ROW_CAP — a unit test
@@ -53,7 +57,7 @@ create table if not exists public.custom_symbols (
   name text not null check (char_length(name) between 1 and 40 and name = btrim(name)),
   mana_value smallint not null default 1 check (mana_value between 0 and 20),
   base_color text check (base_color in ('W', 'U', 'B', 'R', 'G')),
-  image_url text not null check (char_length(image_url) <= 600),
+  image_url text not null check (char_length(image_url) between 1 and 600),
   source text not null default 'upload' check (source in ('upload', 'forge')),
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
@@ -157,7 +161,8 @@ create trigger custom_symbols_guard_media_columns
 -- written: the cost, the rules text, the rows (walker / saga / station) and
 -- the back face or second part (its cost, text and rows). Case-insensitive,
 -- as the parsers read it. A code holds only [A-Z0-9], so it is no LIKE
--- pattern character. SECURITY INVOKER: the delete guard calls it as the
+-- pattern character (and a code that isn't one answers false, so no caller
+-- can hand it a pattern). SECURITY INVOKER: the delete guard calls it as the
 -- deleting owner, whose own cards (private ones too) RLS hands them; any
 -- other caller sees only what it may read anyway.
 create or replace function public.custom_symbol_in_use(p_owner uuid, p_code text)
@@ -166,7 +171,8 @@ language sql
 stable
 set search_path = ''
 as $$
-  select exists (
+  select p_code ~* '^[A-Z][A-Z0-9]{0,5}$'
+     and exists (
     select 1
       from public.cards c
      where c.owner_id = p_owner

@@ -63,6 +63,14 @@ describe("0193 custom symbols", () => {
     expect(sql).toContain("custom_symbol_code_locked");
   });
 
+  it("never takes an empty picture (0127's guard lets '' through as a clear)", () => {
+    expect(sql).toContain("image_url text not null check (char_length(image_url) between 1 and 600)");
+  });
+
+  it("the in-use check answers only for a real code, never a pattern", () => {
+    expect(sql).toContain("select p_code ~* '^[A-Z][A-Z0-9]{0,5}$'");
+  });
+
   it("guards the picture with 0127's 'pip' kind", () => {
     expect(sql).toContain("media_url_change_allowed('pip', v_old_image, new.image_url)");
     expect(sql).toMatch(/before insert or update of image_url\s+on public\.custom_symbols/);

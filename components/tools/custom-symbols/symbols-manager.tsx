@@ -65,7 +65,6 @@ export function SymbolsManager({
   forgedPips: ForgedPipChoice[];
 }) {
   const [symbols, setSymbols] = useState<CustomSymbol[]>(() => [...initialSymbols].sort(byCode));
-  const [announcement, setAnnouncement] = useState("");
   // A row that leaves its list (removed, restored, deleted) hands the focus
   // to its section's heading, never to <body>.
   const yoursRef = useRef<HTMLHeadingElement>(null);
@@ -78,18 +77,14 @@ export function SymbolsManager({
   const upsert = (symbol: CustomSymbol) =>
     setSymbols((prev) => [...prev.filter((s) => s.id !== symbol.id), symbol].sort(byCode));
   const drop = (id: string) => setSymbols((prev) => prev.filter((s) => s.id !== id));
+  // One announcement per outcome: the toast (sonner's own live region).
   const say = (text: string, tone: "success" | "error" = "success") => {
-    setAnnouncement(text);
     if (tone === "success") toast.success(text);
     else toast.error(text);
   };
 
   return (
     <div className="mt-8 flex flex-col gap-8">
-      <p className="sr-only" role="status" aria-live="polite">
-        {announcement}
-      </p>
-
       <SurfaceCard className="p-5">
         <h2 className="font-display text-lg font-semibold text-foreground">How symbols work</h2>
         <ul className="mt-3 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-6 text-muted">
@@ -123,6 +118,9 @@ export function SymbolsManager({
         onCreated={(symbol) => {
           upsert(symbol);
           say(`${symbolToken(symbol.code)} ${symbol.name} is ready.`);
+          // The form gives way to the "full" note: its button can't keep
+          // the focus.
+          if (live.length + 1 >= LIVE_SYMBOL_CAP) focusLater(yoursRef);
         }}
       />
 
@@ -270,9 +268,11 @@ function NewSymbolForm({
     else setErrors({});
     setFormError(result.error);
     toast.error(result.error);
-    const target = result.field
+    const field = result.field
       ? formRef.current?.querySelector<HTMLElement>(`[data-field="${result.field}"]`)
       : null;
+    // A chip row's wrapper isn't focusable: its tab stop is.
+    const target = field && field.tabIndex < 0 && field.tagName === "DIV" ? field.querySelector<HTMLElement>('[role="radio"]:not([tabindex="-1"])') : field;
     target?.focus();
   };
 
@@ -382,37 +382,23 @@ function NewSymbolForm({
                 </div>
               </div>
             ) : (
-              <div
-                role="radiogroup"
-                aria-label="Your forged pips"
-                aria-describedby={describedBy("file")}
-                className="grid grid-cols-3 gap-2 sm:grid-cols-6"
-              >
-                {forgedPips.map((pip, index) => {
-                  const picked = forgedPipId === pip.id;
-                  return (
-                    <button
-                      key={pip.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={picked}
-                      data-field={index === 0 ? "file" : undefined}
-                      onClick={() => {
-                        setForgedPipId(pip.id);
-                        setErrors((prev) => ({ ...prev, file: undefined }));
-                      }}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
-                        picked
-                          ? "border-gold bg-gold/10 text-foreground"
-                          : "border-border/70 bg-surface/60 text-muted hover:border-border-strong hover:text-foreground",
-                      )}
-                    >
-                      <SymbolPicture src={pip.imageUrl} size={32} />
-                      <span className="max-w-full truncate">{pip.name}</span>
-                    </button>
-                  );
-                })}
+              <div data-field="file">
+                <ChipGroup
+                  ariaLabel="Your forged pips"
+                  ariaDescribedBy={describedBy("file")}
+                  ariaInvalid={Boolean(errors.file)}
+                  value={forgedPipId ?? ""}
+                  onChange={(next) => {
+                    setForgedPipId(next);
+                    setErrors((prev) => ({ ...prev, file: undefined }));
+                  }}
+                  keepCase
+                  options={forgedPips.map((pip) => ({
+                    value: pip.id,
+                    label: pip.name,
+                    leading: <SymbolPicture src={pip.imageUrl} size={24} />,
+                  }))}
+                />
               </div>
             )}
             {errors.file ? (
@@ -436,12 +422,17 @@ function NewSymbolForm({
                   required
                   autoComplete="off"
                   spellCheck={false}
-                  maxLength={SYMBOL_CODE_MAX}
+                  maxLength={SYMBOL_CODE_MAX + 4}
                   aria-invalid={errors.code ? true : undefined}
                   aria-describedby={describedBy("code", `${id}-code-hint`)}
                   onInput={(event) => {
+                    // Room for a pasted "{*ABCDEF}": the braces and star go,
+                    // then the code is held to its length. Rewritten only
+                    // when it changes, so typing keeps the caret where it is
+                    // (the field SHOWS capitals; the server stores them).
                     const input = event.currentTarget;
-                    input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                    const next = input.value.replace(/[^A-Za-z0-9]/g, "").slice(0, SYMBOL_CODE_MAX);
+                    if (next !== input.value) input.value = next;
                   }}
                   className={cn(inputClass(Boolean(errors.code)), "w-32 font-mono uppercase")}
                 />
@@ -795,6 +786,7 @@ function RemovedRow({
   onError: (message: string) => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const fullNoteId = useId();
   const token = symbolToken(symbol.code);
 
   const restore = () =>
@@ -824,16 +816,23 @@ function RemovedRow({
           <span className="truncate text-sm text-foreground">{symbol.name}</span>
         </div>
         <span className="text-xs text-muted">{symbolMeaningLabel(symbol)}</span>
+        {full ? (
+          <span id={fullNoteId} className="text-xs text-subtle">
+            You have {LIVE_SYMBOL_CAP} symbols — remove one to restore this.
+          </span>
+        ) : null}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
           size="sm"
           variant="outline"
-          disabled={pending || full}
-          title={full ? `You have ${LIVE_SYMBOL_CAP} symbols. Remove one to restore this.` : undefined}
-          onClick={restore}
+          disabled={pending}
+          aria-disabled={full || undefined}
+          aria-describedby={full ? fullNoteId : undefined}
+          onClick={full ? undefined : restore}
           aria-label={`Restore ${token} ${symbol.name}`}
+          className={cn(full && "cursor-not-allowed opacity-50")}
         >
           <RotateCcw aria-hidden />
           Restore

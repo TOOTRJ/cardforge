@@ -54,8 +54,9 @@ import {
 //
 // "Remove" deletes a symbol no card of the maker's names; one a card names is
 // KEPT as removed (a tombstone: the cards keep drawing it, Restore brings it
-// back) — the database's delete guard decides, so a save landing at the same
-// moment can't leave a card naming a deleted symbol.
+// back) — the database's delete guard decides, at the moment of the delete.
+// It is not a lock: a card saved naming the code in that same instant can
+// still name a deleted symbol, which the renderers draw as a placeholder.
 //
 // Nothing is revalidated: the manager follows each action's answer, and no
 // other page draws a symbol yet (PR 2 adds the renderers and their re-bake).
@@ -101,6 +102,7 @@ function writeError(error: { code?: string; message?: string } | null, code?: st
       error: `You have ${SYMBOL_ROW_CAP} symbols counting removed ones. Delete a removed symbol no card uses to make another.`,
     };
   }
+  if (message.includes("media_url_not_allowed")) return { error: "The picture couldn't be saved. Try again in a moment." };
   if (error?.code === "42501") return { error: NO_ACCESS };
   return { error: "The symbol couldn't be saved. Try again in a moment." };
 }
@@ -221,11 +223,12 @@ async function insertSymbol(
     })
     .select(SYMBOL_COLUMNS)
     .single();
-  const symbol = data ? symbolFromRow(data as SymbolRow, ownerId) : null;
-  if (error || !symbol) {
+  if (error || !data) {
     await removeSymbolPictures(ownerId, [stored.fileName]);
     return { ok: false, ...writeError(error, details.code) };
   }
+  const symbol = symbolFromRow(data as SymbolRow, ownerId);
+  if (!symbol) return { ok: false, error: "The symbol couldn't be saved. Try again in a moment." };
   return { ok: true, symbol };
 }
 
@@ -384,11 +387,12 @@ export async function replaceSymbolPictureAction(formData: FormData): Promise<Sy
     .is("deleted_at", null)
     .select(SYMBOL_COLUMNS)
     .maybeSingle();
-  const symbol = data ? symbolFromRow(data as SymbolRow, access.userId) : null;
-  if (error || !symbol) {
+  if (error || !data) {
     await removeSymbolPictures(access.userId, [stored.fileName]);
     return { ok: false, ...writeError(error ?? null) };
   }
+  const symbol = symbolFromRow(data as SymbolRow, access.userId);
+  if (!symbol) return { ok: false, error: "The picture couldn't be saved. Try again in a moment." };
   const old = ownSymbolFileName(access.userId, before.imageUrl);
   if (old && old !== stored.fileName) await removeSymbolPictures(access.userId, [old]);
   await recordToolEvent({
@@ -477,10 +481,8 @@ export async function restoreSymbolAction(input: unknown): Promise<SymbolResult>
     .select(SYMBOL_COLUMNS)
     .maybeSingle();
   const symbol = data ? symbolFromRow(data as SymbolRow, access.userId) : null;
-  if (error || !symbol) {
-    if (!error) return { ok: false, error: "That symbol is gone." };
-    return { ok: false, ...writeError(error) };
-  }
+  if (error) return { ok: false, ...writeError(error) };
+  if (!symbol) return { ok: false, error: "That symbol isn't in your removed symbols any more." };
   await recordToolEvent({ slug: CUSTOM_SYMBOLS_SLUG, userId: access.userId, event: "restore", access: access.via });
   return { ok: true, symbol };
 }

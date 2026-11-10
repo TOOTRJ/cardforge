@@ -13,10 +13,12 @@
 // cost tokenizer reads `{*…}` as an unknown symbol today, print typography
 // never reads inside braces, and the rules `* ` → `•` rule is a line start's.
 //
-// A code is never re-pointed: unique per owner across every row, removed
-// ones too, and fixed once made. "Remove" keeps the symbol (a tombstone,
-// `deleted_at`) while one of the maker's cards names it, so those cards keep
-// drawing it; one no card names is deleted for good.
+// A code is never re-pointed while a card names it: unique per owner across
+// every row, removed ones too, and fixed once made. "Remove" keeps the symbol
+// (a tombstone, `deleted_at`) while one of the maker's cards names it, so
+// those cards keep drawing it; one no card names is deleted for good. (That
+// check is not a lock: a card saved in the same instant can still name a
+// deleted code — the renderers draw an unknown code as a placeholder.)
 //
 // Client-safe: plain data and zod, no server imports.
 // ---------------------------------------------------------------------------
