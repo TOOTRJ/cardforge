@@ -7,7 +7,7 @@ import { textModelOptions } from "@/lib/ai/sampling";
 import { budgetAbortSignal, repairStructuredText, retryFitsBudget, structuredCall } from "@/lib/ai/structured-output";
 import type { CollectionCard } from "./card-row";
 import { aiCandidates, aiCandidateLines, picksFromIds } from "./ai-candidates";
-import { LAND_TARGET, ROLE_TARGETS, draftCommanderDeck, type CommanderDraft, type DraftPlan } from "./builder";
+import { LAND_TARGET, ROLE_TARGETS, cardKey, draftCommanderDeck, gameChangerCap, type CommanderDraft, type DraftPlan } from "./builder";
 import { COMMANDER_DECK_SIZE } from "./limits";
 import { commanderBracket } from "@/lib/decks/deck-types";
 import { collectionDeckType, draftPlanFor, tribeLabel, type BracketCardLists, type BuildChoice } from "./archetypes";
@@ -120,7 +120,7 @@ export const AI_BUILD_SYSTEM = [
 ].join(" ");
 
 /** The plan blocks: what the deck is built around, and the bracket. */
-function planBlocks(choice: BuildChoice, plan: DraftPlan | null): string[] {
+function planBlocks(choice: BuildChoice, plan: DraftPlan | null, commander: CollectionCard): string[] {
   const out: string[] = [];
   const type = collectionDeckType(choice.deckType);
   if (type) {
@@ -141,13 +141,19 @@ function planBlocks(choice: BuildChoice, plan: DraftPlan | null): string[] {
   }
   const bracket = choice.bracket ? commanderBracket(choice.bracket) : null;
   if (bracket) {
-    const checked = !!plan?.bracket?.cards;
+    const lists = plan?.bracket?.cards ?? null;
+    const cap = gameChangerCap(bracket.level);
+    const commanderIsOne = !!lists && lists.isGameChanger(cardKey(commander.name));
     out.push(
       "<bracket>",
       bracket.guidance,
-      checked
-        ? "The cards that bracket bars are already left out of <cards>; keep to its other rules (combos, extra turns) yourself."
-        : "Keep to that bracket's rules yourself: the app couldn't check its card lists this time.",
+      !lists
+        ? "Keep to that bracket's rules yourself: the app couldn't check its card lists this time."
+        : cap === 0
+          ? "The cards that bracket bars (Game Changers, mass land denial) are already left out of <cards>; keep to its other rules (combos, extra turns) yourself."
+          : Number.isFinite(cap)
+            ? `At most ${Math.max(0, cap - (commanderIsOne ? 1 : 0))} Game Changers among your picks${commanderIsOne ? " (the commander is one of the three)" : ""}: they are marked "Game Changer" in <cards>. Mass land denial is already left out; keep to the other rules (combos, extra turns) yourself.`
+            : "Game Changers are allowed at this bracket.",
       "</bracket>",
     );
   }
@@ -161,18 +167,20 @@ export function aiBuildPrompt(
   plan: DraftPlan | null = null,
 ): string {
   const roles = { ...ROLE_TARGETS, ...(plan?.roles ?? {}) };
+  const lists = plan?.bracket?.cards ?? null;
+  const markGameChanger = lists && Number.isFinite(gameChangerCap(plan!.bracket!.level)) ? (c: CollectionCard) => lists.isGameChanger(cardKey(c.name)) : undefined;
   const lands = plan?.lands ?? LAND_TARGET;
   const spells = COMMANDER_DECK_SIZE - 1 - lands;
   return [
     "<cards>",
-    aiCandidateLines(candidates),
+    aiCandidateLines(candidates, markGameChanger),
     "</cards>",
     "<commander>",
     `${commander.name} — ${commander.manaCost ?? ""} — ${commander.typeLine ?? ""}`,
     commander.oracleText ? commander.oracleText.replace(/\s+/g, " ").trim().slice(0, 800) : null,
     `Colour identity: ${commander.colorIdentity.join("") || "colourless"}.`,
     "</commander>",
-    ...planBlocks(choice, plan),
+    ...planBlocks(choice, plan, commander),
     "<targets>",
     `About ${spells} non-land cards: ramp ~${roles.ramp}, card draw ~${roles.draw}, removal ~${roles.removal}, board wipes ~${roles.wipe}, the rest for the plan. Plus the non-basic lands from <cards> that make the deck's colours (${lands} lands in all once basics are added).`,
     "</targets>",
@@ -223,7 +231,9 @@ export async function aiBuildCommanderDeck(input: {
   const prompt = aiBuildPrompt(commander, candidates, choice, plan);
 
   const firstStarted = Date.now();
-  let answer = await askOnce(prompt);
+  // Cut off before the refund's tail, the first call too (the pre-charge
+  // reads may have used some of the budget).
+  let answer = await askOnce(prompt, budgetAbortSignal());
   const firstMs = Date.now() - firstStarted;
   let picked = picksFromIds(
     answer.picks.map((p) => p.id),

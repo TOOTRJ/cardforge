@@ -190,9 +190,32 @@ export function prepareScoringCards(cards: readonly ScoringCard[]): Prepared[][]
   return byMask;
 }
 
+type MaskTotals = { types: number[]; tribes: Map<string, number>; changelings: number };
+
+/** The deck-type and creature-type counts of each colour identity, totalled
+ *  once (a commander then adds up the identities inside its own, instead of
+ *  walking every card again). */
+export function totalsByMask(prepared: Prepared[][]): MaskTotals[] {
+  return prepared.map((cards) => {
+    const totals: MaskTotals = { types: new Array<number>(COLLECTION_DECK_TYPES.length).fill(0), tribes: new Map(), changelings: 0 };
+    for (const card of cards) addCard(totals, card, 1);
+    return totals;
+  });
+}
+
+function addCard(totals: MaskTotals, card: Prepared, sign: 1 | -1): void {
+  if (card.deckTypeBits) {
+    for (let i = 0; i < totals.types.length; i += 1) if (card.deckTypeBits & (1 << i)) totals.types[i] += sign;
+  }
+  if (!card.creature) return;
+  if (card.changeling) totals.changelings += sign;
+  else for (const t of card.types) totals.tribes.set(t, (totals.tribes.get(t) ?? 0) + sign);
+}
+
 export function scoreCommander(
   commander: Pick<CollectionCard, "name" | "typeLine" | "oracleText" | "colorIdentity">,
   prepared: Prepared[][],
+  totals: MaskTotals[] = totalsByMask(prepared),
 ): CommanderSupport {
   const own = cardKey(commander.name);
   const mask = identityMask(commander.colorIdentity);
@@ -201,19 +224,18 @@ export function scoreCommander(
   let inColours = 0;
   let fit = 0;
   let lands = 0;
-  const typeCounts = new Array<number>(COLLECTION_DECK_TYPES.length).fill(0);
-  const tribeCounts = new Map<string, number>();
-  let changelings = 0;
+  const sum: MaskTotals = { types: new Array<number>(COLLECTION_DECK_TYPES.length).fill(0), tribes: new Map(), changelings: 0 };
   for (let sub = 0; sub < 32; sub += 1) {
     if ((sub & ~mask) !== 0) continue;
+    const at = totals[sub];
+    for (let i = 0; i < sum.types.length; i += 1) sum.types[i] += at.types[i];
+    for (const [t, n] of at.tribes) sum.tribes.set(t, (sum.tribes.get(t) ?? 0) + n);
+    sum.changelings += at.changelings;
     for (const card of prepared[sub]) {
-      if (card.key === own) continue;
-      if (card.deckTypeBits) {
-        for (let i = 0; i < typeCounts.length; i += 1) if (card.deckTypeBits & (1 << i)) typeCounts[i] += 1;
-      }
-      if (card.creature) {
-        if (card.changeling) changelings += 1;
-        else for (const t of card.types) tribeCounts.set(t, (tribeCounts.get(t) ?? 0) + 1);
+      if (card.key === own) {
+        // The commander's own card is in the totals: take it back out.
+        addCard(sum, card, -1);
+        continue;
       }
       if (card.land) {
         lands += 1;
@@ -240,10 +262,10 @@ export function scoreCommander(
   );
   const deckTypes: CommanderSupport["deckTypes"] = {};
   COLLECTION_DECK_TYPES.forEach((type, i) => {
-    if (typeCounts[i] > 0) deckTypes[type.id] = typeCounts[i];
+    if (sum.types[i] > 0) deckTypes[type.id] = sum.types[i];
   });
-  const tribeList = [...tribeCounts.entries()]
-    .map(([tribe, count]) => ({ tribe, count: count + changelings }))
+  const tribeList = [...sum.tribes.entries()]
+    .map(([tribe, count]) => ({ tribe, count: count + sum.changelings }))
     .filter((t) => t.count >= TYPAL_OFFER_MIN)
     .sort((a, b) => b.count - a.count || a.tribe.localeCompare(b.tribe))
     .slice(0, TRIBES_LISTED);
@@ -256,8 +278,9 @@ export function rankCommanders(
   cards: readonly ScoringCard[],
 ): Record<string, CommanderSupport> {
   const prepared = prepareScoringCards(cards);
+  const totals = totalsByMask(prepared);
   const out: Record<string, CommanderSupport> = {};
-  for (const commander of commanders) out[commander.id] = scoreCommander(commander, prepared);
+  for (const commander of commanders) out[commander.id] = scoreCommander(commander, prepared, totals);
   return out;
 }
 

@@ -371,13 +371,22 @@ export function CollectionBuild({
     if (!kept) return;
     setCommanderId(kept.commanderId);
     setError(null);
+    // A kept choice is cleaned before it's used (a type renamed since, a
+    // creature type no longer offered): the save must send what validates.
     const keptChoice = kept.choice ?? {};
-    setDeckType(collectionDeckType(keptChoice.deckType)?.id ?? "");
-    setTribe(keptChoice.tribe ?? "");
-    setBracket(
-      typeof keptChoice.bracket === "number" && keptChoice.bracket >= 1 && keptChoice.bracket <= 5 ? keptChoice.bracket : "",
-    );
-    setDraftChoice(keptChoice);
+    const keptType = collectionDeckType(keptChoice.deckType)?.id ?? null;
+    const keptTribe =
+      typeof keptChoice.tribe === "string" &&
+      /^[a-z][a-z'-]{1,29}$/.test(keptChoice.tribe) &&
+      (ready?.[kept.commanderId]?.tribes ?? []).some((t) => t.tribe === keptChoice.tribe)
+        ? keptChoice.tribe
+        : null;
+    const keptBracket =
+      typeof keptChoice.bracket === "number" && keptChoice.bracket >= 1 && keptChoice.bracket <= 5 ? keptChoice.bracket : null;
+    setDeckType(keptType ?? "");
+    setTribe(keptTribe ?? "");
+    setBracket(keptBracket ?? "");
+    setDraftChoice({ deckType: keptType, tribe: keptTribe, bracket: keptBracket });
     showDraft(kept.draft, "ai", kept.truncated);
     setKept(null);
   };
@@ -584,11 +593,10 @@ export function CollectionBuild({
           ) : null}
           {bracketLevel ? <p>Bracket {bracketLevel}: {commanderBracket(bracketLevel)?.blurb}</p> : null}
         </div>
-        {choiceNote ? (
-          <p role="status" className="text-xs text-ember">
-            {choiceNote}
-          </p>
-        ) : null}
+        {/* Always mounted: a status region added with its text is often not announced. */}
+        <p role="status" className="text-xs text-ember empty:hidden">
+          {choiceNote ?? ""}
+        </p>
         </div>
         <p className="text-xs text-subtle">
           &ldquo;Draft a deck&rdquo; is free and follows the rules. &ldquo;Build with AI&rdquo; reads your cards and plans around
@@ -933,7 +941,7 @@ function DraftReview({
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
               {draft.bracket ? `Built for Bracket ${draft.bracket} · ` : ""}
               {draft.gameChangers} Game Changer{draft.gameChangers === 1 ? "" : "s"}
-              {draft.bracketFloor ? ` · its cards allow Bracket ${draft.bracketFloor}${draft.bracketFloor < 4 ? " or higher" : "+"}` : ""}
+              {draft.bracketFloor && draft.bracketFloor > 2 ? ` · its cards need Bracket ${draft.bracketFloor} or higher` : ""}
             </span>
           ) : draft.bracket ? (
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">Built for Bracket {draft.bracket}</span>

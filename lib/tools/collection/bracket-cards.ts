@@ -15,10 +15,14 @@ import { cardKey } from "./builder";
 //     chained) in 2–3.
 //
 // (Wizards, "Introducing Commander Brackets Beta", 2025-02-11; the 2025-10-21
-// and 2026-02-09 updates.) Each list is one to three Scryfall searches, held
-// a day in Next's data cache. A list Scryfall can't give is `null`: the
-// builder then leaves the bracket unchecked and says so — it never blocks a
-// build. Keys are card names as the drafter reads them (`cardKey`).
+// and 2026-02-09 updates.) Each list is one to three Scryfall searches (4 s
+// a page at most: this runs before the AI build's charge), held a day in
+// Next's data cache and six hours in this instance. A list Scryfall can't
+// give — or gives EMPTY (a renamed Tagger tag answers "no matches", and an
+// empty list would pass every card as checked) — makes the whole set
+// `null`: the builder then leaves the bracket unchecked and says so; it
+// never blocks a build. Keys are card names as the drafter reads them
+// (`cardKey`).
 // ---------------------------------------------------------------------------
 
 export type BracketCards = {
@@ -28,19 +32,25 @@ export type BracketCards = {
 };
 
 const DAY_SECONDS = 24 * 60 * 60;
+const MEMO_MS = 6 * 60 * 60 * 1000;
+let memo: { at: number; value: BracketCards } | null = null;
 
 async function namesFor(query: string): Promise<Set<string> | null> {
-  const names = await searchCardNames(`${query} legal:commander`, { maxPages: 3, revalidate: DAY_SECONDS });
-  return names ? new Set(names.map(cardKey)) : null;
+  const names = await searchCardNames(`${query} legal:commander`, { maxPages: 3, revalidate: DAY_SECONDS, timeoutMs: 4_000 });
+  // Empty is "unknown", never "none of them": every list has dozens of cards.
+  return names && names.length > 0 ? new Set(names.map(cardKey)) : null;
 }
 
 /** The three lists, or null when any of them can't be read. */
-export async function getBracketCards(): Promise<BracketCards | null> {
+export async function getBracketCards(now: number = Date.now()): Promise<BracketCards | null> {
+  if (memo && now - memo.at < MEMO_MS) return memo.value;
   const [gameChangers, massLandDenial, extraTurns] = await Promise.all([
     namesFor("is:gamechanger"),
     namesFor("otag:mass-land-denial"),
     namesFor("otag:extra-turn"),
   ]);
   if (!gameChangers || !massLandDenial || !extraTurns) return null;
-  return { gameChangers, massLandDenial, extraTurns };
+  const value = { gameChangers, massLandDenial, extraTurns };
+  memo = { at: now, value };
+  return value;
 }

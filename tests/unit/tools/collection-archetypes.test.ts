@@ -85,6 +85,27 @@ describe("the deck types", () => {
     expect(type(id).matches(card("X", { oracleText, typeLine }))).toBe(expected);
   });
 
+  it("a legendary card names itself: Blink reads 'When Atraxa enters'", () => {
+    const atraxa = card("Atraxa, Grand Unifier", {
+      typeLine: "Legendary Creature — Phyrexian Angel",
+      oracleText: "Flying, vigilance\nWhen Atraxa enters, reveal the top ten cards of your library.",
+    });
+    expect(type("blink").matches(atraxa)).toBe(true);
+    expect(commanderDeckTypes(atraxa)).toContain("blink");
+  });
+
+  it.each([
+    ["tokens", "Create a Treasure token.", "Artifact", false],
+    ["tokens", "Create a 1/1 white Soldier creature token.", "Sorcery", true],
+    ["group-hug", "Target player draws three cards.", "Sorcery", false],
+    ["group-hug", "Target opponent draws a card. You gain 2 life.", "Sorcery", true],
+    ["mill", "You mill four cards.", "Sorcery", false],
+    ["mill", "Each opponent mills four cards.", "Sorcery", true],
+    ["reanimator", "You mill four cards.", "Sorcery", true],
+  ])("precision — %s: %s → %s", (id, oracleText, typeLine, expected) => {
+    expect(type(id).matches(card("X", { oracleText, typeLine }))).toBe(expected);
+  });
+
   it("reads Oracle's current self-reference, never the old 'enters the battlefield' alone", () => {
     expect(type("blink").matches(card("X", { oracleText: "When ~ enters, scry 2." }))).toBe(true);
     expect(type("blink").matches(card("X", { typeLine: "Sorcery", oracleText: "When this creature enters, draw." }))).toBe(false);
@@ -117,6 +138,10 @@ describe("the deck types", () => {
     expect(cardFitsTribe(card("B", { typeLine: "Creature — Shapeshifter", oracleText: "Changeling" }), "goblin")).toBe(true);
     expect(cardFitsTribe(card("C", { typeLine: "Sorcery", oracleText: "Goblin spells you cast cost {1} less." }), "goblin")).toBe(true);
     expect(cardFitsTribe(card("D", { typeLine: "Creature — Elf" }), "goblin")).toBe(false);
+    // Plurals, and never "non-Human".
+    expect(cardFitsTribe(card("E", { typeLine: "Sorcery", oracleText: "Elves you control get +1/+1." }), "elf")).toBe(true);
+    expect(cardFitsTribe(card("F", { typeLine: "Sorcery", oracleText: "Allies you control gain lifelink." }), "ally")).toBe(true);
+    expect(cardFitsTribe(card("G", { typeLine: "Instant", oracleText: "Destroy target non-Human creature." }), "human")).toBe(false);
   });
 
   it("the AI refuses below half a floor", () => {
@@ -180,6 +205,41 @@ describe("the drafter's plan", () => {
     const four = draftCommanderDeck({ commander, collection, plan: draftPlanFor({ bracket: 4 }, names) });
     expect(four.picks.some((p) => p.name === "Armageddon")).toBe(true);
     expect(four.bracketFloor).toBe(4);
+  });
+
+  it("the commander's own land denial and extra turns count too", () => {
+    const hokori = { ...commander, name: "Hokori, Dust Drinker" };
+    const mld = draftCommanderDeck({
+      commander: hokori,
+      collection: [hokori, ...filler(40)],
+      plan: draftPlanFor({ bracket: 3 }, lists({ massLandDenial: ["Hokori, Dust Drinker"] })),
+    });
+    expect(mld.bracketFloor).toBe(4);
+    expect(mld.warnings.join(" ")).toMatch(/denies lands to the whole table, so this deck can't be Bracket 3/);
+
+    const medomai = { ...commander, name: "Medomai the Ageless" };
+    const turns = draftCommanderDeck({
+      commander: medomai,
+      collection: [medomai, card("Time Warp"), ...filler(40)],
+      plan: draftPlanFor({ bracket: 2 }, lists({ extraTurns: ["Medomai the Ageless", "Time Warp"] })),
+    });
+    // The commander takes the one extra-turn card Bracket 2 allows.
+    expect(turns.picks.some((p) => p.name === "Time Warp")).toBe(false);
+    const one = draftCommanderDeck({
+      commander: medomai,
+      collection: [medomai, ...filler(40)],
+      plan: draftPlanFor({ bracket: 1 }, lists({ extraTurns: ["Medomai the Ageless"] })),
+    });
+    expect(one.warnings.join(" ")).toMatch(/takes extra turns, so this deck can't be Bracket 1/);
+  });
+
+  it("more than one extra turn needs Bracket 4", () => {
+    const draft = draftCommanderDeck({
+      commander,
+      collection: [commander, card("Time Walk"), card("Time Warp"), ...filler(40)],
+      plan: draftPlanFor({ bracket: 4 }, lists({ extraTurns: ["Time Walk", "Time Warp"] })),
+    });
+    expect(draft.bracketFloor).toBe(4);
   });
 
   it("a bracket whose lists couldn't be read is built, unchecked, and says so", () => {

@@ -117,7 +117,11 @@ export function candidateId(index: number): string {
  * the model may overrule), the text cut short (the gist is enough; the
  * prompt stays small).
  */
-export function aiCandidateLines(candidates: readonly CollectionCard[]): string {
+export function aiCandidateLines(
+  candidates: readonly CollectionCard[],
+  /** Marks a Game Changer ("… | Game Changer") where a bracket caps them. */
+  isGameChanger?: (card: CollectionCard) => boolean,
+): string {
   return candidates
     .map((c, i) => {
       const themes = isLand(c) ? [] : cardThemes(c);
@@ -128,6 +132,7 @@ export function aiCandidateLines(candidates: readonly CollectionCard[]): string 
         oneLine(c.typeLine, 60),
         `role: ${ROLE_HINT[roleOf(c)]}`,
         `themes: ${themes.length ? themes.join(", ") : "—"}`,
+        ...(isGameChanger?.(c) ? ["Game Changer"] : []),
         oneLine(c.oracleText, 160),
       ].join(" | ");
     })
