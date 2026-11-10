@@ -3,6 +3,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { designModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import type { CollectionCard } from "./card-row";
 import { aiCandidates, aiCandidateLines, picksFromIndexes } from "./ai-candidates";
@@ -46,7 +47,7 @@ export async function aiBuildCommanderDeck(input: {
   const commander = input.commander;
   const { object } = await structuredCall("collection-build", repairStructuredText(aiBuildSchema), (experimental_repairText) =>
     generateObject({
-      model: designModel(),
+      ...textModelOptions(designModel(), 0.5),
       schema: aiBuildSchema,
       experimental_repairText,
       system: SYSTEM,
@@ -59,7 +60,6 @@ export async function aiBuildCommanderDeck(input: {
       ]
         .filter(Boolean)
         .join("\n"),
-      temperature: 0.5,
     }),
   );
   return draftCommanderDeck({

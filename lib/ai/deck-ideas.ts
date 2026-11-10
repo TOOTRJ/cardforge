@@ -2,6 +2,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket, type DeckType, describeColors } from "@/lib/decks/deck-types";
 import type { DeckFormat } from "@/types/deck";
@@ -50,7 +51,7 @@ export async function generateDeckIdeas(input: {
   // a wrong number of ideas is asked for once more. The credit is the
   // route's — reserved once, refunded on any failure.
   const { object } = await structuredCall("deck-ideas", repairStructuredText(deckIdeasSchema), (experimental_repairText) => generateObject({
-    model: judgeModel(),
+    ...textModelOptions(judgeModel(), 0.95),
     schema: deckIdeasSchema,
     experimental_repairText,
     system: SYSTEM,
@@ -65,7 +66,6 @@ export async function generateDeckIdeas(input: {
     ]
       .filter(Boolean)
       .join("\n"),
-    temperature: 0.95,
   }));
   return object.ideas;
 }

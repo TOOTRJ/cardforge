@@ -11,6 +11,7 @@ import {
   type Rarity,
 } from "@/types/card";
 import { designModel, judgeModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import {
   autofixCard,
   lintCardDesign,
@@ -431,11 +432,10 @@ async function judgeRepair(
       designRepair(allowEmblem, layout),
       (experimental_repairText) =>
         generateObject({
-          model: judgeModel(),
+          ...textModelOptions(judgeModel(), 0.2),
           schema: designedCardsSchema(allowEmblem, layout),
           system: layout ? `${JUDGE_SYSTEM} ${isAiDfcKind(layout) ? DFC_JUDGE_RULE : LAYOUT_JUDGE_RULE}` : JUDGE_SYSTEM,
           prompt,
-          temperature: 0.2,
           experimental_repairText,
         }),
       { attempts: 1 },
@@ -533,11 +533,10 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
   // miss throws AiOutputError, whose message is the client's.
   const { object } = await structuredCall("card-design/design", designRepair(allowEmblem, layout), (experimental_repairText) =>
     generateObject({
-      model: designModel(),
+      ...textModelOptions(designModel(), 0.9),
       schema: designedCardsSchema(allowEmblem, layout),
       system: SYSTEM_PROMPT,
       prompt: batchPrompt(input),
-      temperature: 0.9,
       experimental_repairText,
     }),
   );
@@ -644,7 +643,7 @@ export async function ensureUniqueTitles<T extends { title: string; rules_text: 
       repairStructuredText(titlesSchema),
       (experimental_repairText) =>
         generateObject({
-          model: judgeModel(),
+          ...textModelOptions(judgeModel(), 0.9),
           schema: titlesSchema,
           system: RENAME_SYSTEM,
           prompt: [
@@ -655,7 +654,6 @@ export async function ensureUniqueTitles<T extends { title: string; rules_text: 
                 `${n + 1}. "${result[index].title}" — ${result[index].rules_text.slice(0, 160)}`,
             ),
           ].join("\n"),
-          temperature: 0.9,
           experimental_repairText,
         }),
       { attempts: 1 },
