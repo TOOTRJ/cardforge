@@ -193,8 +193,11 @@ describe("the gate (lib/cards/dfc.ts, lib/cards/dfc-gate.ts)", () => {
 });
 
 describe("the see-through tick (lib/cards/dfc.ts seeThroughTickKeys)", () => {
-  it("ships at the current layout version, no bump", () => {
-    expect(SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION).toBe(CARD_LAYOUT_VERSION);
+  it("shipped at v75 with no bump of its own, and is frozen there", () => {
+    // A later bump (v76, the owner's symbols) never moves it: a tick at v75
+    // or later still looked at the see-through master.
+    expect(SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION).toBe(75);
+    expect(SEE_THROUGH_COLORLESS_SINCE_LAYOUT_VERSION).toBeLessThanOrEqual(CARD_LAYOUT_VERSION);
   });
 
   it("a `c` tick made before (production's, v41) publishes nothing; one at the version or later publishes the body's see-through key; never for a transform body or another colour", () => {

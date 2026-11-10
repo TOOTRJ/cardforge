@@ -1359,6 +1359,18 @@ Rules and gotchas:
   — a creator rule; the validator, the database and the renderers keep
   0.5 – 4, and no automatic path (landing = the fit, carry = the maker's
   zoom) makes one.
+- The owner's own mana symbols (beta tool `custom-symbols`, 0193; drawn
+  since layout v76): `{*CODE}` in a cost or rules-style text is the CARD
+  OWNER's symbol for every viewer — ONE reading, `lib/symbols/symbol-token.ts`
+  (the tokenizer's `custom` token, the suffix `*code`, the key `*CODE` in the
+  owner's `PipOverrides`, which `getPipOverrides` fills from `custom_symbols`
+  too, removed ones included). Its picture draws as a custom pip's; a code
+  with no picture draws the placeholder (`manaGemSpec` `kind: "blank"`), never
+  nothing; an unknown `*…` token's suffix never reads as a code. The bake
+  fetches only the codes a card names (`pipOverridesNamedIn`); a symbol made
+  or re-pictured re-bakes the cards that name it (`lib/symbols/rebake.ts`).
+  A symbol's name and code are public: no strong language (refused on the
+  field, `lib/symbols/actions.ts`). `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes
