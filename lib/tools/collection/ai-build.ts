@@ -7,8 +7,10 @@ import { textModelOptions } from "@/lib/ai/sampling";
 import { budgetAbortSignal, repairStructuredText, retryFitsBudget, structuredCall } from "@/lib/ai/structured-output";
 import type { CollectionCard } from "./card-row";
 import { aiCandidates, aiCandidateLines, picksFromIds } from "./ai-candidates";
-import { LAND_TARGET, ROLE_TARGETS, draftCommanderDeck, type CommanderDraft } from "./builder";
+import { LAND_TARGET, ROLE_TARGETS, draftCommanderDeck, type CommanderDraft, type DraftPlan } from "./builder";
 import { COMMANDER_DECK_SIZE } from "./limits";
+import { commanderBracket } from "@/lib/decks/deck-types";
+import { collectionDeckType, draftPlanFor, tribeLabel, type BracketCardLists, type BuildChoice } from "./archetypes";
 
 // ---------------------------------------------------------------------------
 // "Build with AI" (1 credit): ONE design call reads the user's eligible
@@ -107,17 +109,60 @@ export const AI_BUILD_SYSTEM = [
   "The player's app checks every pick, so a pick that breaks a rule is simply lost:",
   "choose only cards listed in <cards>, by their id (c0, c1, …) — any other card is one the player doesn't own;",
   "each card at most once; basic lands are added afterwards, so don't plan on them.",
-  "Build for the commander's plan first: cards that share its creature types or do what its text rewards.",
-  `Then make the deck work: about ${ROLE_TARGETS.ramp} ramp so it casts its spells on time,`,
-  `about ${ROLE_TARGETS.draw} card draw so it doesn't run out of cards,`,
-  `about ${ROLE_TARGETS.removal} removal and two or three board wipes to answer threats,`,
-  "on a curve that leans low (most spells at mana value 2 to 4).",
+  "Build for the plan first: the deck type and creature type when you're given them (<deck_type>, <creature_type>), with the commander's own text;",
+  "otherwise the commander's plan — cards that share its creature types or do what its text rewards.",
+  "Then make the deck work: enough ramp so it casts its spells on time, enough card draw so it doesn't run out of cards,",
+  "and enough removal and board wipes to answer threats (<targets> gives the numbers),",
+  "on a curve that leans low (most spells at mana value 2 to 4). Keep to <bracket> when there is one.",
   "Prefer cards that work together over cards that are merely strong.",
   "The role and themes on each line are the app's quick reading of the card; trust the card's text over them.",
   "Write the plan first (strategy, shortfalls), then the picks — each with its role and a short reason.",
 ].join(" ");
 
-export function aiBuildPrompt(commander: CollectionCard, candidates: readonly CollectionCard[]): string {
+/** The plan blocks: what the deck is built around, and the bracket. */
+function planBlocks(choice: BuildChoice, plan: DraftPlan | null): string[] {
+  const out: string[] = [];
+  const type = collectionDeckType(choice.deckType);
+  if (type) {
+    out.push(
+      "<deck_type>",
+      `${type.label}: ${type.summary}`,
+      `Build the plan around it: ${type.wants}. Aim for about ${type.target} cards that serve this plan, and say in shortfalls when the player's cards can't reach it.`,
+      "</deck_type>",
+    );
+  }
+  const tribe = choice.tribe?.trim();
+  if (tribe) {
+    out.push(
+      "<creature_type>",
+      `${tribeLabel(tribe)}: make it a ${tribeLabel(tribe)} deck — about three in four of its creatures ${tribeLabel(tribe)}s (changelings count), plus the cards that reward them.`,
+      "</creature_type>",
+    );
+  }
+  const bracket = choice.bracket ? commanderBracket(choice.bracket) : null;
+  if (bracket) {
+    const checked = !!plan?.bracket?.cards;
+    out.push(
+      "<bracket>",
+      bracket.guidance,
+      checked
+        ? "The cards that bracket bars are already left out of <cards>; keep to its other rules (combos, extra turns) yourself."
+        : "Keep to that bracket's rules yourself: the app couldn't check its card lists this time.",
+      "</bracket>",
+    );
+  }
+  return out;
+}
+
+export function aiBuildPrompt(
+  commander: CollectionCard,
+  candidates: readonly CollectionCard[],
+  choice: BuildChoice = {},
+  plan: DraftPlan | null = null,
+): string {
+  const roles = { ...ROLE_TARGETS, ...(plan?.roles ?? {}) };
+  const lands = plan?.lands ?? LAND_TARGET;
+  const spells = COMMANDER_DECK_SIZE - 1 - lands;
   return [
     "<cards>",
     aiCandidateLines(candidates),
@@ -127,8 +172,9 @@ export function aiBuildPrompt(commander: CollectionCard, candidates: readonly Co
     commander.oracleText ? commander.oracleText.replace(/\s+/g, " ").trim().slice(0, 800) : null,
     `Colour identity: ${commander.colorIdentity.join("") || "colourless"}.`,
     "</commander>",
+    ...planBlocks(choice, plan),
     "<targets>",
-    `About ${SPELLS} non-land cards: ramp ~${ROLE_TARGETS.ramp}, card draw ~${ROLE_TARGETS.draw}, removal ~${ROLE_TARGETS.removal}, board wipes 2–3, the rest for the plan. Plus the non-basic lands from <cards> that make the deck's colours (${LAND_TARGET} lands in all once basics are added).`,
+    `About ${spells} non-land cards: ramp ~${roles.ramp}, card draw ~${roles.draw}, removal ~${roles.removal}, board wipes ~${roles.wipe}, the rest for the plan. Plus the non-basic lands from <cards> that make the deck's colours (${lands} lands in all once basics are added).`,
     "</targets>",
     "Choose the deck now. Use only ids from <cards>. If the cards can't fill a role, say so in shortfalls instead of padding it with cards that don't do the job.",
   ]
@@ -136,12 +182,12 @@ export function aiBuildPrompt(commander: CollectionCard, candidates: readonly Co
     .join("\n");
 }
 
-function retryNote(valid: number, unknown: number): string {
+function retryNote(valid: number, unknown: number, spells: number = SPELLS): string {
   return [
     "<previous_answer>",
     `Your last answer had ${valid} usable picks${unknown ? ` and ${unknown} ids that are not in <cards>` : ""}.`,
     "</previous_answer>",
-    `Choose the deck again, each card an id from <cards>: as many fitting cards as the list allows, up to about ${SPELLS} non-land cards plus the non-basic lands that fit — and say in shortfalls what the list can't give, rather than padding.`,
+    `Choose the deck again, each card an id from <cards>: as many fitting cards as the list allows, up to about ${spells} non-land cards plus the non-basic lands that fit — and say in shortfalls what the list can't give, rather than padding.`,
   ].join("\n");
 }
 
@@ -162,12 +208,19 @@ async function askOnce(prompt: string, abortSignal?: AbortSignal): Promise<AiBui
 export async function aiBuildCommanderDeck(input: {
   commander: CollectionCard;
   collection: readonly CollectionCard[];
+  /** A deck type, a creature type, a bracket (all optional). */
+  choice?: BuildChoice;
+  /** The bracket's card lists (null: picked but unreadable; the build
+   *  says so). Read by the route. */
+  bracketCards?: BracketCardLists | null;
   /** The candidates' shuffle (tests pass a fixed one). */
   random?: () => number;
 }): Promise<CommanderDraft> {
   const commander = input.commander;
-  const candidates = aiCandidates(commander, input.collection, input.random ?? Math.random);
-  const prompt = aiBuildPrompt(commander, candidates);
+  const choice = input.choice ?? {};
+  const plan = draftPlanFor(choice, input.bracketCards ?? null);
+  const candidates = aiCandidates(commander, input.collection, { random: input.random ?? Math.random, plan });
+  const prompt = aiBuildPrompt(commander, candidates, choice, plan);
 
   const firstStarted = Date.now();
   let answer = await askOnce(prompt);
@@ -180,7 +233,7 @@ export async function aiBuildCommanderDeck(input: {
   const tooWild = answer.picks.length > 0 && picked.unknown / answer.picks.length > AI_RETRY_UNKNOWN_SHARE;
   if ((tooFew || tooWild) && retryFitsBudget(Math.max(firstMs, AI_FULL_ANSWER_MS))) {
     try {
-      const again = await askOnce(`${prompt}\n${retryNote(picked.rowIds.length, picked.unknown)}`, budgetAbortSignal());
+      const again = await askOnce(`${prompt}\n${retryNote(picked.rowIds.length, picked.unknown, COMMANDER_DECK_SIZE - 1 - (plan?.lands ?? LAND_TARGET))}`, budgetAbortSignal());
       const pickedAgain = picksFromIds(
         again.picks.map((p) => p.id),
         candidates,
@@ -211,6 +264,7 @@ export async function aiBuildCommanderDeck(input: {
     preferred: picked.rowIds,
     reasons,
     shortfalls: answer.shortfalls.slice(0, 3),
+    plan,
     strategy: answer.strategy,
   });
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isUuid } from "@/lib/ids";
 import { DEFAULT_BASIC_PRINTINGS, type BasicLandName } from "./builder";
+import { COLLECTION_DECK_TYPE_IDS } from "./archetypes";
 import { IMPORT_CHUNK_LINES, MAX_COLLECTION_QUANTITY, COMMANDER_DECK_SIZE } from "./limits";
 import { COLLECTION_FINISHES } from "./parse-import";
 
@@ -62,7 +63,20 @@ export const removeCardSchema = z.object({ id: uuid });
 
 export const clearCollectionSchema = z.object({ confirm: z.literal("clear") });
 
-export const draftSchema = z.object({ commanderId: uuid });
+/** A deck type, a creature type, a bracket — what a draft is built around
+ *  (all optional; lib/tools/collection/archetypes.ts). */
+const choiceFields = {
+  deckType: z.enum(COLLECTION_DECK_TYPE_IDS).nullish(),
+  tribe: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z][a-z'-]{1,29}$/, "That isn't a creature type.")
+    .nullish(),
+  bracket: z.number().int().min(1).max(5).nullish(),
+};
+
+export const draftSchema = z.object({ commanderId: uuid, ...choiceFields });
 
 const BASIC_NAMES = Object.keys(DEFAULT_BASIC_PRINTINGS) as [BasicLandName, ...BasicLandName[]];
 
@@ -77,4 +91,5 @@ export const saveDeckSchema = z.object({
   // A press after one that failed or got no answer: its deck, made in the
   // last minute, is taken back instead of a second one.
   retry: z.boolean().default(false),
+  ...choiceFields,
 });

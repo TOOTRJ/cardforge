@@ -83,7 +83,8 @@ async function scryfallFetch(
     method?: "POST";
     body?: string;
     /** Seconds Next's data cache may serve this answer for. Only the set
-     *  lookup (getScryfallSet) passes one; every card call stays uncached. */
+     *  lookup (getScryfallSet) and the bracket lists' name search
+     *  (searchCardNames) pass one; every other card call stays uncached. */
     revalidate?: number;
     /** The whole call's budget, retries included (the throttle's wait
      *  too): past it the request is aborted (a TimeoutError is thrown) and
@@ -492,6 +493,42 @@ export async function searchPrintingsPage(
   } catch {
     return null;
   }
+}
+
+/**
+ * Every card NAME a Scryfall search matches (one per oracle card), up to
+ * `maxPages` pages of Scryfall's 175 — for short lists that change a few
+ * times a year (the Commander brackets' Game Changers, mass land denial,
+ * extra turns: lib/tools/collection/bracket-cards.ts), held in Next's data
+ * cache for `revalidate` seconds (Scryfall asks for a day of caching). A
+ * 404 is "no matches" (empty); null when Scryfall didn't answer or the list
+ * runs past `maxPages` — a list cut short would mislead its caller.
+ */
+export async function searchCardNames(
+  q: string,
+  options: { maxPages?: number; revalidate?: number; timeoutMs?: number } = {},
+): Promise<string[] | null> {
+  const maxPages = options.maxPages ?? 3;
+  const names: string[] = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const url = `/cards/search?${new URLSearchParams({ q, unique: "cards", order: "name", page: String(page) })}`;
+    let response: Response;
+    try {
+      response = await scryfallFetch(url, { revalidate: options.revalidate, timeoutMs: options.timeoutMs ?? 10_000 });
+    } catch {
+      return null;
+    }
+    if (response.status === 404) return names;
+    if (!response.ok) return null;
+    try {
+      const parsed = scryfallSearchResponseSchema.parse(await response.json());
+      names.push(...parsed.data.map((card) => card.name));
+      if (parsed.has_more !== true) return names;
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 export type ScryfallNamedLookup =

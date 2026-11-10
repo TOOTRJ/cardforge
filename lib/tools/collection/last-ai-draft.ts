@@ -1,4 +1,5 @@
 import type { CommanderDraft } from "./builder";
+import type { BuildChoice } from "./archetypes";
 
 // ---------------------------------------------------------------------------
 // The last "Build with AI" draft, kept in this browser for 7 days (owner
@@ -23,6 +24,8 @@ export type StoredAiDraft = {
   collectionSize: number;
   truncated: boolean;
   draft: CommanderDraft;
+  /** The deck type / creature type / bracket it was built with. */
+  choice?: BuildChoice;
 };
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem" | "removeItem">;
@@ -56,6 +59,7 @@ function isStored(value: unknown): value is StoredAiDraft {
   ) {
     return false;
   }
+  if (value.choice !== undefined && !isRecord(value.choice)) return false;
   const commander = draft.commander;
   const pickOk = (p: unknown) =>
     isRecord(p) && typeof p.cardId === "string" && typeof p.name === "string" && typeof p.role === "string";

@@ -116,7 +116,51 @@ export type CommanderDraft = {
   poolSize: number;
   warnings: string[];
   strategy: string | null;
+  /** What the draft was built around (a deck type, a creature type), with
+   *  how many of the deck's cards are on it. Absent on a plain draft. */
+  focus?: { label: string; inDeck: number; inPool: number; floor: number }[];
+  /** The bracket asked for, when one was. */
+  bracket?: number | null;
+  /** The deck's Game Changers (commander included) — null when Scryfall's
+   *  lists couldn't be read. */
+  gameChangers?: number | null;
+  /** The lowest bracket the deck's cards allow: 2 with no Game Changers, 3
+   *  with one to three, 4 with more or with mass land denial. */
+  bracketFloor?: 2 | 3 | 4 | null;
 };
+
+/**
+ * What a draft is built around beyond its commander — a deck type, a
+ * creature type, a bracket — made by `draftPlanFor`
+ * (lib/tools/collection/archetypes.ts) so this file stays free of the type
+ * list. Every part is optional; none = the plain draft.
+ */
+export type DraftPlan = {
+  /** The deck type: its label, a card on it, its floor. */
+  type?: { label: string; matches: (card: CollectionCard) => boolean; floor: number } | null;
+  /** The creature type: its label, a card on it, its floor. */
+  tribe?: { label: string; matches: (card: CollectionCard) => boolean; floor: number } | null;
+  /** Lands in the deck (default LAND_TARGET). */
+  lands?: number;
+  /** Role targets that move for the type. */
+  roles?: Partial<Record<keyof typeof ROLE_TARGETS, number>>;
+  /** The bracket asked for, and its card lists (null: not readable). */
+  bracket?: {
+    level: 1 | 2 | 3 | 4 | 5;
+    cards: { isGameChanger: (name: string) => boolean; isMassLandDenial: (name: string) => boolean; isExtraTurn: (name: string) => boolean } | null;
+  } | null;
+};
+
+/** Game Changers a bracket allows (the commander counts). */
+export function gameChangerCap(level: number): number {
+  return level <= 2 ? 0 : level === 3 ? 3 : Number.POSITIVE_INFINITY;
+}
+
+/** Extra-turn cards a bracket allows: none in 1, one in 2–3 (they may be
+ *  in "low numbers, never chained" — one keeps that honest). */
+export function extraTurnCap(level: number): number {
+  return level <= 1 ? 0 : level <= 3 ? 1 : Number.POSITIVE_INFINITY;
+}
 
 // ---------------------------------------------------------------------------
 // Reading a card
@@ -306,12 +350,33 @@ export function uniqueByCard(cards: readonly CollectionCard[]): CollectionCard[]
 }
 
 /** The cards this commander's deck may hold, best first for the rules' fill. */
-export function eligiblePool(commander: CollectionCard, collection: readonly CollectionCard[]): CollectionCard[] {
+export function eligiblePool(
+  commander: CollectionCard,
+  collection: readonly CollectionCard[],
+  plan: DraftPlan | null = null,
+): CollectionCard[] {
   const tribes = commanderTribes(commander);
   const themes = commanderThemes(commander);
+  const level = plan?.bracket?.cards ? plan.bracket.level : null;
+  const lists = plan?.bracket?.cards ?? null;
   return uniqueByCard(collection)
     .filter((card) => !isBasicLand(card) && ineligibleReason(card, commander) === null)
-    .map((card) => ({ card, score: synergyScore(card, { tribes, themes }) }))
+    // The bracket's outright bans; its caps are kept while drafting.
+    .filter((card) => {
+      if (!lists || level === null) return true;
+      const key = cardKey(card.name);
+      if (level <= 3 && lists.isMassLandDenial(key)) return false;
+      if (gameChangerCap(level) === 0 && lists.isGameChanger(key)) return false;
+      if (extraTurnCap(level) === 0 && lists.isExtraTurn(key)) return false;
+      return true;
+    })
+    .map((card) => ({
+      card,
+      score:
+        synergyScore(card, { tribes, themes }) +
+        (plan?.type?.matches(card) ? 3 : 0) +
+        (plan?.tribe?.matches(card) ? 4 : 0),
+    }))
     .sort(
       (a, b) =>
         b.score - a.score ||
@@ -332,10 +397,22 @@ export function draftCommanderDeck(input: {
   /** What the AI said the collection is thin on (shown with the warnings). */
   shortfalls?: readonly string[];
   strategy?: string | null;
+  /** A deck type, a creature type, a bracket (none = the plain draft). */
+  plan?: DraftPlan | null;
 }): CommanderDraft {
   const { commander } = input;
+  const plan = input.plan ?? null;
   const identity = commander.colorIdentity;
-  const pool = eligiblePool(commander, input.collection);
+  const pool = eligiblePool(commander, input.collection, plan);
+  const landTarget = plan?.lands ?? LAND_TARGET;
+  const roleTargets = { ...ROLE_TARGETS, ...(plan?.roles ?? {}) };
+  const level = plan?.bracket?.level ?? null;
+  const lists = plan?.bracket?.cards ?? null;
+  const isGameChanger = (card: { name: string }) => !!lists && lists.isGameChanger(cardKey(card.name));
+  const isExtraTurn = (card: { name: string }) => !!lists && lists.isExtraTurn(cardKey(card.name));
+  // The commander counts toward a bracket's Game Changers.
+  let gameChangersIn = isGameChanger(commander) ? 1 : 0;
+  let extraTurnsIn = 0;
   const byId = new Map(pool.map((c) => [c.id, c]));
   // Any printing of a card the pool holds answers for it (the AI may name a
   // second printing's row).
@@ -347,12 +424,19 @@ export function draftCommanderDeck(input: {
   const take = (card: CollectionCard, fromAi = false, aiWhy?: string) => {
     const key = cardKey(card.name);
     if (taken.has(key)) return false;
+    // A bracket's caps: Game Changers (the commander counts), extra turns.
+    if (level !== null && lists) {
+      if (isGameChanger(card) && gameChangersIn >= gameChangerCap(level)) return false;
+      if (isExtraTurn(card) && extraTurnsIn >= extraTurnCap(level)) return false;
+    }
     taken.add(key);
+    if (isGameChanger(card)) gameChangersIn += 1;
+    if (isExtraTurn(card)) extraTurnsIn += 1;
     chosen.push(toPick(card, roleOf(card), fromAi, aiWhy));
     return true;
   };
 
-  const nonlandTarget = COMMANDER_DECK_SIZE - 1 - LAND_TARGET;
+  const nonlandTarget = COMMANDER_DECK_SIZE - 1 - landTarget;
   const nonlands = () => chosen.filter((p) => p.role !== "land").length;
   const lands = () => chosen.filter((p) => p.role === "land").length;
 
@@ -362,7 +446,7 @@ export function draftCommanderDeck(input: {
     const card = byId.get(id) ?? (row ? poolByKey.get(cardKey(row.name)) : undefined);
     if (!card) continue;
     const land = isLand(card);
-    if (land ? lands() >= LAND_TARGET : nonlands() >= nonlandTarget) continue;
+    if (land ? lands() >= landTarget : nonlands() >= nonlandTarget) continue;
     take(card, true, input.reasons?.get(id));
   }
 
@@ -374,7 +458,7 @@ export function draftCommanderDeck(input: {
       .filter((c) => roleOf(c) === role)
       .sort((a, b) => (role === "ramp" ? (a.manaValue ?? 0) - (b.manaValue ?? 0) : 0));
     for (const card of ranked) {
-      if (have() >= ROLE_TARGETS[role] || nonlands() >= nonlandTarget) break;
+      if (have() >= roleTargets[role] || nonlands() >= nonlandTarget) break;
       take(card);
     }
   }
@@ -387,12 +471,12 @@ export function draftCommanderDeck(input: {
   const helpful = pool.filter((c) => isLand(c) && landHelps(c, identity));
   const utility = pool.filter((c) => isLand(c) && !landHelps(c, identity));
   for (const card of [...helpful, ...utility]) {
-    if (lands() >= LAND_TARGET) break;
+    if (lands() >= landTarget) break;
     take(card);
   }
 
   const spellsShort = Math.max(0, nonlandTarget - nonlands());
-  const basicsWanted = Math.max(0, LAND_TARGET - lands()) + Math.min(MAX_EXTRA_BASICS, spellsShort);
+  const basicsWanted = Math.max(0, landTarget - lands()) + Math.min(MAX_EXTRA_BASICS, spellsShort);
   const basics = splitBasics(basicsWanted, identity, chosen);
 
   const basicCount = basics.reduce((sum, b) => sum + b.count, 0);
@@ -418,9 +502,40 @@ export function draftCommanderDeck(input: {
     );
   }
   for (const role of ["ramp", "draw", "removal"] as const) {
-    if (counts[role] < Math.ceil(ROLE_TARGETS[role] / 2)) {
-      warnings.push(`Only ${counts[role]} ${ROLE_LABELS[role].toLowerCase()} card${counts[role] === 1 ? "" : "s"} — most decks want about ${ROLE_TARGETS[role]}.`);
+    if (counts[role] < Math.ceil(roleTargets[role] / 2)) {
+      warnings.push(`Only ${counts[role]} ${ROLE_LABELS[role].toLowerCase()} card${counts[role] === 1 ? "" : "s"} — most decks want about ${roleTargets[role]}.`);
     }
+  }
+
+  // What the deck was built around, and how much of it the collection holds.
+  const focus: NonNullable<CommanderDraft["focus"]> = [];
+  for (const part of [plan?.type, plan?.tribe]) {
+    if (!part) continue;
+    const inPool = pool.filter((c) => part.matches(c)).length;
+    const inDeck = chosen.filter((p) => {
+      const row = rowById.get(p.cardId);
+      return row ? part.matches(row) : false;
+    }).length;
+    focus.push({ label: part.label, inDeck, inPool, floor: part.floor });
+    if (inPool < part.floor) {
+      warnings.push(
+        `Only ${inPool} of your cards in ${commander.name}'s colours are ${part.label} cards — a ${part.label} deck wants about ${part.floor}.`,
+      );
+    }
+  }
+
+  // The bracket: what the cards allow, and whether it was checked at all.
+  let gameChangers: number | null = null;
+  let bracketFloor: 2 | 3 | 4 | null = null;
+  if (lists) {
+    gameChangers = gameChangersIn;
+    const landDenial = chosen.some((p) => lists.isMassLandDenial(cardKey(p.name)));
+    bracketFloor = landDenial || gameChangers > 3 ? 4 : gameChangers > 0 ? 3 : 2;
+    if (level !== null && level <= 2 && isGameChanger(commander)) {
+      warnings.push(`${commander.name} is a Game Changer, so this deck can't be Bracket ${level} — it starts at Bracket 3.`);
+    }
+  } else if (level !== null) {
+    warnings.push("The bracket's card lists couldn't be read just now, so the deck wasn't checked against the bracket.");
   }
 
   return {
@@ -434,6 +549,9 @@ export function draftCommanderDeck(input: {
     poolSize: pool.length,
     warnings,
     strategy: input.strategy?.trim() || null,
+    ...(focus.length ? { focus } : {}),
+    ...(level !== null ? { bracket: level } : {}),
+    ...(lists ? { gameChangers, bracketFloor } : {}),
   };
 }
 

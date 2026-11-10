@@ -55,7 +55,16 @@ function commander(i: number, over: Partial<CollectionCard> = {}): CollectionCar
 const COMMANDERS = Array.from({ length: 20 }, (_, i) => commander(i + 1));
 
 function support(score: number): CommanderSupport {
-  return { inColours: score, fit: Math.round(score / 2), roles: { ramp: 1, draw: 1, removal: 1, wipe: 0 }, lands: 2, score };
+  return {
+    inColours: score,
+    fit: Math.round(score / 2),
+    roles: { ramp: 1, draw: 1, removal: 1, wipe: 0 },
+    lands: 2,
+    score,
+    // The least supported commanders hold the most token cards.
+    deckTypes: { tokens: 21 - score },
+    tribes: score === 20 ? [{ tribe: "goblin", count: 14 }] : [],
+  };
 }
 
 function draftFor(card: CollectionCard): CommanderDraft {
@@ -372,3 +381,74 @@ describe("the AI draft this browser keeps", () => {
     expect(screen.queryByText(/You have an unsaved AI build for/)).toBeNull();
   });
 });
+
+describe("deck type, creature type and bracket", () => {
+  const select = (label: string) => screen.getByLabelText(label) as HTMLSelectElement;
+
+  it("a deck type ranks the commanders best for it, and its counts show in the picker", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    // Commander 20 is the best supported overall …
+    expect(radios()[0].value).toBe(COMMANDERS[19].id);
+    const tokens = [...select("Deck type").options].find((o) => o.value === "tokens") as HTMLOptionElement;
+    expect(tokens.textContent).toBe("Tokens — 1 card (wants 20)");
+    fireEvent.change(select("Deck type"), { target: { value: "tokens" } });
+    // … but Commander 01 holds the most token cards.
+    expect(radios()[0].value).toBe(COMMANDERS[0].id);
+    expect(select("Sort").selectedOptions[0].textContent).toBe("Best for Tokens");
+  });
+
+  it("the AI build says so when the collection can't begin to fill the type", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    fireEvent.change(select("Deck type"), { target: { value: "tokens" } });
+    expect(aiButton().getAttribute("aria-disabled")).toBe("true");
+    expect(descriptionOf(aiButton())).toMatch(/too few Tokens cards/);
+    // The free draft still goes.
+    expect(draftButton().getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("Stax and Combo can't be picked below Bracket 3, and a lower bracket sets the type back", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    fireEvent.change(select("Deck type"), { target: { value: "stax" } });
+    fireEvent.change(select("Bracket"), { target: { value: "2" } });
+    expect(select("Deck type").value).toBe("");
+    expect(screen.getByText(/Stax is a deck type for Bracket 3 and up/)).toBeTruthy();
+    const stax = [...select("Deck type").options].find((o) => o.value === "stax") as HTMLOptionElement;
+    expect(stax.disabled).toBe(true);
+    expect(stax.textContent).toMatch(/Bracket 3\+$/);
+  });
+
+  it("a commander's creature types are offered, and the draft asks for the choice", async () => {
+    m.draft.mockResolvedValue({ ok: true, draft: draftFor(COMMANDERS[19]), truncated: false });
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    const tribe = select("Creature type");
+    expect([...tribe.options].map((o) => o.textContent)).toEqual(["None", "Goblin — 14 creatures (aim for 20+)"]);
+    fireEvent.change(tribe, { target: { value: "goblin" } });
+    fireEvent.change(select("Bracket"), { target: { value: "3" } });
+    await act(async () => {
+      fireEvent.click(draftButton());
+    });
+    expect(m.draft).toHaveBeenCalledWith({ commanderId: COMMANDERS[19].id, deckType: null, tribe: "goblin", bracket: 3 });
+  });
+
+  it("saves the deck with the choice it was built with", async () => {
+    m.draft.mockResolvedValue({ ok: true, draft: draftFor(COMMANDERS[19]), truncated: false });
+    m.save.mockResolvedValue({ ok: true, slug: "d", title: "T", placeholders: 0 });
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    fireEvent.change(select("Bracket"), { target: { value: "2" } });
+    await act(async () => {
+      fireEvent.click(draftButton());
+    });
+    // Moving the picker after the draft doesn't relabel it.
+    fireEvent.change(select("Bracket"), { target: { value: "4" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
+    });
+    expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ deckType: null, tribe: null, bracket: 2 }));
+  });
+});
+

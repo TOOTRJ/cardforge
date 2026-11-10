@@ -58,16 +58,25 @@ export const DECK_TYPES: readonly DeckType[] = [
   { key: "zombies", label: "Zombies", kind: "tribe", colors: ["U", "B"], hint: "recursive Zombies that never stay dead" },
   // Archetypes
   { key: "aggro", label: "Aggro", kind: "archetype", colors: ["R"], hint: "cheap attackers and burn to close fast" },
+  // The Collection Deck Builder's deck types (lib/tools/collection/
+  // archetypes.ts) are saved as these keys too — a test keeps every one of
+  // them listed here.
+  { key: "artifacts", label: "Artifacts", kind: "archetype", colors: ["U", "R"], hint: "artifact makers, cost reducers and artifact payoffs" },
   { key: "blink", label: "Blink", kind: "archetype", colors: ["W", "U"], hint: "enter-the-battlefield creatures and flicker effects" },
+  { key: "combo", label: "Combo", kind: "archetype", colors: ["U", "B"], hint: "tutors, untappers and a few cards that win together" },
   { key: "control", label: "Control", kind: "archetype", colors: ["W", "U"], hint: "counters, sweepers and a few big finishers" },
   { key: "counters", label: "+1/+1 counters", kind: "archetype", colors: ["G", "W"], hint: "counter synergies, proliferate and growing threats" },
+  { key: "enchantress", label: "Enchantress", kind: "archetype", colors: ["G", "W"], hint: "many enchantments and payoffs that draw or grow from them" },
   { key: "graveyard", label: "Graveyard", kind: "archetype", colors: ["B", "G"], hint: "self-mill, recursion and dredge-style value" },
+  { key: "group-hug", label: "Group hug", kind: "archetype", colors: ["G", "U"], hint: "help every player, then break the symmetry to win" },
   { key: "landfall", label: "Landfall", kind: "archetype", colors: ["R", "G"], hint: "extra land drops and landfall payoffs" },
   { key: "lifegain", label: "Lifegain", kind: "archetype", colors: ["W", "B"], hint: "lifegain triggers and drain payoffs" },
   { key: "mill", label: "Mill", kind: "archetype", colors: ["U"], hint: "empty their library and punish the graveyard" },
   { key: "ramp", label: "Ramp", kind: "archetype", colors: ["G"], hint: "mana acceleration into giant threats" },
   { key: "reanimator", label: "Reanimator", kind: "archetype", colors: ["B"], hint: "discard fatties and cheat them back" },
   { key: "spellslinger", label: "Spellslinger", kind: "archetype", colors: ["U", "R"], hint: "instants and sorceries with prowess and copy payoffs" },
+  { key: "stax", label: "Stax", kind: "archetype", colors: ["W", "U"], hint: "taxes and symmetrical locks your deck breaks first" },
+  { key: "superfriends", label: "Superfriends", kind: "archetype", colors: ["W", "U", "B"], hint: "planeswalkers, proliferate and protection for them" },
   { key: "tokens", label: "Tokens", kind: "archetype", colors: ["G", "W"], hint: "go wide with tokens and anthems" },
   { key: "voltron", label: "Voltron", kind: "archetype", colors: ["W"], hint: "one creature loaded with auras and equipment" },
 ];

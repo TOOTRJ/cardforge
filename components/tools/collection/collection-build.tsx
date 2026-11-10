@@ -25,6 +25,21 @@ import {
 } from "@/lib/tools/collection/builder";
 import { describeSupport, type CommanderSupport } from "@/lib/tools/collection/commander-scores";
 import {
+  COLLECTION_DECK_TYPES,
+  DECK_TYPE_GROUP_LABELS,
+  TYPAL_FLOOR,
+  collectionDeckType,
+  commanderDeckTypes,
+  deckTypeFitsBracket,
+  refusalFloor,
+  tribeLabel,
+  type BuildChoice,
+  type CollectionDeckType,
+  type CollectionDeckTypeId,
+  type DeckTypeGroup,
+} from "@/lib/tools/collection/archetypes";
+import { COMMANDER_BRACKETS, commanderBracket } from "@/lib/decks/deck-types";
+import {
   LAST_AI_DRAFT_DAYS,
   clearLastAiDraft,
   readLastAiDraft,
@@ -47,6 +62,11 @@ type DraftSource = "rules" | "ai";
  *  (lib/tools/collection/commander-scores.ts); until they arrive, or when
  *  they can't be read, the list keeps its name order. */
 export type CommanderSort = "best" | "colours" | "name";
+
+/** "Best supported by your cards", or — with a deck type picked — best for
+ *  that type. */
+const sortLabel = (key: CommanderSort, type: CollectionDeckType | null) =>
+  key === "best" && type ? `Best for ${type.label}` : SORT_LABELS[key];
 
 const SORT_LABELS: Record<CommanderSort, string> = {
   best: "Best supported by your cards",
@@ -119,6 +139,14 @@ export function CollectionBuild({
   const [filter, setFilter] = useState("");
   const [colours, setColours] = useState<CollectionColour[]>([]);
   const [sort, setSort] = useState<CommanderSort>("best");
+  // What the deck is built around (all optional): sent with a draft or an
+  // AI build, saved on the deck (decks.deck_type / bracket).
+  const [deckType, setDeckType] = useState<CollectionDeckTypeId | "">("");
+  const [tribe, setTribe] = useState("");
+  const [bracket, setBracket] = useState<number | "">("");
+  const [choiceNote, setChoiceNote] = useState<string | null>(null);
+  /** The choice the draft on screen was made with (the pickers may move on). */
+  const [draftChoice, setDraftChoice] = useState<BuildChoice>({});
   const [expanded, setExpanded] = useState(false);
   /** With a draft on screen the list folds away behind "Change commander". */
   const [listOpen, setListOpen] = useState(true);
@@ -138,6 +166,10 @@ export function CollectionBuild({
     listHeading: useId(),
     grid: useId(),
     reason: useId(),
+    deckType: useId(),
+    tribe: useId(),
+    bracket: useId(),
+    choiceHint: useId(),
   };
   useLeaveWarning(working === "ai");
   const hasCommanders = collectionSize > 0 && commanders.length > 0;
@@ -194,15 +226,18 @@ export function CollectionBuild({
       if (ready && sort !== "name") {
         const sa = support(a);
         const sb = support(b);
+        // With a deck type picked, "best" is best FOR it (theme first):
+        // the most cards of the type in its colours, then the score.
+        const onType = (x: CommanderSupport | undefined) => (deckType && x ? (x.deckTypes[deckType] ?? 0) : 0);
         const diff =
           sort === "best"
-            ? (sb?.score ?? -1) - (sa?.score ?? -1) || (sb?.inColours ?? -1) - (sa?.inColours ?? -1)
+            ? onType(sb) - onType(sa) || (sb?.score ?? -1) - (sa?.score ?? -1) || (sb?.inColours ?? -1) - (sa?.inColours ?? -1)
             : (sb?.inColours ?? -1) - (sa?.inColours ?? -1);
         if (diff !== 0) return diff;
       }
       return byName(a, b);
     });
-  }, [commanders, scores, sort]);
+  }, [commanders, scores, sort, deckType]);
 
   if (!hasCommanders) {
     return (
@@ -244,6 +279,24 @@ export function CollectionBuild({
     setCommanderId(card.id);
     setDraft(null);
     setError(null);
+    if (tribe && !(ready?.[card.id]?.tribes ?? []).some((t) => t.tribe === tribe)) setTribe("");
+  };
+
+  const choice: BuildChoice = {
+    deckType: deckType || null,
+    tribe: tribe || null,
+    bracket: bracket === "" ? null : bracket,
+  };
+
+  const pickBracket = (value: number | "") => {
+    setBracket(value);
+    const type = collectionDeckType(deckType);
+    if (type && value !== "" && !deckTypeFitsBracket(type, value)) {
+      setDeckType("");
+      setChoiceNote(`${type.label} is a deck type for Bracket ${type.minBracket} and up, so the deck type is back to Any.`);
+    } else {
+      setChoiceNote(null);
+    }
   };
 
   const showDraft = (next: CommanderDraft, from: DraftSource, wasTruncated: boolean) => {
@@ -258,11 +311,12 @@ export function CollectionBuild({
     setWorking("rules");
     setError(null);
     try {
-      const result = await draftCollectionDeckAction({ commanderId });
+      const result = await draftCollectionDeckAction({ commanderId, ...choice });
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setDraftChoice(choice);
       showDraft(result.draft, "rules", result.truncated);
     } catch {
       setError("The draft didn't finish. Try again.");
@@ -279,7 +333,7 @@ export function CollectionBuild({
       const response = await fetch("/api/tools/collection-builder/ai-build", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ commanderId }),
+        body: JSON.stringify({ commanderId, ...choice }),
       });
       const body = (await response.json()) as {
         ok: boolean;
@@ -294,6 +348,7 @@ export function CollectionBuild({
         return;
       }
       const wasTruncated = Boolean(body.truncated);
+      setDraftChoice(choice);
       showDraft(body.draft, "ai", wasTruncated);
       // Paid for: kept in this browser for a week, so a reload can't lose it.
       writeLastAiDraft(viewerId, {
@@ -302,6 +357,7 @@ export function CollectionBuild({
         collectionSize,
         truncated: wasTruncated,
         draft: body.draft,
+        choice,
       });
       setKept(null);
     } catch {
@@ -315,6 +371,13 @@ export function CollectionBuild({
     if (!kept) return;
     setCommanderId(kept.commanderId);
     setError(null);
+    const keptChoice = kept.choice ?? {};
+    setDeckType(collectionDeckType(keptChoice.deckType)?.id ?? "");
+    setTribe(keptChoice.tribe ?? "");
+    setBracket(
+      typeof keptChoice.bracket === "number" && keptChoice.bracket >= 1 && keptChoice.bracket <= 5 ? keptChoice.bracket : "",
+    );
+    setDraftChoice(keptChoice);
     showDraft(kept.draft, "ai", kept.truncated);
     setKept(null);
   };
@@ -335,8 +398,31 @@ export function CollectionBuild({
   // A button that can't act yet stays reachable and says why (aria-disabled,
   // never `disabled`, which would drop it from the keyboard's path).
   const draftBlocked = !commander ? "Pick a commander first." : null;
-  const aiBlocked = draftBlocked ?? aiOff;
   const support = commander && ready ? ready[commander.id] : undefined;
+  const pickedType = collectionDeckType(deckType);
+  const typeCount = pickedType && support ? (support.deckTypes[pickedType.id] ?? 0) : null;
+  // The route refuses a type the collection can't begin to fill (below half
+  // its floor) before charging; the button says so first.
+  const themeTooThin =
+    pickedType && typeCount !== null && typeCount < refusalFloor(pickedType.floor)
+      ? `Your collection has too few ${pickedType.label} cards in these colours for the AI to build around — try the free draft or another deck type.`
+      : null;
+  const aiBlocked = draftBlocked ?? aiOff ?? themeTooThin;
+  const tribeOptions = support?.tribes ?? [];
+  const fitsTypes = commander ? commanderDeckTypes(commander) : [];
+  const bracketLevel = bracket === "" ? null : bracket;
+  const typeOptionLabel = (type: CollectionDeckType) => {
+    const count = support ? (support.deckTypes[type.id] ?? 0) : null;
+    return [
+      type.label,
+      count !== null ? ` — ${n(count)} card${count === 1 ? "" : "s"}${count < type.floor ? ` (wants ${type.floor})` : ""}` : "",
+      deckTypeFitsBracket(type, bracketLevel) ? "" : ` — Bracket ${type.minBracket}+`,
+    ].join("");
+  };
+  const typesByGroup = (Object.keys(DECK_TYPE_GROUP_LABELS) as DeckTypeGroup[]).map((group) => ({
+    group,
+    types: COLLECTION_DECK_TYPES.filter((t) => t.group === group),
+  }));
   const supportFor = (card: CollectionCard) => (ready && card.commanderLegal ? ready[card.id] : undefined);
 
   return (
@@ -357,7 +443,8 @@ export function CollectionBuild({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface/40 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             {commander ? (
               <>
@@ -403,10 +490,110 @@ export function CollectionBuild({
             </Button>
           </div>
         </div>
+        <div className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={ids.deckType} className="text-xs font-medium text-muted">
+              Deck type
+            </label>
+            <select
+              id={ids.deckType}
+              value={deckType}
+              aria-describedby={ids.choiceHint}
+              onChange={(event) => {
+                setDeckType(event.target.value as CollectionDeckTypeId | "");
+                setChoiceNote(null);
+              }}
+              className={inputClass(false)}
+            >
+              <option value="">Any — follow the commander</option>
+              {typesByGroup.map(({ group, types }) => (
+                <optgroup key={group} label={DECK_TYPE_GROUP_LABELS[group]}>
+                  {types.map((type) => (
+                    <option key={type.id} value={type.id} disabled={!deckTypeFitsBracket(type, bracketLevel)}>
+                      {typeOptionLabel(type)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            {tribeOptions.length > 0 ? (
+              <>
+                <label htmlFor={ids.tribe} className="text-xs font-medium text-muted">
+                  Creature type
+                </label>
+                <select
+                  id={ids.tribe}
+                  value={tribe}
+                  onChange={(event) => setTribe(event.target.value)}
+                  className={inputClass(false)}
+                >
+                  <option value="">None</option>
+                  {tribeOptions.map((t) => (
+                    <option key={t.tribe} value={t.tribe}>
+                      {`${tribeLabel(t.tribe)} — ${n(t.count)} creature${t.count === 1 ? "" : "s"}${t.count < TYPAL_FLOOR ? ` (aim for ${TYPAL_FLOOR}+)` : ""}`}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-medium text-muted">Creature type</span>
+                <p className="py-2 text-xs leading-5 text-subtle">
+                  {!commander
+                    ? "Pick a commander to see the creature types you could build around."
+                    : scores.status === "ready"
+                      ? "No creature type has 10 or more creatures in these colours yet."
+                      : "Counting your creature types…"}
+                </p>
+              </>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={ids.bracket} className="text-xs font-medium text-muted">
+              Bracket
+            </label>
+            <select
+              id={ids.bracket}
+              value={bracket === "" ? "" : String(bracket)}
+              onChange={(event) => pickBracket(event.target.value === "" ? "" : Number(event.target.value))}
+              className={inputClass(false)}
+            >
+              <option value="">Any bracket</option>
+              {COMMANDER_BRACKETS.map((b) => (
+                <option key={b.level} value={String(b.level)}>{`${b.level} · ${b.name}`}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div id={ids.choiceHint} className="flex flex-col gap-1 text-xs leading-5 text-muted empty:hidden">
+          {pickedType ? (
+            <p>
+              {pickedType.label}: {pickedType.summary}
+              {typeCount !== null
+                ? ` You own ${n(typeCount)} ${pickedType.label} card${typeCount === 1 ? "" : "s"} in these colours — a ${pickedType.label} deck wants about ${pickedType.floor}.`
+                : ""}
+            </p>
+          ) : null}
+          {commander && fitsTypes.length > 0 ? (
+            <p>
+              {commander.name}&apos;s own text plays into{" "}
+              {fitsTypes.map((id) => collectionDeckType(id)?.label).filter(Boolean).join(", ")}.
+            </p>
+          ) : null}
+          {bracketLevel ? <p>Bracket {bracketLevel}: {commanderBracket(bracketLevel)?.blurb}</p> : null}
+        </div>
+        {choiceNote ? (
+          <p role="status" className="text-xs text-ember">
+            {choiceNote}
+          </p>
+        ) : null}
+        </div>
         <p className="text-xs text-subtle">
           &ldquo;Draft a deck&rdquo; is free and follows the rules. &ldquo;Build with AI&rdquo; reads your cards and plans around
           your commander{balance !== null ? ` — you have ${n(balance)} credit${balance === 1 ? "" : "s"}` : ""}.
-          {draftBlocked || aiOff ? <span id={ids.reason}> {draftBlocked ?? aiOff}</span> : null}
+          {draftBlocked || aiOff || themeTooThin ? <span id={ids.reason}> {draftBlocked ?? aiOff ?? themeTooThin}</span> : null}
         </p>
         <p role="status" className="text-sm text-muted empty:hidden">
           {working === "ai" ? "The AI is choosing from your cards. This takes up to a minute." : working === "rules" ? "Drafting…" : ""}
@@ -497,7 +684,7 @@ export function CollectionBuild({
                     >
                       {(Object.keys(SORT_LABELS) as CommanderSort[]).map((key) => (
                         <option key={key} value={key}>
-                          {SORT_LABELS[key]}
+                          {sortLabel(key, pickedType)}
                         </option>
                       ))}
                     </select>
@@ -555,7 +742,9 @@ export function CollectionBuild({
                           off
                             ? `${card.name} (not legal in Commander)`
                             : cardSupport
-                              ? `${card.name}, ${n(cardSupport.fit)} of your cards fit its plan`
+                              ? pickedType
+                                ? `${card.name}, ${n(cardSupport.deckTypes[pickedType.id] ?? 0)} of your ${pickedType.label} cards in its colours`
+                                : `${card.name}, ${n(cardSupport.fit)} of your cards fit its plan`
                               : card.name
                         }
                         onChange={() => pick(card)}
@@ -567,7 +756,9 @@ export function CollectionBuild({
                         <span className="text-[11px] leading-4 text-subtle">Not legal in Commander</span>
                       ) : cardSupport ? (
                         <span aria-hidden className="text-[11px] leading-4 text-subtle">
-                          {n(cardSupport.fit)} fit · {n(cardSupport.inColours)} cards
+                          {pickedType
+                            ? `${n(cardSupport.deckTypes[pickedType.id] ?? 0)} ${pickedType.label}`
+                            : `${n(cardSupport.fit)} fit · ${n(cardSupport.inColours)} cards`}
                         </span>
                       ) : null}
                     </label>
@@ -614,6 +805,7 @@ export function CollectionBuild({
           source={source}
           truncated={truncated}
           onSaved={source === "ai" ? () => clearLastAiDraft(viewerId) : undefined}
+          choice={draftChoice}
         />
       ) : null}
     </div>
@@ -629,12 +821,15 @@ function DraftReview({
   source,
   truncated,
   onSaved,
+  choice = {},
 }: {
   draft: CommanderDraft;
   source: DraftSource;
   truncated: boolean;
   /** Called once the draft is a deck (the AI draft this browser kept goes). */
   onSaved?: () => void;
+  /** The deck type / creature type / bracket it was built with (saved on the deck). */
+  choice?: BuildChoice;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // A new draft takes the focus — it lands under the build bar, and a
@@ -699,6 +894,9 @@ function DraftReview({
           title,
           visibility,
           retry,
+          deckType: choice.deckType ?? null,
+          tribe: choice.tribe ?? null,
+          bracket: choice.bracket ?? null,
         });
       } catch {
         setSaveError("The connection dropped before the deck was saved. Press Save deck again — it won't make a second one.");
@@ -726,6 +924,20 @@ function DraftReview({
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
             {source === "ai" ? "Built with AI" : "Drafted by the rules"}
           </span>
+          {(draft.focus ?? []).map((f) => (
+            <span key={f.label} className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+              {f.label} · {f.inDeck} in the deck
+            </span>
+          ))}
+          {draft.gameChangers !== undefined && draft.gameChangers !== null ? (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+              {draft.bracket ? `Built for Bracket ${draft.bracket} · ` : ""}
+              {draft.gameChangers} Game Changer{draft.gameChangers === 1 ? "" : "s"}
+              {draft.bracketFloor ? ` · its cards allow Bracket ${draft.bracketFloor}${draft.bracketFloor < 4 ? " or higher" : "+"}` : ""}
+            </span>
+          ) : draft.bracket ? (
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">Built for Bracket {draft.bracket}</span>
+          ) : null}
         </div>
         <p className="text-sm text-muted">
           <span className={cn("font-semibold tabular-nums", over > 0 ? "text-danger" : "text-foreground")}>

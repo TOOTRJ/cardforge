@@ -11,6 +11,13 @@ import {
   roleOf,
   type DeckRole,
 } from "./builder";
+import {
+  COLLECTION_DECK_TYPES,
+  TYPAL_OFFER_MIN,
+  cardCreatureTypes,
+  isChangeling,
+  type CollectionDeckTypeId,
+} from "./archetypes";
 
 // ---------------------------------------------------------------------------
 // How well a user's OWN cards support each commander they own (pure, tested;
@@ -56,7 +63,17 @@ export type CommanderSupport = {
   lands: number;
   /** 0–100, for the sort (and the suggestions' shortlist). */
   score: number;
+  /** Cards you own in its colours on each deck type (lands included: a
+   *  fetch land is a Landfall card). Types with none are left out. */
+  deckTypes: Partial<Record<CollectionDeckTypeId, number>>;
+  /** The creature types it could be built around: types with at least
+   *  TYPAL_OFFER_MIN creatures in its colours (changelings count for
+   *  every type), most first, at most eight. */
+  tribes: { tribe: string; count: number }[];
 };
+
+/** Most creature types a commander's support lists. */
+export const TRIBES_LISTED = 8;
 
 /** Plan cards past which more of them add nothing to the score. */
 export const FIT_FULL = 30;
@@ -137,6 +154,10 @@ type Prepared = {
   themes: readonly string[];
   types: ReadonlySet<string>;
   changeling: boolean;
+  /** Bit i set = on COLLECTION_DECK_TYPES[i]. */
+  deckTypeBits: number;
+  /** A creature (its types count toward Typal). */
+  creature: boolean;
 };
 
 /** The cards grouped by identity mask (index 0–31), one per name, basics and
@@ -150,13 +171,20 @@ export function prepareScoringCards(cards: readonly ScoringCard[]): Prepared[][]
     if (seen.has(key)) continue;
     seen.add(key);
     const land = isLand(card);
+    let deckTypeBits = 0;
+    COLLECTION_DECK_TYPES.forEach((type, i) => {
+      if (type.matches(card)) deckTypeBits |= 1 << i;
+    });
+    const creature = cardCreatureTypes(card).length > 0 || /\bCreature\b/.test((card.typeLine ?? "").split(" // ")[0]);
     byMask[identityMask(card.colorIdentity)].push({
       key,
       land,
       role: land ? "land" : roleOf(card),
       themes: land ? [] : cardThemes(card),
       types: new Set(creatureTypesOf(card)),
-      changeling: /\bchangeling\b/i.test(card.oracleText ?? ""),
+      changeling: isChangeling(card),
+      deckTypeBits,
+      creature,
     });
   }
   return byMask;
@@ -173,10 +201,20 @@ export function scoreCommander(
   let inColours = 0;
   let fit = 0;
   let lands = 0;
+  const typeCounts = new Array<number>(COLLECTION_DECK_TYPES.length).fill(0);
+  const tribeCounts = new Map<string, number>();
+  let changelings = 0;
   for (let sub = 0; sub < 32; sub += 1) {
     if ((sub & ~mask) !== 0) continue;
     for (const card of prepared[sub]) {
       if (card.key === own) continue;
+      if (card.deckTypeBits) {
+        for (let i = 0; i < typeCounts.length; i += 1) if (card.deckTypeBits & (1 << i)) typeCounts[i] += 1;
+      }
+      if (card.creature) {
+        if (card.changeling) changelings += 1;
+        else for (const t of card.types) tribeCounts.set(t, (tribeCounts.get(t) ?? 0) + 1);
+      }
       if (card.land) {
         lands += 1;
         continue;
@@ -200,7 +238,16 @@ export function scoreCommander(
         SCORE_WEIGHTS.roles * coverage +
         SCORE_WEIGHTS.depth * Math.min(inColours / DEPTH_FULL, 1)),
   );
-  return { inColours, fit, roles, lands, score };
+  const deckTypes: CommanderSupport["deckTypes"] = {};
+  COLLECTION_DECK_TYPES.forEach((type, i) => {
+    if (typeCounts[i] > 0) deckTypes[type.id] = typeCounts[i];
+  });
+  const tribeList = [...tribeCounts.entries()]
+    .map(([tribe, count]) => ({ tribe, count: count + changelings }))
+    .filter((t) => t.count >= TYPAL_OFFER_MIN)
+    .sort((a, b) => b.count - a.count || a.tribe.localeCompare(b.tribe))
+    .slice(0, TRIBES_LISTED);
+  return { inColours, fit, roles, lands, score, deckTypes, tribes: tribeList };
 }
 
 /** Every commander's support, by its collection row id. */
