@@ -3,6 +3,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { designModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { DECK_FORMAT_LABELS, type DeckFormat } from "@/types/deck";
 import { commanderBracket } from "@/lib/decks/deck-types";
@@ -70,7 +71,7 @@ export async function draftTableSheet(input: {
   const bracket = input.format === "commander" ? commanderBracket(input.bracket) : null;
   const { object } = await structuredCall("table-sheet", repairStructuredText(tableSheetDraftSchema), (experimental_repairText) =>
     generateObject({
-      model: designModel(),
+      ...textModelOptions(designModel(), 0.4),
       schema: tableSheetDraftSchema,
       experimental_repairText,
       system: SYSTEM,
@@ -83,7 +84,6 @@ export async function draftTableSheet(input: {
       ]
         .filter(Boolean)
         .join("\n"),
-      temperature: 0.4,
     }),
   );
   const winConditions = object.winConditions.filter(Boolean).slice(0, TABLE_SHEET_LIMITS.winConditionLines);

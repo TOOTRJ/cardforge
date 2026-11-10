@@ -12,6 +12,7 @@ import {
 } from "@/lib/ai/card-design";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { judgeModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { buildDeckSkeleton, type DeckSlot } from "@/lib/ai/mtg-rules";
 import { COLOR_LETTER_IDENTITY, type ColorIdentity } from "@/types/card";
 import type { DeckFormat } from "@/types/deck";
@@ -263,7 +264,7 @@ export async function generateDeckPlan(input: {
   // Repaired where a machine can, else asked once more; a second miss is
   // AiOutputError (lib/ai/structured-output.ts).
   const { object: concept } = await structuredCall("deck-design/concept", repairStructuredText(conceptSchema), (experimental_repairText) => generateObject({
-    model: judgeModel(),
+    ...textModelOptions(judgeModel(), 0.9),
     schema: conceptSchema,
     experimental_repairText,
     system: colourless
@@ -293,7 +294,6 @@ export async function generateDeckPlan(input: {
     ]
       .filter(Boolean)
       .join("\n"),
-    temperature: 0.9,
   }));
 
   let slots = buildDeckSkeleton(input.format, input.size);

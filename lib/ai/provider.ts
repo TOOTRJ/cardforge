@@ -10,12 +10,18 @@ import type { LanguageModel } from "ai";
 // OPENAI_API_KEY, etc.) or with AI_GATEWAY_API_KEY for unified access.
 //
 // Overrides: AI_DESIGN_MODEL / AI_JUDGE_MODEL accept either a gateway string
-// ("anthropic/claude-sonnet-4.5") or a bare model id ("claude-sonnet-4.5",
-// "gpt-4o") — bare ids are automatically prefixed with the provider.
+// ("anthropic/claude-sonnet-5.5") or a bare model id ("claude-sonnet-5.5",
+// "gpt-4o") — bare ids are automatically prefixed with the provider. A set
+// override WINS over the default, so one naming a retired model breaks every
+// text flow (Sonnet 4.5 retires on 2026-11-30).
+//
+// The gateway ids use dots ("claude-sonnet-5.5"), Anthropic's API dashes
+// ("claude-sonnet-5-5"). Claude 4.7+ / 5.x models refuse sampling parameters,
+// so every call passes its model through textModelOptions (lib/ai/sampling.ts).
 // ---------------------------------------------------------------------------
 
-const DEFAULT_DESIGN_MODEL = "anthropic/claude-sonnet-4.5";
-const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-4.5";
+export const DEFAULT_DESIGN_MODEL = "anthropic/claude-sonnet-5.5";
+export const DEFAULT_JUDGE_MODEL = "anthropic/claude-haiku-4.5";
 
 /**
  * True when the AI Gateway itself is reachable — an explicit key, or the
