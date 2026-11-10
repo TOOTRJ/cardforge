@@ -75,6 +75,35 @@ describe("getBracketCards", () => {
     expect(fetchMock.mock.calls.every(([url]) => new URL(String(url)).searchParams.get("q")?.endsWith("legal:commander"))).toBe(true);
   });
 
+  it("an EMPTY list is unknown, never 'none of them' (a renamed tag answers no matches)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        (new URL(url).searchParams.get("q") ?? "").includes("mass-land-denial") ? page([], false, 404) : page(["X"], false),
+      ),
+    );
+    expect(await (await fresh()).brackets.getBracketCards()).toBeNull();
+  });
+
+  it("is held in the instance for six hours", async () => {
+    const fetchMock = vi.fn(async () => page(["X"], false));
+    vi.stubGlobal("fetch", fetchMock);
+    const { brackets } = await fresh();
+    const t = Date.now();
+    expect(await brackets.getBracketCards(t)).not.toBeNull();
+    const calls = fetchMock.mock.calls.length;
+    await brackets.getBracketCards(t + 60_000);
+    expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
+  it("reads names only: a card the full schema can't read doesn't void the list", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ object: "list", has_more: false, data: [{ name: "Odd", weird: true }] }), { status: 200 })),
+    );
+    expect(await (await fresh()).client.searchCardNames("is:gamechanger")).toEqual(["Odd"]);
+  });
+
   it("any list that can't be read makes the whole set null", async () => {
     vi.stubGlobal(
       "fetch",

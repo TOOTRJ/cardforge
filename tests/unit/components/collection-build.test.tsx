@@ -367,6 +367,34 @@ describe("the AI draft this browser keeps", () => {
     expect(screen.getByText(/AI's pick/)).toBeTruthy();
   });
 
+  it("restores the pickers from a kept draft's choice, cleaned of what no longer validates", async () => {
+    window.localStorage.setItem(
+      lastAiDraftKey("viewer-1"),
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        commanderId: COMMANDERS[19].id,
+        collectionSize: 71,
+        truncated: false,
+        draft: draftFor(COMMANDERS[19]),
+        choice: { deckType: "storm", tribe: "goblin", bracket: 9 },
+      }),
+    );
+    m.save.mockResolvedValue({ ok: true, slug: "d", title: "T", placeholders: 0 });
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Show it" }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Bracket") as HTMLSelectElement).value).toBe("");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Save deck" }));
+    });
+    // A type renamed since or a bracket out of range is never sent; the
+    // creature type the commander still offers is.
+    expect(m.save).toHaveBeenCalledWith(expect.objectContaining({ deckType: null, tribe: "goblin", bracket: null }));
+  });
+
   it("is not offered for a collection that changed", async () => {
     window.localStorage.setItem(
       lastAiDraftKey("viewer-1"),

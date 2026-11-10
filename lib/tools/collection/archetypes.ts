@@ -103,7 +103,17 @@ const either =
   (card: Card) =>
     tests.some((t) => t(card));
 
-const SELF = String.raw`(?:this \w+|~)`;
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** How a card's own text names itself: "this creature" (Foundations' wording
+ *  for most cards), "~", or — on a LEGENDARY card — its name, short name
+ *  first ("When Atraxa enters"; "Krenko, Mob Boss" → "Krenko"). */
+function selfNames(card: Pick<CollectionCard, "name">): string {
+  const full = card.name.split(" // ")[0].trim();
+  const short = full.split(",")[0].trim();
+  const names = [...new Set([full, short].filter(Boolean))].map(escapeRe);
+  return String.raw`(?:this \w+|~|${names.join("|")})`;
+}
 
 export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
   {
@@ -113,8 +123,9 @@ export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
     summary: "Fill the board with token creatures, then win wide.",
     wants: "repeatable token makers, token doublers, anthems that pump the team, and payoffs that count your creatures",
     matches: textHas(
-      /\bcreates?\b[^.]*\btokens?\b/i,
-      /\btokens? you control\b/i,
+      // CREATURE tokens: a Treasure, Clue or Food maker is an Artifacts card.
+      /\bcreates?\b[^.]*\bcreature tokens?\b/i,
+      /\b(?:creature )?tokens? you control\b/i,
       /\bcreatures you control get \+\d+\/\+\d+/i,
       /\btwice that many\b[^.]*\btokens?\b|\bwould create one or more\b[^.]*\btokens?\b/i,
       /\bfor each (?:creature|token) you control\b/i,
@@ -229,7 +240,9 @@ export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
     summary: "Exile your own creatures and bring them back to reuse their enter abilities.",
     wants: `creatures with strong "enters" abilities (ramp, card draw, removal) and flicker effects that exile and return them`,
     matches: either(
-      (card) => typeHas(/\bCreature\b/)(card) && new RegExp(String.raw`\bwhen(?:ever)? ${SELF} enters\b`, "i").test(textOf(card)),
+      (card) =>
+        typeHas(/\bCreature\b/)(card) &&
+        new RegExp(String.raw`\bwhen(?:ever)? ${selfNames(card)} enters\b`, "i").test(textOf(card)),
       textHas(/\bexile\b[^.]*\bthen return\b[^.]*\bto the battlefield\b/i, /\bexile another target\b[^.]*\byou control\b[^.]*\breturn\b/i),
     ),
     floor: 15,
@@ -312,7 +325,8 @@ export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
     wants: "cards that give every player cards, mana or life, a few that break the symmetry for you, and a real way to win",
     matches: textHas(
       /\beach player (?:draws|may draw|may put|may search|gains|creates)\b/i,
-      /\btarget (?:opponent|player) draws\b/i,
+      // An opponent is helped: "target player draws" is any draw spell.
+      /\btarget opponent (?:draws|gains|creates|may)\b/i,
       /\bfor each player\b/i,
     ),
     floor: 8,
@@ -324,7 +338,12 @@ export const COLLECTION_DECK_TYPES: readonly CollectionDeckType[] = [
     group: "alt",
     summary: "Empty the opponents' libraries before they empty your life.",
     wants: "cards that mill opponents, mill doublers, and payoffs for cards in their graveyards",
-    matches: textHas(/\b(?:target|each) (?:player|opponent) mills\b/i, /\bmills? (?:\w+|x) cards\b/i, /\bcards? in (?:each )?opponents?'? graveyards?\b/i),
+    // The OPPONENTS' libraries: "you mill four cards" is a Reanimator card.
+    matches: textHas(
+      /\b(?:target|each) (?:player|opponent) mills\b/i,
+      /\beach opponent mills\b|\btarget opponent mills\b|\bthat player mills\b/i,
+      /\bcards? in (?:each )?opponents?'? graveyards?\b/i,
+    ),
     floor: 10,
     target: 18,
   },
@@ -390,8 +409,28 @@ export function cardFitsTribe(card: Card, tribe: string): boolean {
   const key = tribe.toLowerCase();
   if (cardCreatureTypes(card).includes(key)) return true;
   if (/\bCreature\b/.test(frontType(card)) && isChangeling(card)) return true;
-  const word = key.charAt(0).toUpperCase() + key.slice(1);
-  return new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(textOf(card));
+  // The type named in rules text — singular or plural ("Elf", "Elves"),
+  // capitalised as Oracle prints a type, never "non-Human".
+  const forms = tribeForms(key).map((f) => escapeRe(f.charAt(0).toUpperCase() + f.slice(1)));
+  return new RegExp(`(?<![-\\w])(?:${forms.join("|")})\\b`).test(textOf(card));
+}
+
+const IRREGULAR_PLURALS: Record<string, string> = {
+  elf: "elves",
+  dwarf: "dwarves",
+  wolf: "wolves",
+  werewolf: "werewolves",
+  mouse: "mice",
+};
+
+/** A creature type's singular and plural ("elf", "elves"; "ally", "allies";
+ *  "fox", "foxes"; "goblin", "goblins"). */
+export function tribeForms(key: string): string[] {
+  const forms = new Set([key, `${key}s`]);
+  if (/(?:x|ch|sh|ss|z)$/.test(key)) forms.add(`${key}es`);
+  if (/[^aeiou]y$/.test(key)) forms.add(`${key.slice(0, -1)}ies`);
+  if (IRREGULAR_PLURALS[key]) forms.add(IRREGULAR_PLURALS[key]);
+  return [...forms];
 }
 
 /** "goblin" → "Goblin" (the label a picker shows). */

@@ -155,7 +155,8 @@ describe("the AI build's answer", () => {
       aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed }),
     );
     expect(s.calls).toHaveLength(2);
-    expect(s.calls[0].abortSignal).toBeUndefined();
+    // Both calls are cut off before the refund's time (none without a budget).
+    expect(s.calls[0].abortSignal).toBeInstanceOf(AbortSignal);
     expect(s.calls[1].abortSignal).toBeInstanceOf(AbortSignal);
   });
 
@@ -220,6 +221,35 @@ describe("a deck type, a creature type and a bracket in the prompt", () => {
     s.answers.push(answer(ids(63)));
     await aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed, choice: { bracket: 3 }, bracketCards: null });
     expect(String(s.calls[0].prompt)).toMatch(/couldn't check its card lists this time/);
+  });
+});
+
+describe("the Bracket 3 cap in the prompt", () => {
+  it("states how many Game Changers are left and marks them in <cards>", async () => {
+    const gc = card("Rhystic Study", { typeLine: "Enchantment", oracleText: "Whenever an opponent casts a spell, you may draw a card." });
+    s.answers.push(answer(ids(63)));
+    await aiBuildCommanderDeck({
+      commander: KRENKO,
+      collection: [...COLLECTION, gc],
+      random: fixed,
+      choice: { bracket: 3 },
+      bracketCards: { gameChangers: new Set(["rhystic study"]), massLandDenial: new Set(), extraTurns: new Set() },
+    });
+    const prompt = String(s.calls[0].prompt);
+    expect(prompt).toMatch(/At most 3 Game Changers among your picks: they are marked "Game Changer" in <cards>/);
+    expect(prompt).toMatch(/\| Rhystic Study \| [^\n]*\| Game Changer \|/);
+  });
+
+  it("counts a Game Changer commander as one of the three", async () => {
+    s.answers.push(answer(ids(63)));
+    await aiBuildCommanderDeck({
+      commander: KRENKO,
+      collection: COLLECTION,
+      random: fixed,
+      choice: { bracket: 3 },
+      bracketCards: { gameChangers: new Set(["krenko, mob boss"]), massLandDenial: new Set(), extraTurns: new Set() },
+    });
+    expect(String(s.calls[0].prompt)).toMatch(/At most 2 Game Changers among your picks \(the commander is one of the three\)/);
   });
 });
 

@@ -495,6 +495,11 @@ export async function searchPrintingsPage(
   }
 }
 
+const cardNamesPageSchema = z.object({
+  has_more: z.boolean().optional(),
+  data: z.array(z.object({ name: z.string() })),
+});
+
 /**
  * Every card NAME a Scryfall search matches (one per oracle card), up to
  * `maxPages` pages of Scryfall's 175 — for short lists that change a few
@@ -521,7 +526,9 @@ export async function searchCardNames(
     if (response.status === 404) return names;
     if (!response.ok) return null;
     try {
-      const parsed = scryfallSearchResponseSchema.parse(await response.json());
+      // Names only: one card the full card schema can't read must not void
+      // the whole list.
+      const parsed = cardNamesPageSchema.parse(await response.json());
       names.push(...parsed.data.map((card) => card.name));
       if (parsed.has_more !== true) return names;
     } catch {

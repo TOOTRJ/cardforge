@@ -410,9 +410,9 @@ export function draftCommanderDeck(input: {
   const lists = plan?.bracket?.cards ?? null;
   const isGameChanger = (card: { name: string }) => !!lists && lists.isGameChanger(cardKey(card.name));
   const isExtraTurn = (card: { name: string }) => !!lists && lists.isExtraTurn(cardKey(card.name));
-  // The commander counts toward a bracket's Game Changers.
+  // The commander counts toward a bracket's Game Changers and extra turns.
   let gameChangersIn = isGameChanger(commander) ? 1 : 0;
-  let extraTurnsIn = 0;
+  let extraTurnsIn = isExtraTurn(commander) ? 1 : 0;
   const byId = new Map(pool.map((c) => [c.id, c]));
   // Any printing of a card the pool holds answers for it (the AI may name a
   // second printing's row).
@@ -529,10 +529,17 @@ export function draftCommanderDeck(input: {
   let bracketFloor: 2 | 3 | 4 | null = null;
   if (lists) {
     gameChangers = gameChangersIn;
-    const landDenial = chosen.some((p) => lists.isMassLandDenial(cardKey(p.name)));
-    bracketFloor = landDenial || gameChangers > 3 ? 4 : gameChangers > 0 ? 3 : 2;
+    // The commander is in the deck too: its own land denial counts.
+    const landDenial = [commander, ...chosen].some((p) => lists.isMassLandDenial(cardKey(p.name)));
+    bracketFloor = landDenial || gameChangers > 3 || extraTurnsIn > 1 ? 4 : gameChangers > 0 ? 3 : 2;
     if (level !== null && level <= 2 && isGameChanger(commander)) {
       warnings.push(`${commander.name} is a Game Changer, so this deck can't be Bracket ${level} — it starts at Bracket 3.`);
+    }
+    if (level !== null && level <= 3 && lists.isMassLandDenial(cardKey(commander.name))) {
+      warnings.push(`${commander.name} denies lands to the whole table, so this deck can't be Bracket ${level} — it starts at Bracket 4.`);
+    }
+    if (level !== null && level <= 1 && isExtraTurn(commander)) {
+      warnings.push(`${commander.name} takes extra turns, so this deck can't be Bracket 1.`);
     }
   } else if (level !== null) {
     warnings.push("The bracket's card lists couldn't be read just now, so the deck wasn't checked against the bracket.");
