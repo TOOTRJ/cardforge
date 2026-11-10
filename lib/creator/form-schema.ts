@@ -20,6 +20,9 @@ import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationTiersProblem } from "@/lib/creator/station-rows";
 import { z } from "zod";
 import { cardSymbolFields } from "@/lib/validation/card-glyphs";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { hidesCost } from "@/lib/creator/steps";
 import { unknownSymbolCodesIn, type SymbolMeanings } from "@/lib/symbols/symbol-token";
 import { unknownSymbolsMessage } from "@/lib/symbols/symbols";
 import {
@@ -469,8 +472,17 @@ export function cardFormSchemaFor(
     // for would draw a blank disc for every viewer — the field says so, on
     // every field the card draws pips from (the glyph notice's ONE list).
     if (symbols) {
+      // Only a field the creator SHOWS on this frame (independent check): a
+      // cost the frame hides (land, token, emblem), or a walker's / saga's
+      // rules text — its rows' copy, whose panel is the rows (with every row
+      // removed it is never sent) — would block Save with no message.
+      const template = values.frame_style?.template;
+      const profile = getFrameProfile(normalizeFrameTemplate(template));
+      const hidden = new Set<string>();
+      if (hidesCost(template)) hidden.add("cost");
+      if (profile.loyaltyRows || profile.chapters) hidden.add("rules_text");
       for (const field of cardSymbolFields(values)) {
-        if (!field.path) continue;
+        if (!field.path || hidden.has(field.path)) continue;
         const codes = unknownSymbolCodesIn(field.value, symbols.meanings).filter((code) => !symbols.opened.has(code));
         if (codes.length === 0) continue;
         ctx.addIssue({

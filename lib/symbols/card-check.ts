@@ -2,6 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { customSymbolCodesIn } from "@/lib/symbols/symbol-token";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { unknownSymbolsMessage } from "@/lib/symbols/symbols";
 
 // ---------------------------------------------------------------------------
@@ -22,6 +24,7 @@ import { unknownSymbolsMessage } from "@/lib/symbols/symbols";
 // ---------------------------------------------------------------------------
 
 type DrawnTexts = {
+  frame_style?: unknown;
   cost?: string | null;
   rules_text?: string | null;
   face_content?: unknown;
@@ -31,23 +34,28 @@ type DrawnTexts = {
 type BackFaceTexts = { cost?: unknown; rules_text?: unknown; face_content?: unknown };
 
 /** The fields a save writes that draw pips, with the creator's field key
- *  each refusal goes to (the rows answer for the rules text: the form shows
- *  them in its place). Only keys the payload holds. */
-export function drawnSymbolFields(saved: DrawnTexts): Array<{ field: string; text: string }> {
+ *  each refusal goes to. Only keys the payload holds, and never a cost the
+ *  frame hides (a land's, a token's: never drawn). The ROWS — a walker's,
+ *  a saga's (their serialized copy in `rules_text` too, on a frame whose
+ *  panel is the rows) and a back face's — answer as `face_content`: no
+ *  creator field shows that key, so the creator says the refusal in its
+ *  toast instead of on a field that isn't there. */
+export function drawnSymbolFields(saved: DrawnTexts, template: string | null | undefined): Array<{ field: string; text: string }> {
   const out: Array<{ field: string; text: string }> = [];
   const push = (field: string, value: unknown) => {
     if (typeof value === "string") out.push({ field, text: value });
     else if (value !== null && value !== undefined) out.push({ field, text: JSON.stringify(value) });
   };
-  push("cost", saved.cost);
-  push("rules_text", saved.rules_text);
-  push("rules_text", saved.face_content);
+  const profile = getFrameProfile(normalizeFrameTemplate(template ?? undefined));
+  if (profile.hideCost !== true) push("cost", saved.cost);
+  push(profile.loyaltyRows || profile.chapters ? "face_content" : "rules_text", saved.rules_text);
+  push("face_content", saved.face_content);
   const back = saved.back_face;
   if (back && typeof back === "object") {
     const face = back as BackFaceTexts;
     push("back_face.cost", face.cost);
     push("back_face.rules_text", face.rules_text);
-    push("back_face.rules_text", face.face_content);
+    push("face_content", face.face_content);
   }
   return out;
 }
@@ -62,7 +70,10 @@ export async function unknownSymbolFieldError(
   stored: Record<string, unknown> | null,
 ): Promise<{ field: string; message: string } | null> {
   const kept = new Set(stored ? customSymbolCodesIn(JSON.stringify(stored)) : []);
-  const fields = drawnSymbolFields(saved)
+  // The frame the card is stored on: the save's, else (an edit that sends
+  // none) the stored one's.
+  const frame = (saved.frame_style ?? stored?.frame_style) as { template?: string | null } | null | undefined;
+  const fields = drawnSymbolFields(saved, frame?.template)
     .map(({ field, text }) => ({ field, codes: customSymbolCodesIn(text).filter((code) => !kept.has(code)) }))
     .filter(({ codes }) => codes.length > 0);
   if (fields.length === 0) return null;

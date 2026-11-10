@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { manaValueOfCost, symbolManaValue } from "@/lib/cards/mana-value";
 import { deriveColorIdentity } from "@/lib/creator/card-fields";
@@ -155,6 +157,42 @@ describe("the creator's field error", () => {
       back_face: { ...EMPTY_BACK_FACE, title: "Back", cost: "{*NOPE}", rules_text: "Flying" },
     });
     expect(issues(back).map((issue) => issue.path)).toContain("back_face.cost");
+  });
+
+  it("never on a field the creator doesn't show on this frame — Save would wait with no message", () => {
+    // A cost on a frame that hides it (a land's): never drawn.
+    expect(issues(values({ card_type: "land", cost: "{1}{*NOPE}", frame_style: { finish: "regular", template: "m15land" } }))).toEqual([]);
+    // A walker's / saga's rules text with every row removed: its panel is the
+    // rows, and the save sends no rules text then.
+    const walker = values({
+      card_type: "planeswalker",
+      frame_style: { finish: "regular", template: "m15pw" },
+      power: "",
+      toughness: "",
+      loyalty: "3",
+      rules_text: "+1: Add {*NOPE}.",
+      loyalty_abilities: [],
+    } as Partial<FormValues>);
+    expect(issues(walker).filter((issue) => issue.message.includes("NOPE"))).toEqual([]);
+    const saga = values({
+      card_type: "enchantment",
+      subtypes_text: "Saga",
+      frame_style: { finish: "regular", template: "saga" },
+      power: "",
+      toughness: "",
+      rules_text: "I — Add {*NOPE}.",
+      saga_chapters: [],
+    } as Partial<FormValues>);
+    expect(issues(saga).filter((issue) => issue.message.includes("NOPE"))).toEqual([]);
+  });
+
+  it("is wired: the create and edit pages read the owner's meanings, the form hands them to its schema and the cost panel", () => {
+    const form = readFileSync(join(process.cwd(), "components/creator/card-creator-form.tsx"), "utf8");
+    expect(form).toMatch(/cardFormSchemaFor\(\s*[\s\S]*?formBackBody,\s*formSymbols,\s*\)/);
+    expect(form).toContain("symbolMeanings={symbolMeanings}");
+    for (const page of ["app/(app)/create/page.tsx", "app/(app)/card/[username]/edit/page.tsx"]) {
+      expect(readFileSync(join(process.cwd(), page), "utf8"), page).toContain("symbolMeanings={await getSymbolMeanings(user.id)}");
+    }
   });
 
   it("an edit is never asked about a code its stored card already named", () => {

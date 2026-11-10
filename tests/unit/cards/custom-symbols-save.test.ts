@@ -133,13 +133,25 @@ describe("createCardAction", () => {
     for (const [over, field, codes] of [
       [{ cost: "{1}{*NOPE}" }, "cost", ["NOPE"]],
       [{ rules_text: "{*NOPE}{*ZAP}: Draw." }, "rules_text", ["NOPE", "ZAP"]],
-      [{ card_type: "planeswalker", power: undefined, toughness: undefined, loyalty: "3", frame_style: { template: "m15pw", finish: "regular" }, rules_text: "+1: Draw.", face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "Add {*NOPE}." }] } } }, "rules_text", ["NOPE"]],
+      [{ card_type: "planeswalker", power: undefined, toughness: undefined, loyalty: "3", frame_style: { template: "m15pw", finish: "regular" }, rules_text: "+1: Draw.", face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "Add {*NOPE}." }] } } }, "face_content", ["NOPE"]],
+      // A walker's serialized copy of its rows answers as the rows too: no
+      // creator field shows a walker's rules text (the toast says it).
+      [{ card_type: "planeswalker", power: undefined, toughness: undefined, loyalty: "3", frame_style: { template: "m15pw", finish: "regular" }, rules_text: "+1: Add {*NOPE}." }, "face_content", ["NOPE"]],
     ] as const) {
       const stub = db();
       const result = await createCardAction(payload(over as Record<string, unknown>));
       expect(result, JSON.stringify(over)).toMatchObject({ ok: false, fieldErrors: { [field]: unknownSymbolsMessage(codes) } });
       expect(wrote(stub)).toBe(false);
     }
+  });
+
+  it("a cost the frame hides is never drawn, so never asked about", async () => {
+    const stub = db();
+    const result = await createCardAction(
+      payload({ card_type: "land", power: undefined, toughness: undefined, cost: "{*NOPE}", color_identity: ["colorless"], frame_style: { template: "m15land", finish: "regular" } }),
+    );
+    expect(result).not.toMatchObject({ fieldErrors: { cost: expect.anything() } });
+    expect(readSymbols(stub)).toBe(false);
   });
 
   it("a card that names no code reads no symbols", async () => {
