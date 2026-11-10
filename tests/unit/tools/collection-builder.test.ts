@@ -248,7 +248,7 @@ describe("the AI's picks", () => {
       collection,
       preferred,
       reasons: new Map([[collection[1].id, "Makes a Goblin every turn."]]),
-      shortfalls: ["only 2 removal spells in red", "  "],
+      shortfalls: ["only 2 removal spells in red", "  ", "only 2 removal spells in red"],
     });
     expect(draft.picks.find((p) => p.cardId === collection[1].id)?.aiWhy).toBe("Makes a Goblin every turn.");
     expect(draft.picks.find((p) => p.cardId === collection[2].id)?.aiWhy).toBeUndefined();

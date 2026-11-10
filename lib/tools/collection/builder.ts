@@ -408,8 +408,8 @@ export function draftCommanderDeck(input: {
 
   const warnings: string[] = [];
   for (const note of input.shortfalls ?? []) {
-    const text = note.trim();
-    if (text) warnings.push(`The AI: ${text}`);
+    const text = `The AI: ${note.trim()}`;
+    if (note.trim() && !warnings.includes(text)) warnings.push(text);
   }
   const short = Math.max(0, COMMANDER_DECK_SIZE - total);
   if (short > 0) {

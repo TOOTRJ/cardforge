@@ -83,11 +83,12 @@ function oneLine(text: string | null, max: number): string {
   return (text ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+/** The rules' reading of a card, in the words the answer's role uses. */
 const ROLE_HINT: Record<DeckRole, string> = {
   ramp: "ramp",
-  draw: "card draw",
+  draw: "draw",
   removal: "removal",
-  wipe: "board wipe",
+  wipe: "wipe",
   land: "land",
   core: "—",
 };

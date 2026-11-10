@@ -4,10 +4,11 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { designModel } from "@/lib/ai/provider";
 import { textModelOptions } from "@/lib/ai/sampling";
-import { repairStructuredText, retryFitsBudget, structuredCall } from "@/lib/ai/structured-output";
+import { budgetAbortSignal, repairStructuredText, retryFitsBudget, structuredCall } from "@/lib/ai/structured-output";
 import type { CollectionCard } from "./card-row";
 import { aiCandidates, aiCandidateLines, picksFromIds } from "./ai-candidates";
-import { ROLE_TARGETS, draftCommanderDeck, type CommanderDraft } from "./builder";
+import { LAND_TARGET, ROLE_TARGETS, draftCommanderDeck, type CommanderDraft } from "./builder";
+import { COMMANDER_DECK_SIZE } from "./limits";
 
 // ---------------------------------------------------------------------------
 // "Build with AI" (1 credit): ONE design call reads the user's eligible
@@ -25,14 +26,20 @@ import { ROLE_TARGETS, draftCommanderDeck, type CommanderDraft } from "./builder
 // the structured output can't hold (counts are enforced here, in code).
 // Variety between builds comes from the candidates' order (shuffled within
 // ranking tiers), not from sampling. A measurable shortfall — too few picks
-// from the list, too many ids that aren't on it — is asked for again ONCE,
-// and only while the route's time budget holds a second call
-// (`retryFitsBudget`, the budget `withAiTimeBudget` sets); anything else
-// the rules builder fixes by itself.
+// from the list, too many ids that aren't on it — is asked for again ONCE:
+// only while the route's time budget holds a FULL answer (a short first
+// answer was quick; a whole deck is not — `AI_FULL_ANSWER_MS`), cut off by
+// `budgetAbortSignal` before the refund's tail, and a retry that fails
+// keeps the first answer. Anything else the rules builder fixes by itself.
+// Only `id` must be right: a missing reason or shortfall list, or a role
+// word off the list, never fails a paid call (the role is the model's own
+// note; the draft groups by the rules' reading).
 // ---------------------------------------------------------------------------
 
 const clamp = (max: number) => z.string().transform((v) => v.trim().slice(0, max));
 
+/** The role words the model is offered (a hint in the schema's text, not
+ *  an enum: an answer is never refused for one). */
 export const AI_PICK_ROLES = [
   "ramp",
   "draw",
@@ -52,6 +59,8 @@ export const aiBuildSchema = z.object({
   ),
   shortfalls: z
     .array(clamp(160))
+    .nullish()
+    .transform((v) => v ?? [])
     .describe(
       "Up to three short notes on what the player's cards are thin on for this plan (e.g. \"only 4 removal spells in these colours\"); an empty list when nothing is missing.",
     ),
@@ -59,8 +68,16 @@ export const aiBuildSchema = z.object({
     .array(
       z.object({
         id: z.string().describe("The card's id from <cards>, e.g. c12."),
-        role: z.enum(AI_PICK_ROLES).describe("The job this card does in the deck."),
-        why: clamp(90).describe("Why this card is in the deck, in under 12 words."),
+        role: z
+          .string()
+          .nullish()
+          .transform((v) => (v ?? "").trim().slice(0, 24))
+          .describe(`The job this card does in the deck: one of ${AI_PICK_ROLES.join(", ")}.`),
+        why: z
+          .string()
+          .nullish()
+          .transform((v) => (v ?? "").trim().slice(0, 90))
+          .describe("Why this card is in the deck, in under 12 words."),
       }),
     )
     .describe("The chosen cards, best first: about 63 non-land cards and the non-basic lands that fit, at most 99 in all."),
@@ -68,10 +85,22 @@ export const aiBuildSchema = z.object({
 
 export type AiBuildAnswer = z.infer<typeof aiBuildSchema>;
 
-/** Fewer valid picks than this, or more than `AI_RETRY_UNKNOWN_SHARE` of
- *  the ids off the list, is asked for again (once). */
+/** Fewer valid picks than this (or than 80 % of a small list), or more
+ *  than `AI_RETRY_UNKNOWN_SHARE` of the ids off the list, is asked for
+ *  again (once). */
 export const AI_RETRY_MIN_PICKS = 50;
 export const AI_RETRY_UNKNOWN_SHARE = 0.2;
+/** What a full answer (about 90 picks with their reasons, ~2.5k tokens) is
+ *  assumed to take when deciding whether a retry fits the route's budget —
+ *  never the first answer's own time when that answer was short. */
+export const AI_FULL_ANSWER_MS = 50_000;
+
+const SPELLS = COMMANDER_DECK_SIZE - 1 - LAND_TARGET;
+
+/** The usable picks a retry asks for: 50, or 80 % of a small list. */
+export function retryMinPicks(candidates: number): number {
+  return Math.min(AI_RETRY_MIN_PICKS, Math.floor(candidates * 0.8));
+}
 
 export const AI_BUILD_SYSTEM = [
   "You build a Magic: The Gathering Commander deck from cards a player already owns.",
@@ -99,7 +128,7 @@ export function aiBuildPrompt(commander: CollectionCard, candidates: readonly Co
     `Colour identity: ${commander.colorIdentity.join("") || "colourless"}.`,
     "</commander>",
     "<targets>",
-    `About 63 non-land cards: ramp ~${ROLE_TARGETS.ramp}, card draw ~${ROLE_TARGETS.draw}, removal ~${ROLE_TARGETS.removal}, board wipes 2–3, the rest for the plan. Plus the non-basic lands from <cards> that make the deck's colours (36 lands in all once basics are added).`,
+    `About ${SPELLS} non-land cards: ramp ~${ROLE_TARGETS.ramp}, card draw ~${ROLE_TARGETS.draw}, removal ~${ROLE_TARGETS.removal}, board wipes 2–3, the rest for the plan. Plus the non-basic lands from <cards> that make the deck's colours (${LAND_TARGET} lands in all once basics are added).`,
     "</targets>",
     "Choose the deck now. Use only ids from <cards>. If the cards can't fill a role, say so in shortfalls instead of padding it with cards that don't do the job.",
   ]
@@ -112,11 +141,11 @@ function retryNote(valid: number, unknown: number): string {
     "<previous_answer>",
     `Your last answer had ${valid} usable picks${unknown ? ` and ${unknown} ids that are not in <cards>` : ""}.`,
     "</previous_answer>",
-    "Choose the deck again: about 63 non-land cards plus the non-basic lands that fit, each one an id from <cards>.",
+    `Choose the deck again, each card an id from <cards>: as many fitting cards as the list allows, up to about ${SPELLS} non-land cards plus the non-basic lands that fit — and say in shortfalls what the list can't give, rather than padding.`,
   ].join("\n");
 }
 
-async function askOnce(prompt: string): Promise<AiBuildAnswer> {
+async function askOnce(prompt: string, abortSignal?: AbortSignal): Promise<AiBuildAnswer> {
   const { object } = await structuredCall("collection-build", repairStructuredText(aiBuildSchema), (experimental_repairText) =>
     generateObject({
       ...textModelOptions(designModel(), 0.5),
@@ -124,6 +153,7 @@ async function askOnce(prompt: string): Promise<AiBuildAnswer> {
       experimental_repairText,
       system: AI_BUILD_SYSTEM,
       prompt,
+      ...(abortSignal ? { abortSignal } : {}),
     }),
   );
   return object;
@@ -146,17 +176,25 @@ export async function aiBuildCommanderDeck(input: {
     answer.picks.map((p) => p.id),
     candidates,
   );
-  const tooFew = picked.rowIds.length < AI_RETRY_MIN_PICKS;
+  const tooFew = picked.rowIds.length < retryMinPicks(candidates.length);
   const tooWild = answer.picks.length > 0 && picked.unknown / answer.picks.length > AI_RETRY_UNKNOWN_SHARE;
-  if ((tooFew || tooWild) && retryFitsBudget(firstMs)) {
-    const again = await askOnce(`${prompt}\n${retryNote(picked.rowIds.length, picked.unknown)}`);
-    const pickedAgain = picksFromIds(
-      again.picks.map((p) => p.id),
-      candidates,
-    );
-    if (pickedAgain.rowIds.length > picked.rowIds.length) {
-      answer = again;
-      picked = pickedAgain;
+  if ((tooFew || tooWild) && retryFitsBudget(Math.max(firstMs, AI_FULL_ANSWER_MS))) {
+    try {
+      const again = await askOnce(`${prompt}\n${retryNote(picked.rowIds.length, picked.unknown)}`, budgetAbortSignal());
+      const pickedAgain = picksFromIds(
+        again.picks.map((p) => p.id),
+        candidates,
+      );
+      if (pickedAgain.rowIds.length > picked.rowIds.length) {
+        answer = again;
+        picked = pickedAgain;
+      }
+    } catch (error) {
+      // The first answer is still a deck: keep it.
+      console.warn(
+        "[ai:design] collection build retry failed, keeping the first answer:",
+        error instanceof Error ? error.message.slice(0, 200) : error,
+      );
     }
   }
 

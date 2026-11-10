@@ -19,11 +19,13 @@ vi.mock("ai", () => ({
     s.calls.push(args);
     const next = s.answers.shift();
     if (!next) throw new Error("no answer queued");
+    if (next instanceof Error) throw next;
     return { object: next };
   },
 }));
 
-import { AI_BUILD_SYSTEM, AI_RETRY_MIN_PICKS, aiBuildCommanderDeck } from "@/lib/tools/collection/ai-build";
+import { AI_BUILD_SYSTEM, AI_RETRY_MIN_PICKS, aiBuildCommanderDeck, aiBuildSchema, retryMinPicks } from "@/lib/tools/collection/ai-build";
+import { aiCandidates } from "@/lib/tools/collection/ai-candidates";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 
 let seq = 0;
@@ -96,7 +98,12 @@ describe("the AI build's answer", () => {
     expect(s.calls).toHaveLength(1);
     const aiPicks = draft.picks.filter((p) => p.fromAi);
     expect(aiPicks.length).toBeGreaterThan(50);
-    expect(aiPicks.every((p) => /^Because c\d+\.$/.test(p.aiWhy ?? ""))).toBe(true);
+    // Each reason lands on the card its id named (the same shuffle).
+    const candidates = aiCandidates(KRENKO, COLLECTION, fixed);
+    for (const pick of aiPicks) {
+      const index = candidates.findIndex((c) => c.id === pick.cardId);
+      expect(pick.aiWhy).toBe(`Because c${index}.`);
+    }
     expect(draft.warnings).toContain("The AI: only 3 removal spells in red");
     expect(draft.strategy).toBe("Go wide with goblins.");
   });
@@ -116,6 +123,42 @@ describe("the AI build's answer", () => {
     expect(String(s.calls[1].prompt)).toMatch(/20 ids that are not in <cards>/);
   });
 
+  it("a retry that fails keeps the first answer", async () => {
+    s.answers.push(answer(ids(20)), new Error("gateway timeout"));
+    const draft = await aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed });
+    expect(s.calls).toHaveLength(2);
+    expect(draft.picks.filter((p) => p.fromAi)).toHaveLength(20);
+    expect(draft.strategy).toBe("Go wide with goblins.");
+  });
+
+  it("a small list asks for 80 % of it, not 50", async () => {
+    const small = [KRENKO, ...Array.from({ length: 35 }, (_, i) => card(`Small ${i}`))];
+    expect(retryMinPicks(35)).toBe(28);
+    s.answers.push(answer(ids(30)));
+    await aiBuildCommanderDeck({ commander: KRENKO, collection: small, random: fixed });
+    expect(s.calls).toHaveLength(1);
+  });
+
+  it("a retry is sized as a full answer, and cut off before the refund's time", async () => {
+    // 80 s left: a full answer (50 s × 1.5) plus the 20 s tail doesn't fit,
+    // however quick the short first answer was.
+    s.answers.push(answer(ids(5)), answer(ids(63)));
+    await withAiTimeBudget(Date.now() - 40_000, 120, () =>
+      aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed }),
+    );
+    expect(s.calls).toHaveLength(1);
+
+    // The whole budget left: the retry runs, with an abort signal.
+    s.calls = [];
+    s.answers = [answer(ids(5)), answer(ids(63))];
+    await withAiTimeBudget(Date.now(), 120, () =>
+      aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed }),
+    );
+    expect(s.calls).toHaveLength(2);
+    expect(s.calls[0].abortSignal).toBeUndefined();
+    expect(s.calls[1].abortSignal).toBeInstanceOf(AbortSignal);
+  });
+
   it("never more than once, and not when the route's budget can't hold a second call", async () => {
     s.answers.push(answer(ids(5)), answer(ids(3)));
     const draft = await aiBuildCommanderDeck({ commander: KRENKO, collection: COLLECTION, random: fixed });
@@ -132,3 +175,23 @@ describe("the AI build's answer", () => {
     expect(AI_RETRY_MIN_PICKS).toBe(50);
   });
 });
+
+describe("the answer's schema", () => {
+  it("only an id must be right: a missing reason or shortfall list, or an odd role word, never fails", () => {
+    const parsed = aiBuildSchema.parse({
+      strategy: "  Go wide.  ",
+      shortfalls: null,
+      picks: [
+        { id: "c1", role: "card draw", why: null },
+        { id: "c2", why: "  Makes goblins.  " },
+      ],
+    });
+    expect(parsed.strategy).toBe("Go wide.");
+    expect(parsed.shortfalls).toEqual([]);
+    expect(parsed.picks).toEqual([
+      { id: "c1", role: "card draw", why: "" },
+      { id: "c2", role: "", why: "Makes goblins." },
+    ]);
+  });
+});
+
