@@ -325,7 +325,7 @@ describe("the AI draft this browser keeps", () => {
     window.localStorage.setItem(lastAiDraftKey("viewer-1"), JSON.stringify(value));
     renderBuild();
     await settle();
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Dismiss\s*the kept AI build$/ }));
     expect(window.localStorage.getItem(lastAiDraftKey("viewer-1"))).toBeNull();
     expect(screen.queryByText(/You have an unsaved AI build for/)).toBeNull();
     // The button went with the notice: the focus goes to the heading.
@@ -572,9 +572,54 @@ describe("Suggest a commander", () => {
     renderBuild();
     await settle();
     expect(screen.getByRole("heading", { name: "Suggested for your collection" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Dismiss\s*the suggestions$/ }));
     expect(screen.queryByRole("heading", { name: "Suggested for your collection" })).toBeNull();
     expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeNull();
+  });
+
+  it("Build this keeps a deck type the bracket doesn't allow out, and keeps the player's own when none is suggested", async () => {
+    const body = answer();
+    body.result.suggestions[0].deckType = "stax";
+    body.result.suggestions[1].deckType = null;
+    suggestBody = body;
+    renderBuild();
+    await settle();
+    fireEvent.change(screen.getByLabelText("Bracket"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Deck type"), { target: { value: "tokens" } });
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[4].name}$`) }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(screen.getByText(/The AI suggested Stax, a deck type for Bracket 3 and up/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^Build this\\s*:\\s*${COMMANDERS[7].name}$`) }));
+    });
+    expect((screen.getByLabelText("Deck type") as HTMLSelectElement).value).toBe("tokens");
+    expect(document.activeElement).toBe(draftButton());
+  });
+
+  it("a draft waits while a suggestion is being made", async () => {
+    let finish: (value: unknown) => void = () => {};
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("commander-scores")) return { json: async () => scoresBody };
+      if (url.includes("suggest")) return new Promise((resolve) => (finish = resolve));
+      return { json: async () => ({ ok: false }) };
+    });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(suggestButton());
+    });
+    expect(draftButton().getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(draftButton());
+    expect(m.draft).not.toHaveBeenCalled();
+    await act(async () => {
+      finish({ json: async () => answer() });
+    });
   });
 
   it("with fewer than three commanders, the button says why and asks nothing", async () => {

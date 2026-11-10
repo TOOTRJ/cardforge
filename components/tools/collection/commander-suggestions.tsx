@@ -59,7 +59,7 @@ export function CommanderSuggestions({
         </div>
         <Button variant="ghost" size="sm" onClick={onDismiss}>
           <X aria-hidden />
-          Dismiss
+          Dismiss<span className="sr-only"> the suggestions</span>
         </Button>
       </div>
       {result.overview ? <p className="text-sm leading-6 text-foreground">{result.overview}</p> : null}

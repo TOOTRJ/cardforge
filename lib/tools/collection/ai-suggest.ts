@@ -4,7 +4,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { designModel } from "@/lib/ai/provider";
 import { textModelOptions } from "@/lib/ai/sampling";
-import { AiOutputError, repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
+import { AiOutputError, budgetAbortSignal, repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket } from "@/lib/decks/deck-types";
 import { COLLECTION_DECK_TYPES, collectionDeckType } from "./archetypes";
 import type { ScoringCard } from "./commander-scores";
@@ -62,7 +62,7 @@ export const suggestSchema = z.object({
         gaps: text(180).describe("What the player's cards are short of for this deck, or an empty string."),
       }),
     )
-    .describe("The commanders to build, best first: up to eight, fewer when the collection supports fewer."),
+    .describe("The commanders to build, best first: at least three and at most eight."),
 });
 
 export type SuggestAnswer = z.infer<typeof suggestSchema>;
@@ -73,9 +73,9 @@ export const AI_SUGGEST_SYSTEM = [
   "The player's app checks every answer, so anything that breaks these rules is simply dropped:",
   "answer only with commander ids from <commanders> (k0, k1, …), each at most once;",
   "cite key cards only from that same commander's <support> list, by id (c12, …) — never a card the player doesn't own.",
-  "Rank by, in this order: a coherent plan the player's cards really support; role coverage (the ramp, card draw and removal numbers given);",
-  "variety across colours and deck types; the player's stated preferences; popularity only to break a tie.",
-  "Fewer than five suggestions is fine when the collection supports fewer — never pad.",
+  "Rank by, in this order: a coherent plan the player's cards really support; the player's stated preferences (<preferences>);",
+  "role coverage (the ramp, card draw and removal numbers given); variety across colours and deck types; popularity only to break a tie.",
+  "Give at least three suggestions (the list holds at least three commanders) and at most eight — don't pad past what the cards support.",
   "Write the overview first, then the suggestions, best first.",
 ].join(" ");
 
@@ -108,7 +108,7 @@ export function suggestPrompt(shortlist: readonly ShortlistEntry[], cards: reado
     ...commanders,
     "</commanders>",
     ...preferencesBlock(prefs),
-    `Rank up to ${SUGGEST_MAX} of these commanders now, best first. Use only ids from <commanders>, and key cards only from each commander's own <support>.`,
+    `Rank ${Math.min(SUGGEST_MIN_USABLE, shortlist.length)} to ${SUGGEST_MAX} of these commanders now, best first. Use only ids from <commanders>, and key cards only from each commander's own <support>.`,
   ].join("\n");
 }
 
@@ -153,6 +153,7 @@ export async function suggestCommanders(input: {
   cards: readonly ScoringCard[];
   preferences: SuggestPreferences;
 }): Promise<SuggestResult> {
+  const abortSignal = budgetAbortSignal();
   const { object } = await structuredCall("collection-suggest", repairStructuredText(suggestSchema), (experimental_repairText) =>
     generateObject({
       ...textModelOptions(designModel(), 0.5),
@@ -160,10 +161,13 @@ export async function suggestCommanders(input: {
       experimental_repairText,
       system: AI_SUGGEST_SYSTEM,
       prompt: suggestPrompt(input.shortlist, input.cards, input.preferences),
+      // Cut off before the refund's tail: a slow answer must never outrun
+      // the route and leave a charge behind (the AI build's rule).
+      ...(abortSignal ? { abortSignal } : {}),
     }),
   );
   const result = checkSuggestions(object, input.shortlist);
-  if (result.suggestions.length < SUGGEST_MIN_USABLE) {
+  if (result.suggestions.length < Math.min(SUGGEST_MIN_USABLE, input.shortlist.length)) {
     // Too few usable: an unreadable answer (the route refunds the credit).
     throw new AiOutputError("collection-suggest");
   }

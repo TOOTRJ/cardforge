@@ -67,6 +67,15 @@ describe("the kept suggestions", () => {
     expect(storage.map.size).toBe(0);
   });
 
+  it("reads a deck type renamed since as none", () => {
+    const value = stored();
+    (value.result.suggestions[0] as { deckType: string | null }).deckType = "storm";
+    const storage = memoryStorage({ [lastSuggestionsKey("u1")]: JSON.stringify(value) });
+    const read = readLastSuggestions("u1", context(), storage);
+    expect(read?.result.suggestions[0].deckType).toBeNull();
+    expect(read?.result.suggestions[1].deckType).toBe("tokens");
+  });
+
   it("drops a broken entry and never throws", () => {
     const broken = { ...stored(), result: { overview: "x", suggestions: [{ commanderId: "a" }] } };
     for (const raw of ["nope", JSON.stringify(broken), JSON.stringify(null)]) {

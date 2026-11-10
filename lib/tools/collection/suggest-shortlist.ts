@@ -83,7 +83,20 @@ function colourMatch(identity: readonly string[], colours: readonly string[] | u
   return colours.some((c) => c !== "C" && identity.includes(c));
 }
 
+/** One preparation per card list (the shortlist and the summary share it). */
+const prepared = new WeakMap<readonly ScoringCard[], Prepared[]>();
+
+/** The cards read once, one per name, in NAME order (so a commander's
+ *  support list never sorts names again). */
 function prepare(cards: readonly ScoringCard[]): Prepared[] {
+  const held = prepared.get(cards);
+  if (held) return held;
+  const out = readCards(cards).sort((a, b) => a.name.localeCompare(b.name));
+  prepared.set(cards, out);
+  return out;
+}
+
+function readCards(cards: readonly ScoringCard[]): Prepared[] {
   const seen = new Set<string>();
   const out: Prepared[] = [];
   for (const card of cards) {
@@ -123,7 +136,10 @@ export function suggestShortlist(input: {
   const prefs = input.preferences ?? {};
   const preferredType = collectionDeckType(prefs.deckType);
   const scores = rankCommanders(input.commanders, input.cards);
-  const onType = (id: string) => (preferredType ? (scores[id]?.deckTypes[preferredType.id] ?? 0) : 0);
+  // A picked type ranks by its cards up to what the type wants: past that,
+  // a five-colour commander's bigger pool is no better a fit.
+  const onType = (id: string) =>
+    preferredType ? Math.min(scores[id]?.deckTypes[preferredType.id] ?? 0, preferredType.target) : 0;
   const ranked = input.commanders
     .filter((c) => scores[c.id] && colourMatch(c.colorIdentity, prefs.colours))
     .sort(
@@ -145,7 +161,7 @@ export function suggestShortlist(input: {
     chosen.push(commander);
   }
 
-  const prepared = prepare(input.cards);
+  const cards = prepare(input.cards);
   const refs = new Map<string, string>();
   const refOf = (id: string) => {
     let ref = refs.get(id);
@@ -161,23 +177,26 @@ export function suggestShortlist(input: {
     const own = cardKey(commander.name);
     const plan = scoringPlan(commander);
     const tribes = new Set(plan.tribes);
-    const scored = prepared
-      .filter((card) => (card.mask & ~mask) === 0 && card.key !== own)
-      .map((card) => {
-        let score = 0;
-        if (card.themes.some((t) => plan.themes.has(t))) score += 2;
-        if (tribes.size && (card.changeling || card.types.some((t) => tribes.has(t)))) score += 3;
-        if (preferredType && card.deckTypes.has(preferredType.id)) score += 3;
-        return { card, score };
-      })
-      .filter((entry) => entry.score > 0)
-      .sort((a, b) => b.score - a.score || a.card.name.localeCompare(b.card.name))
-      .slice(0, SUGGEST_SUPPORT_CARDS);
+    // Scores run 0–8: bucket them (the cards are already in name order)
+    // and take the best twelve — no sort per commander.
+    const buckets: Prepared[][] = Array.from({ length: 9 }, () => []);
+    for (const card of cards) {
+      if ((card.mask & ~mask) !== 0 || card.key === own) continue;
+      let score = 0;
+      if (card.themes.some((t) => plan.themes.has(t))) score += 2;
+      if (tribes.size && (card.changeling || card.types.some((t) => tribes.has(t)))) score += 3;
+      if (preferredType && card.deckTypes.has(preferredType.id)) score += 3;
+      if (score > 0) buckets[score].push(card);
+    }
+    const best: Prepared[] = [];
+    for (let score = buckets.length - 1; score > 0 && best.length < SUGGEST_SUPPORT_CARDS; score -= 1) {
+      best.push(...buckets[score].slice(0, SUGGEST_SUPPORT_CARDS - best.length));
+    }
     return {
       ref: `k${i}`,
       commander,
       support: scores[commander.id],
-      cards: scored.map(({ card }) => ({ ref: refOf(card.id), id: card.id, name: card.name, line: card.line })),
+      cards: best.map((card) => ({ ref: refOf(card.id), id: card.id, name: card.name, line: card.line })),
     };
   });
 }
@@ -185,10 +204,10 @@ export function suggestShortlist(input: {
 /** A short read of the whole collection for the prompt: cards by colour
  *  identity and by deck type (the five most held). */
 export function collectionSummary(cards: readonly ScoringCard[]): string {
-  const prepared = prepare(cards);
+  const read = prepare(cards);
   const byColour = new Map<string, number>();
   const byType = new Map<CollectionDeckTypeId, number>();
-  for (const card of prepared) {
+  for (const card of read) {
     const colours = ["W", "U", "B", "R", "G"].filter((c, i) => card.mask & (1 << i));
     const key = colours.length === 0 ? "colourless" : colours.length > 1 ? "multicolour" : colours[0];
     byColour.set(key, (byColour.get(key) ?? 0) + 1);
@@ -200,7 +219,7 @@ export function collectionSummary(cards: readonly ScoringCard[]): string {
     .slice(0, 5)
     .map(([k, v]) => `${collectionDeckType(k)?.label ?? k} ${v}`);
   return [
-    `${prepared.length} different cards legal in Commander (basics aside).`,
+    `${read.length} different cards legal in Commander (basics aside).`,
     `By colour: ${colours.join(", ") || "none"}.`,
     `Most-held deck types: ${types.join(", ") || "none"}.`,
   ].join(" ");

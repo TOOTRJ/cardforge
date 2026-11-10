@@ -1,4 +1,4 @@
-import type { CollectionDeckTypeId } from "./archetypes";
+import { collectionDeckType, type CollectionDeckTypeId } from "./archetypes";
 import type { CommanderSupport } from "./commander-scores";
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,10 @@ export function readLastSuggestions(
       return null;
     }
     const age = now - Date.parse(parsed.savedAt);
-    const suggestions = (parsed.result.suggestions as CommanderSuggestion[]).filter((s) => context.commanderIds.has(s.commanderId));
+    // A deck type renamed since is read as none (never sent to a draft).
+    const suggestions = (parsed.result.suggestions as CommanderSuggestion[])
+      .filter((s) => context.commanderIds.has(s.commanderId))
+      .map((s) => ({ ...s, deckType: collectionDeckType(s.deckType)?.id ?? null }));
     if (
       !Number.isFinite(age) ||
       age < 0 ||

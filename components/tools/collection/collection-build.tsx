@@ -226,13 +226,16 @@ export function CollectionBuild({
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const suggestionsHeadingRef = useRef<HTMLHeadingElement>(null);
   const draftButtonRef = useRef<HTMLButtonElement>(null);
-  /** Where the focus goes once the next render is on screen. */
-  const focusNext = useRef<"suggestions" | "draft" | null>(null);
+  /** A focus hand-off: state (with a counter), so asking again always
+   *  renders and lands — never a request left waiting for some later,
+   *  unrelated render to move the focus. */
+  const [focusRequest, setFocusRequest] = useState<{ to: "suggestions" | "draft"; n: number } | null>(null);
   useEffect(() => {
-    if (focusNext.current === "suggestions") suggestionsHeadingRef.current?.focus();
-    if (focusNext.current === "draft") draftButtonRef.current?.focus();
-    focusNext.current = null;
-  });
+    if (!focusRequest) return;
+    if (focusRequest.to === "suggestions") suggestionsHeadingRef.current?.focus();
+    if (focusRequest.to === "draft") draftButtonRef.current?.focus();
+  }, [focusRequest]);
+  const requestFocus = (to: "suggestions" | "draft") => setFocusRequest((prev) => ({ to, n: (prev?.n ?? 0) + 1 }));
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusListOnOpen = useRef(false);
   useEffect(() => {
@@ -334,7 +337,7 @@ export function CollectionBuild({
   };
 
   const draftWithRules = async () => {
-    if (!commanderId || working) return;
+    if (!commanderId || working || suggesting) return;
     setWorking("rules");
     setError(null);
     try {
@@ -353,7 +356,7 @@ export function CollectionBuild({
   };
 
   const draftWithAi = async () => {
-    if (!commanderId || working) return;
+    if (!commanderId || working || suggesting) return;
     setWorking("ai");
     setError(null);
     try {
@@ -414,7 +417,7 @@ export function CollectionBuild({
       // Paid for: kept in this browser for a week.
       writeLastSuggestions(viewerId, stored);
       setSuggestions(stored);
-      focusNext.current = "suggestions";
+      requestFocus("suggestions");
     } catch {
       setSuggestError("The suggestions didn't answer. If a credit was taken it comes back by itself.");
     } finally {
@@ -426,10 +429,17 @@ export function CollectionBuild({
     const target = commanders.find((c) => c.id === suggestion.commanderId);
     if (!target || working) return;
     pick(target);
-    setDeckType(suggestion.deckType ?? "");
-    setChoiceNote(null);
+    // The suggested type, when it is one and the picked bracket allows it;
+    // none suggested keeps the player's own pick.
+    const type = collectionDeckType(suggestion.deckType);
+    if (type && deckTypeFitsBracket(type, bracket === "" ? null : bracket)) {
+      setDeckType(type.id);
+      setChoiceNote(null);
+    } else if (type) {
+      setChoiceNote(`The AI suggested ${type.label}, a deck type for Bracket ${type.minBracket} and up, so the deck type stays as it was.`);
+    }
     // To the bar: the next press builds it.
-    focusNext.current = "draft";
+    requestFocus("draft");
   };
 
   const dismissSuggestions = () => {
@@ -557,18 +567,18 @@ export function CollectionBuild({
               ref={draftButtonRef}
               variant="secondary"
               onClick={draftBlocked ? undefined : draftWithRules}
-              aria-disabled={draftBlocked || working ? true : undefined}
+              aria-disabled={draftBlocked || working || suggesting ? true : undefined}
               aria-describedby={draftBlocked ? ids.reason : undefined}
-              className={cn("flex-1 sm:flex-none", (draftBlocked || working) && "opacity-50")}
+              className={cn("flex-1 sm:flex-none", (draftBlocked || working || suggesting) && "opacity-50")}
             >
               <Hammer aria-hidden />
               {working === "rules" ? "Drafting…" : draft ? "Draft again" : "Draft a deck"}
             </Button>
             <Button
               onClick={aiBlocked ? undefined : draftWithAi}
-              aria-disabled={aiBlocked || working ? true : undefined}
+              aria-disabled={aiBlocked || working || suggesting ? true : undefined}
               aria-describedby={aiBlocked ? ids.reason : undefined}
-              className={cn("flex-1 sm:flex-none", (aiBlocked || working) && "opacity-50")}
+              className={cn("flex-1 sm:flex-none", (aiBlocked || working || suggesting) && "opacity-50")}
             >
               <Sparkles aria-hidden />
               {working === "ai" ? "Building with AI…" : "Build with AI · 1 credit"}
@@ -703,7 +713,7 @@ export function CollectionBuild({
                 Show it
               </Button>
               <Button size="sm" variant="ghost" onClick={dismissKept}>
-                Dismiss
+                Dismiss<span className="sr-only"> the kept AI build</span>
               </Button>
             </div>
           </div>
