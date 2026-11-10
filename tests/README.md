@@ -46,9 +46,9 @@ puts the run in one tier and says which, and why, on the run summary:
 | **full** | a READY pull request; a merge to `main` that no green full PR run already tested; anything unclear | everything — the unit shards WITHOUT coverage on a PR, with coverage + the floors on `main` | ~61 min on a PR (measured 2026-10-16), ~73–80 on `main` |
 | **draft** | a DRAFT pull request that changes code | typecheck + lint + build, and the notes tests | ~7 min (measured 2026-10-13) |
 | **notes** | every changed file is notes (PR or merge to `main`) | the notes tests (`npm run test:docs`) | ~3 min |
-| **verified** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) AND whose head has a GREEN FULL pull request run | the cache warm-up + Frames published | ~5 min (estimate) |
-| **nightly** | the schedule (03:23 UTC), on `main` as it is | the six unit shards with coverage + the floors, and the FULL Frames published check | ~38 min (estimate) |
-| **idle** | the schedule, when a run on that commit already passed the floors | the FULL Frames published check only (the bucket can change with no commit) | ~5 min (estimate) |
+| **verified** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) AND whose head has a GREEN FULL pull request run | the cache warm-up + Frames published (the objects the merge adds) | ~5 min (estimate) |
+| **nightly** | the schedule (03:23 UTC), on `main` as it is | the six unit shards with coverage + the floors, and the Frames published SWEEP of the whole bucket | ~38 min (estimate; a cold CDN night adds up to 20) |
+| **idle** | the schedule, when a run on that commit already passed the floors | the Frames published sweep only (the bucket can change with no commit) | ~5 min (estimate; up to 22 on a cold CDN night) |
 
 **Working with it: open the pull request as a draft while you iterate, mark
 it ready when you want the full checks.**
@@ -152,6 +152,22 @@ parity, `parity-record.yml`) and setup-node's npm cache — each looked up
 first and filled only on a miss (a moved manifest, or the 10 GB limit's
 eviction) — and **Frames published**. The manifest no longer forces a full
 run on `main`.
+
+**Frames published never walks the whole bucket on a pull request or a
+merge** (2026-11-10). Those runs look up only the manifest objects they add
+or change (`frames-check.mjs --incremental`, against the pull request's base
+or the commit before the push) — nothing on the runs that leave the manifest
+alone. The whole bucket is the nightly **sweep**'s (`--sweep`). Every lookup
+goes at the pace of `createLookupPacer` (`scripts/lib/frame-objects.mjs`):
+fast while the CDN answers from its cache, about one a second when it does
+not, a minute's pause on a 429. A pull request is compared with `main`'s
+tip whatever branch it targets (a stacked pull request must not skip its
+base's frames), and what a run ADDS must all be verified — its budget grows
+with the count (13 to 22 minutes). Why: ~30 full walks a day, two of them through a
+cold CDN, exhausted production's storage connections and the site's
+thumbnails, uploads and bakes were refused for 45 minutes. A sweep the slow
+pace keeps from finishing is GREEN with the count it left (its starting
+point moves on each night); only an object that is MISSING is red.
 
 **Coverage runs off a pull request only.** A PR's six shards run plain
 `npm run test:unit:shard` (no V8 counters); a failing test still fails its

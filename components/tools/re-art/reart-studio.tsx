@@ -16,6 +16,7 @@ import { remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-cop
 import type { GenerationJobView } from "@/lib/ai/generation-jobs";
 import {
   EMPTY_REART_STYLE,
+  REART_DEFAULT_VISIBILITY,
   REART_SAMPLE_MAX,
   REART_SCOPE_HINTS,
   REART_SCOPE_LABELS,
@@ -99,7 +100,7 @@ export function ReartStudio({
       ),
   );
   const [scope, setScope] = useState<ReartScope>("all");
-  const [visibility, setVisibility] = useState<ReartVisibility>("public");
+  const [visibility, setVisibility] = useState<ReartVisibility>(REART_DEFAULT_VISIBILITY);
   const [filter, setFilter] = useState<ReartGridFilter>("all");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -111,6 +112,11 @@ export function ReartStudio({
 
   // A sample entry that left the deck drops out of the sample.
   const sampleIds = useMemo(() => [...sample].filter((id) => paintable.some((entry) => entry.id === id)), [sample, paintable]);
+  /** A sample that holds a real card MAKES a card of the maker's own. */
+  const sampleMakesCards = useMemo(
+    () => paintable.some((entry) => entry.kind === "printing" && sampleIds.includes(entry.id)),
+    [paintable, sampleIds],
+  );
 
   const inStyle = paintable.filter((entry) => entry.state === "in_style" || entry.state === "kept").length;
   const paintedInSaved = paintable.filter((entry) => entry.state === "in_style").length;
@@ -320,6 +326,15 @@ export function ReartStudio({
               </ul>
             ) : null}
             <p className="text-xs text-subtle">Tick “In the sample” on any card to change the picks.</p>
+            {sampleMakesCards ? (
+              // The sample is painted before step 3 is reached, and its real
+              // cards are saved with the same choice: say which, and where.
+              <p className="text-xs text-subtle">
+                A real card in the sample becomes your own card, saved{" "}
+                <span className="text-foreground">{VISIBILITY_LABELS[visibility].toLowerCase()}</span> — “Show the new
+                cards” in step 3 decides it for the sample too, so set it first if you want another.
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 id="reart-paint-sample"
@@ -364,7 +379,9 @@ export function ReartStudio({
                 />
               )}
             </FieldGroup>
-            {scope !== "own" ? (
+            {scope !== "own" || sampleMakesCards ? (
+              // Also while the sample holds a real card: it is saved with
+              // this choice, whatever the full run's cards are set to.
               <FieldGroup
                 kind="control"
                 label="Show the new cards"

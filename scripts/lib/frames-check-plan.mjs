@@ -31,6 +31,25 @@
 // WHAT to look up; a lookup that fails still fails the build, exactly as
 // the full check does.
 //
+// CI plans the same way since 2026-11-10 (`FRAMES_CHECK_BASE_SHA`, set by
+// .github/workflows/ci.yml: on a pull request the TIP OF THE DEFAULT BRANCH
+// — never the pull request's own base, which for a stacked pull request is
+// a branch whose frames nobody promoted — and on a push to main the commit
+// before it): only the objects that run ADDS or changes, and no canary. Before, every full pull request run and every merge looked
+// up all ~4,280 objects in production's bucket (~30 runs a day in a busy
+// week); when the CDN in front of the bucket was cold those lookups reached
+// Supabase's storage API and exhausted the project's connection pooler —
+// every thumbnail, art upload and bake of the SITE was refused meanwhile
+// (2026-11-10, 20:55–21:40 UTC). The unchanged objects are main's: an
+// object enters main's manifest through a merge whose own push run and
+// production build look it up (the build's base is the last SUCCESSFUL
+// deployment, so an object merged red stays "new" to every build until it
+// is promoted — production never deploys without it). A pull request made
+// after such a red merge is green on its own content; the red is main's
+// push run, the failed deployment and the nightly sweep's issue. What is
+// left — an older object gone from the bucket — is the NIGHTLY SWEEP's
+// (`frames-check.mjs --sweep`, `sweepOrder` below).
+//
 // Why not a record in Vercel's build cache (the research's first idea):
 // Vercel keys the build cache by team, project, framework, root directory,
 // Node version, package manager and GIT BRANCH — not by environment
@@ -45,6 +64,19 @@ import { BUCKET, MANIFEST_PATH, frameObjectKey } from "./frame-objects.mjs";
 
 /** How many unchanged objects a production build re-checks besides the new ones. */
 export const CANARY_SIZE = 200;
+
+/**
+ * How far the nightly sweep's starting point moves from one night to the
+ * next: a number of objects a sweep reaches even when the CDN answers NONE
+ * of them from its cache — the slow pace of createLookupPacer (a 0.5 s gap
+ * plus the lookup) inside the sweep's first pass, with a busy pause and
+ * lookups a second long to spare (a test holds the arithmetic to the
+ * budget). With a warm CDN a sweep looks at every object; with a cold one,
+ * night after night, the whole manifest is covered in
+ * ceil(objects / SWEEP_STRIDE) nights — usually far sooner, since a cold
+ * night reaches about twice the stride.
+ */
+export const SWEEP_STRIDE = 400;
 
 /** A full git object name: SHA-1 (40) or SHA-256 (64), lower-case hex. */
 const GIT_SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -125,6 +157,25 @@ export function canarySample(entries, seed, size) {
 }
 
 /**
+ * The manifest's entries in the order the nightly sweep looks at them on
+ * UTC day `day` (days since the epoch): the manifest's own order, started
+ * `day * stride` objects in and wrapped. A sweep that cannot finish (a cold
+ * CDN: frames-check --sweep stops inside its budget rather than load
+ * production's storage) has looked at a different stretch each night, each
+ * starting where the last sure stretch ended.
+ * @template T
+ * @param {T[]} entries
+ * @param {number} day
+ * @param {number} [stride]
+ * @returns {T[]}
+ */
+export function sweepOrder(entries, day, stride = SWEEP_STRIDE) {
+  if (entries.length === 0 || !Number.isFinite(day)) return [...entries];
+  const start = ((Math.floor(day) * stride) % entries.length + entries.length) % entries.length;
+  return [...entries.slice(start), ...entries.slice(0, start)];
+}
+
+/**
  * The plan: which manifest entries to look up, and why.
  *   { mode: "full", reason, entries }
  *   { mode: "incremental", entries, changed, canary, unchanged, baseSha }
@@ -144,16 +195,22 @@ export function planFramesCheck({ manifest, incremental, originIsProduction, env
   const entries = Object.entries(manifest.files);
   const full = (/** @type {string} */ reason) => ({ mode: /** @type {const} */ ("full"), reason, entries });
   if (incremental !== true) return full("--incremental was not asked for");
-  if (env.VERCEL_ENV !== "production") return full("not a production build (only a production build of this branch has a checked base)");
+  // CI names its base itself (a pull request's base, the commit before a
+  // push to main); a Vercel build's is the last successful deployment.
+  const ci = typeof env.FRAMES_CHECK_BASE_SHA === "string" && env.FRAMES_CHECK_BASE_SHA !== "";
+  if (!ci && env.VERCEL_ENV !== "production") {
+    return full("not a production build (only a production build of this branch has a checked base)");
+  }
   if (originIsProduction !== true) return full("--origin is not production's bucket (the base was checked against production's)");
   if (env.FRAMES_CHECK_FULL === "1") return full("FRAMES_CHECK_FULL=1");
-  const head = env.VERCEL_GIT_COMMIT_SHA ?? "";
-  if (!GIT_SHA.test(head)) return full(`VERCEL_GIT_COMMIT_SHA ("${head}") is not a full commit SHA`);
-  const baseSha = env.VERCEL_GIT_PREVIOUS_SHA ?? "";
+  const head = ci ? (env.GITHUB_SHA ?? "") : (env.VERCEL_GIT_COMMIT_SHA ?? "");
+  if (!ci && !GIT_SHA.test(head)) return full(`VERCEL_GIT_COMMIT_SHA ("${head}") is not a full commit SHA`);
+  const baseName = ci ? "FRAMES_CHECK_BASE_SHA" : "VERCEL_GIT_PREVIOUS_SHA";
+  const baseSha = (ci ? env.FRAMES_CHECK_BASE_SHA : env.VERCEL_GIT_PREVIOUS_SHA) ?? "";
   if (baseSha === "") {
     return full("VERCEL_GIT_PREVIOUS_SHA is empty (the branch's first deployment, or no Ignored Build Step — vercel.json ignoreCommand)");
   }
-  if (!GIT_SHA.test(baseSha)) return full(`VERCEL_GIT_PREVIOUS_SHA ("${baseSha}") is not a full commit SHA`);
+  if (!GIT_SHA.test(baseSha)) return full(`${baseName} ("${baseSha}") is not a full commit SHA`);
   let base;
   try {
     base = readBase(baseSha);
@@ -167,6 +224,9 @@ export function planFramesCheck({ manifest, incremental, originIsProduction, env
   const before = base.manifest.files;
   const changed = entries.filter(([key, entry]) => !(Object.hasOwn(before, key) && sameObject(entry, before[key])));
   const unchanged = entries.filter(([key, entry]) => Object.hasOwn(before, key) && sameObject(entry, before[key]));
-  const canary = canarySample(unchanged, head, canarySize);
+  // No canary in CI: the production build samples the rest at every deploy
+  // and the nightly sweep walks it — a pull request only vouches for what
+  // it adds.
+  const canary = canarySample(unchanged, head, ci ? 0 : canarySize);
   return { mode: /** @type {const} */ ("incremental"), entries: [...changed, ...canary], changed, canary, unchanged: unchanged.length, baseSha };
 }

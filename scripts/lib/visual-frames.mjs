@@ -8,7 +8,7 @@
 //
 // Storage answers transient errors under load — a 429, a 5xx, a hang, and
 // sometimes a 400 for an object that is there (the "Frames published" gate
-// met all of them; scripts/lib/frame-objects.mjs findMissing). So, like that
+// met all of them; scripts/lib/frame-objects.mjs checkObjects). So, like that
 // gate: a quick first pass (a 404/400 = "not published at this origin" → the
 // next origin; other failures retried a few times), then every object that
 // pass could not get is tried again THOROUGHLY, one at a time after a pause,

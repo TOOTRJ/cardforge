@@ -940,9 +940,22 @@ cards; a removal changes no case).
    plus a canary of 200 of the rest that rotates per commit. Any
    doubt (no previous SHA, a git error) is the full check, and
    `FRAMES_CHECK_FULL=1` on the project forces it
-   (`scripts/lib/frames-check-plan.mjs`). CI runs the FULL check on every
-   merge and every night; a red one off a pull request opens one issue,
-   "CI: frames are missing from production's bucket".
+   (`scripts/lib/frames-check-plan.mjs`). Since 2026-11-10 CI plans the
+   same way: a pull request and a merge look up only the objects they add
+   or change (a pull request against `main`'s tip, whatever branch it
+   targets; a push against the commit before it — no canary), and the WHOLE
+   bucket is the nightly sweep's (`frames-check.mjs --sweep`). What a run
+   adds must all be verified (the budget grows with the count, 13 to 22
+   minutes: `scripts/lib/frames-check-run.mjs`). Every lookup is paced
+   (`createLookupPacer`): four in flight while the CDN answers from its
+   cache, about one a second when it does not, a minute's pause on a 429 —
+   walking the whole bucket at full speed on every run exhausted
+   production's storage connections on 2026-11-10 (thumbnails, uploads and
+   bakes were refused meanwhile). A sweep that a cold CDN keeps from
+   finishing is green with the count it left, and starts further on the
+   next night; a MISSING object is red. A red run off a pull request opens
+   one issue, "CI: frames are missing from production's bucket", which
+   only a sweep that looked at every object closes.
 
 A frame swap that changes baked output still needs its `CARD_LAYOUT_VERSION`
 bump with a `"sweep"` rollout, so owners are never badged, and the owner's
