@@ -92,42 +92,60 @@ export type CommanderBracket = {
   guidance: string;
 };
 
-/** The five official Commander brackets (Wizards of the Coast, 2025). */
+/**
+ * The five official Commander brackets (Wizards of the Coast; still a beta).
+ * `guidance` is what the AI is told, so it states the brackets' own rules:
+ *
+ *   * the checklists — Game Changers (none in 1–2, up to three in 3, any in
+ *     4–5), mass land denial (none in 1–3), extra turns (none in 1, few and
+ *     never chained or looped in 2–3), two-card infinite combos (none in
+ *     1–2, no early-game ones in 3): "Introducing Commander Brackets Beta",
+ *     2025-02-11, magic.wizards.com/en/news/announcements/introducing-commander-brackets-beta;
+ *   * the tutor limits REMOVED (the Game Changers list covers the strongest
+ *     tutors), the turns a game should last (9 / 8 / 6 / 4 / any), and Core
+ *     no longer tied to precons: "Commander Brackets Beta Update",
+ *     2025-10-21, …/commander-brackets-beta-update-october-21-2025;
+ *   * no bracket-level change on 2026-02-09 (Farewell and Biorhythm joined
+ *     the Game Changers), …/commander-brackets-beta-update-february-9-2026.
+ *
+ * Which cards ARE Game Changers is never written here: it changes, and
+ * Scryfall's `game_changer` flag / `is:gamechanger` is the live list.
+ */
 export const COMMANDER_BRACKETS: readonly CommanderBracket[] = [
   {
     level: 1,
     name: "Exhibition",
     blurb: "Creative, unoptimised, made to show off a theme. Long games.",
     guidance:
-      "Power level: Bracket 1 (Exhibition). Prioritise theme and creativity over strength. Slow, splashy, fun cards; no fast mana, no tutors, no infinite combos, no extra-turn chains, no mass land destruction. Games should last eight or more turns.",
+      "Power level: Bracket 1 (Exhibition). Prioritise theme and creativity over strength; the win conditions can be highly thematic or even substandard. Slow, splashy, fun cards. No Game Changers, no two-card infinite combos, no extra-turn cards and no mass land denial. Games should last nine or more turns.",
   },
   {
     level: 2,
     name: "Core",
-    blurb: "The precon experience — everyone gets to play their deck.",
+    blurb: "Unoptimised and straightforward — everyone gets to play their deck.",
     guidance:
-      "Power level: Bracket 2 (Core). Precon-level power. Solid synergy but nothing oppressive: no infinite two-card combos, no chained extra turns, no mass land destruction, no game-changer-level cards, tutors only narrow ones.",
+      "Power level: Bracket 2 (Core). Unoptimised and straightforward: solid synergy, and wins that are incremental, telegraphed on the board and disruptable. No Game Changers, no intentional two-card infinite combos and no mass land denial; extra-turn cards only in low numbers, never chained or looped. Games should last eight or more turns.",
   },
   {
     level: 3,
     name: "Upgraded",
     blurb: "Tuned and consistent, with a few standout cards.",
     guidance:
-      "Power level: Bracket 3 (Upgraded). A tuned, consistent deck with efficient interaction, a clear game plan and a few genuinely strong cards. Combos are allowed only as a late-game finish; no mass land destruction.",
+      "Power level: Bracket 3 (Upgraded). Strong synergy and high card quality with a clear game plan; it can win in one big turn. At most three Game Changers (the commander counts), no mass land denial and no intentional early-game two-card infinite combos (a late-game finish is fine); extra-turn cards only in low numbers, never chained or looped. Games should last six or more turns.",
   },
   {
     level: 4,
     name: "Optimized",
     blurb: "High power, efficient answers, nothing off the table but cEDH speed.",
     guidance:
-      "Power level: Bracket 4 (Optimized). High power: efficient tutors, fast mana, cheap interaction, strong combos and synergies. Cards should be pushed but still fair for a high-power table.",
+      "Power level: Bracket 4 (Optimized). High power, limited only by the banned list: any Game Changers, efficient tutors, fast mana, cheap interaction, strong combos and synergies. Games can end from the fourth turn on. Cards should be pushed but still fair for a high-power table.",
   },
   {
     level: 5,
     name: "cEDH",
     blurb: "Fully competitive — win as fast and consistently as possible.",
     guidance:
-      "Power level: Bracket 5 (cEDH). Maximal efficiency: one- and two-mana interaction, fast mana, compact combos, redundancy and tutors. Every slot must earn its place.",
+      "Power level: Bracket 5 (cEDH). Maximal efficiency: one- and two-mana interaction, fast mana, compact combos, redundancy and tutors. Every slot must earn its place; a game can end on any turn.",
   },
 ];
 
