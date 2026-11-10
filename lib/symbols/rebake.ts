@@ -25,10 +25,8 @@ const SCANNED = 400;
 /** True when a card row's drawn text names `{*code}` (any case): its cost,
  *  rules text, rows and back face, and its name and nickname (a `~` in the
  *  rules draws them as text — lib/cards/self-name.ts) — layout v76's scope
- *  (customSymbolsChanged). Wider than 0193's in-use check, which reads no
- *  name: a symbol a card only reaches through `~` can be deleted for good,
- *  and that card then draws the placeholder — the same as the check's
- *  documented race. */
+ *  (customSymbolsChanged) — and the delete guard's in-use check, which
+ *  reads the name and nickname too since 0195. */
 export function cardNamesSymbol(
   row: {
     cost?: string | null;

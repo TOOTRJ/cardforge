@@ -8,8 +8,8 @@ import {
   isCustomPipSymbol,
   type PipOverrides,
 } from "@/lib/pips/override";
-import { customSymbolKey } from "@/lib/symbols/symbol-token";
-import { SYMBOL_CODE_RE } from "@/lib/symbols/symbols";
+import { customSymbolKey, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+import { isSymbolBaseColor, SYMBOL_CODE_RE, SYMBOL_MANA_VALUE_MAX } from "@/lib/symbols/symbols";
 
 // ---------------------------------------------------------------------------
 // Custom pip reads — the six pips and the owner's own symbols. RLS allows
@@ -17,6 +17,25 @@ import { SYMBOL_CODE_RE } from "@/lib/symbols/symbols";
 // need the OWNER's overrides to render the cost faithfully), so these run on
 // the request-scoped anon/session client.
 // ---------------------------------------------------------------------------
+
+type OwnerSymbolRow = {
+  code: string;
+  image_url: string;
+  mana_value: number | string | null;
+  base_color: string | null;
+};
+
+/** The owner's symbols, removed ones too — ONE read per owner per request,
+ *  shared by the picture map and the meanings. null when the read fails. */
+const readOwnerSymbols = cache(async (ownerId: string): Promise<OwnerSymbolRow[] | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("custom_symbols")
+    .select("code, image_url, mana_value, base_color")
+    .eq("owner_id", ownerId);
+  if (error || !data) return null;
+  return data as OwnerSymbolRow[];
+});
 
 /**
  * The pip-override map for a user (card owner). Returns {} when the user has
@@ -39,7 +58,7 @@ export const getPipOverrides = cache(
     // never the six.
     const [pips, symbols] = await Promise.all([
       supabase.from("custom_pips").select("symbol, image_url").eq("owner_id", ownerId),
-      supabase.from("custom_symbols").select("code, image_url").eq("owner_id", ownerId),
+      readOwnerSymbols(ownerId),
     ]);
 
     const overrides: PipOverrides = {};
@@ -53,8 +72,8 @@ export const getPipOverrides = cache(
         }
       }
     }
-    if (!symbols.error && symbols.data) {
-      for (const row of symbols.data) {
+    if (symbols) {
+      for (const row of symbols) {
         if (SYMBOL_CODE_RE.test(row.code) && isAllowedMediaUrl("pip", row.image_url, ownerId)) {
           overrides[customSymbolKey(row.code)] = row.image_url;
         }
@@ -63,3 +82,32 @@ export const getPipOverrides = cache(
     return overrides;
   },
 );
+
+/**
+ * What each of the owner's symbols MEANS (PR 3): its declared mana value and
+ * base colour, by code — removed ones too (a card that names one keeps
+ * counting it). {} when the owner has none, the read fails or Supabase isn't
+ * configured: every `{*CODE}` then counts 0 and no colour, as before. The
+ * same read as the picture map (one query per owner per request).
+ */
+export const getSymbolMeanings = cache(async (ownerId: string): Promise<SymbolMeanings> => {
+  if (!ownerId || !isSupabaseConfigured()) return {};
+  const rows = await readOwnerSymbols(ownerId);
+  return symbolMeaningsFromRows(rows ?? []);
+});
+
+/** The meanings map from the table's rows: a row with a code, a mana value or
+ *  a colour outside 0193's CHECKs is left out (never counted). */
+export function symbolMeaningsFromRows(
+  rows: readonly { code: string; mana_value: number | string | null; base_color: string | null }[],
+): SymbolMeanings {
+  const meanings: Record<string, SymbolMeanings[string]> = {};
+  for (const row of rows) {
+    const manaValue = Number(row.mana_value);
+    if (!SYMBOL_CODE_RE.test(row.code)) continue;
+    if (!Number.isInteger(manaValue) || manaValue < 0 || manaValue > SYMBOL_MANA_VALUE_MAX) continue;
+    if (row.base_color !== null && !isSymbolBaseColor(row.base_color)) continue;
+    meanings[row.code] = { manaValue, baseColor: row.base_color };
+  }
+  return meanings;
+}

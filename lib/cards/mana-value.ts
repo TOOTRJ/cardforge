@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
-// Mana value of a mana cost (CR 202.3) — pure, no imports, safe in the
-// client bundle (the deck list reads it through lib/decks/analytics.ts).
+// Mana value of a mana cost (CR 202.3) — pure (its one import is pure too),
+// safe in the client bundle (the deck list reads it through
+// lib/decks/analytics.ts).
 //
 // Per symbol (the text between the braces, any case):
 //   {N}            → N (generic)
@@ -10,6 +11,9 @@
 //   {2/W}          → 2 (the monocoloured hybrid's largest part)
 //   {W/P} {G/U/P}  → 1 (a Phyrexian symbol is one mana, 202.3g)
 //   {HW} {½}       → 0.5 (Un-set half mana)
+//   {*CODE}        → the card owner's symbol's DECLARED mana value, given
+//                    the owner's meanings (lib/symbols/symbol-token.ts);
+//                    0 for a code the map doesn't hold, or with no map
 //   anything else  → 0 ({T}, {E}, {Q}, {CHAOS}… are not mana)
 //
 // A split card's " // " cost sums both halves, as its mana value does off
@@ -20,10 +24,17 @@
 // cost from any source still yields a value.
 // ---------------------------------------------------------------------------
 
+import { customSymbolCodeOfInner, symbolMeaningOf, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+
 const PIP = /^[WUBRGCS]$/;
 
-/** Mana value of ONE symbol, given without its braces ("2/W", "G/U/P"). */
-export function symbolManaValue(symbol: string): number {
+/** Mana value of ONE symbol, given without its braces ("2/W", "G/U/P",
+ *  "*FIRE" — read through `meanings`, the card owner's symbols). */
+export function symbolManaValue(symbol: string, meanings?: SymbolMeanings | null): number {
+  // A custom symbol's inside is read AS TYPED (never upper-cased first: the
+  // tokenizer's rule — "ß" would become "SS").
+  const code = customSymbolCodeOfInner(symbol);
+  if (code) return symbolMeaningOf(code, meanings)?.manaValue ?? 0;
   const s = symbol.trim().toUpperCase();
   if (/^\d+$/.test(s)) return Number(s);
   if (s === "½" || /^H[WUBRGCS]$/.test(s)) return 0.5;
@@ -49,14 +60,18 @@ export function symbolManaValue(symbol: string): number {
  * Mana value of a cost string (`{2}{W}{W}` → 4, `{2/W}{G/U/P}` → 3). A cost
  * with no braces is read as a bare number ("3"); anything else without a
  * symbol is null (no cost to read). Symbols that are not mana count 0 but
- * still make the cost readable.
+ * still make the cost readable. `meanings` — the card OWNER's symbols —
+ * gives each `{*CODE}` its declared value; without it one counts 0.
  */
-export function manaValueOfCost(cost: string | null | undefined): number | null {
+export function manaValueOfCost(
+  cost: string | null | undefined,
+  meanings?: SymbolMeanings | null,
+): number | null {
   if (!cost) return null;
   const symbols = Array.from(cost.matchAll(/\{([^}]+)\}/g), (match) => match[1]);
   if (symbols.length === 0) {
     const bare = cost.trim();
     return /^\d+$/.test(bare) ? Number(bare) : null;
   }
-  return symbols.reduce((total, symbol) => total + symbolManaValue(symbol), 0);
+  return symbols.reduce((total, symbol) => total + symbolManaValue(symbol, meanings), 0);
 }

@@ -26,6 +26,12 @@ import {
   withSupertypeWord,
 } from "@/lib/cards/card-display";
 import { repairStationText, stationDesignProblems } from "@/lib/ai/station-design";
+import {
+  customSymbolCodeOfInner,
+  symbolMeaningOf,
+  unknownSymbolCodesIn,
+  type SymbolMeanings,
+} from "@/lib/symbols/symbol-token";
 
 // ---------------------------------------------------------------------------
 // Mana costs
@@ -75,9 +81,11 @@ export function isNoCost(cost: string | null | undefined): boolean {
 /**
  * Parse a curly-brace mana cost. Returns null when the string contains
  * anything that isn't a valid mana symbol (stray text, unclosed braces,
- * unknown letters).
+ * unknown letters). A card owner's own symbol (`{*CODE}`, PR 3) is valid
+ * only when `meanings` — the owner's symbols — holds its code: it counts
+ * its declared mana value and base colour.
  */
-export function parseManaCost(cost: string): ParsedManaCost | null {
+export function parseManaCost(cost: string, meanings?: SymbolMeanings | null): ParsedManaCost | null {
   const trimmed = cost.trim();
   if (isNoCost(trimmed)) return { symbols: [], manaValue: 0, colorLetters: [] };
 
@@ -91,6 +99,16 @@ export function parseManaCost(cost: string): ParsedManaCost | null {
   const colors = new Set<ColorLetter>();
 
   for (const group of groups) {
+    // The owner's own symbol, read as typed (never upper-cased first).
+    const code = customSymbolCodeOfInner(group.slice(1, -1));
+    if (code) {
+      const meaning = symbolMeaningOf(code, meanings);
+      if (!meaning) return null;
+      symbols.push(`*${code}`);
+      manaValue += meaning.manaValue;
+      if (meaning.baseColor) colors.add(meaning.baseColor);
+      continue;
+    }
     const symbol = group.slice(1, -1).toUpperCase();
     if (!SYMBOL_RE.test(symbol)) return null;
     // Hybrid pairs must be two DIFFERENT colors ({R/R} isn't a symbol).
@@ -121,12 +139,19 @@ export function parseManaCost(cost: string): ParsedManaCost | null {
 export function deriveColorLetters(
   cost: string | null | undefined,
   rulesText: string | null | undefined,
+  meanings?: SymbolMeanings | null,
 ): ColorLetter[] {
   const colors = new Set<ColorLetter>();
-  const costParse = parseManaCost(cost ?? "");
+  const costParse = parseManaCost(cost ?? "", meanings);
   for (const letter of costParse?.colorLetters ?? []) colors.add(letter);
 
   for (const match of (rulesText ?? "").matchAll(/\{([^{}]+)\}/g)) {
+    const code = customSymbolCodeOfInner(match[1]);
+    if (code) {
+      const color = symbolMeaningOf(code, meanings)?.baseColor;
+      if (color) colors.add(color);
+      continue;
+    }
     const symbol = match[1].toUpperCase();
     if (!SYMBOL_RE.test(symbol)) continue;
     for (const part of symbol.split("/")) {
@@ -233,6 +258,14 @@ export type LintResult = {
   warnings: LintIssue[];
 };
 
+/** What the lint knows beyond the card. */
+export type LintOptions = {
+  /** The card owner's own mana symbols by code (`{*CODE}`, PR 3): a design
+   *  may use these, counting their declared mana value and colour. Absent:
+   *  every `{*CODE}` is an error. */
+  symbolMeanings?: SymbolMeanings | null;
+};
+
 export type LintableCard = {
   title: string;
   cost: string;
@@ -274,14 +307,30 @@ function statNumber(value: string | null): number | null {
  * Lint one designed card. Errors are template/shape violations we refuse to
  * save; warnings are judgement calls forwarded to the judge model.
  */
-export function lintCardDesign(card: LintableCard): LintResult {
+export function lintCardDesign(card: LintableCard, options: LintOptions = {}): LintResult {
   const errors: LintIssue[] = [];
   const warnings: LintIssue[] = [];
   const type = card.card_type;
+  const meanings = options.symbolMeanings ?? null;
+
+  // ---- The card owner's own symbols (PR 3) ----
+  // `{*CODE}` means the card OWNER's symbol: a design may use only the
+  // codes it was given (none unless the owner's symbols were passed) — any
+  // other draws a blank disc, and the save refuses it
+  // (lib/symbols/card-check.ts).
+  const unknownInCost = unknownSymbolCodesIn(card.cost, meanings);
+  const unknownInRules = unknownSymbolCodesIn(card.rules_text, meanings);
+  for (const [field, codes] of [["cost", unknownInCost], ["rules_text", unknownInRules]] as const) {
+    if (codes.length === 0) continue;
+    errors.push({
+      field,
+      message: `${codes.map((code) => `{*${code}}`).join(", ")} ${codes.length === 1 ? "isn't one of the card owner's mana symbols" : "aren't the card owner's mana symbols"} — use only the standard symbols${meanings && Object.keys(meanings).length > 0 ? " and the owner's symbols listed" : ""}.`,
+    });
+  }
 
   // ---- Mana cost grammar ----
-  const parsed = parseManaCost(card.cost);
-  if (parsed === null) {
+  const parsed = parseManaCost(card.cost, meanings);
+  if (parsed === null && unknownInCost.length === 0) {
     errors.push({
       field: "cost",
       message: `Mana cost "${card.cost}" isn't valid curly-brace notation.`,
@@ -370,7 +419,7 @@ export function lintCardDesign(card: LintableCard): LintResult {
   // ---- Color identity consistency ----
   // An emblem is colorless whatever its text names (CR 114): the mana
   // symbols in "Add {U}" don't give it a colour.
-  const derived = type === "emblem" ? [] : deriveColorLetters(card.cost, card.rules_text);
+  const derived = type === "emblem" ? [] : deriveColorLetters(card.cost, card.rules_text, meanings);
   const declared = new Set(colorLettersFromWords(card.color_identity));
   const missing = derived.filter((letter) => !declared.has(letter));
   if (type === "emblem" && card.color_identity.some((color) => color !== "colorless")) {

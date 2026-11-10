@@ -21,7 +21,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { CardHeroPreview } from "@/components/cards/card-hero-preview";
-import { getPipOverrides } from "@/lib/pips/queries";
+import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
+import type { SymbolMeanings } from "@/lib/symbols/symbol-token";
 import type { PipOverrides } from "@/lib/pips/override";
 import { CardTextBlock } from "@/components/cards/card-text-block";
 import { cardTextFacesOf, colorWords } from "@/lib/cards/card-text-faces";
@@ -157,6 +158,7 @@ export async function CardDetailContent({
     moreFromOwner,
     relatedCards,
     pipOverrides,
+    symbolMeanings,
     creatorProfile,
     viewerFollows,
     remixCount,
@@ -193,6 +195,9 @@ export async function CardDetailContent({
     ),
     // The owner's custom pip icons for the card preview.
     getPipOverrides(card.owner_id),
+    // …and what the owner's own symbols mean: a `{*CODE}` in the cost counts
+    // its declared mana value in the details (one read with the pictures).
+    getSymbolMeanings(card.owner_id),
     // Full creator profile (bio + socials + avatar) for the featured card.
     getProfileByUsername(username),
     // Whether the viewer already follows the creator (drives the Follow button).
@@ -494,7 +499,7 @@ export async function CardDetailContent({
               but a crawler or answer engine reads none of it from an image —
               this block is what makes the page citable for "custom MTG
               {type}" queries. */}
-          <CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} />
+          <CardDetails card={card} aiProvenance={aiProvenance} pipOverrides={pipOverrides} symbolMeanings={symbolMeanings} />
 
           {/* Discovery tags — under the details they describe. */}
           {card.tags.length > 0 ? (
@@ -1440,6 +1445,7 @@ export function CardDetails({
   card,
   aiProvenance,
   pipOverrides = null,
+  symbolMeanings = null,
 }: {
   card: {
     title: string;
@@ -1481,6 +1487,9 @@ export function CardDetails({
   aiProvenance?: AiProvenance;
   /** The owner's custom pip icons — the costs draw the pips the card draws. */
   pipOverrides?: PipOverrides | null;
+  /** What the owner's own symbols mean — a `{*CODE}` in the cost counts its
+   *  declared mana value (lib/symbols/symbol-token.ts). */
+  symbolMeanings?: SymbolMeanings | null;
 }) {
   const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
   // The faces as text — the ONE answer the exports read too
@@ -1493,7 +1502,7 @@ export function CardDetails({
   // 1.2), so the row says "Color".
   const colors = card.color_identity ?? [];
   const template = normalizeFrameTemplate(frontTemplate, { rulesText: card.rules_text ?? null });
-  const manaValue = card.cost?.trim() ? manaValueOfCost(card.cost) : null;
+  const manaValue = card.cost?.trim() ? manaValueOfCost(card.cost, symbolMeanings) : null;
   const rows: Array<[string, React.ReactNode]> = [];
   // The nickname it prints in its title bar (TODO 6.3).
   const nickname = cardNickname(card.nickname);

@@ -1370,7 +1370,17 @@ Rules and gotchas:
   fetches only the codes a card names (`pipOverridesNamedIn`); a symbol made
   or re-pictured re-bakes the cards that name it (`lib/symbols/rebake.ts`).
   A symbol's name and code are public: no strong language (refused on the
-  field, `lib/symbols/actions.ts`). `docs/FRAMES.md` "The owner's own symbols".
+  field, `lib/symbols/actions.ts`). What it MEANS (PR 3) is its maker's
+  declaration, read through the owner's `SymbolMeanings` (`getSymbolMeanings`,
+  the same read as the pictures; removed ones included): `manaValueOfCost` /
+  `deriveColorIdentity` / the AI's `parseManaCost` take the map — without it
+  a `{*CODE}` counts 0 and no colour. A code the owner has NO symbol for is
+  refused where it is ADDED: the creator's field error (`cardFormSchemaFor`'s
+  symbol context) and both card actions (`lib/symbols/card-check.ts`, every
+  caller; an edit never about a code its stored card already named); the
+  AI's lint refuses any code it wasn't given. The delete guard's in-use
+  check reads the name and nickname too (0195). `docs/FRAMES.md` "The
+  owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes

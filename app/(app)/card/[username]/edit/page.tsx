@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
-import { getPipOverrides } from "@/lib/pips/queries";
+import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { getFantasyGameSystem, getMyCardBySlug } from "@/lib/cards/queries";
@@ -208,6 +208,7 @@ export default async function EditCardPage({
           canDesignForDeck={entitlements.effectiveTier === "pro"}
           aiConfigured={isDesignAiConfigured()}
           pipOverrides={await getPipOverrides(user.id)}
+          symbolMeanings={await getSymbolMeanings(user.id)}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
           framePreview={
             framePreview

@@ -19,6 +19,12 @@
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationTiersProblem } from "@/lib/creator/station-rows";
 import { z } from "zod";
+import { cardSymbolFields } from "@/lib/validation/card-glyphs";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { hidesCost } from "@/lib/creator/steps";
+import { unknownSymbolCodesIn, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+import { unknownSymbolsMessage } from "@/lib/symbols/symbols";
 import {
   cardArtistCreditSchema,
   cardArtUrlSchema,
@@ -178,12 +184,24 @@ export type FormBackBodyContext = {
 
 const NO_BACK_BODY_CONTEXT: FormBackBodyContext = { mode: "create", verifiedKeys: new Set() };
 
+/** What the form knows of the card OWNER's own mana symbols (PR 3): their
+ *  codes (removed ones too — they keep drawing) and the codes the card
+ *  already named as it OPENED (an edit's stored card: a code it was saved
+ *  with is never asked about again, even one since deleted — an edit never
+ *  blocks on what its maker didn't add). Absent (a guest, a page that read
+ *  no symbols): nothing is checked here; the card actions still are. */
+export type FormSymbolContext = {
+  meanings: SymbolMeanings;
+  opened: ReadonlySet<string>;
+};
+
 export function cardFormSchemaFor(
   // (Or the opened rows read for the frame the values are on — an edit's
   // saga moved on or off the saga creature frame, TODO 4.5d:
   // lib/creator/card-fields.ts openedForFrame.)
   openedFor: StructuredRulesValues | ((values: FormValues) => StructuredRulesValues | null) | null = null,
   backBody: FormBackBodyContext = NO_BACK_BODY_CONTEXT,
+  symbols: FormSymbolContext | null = null,
 ): z.ZodType<FormValues, FormValues> {
   return z
   .custom<FormValues>()
@@ -449,6 +467,30 @@ export function cardFormSchemaFor(
         opened !== null && opened.rules_text === values.rules_text && (opened.station_pt_tier ?? null) === (values.station_pt_tier ?? null);
       const problem = untouched ? null : stationTiersProblem(values.rules_text);
       if (problem) ctx.addIssue({ code: "custom", path: ["rules_text"], message: problem });
+    }
+    // The owner's own symbols (PR 3): a `{*CODE}` the owner has no symbol
+    // for would draw a blank disc for every viewer — the field says so, on
+    // every field the card draws pips from (the glyph notice's ONE list).
+    if (symbols) {
+      // Only a field the creator SHOWS on this frame (independent check): a
+      // cost the frame hides (land, token, emblem), or a walker's / saga's
+      // rules text — its rows' copy, whose panel is the rows (with every row
+      // removed it is never sent) — would block Save with no message.
+      const template = values.frame_style?.template;
+      const profile = getFrameProfile(normalizeFrameTemplate(template));
+      const hidden = new Set<string>();
+      if (hidesCost(template)) hidden.add("cost");
+      if (profile.loyaltyRows || profile.chapters) hidden.add("rules_text");
+      for (const field of cardSymbolFields(values)) {
+        if (!field.path || hidden.has(field.path)) continue;
+        const codes = unknownSymbolCodesIn(field.value, symbols.meanings).filter((code) => !symbols.opened.has(code));
+        if (codes.length === 0) continue;
+        ctx.addIssue({
+          code: "custom",
+          path: field.path.split(".").map((key) => (/^\d+$/.test(key) ? Number(key) : key)),
+          message: unknownSymbolsMessage(codes),
+        });
+      }
     }
 
     check(

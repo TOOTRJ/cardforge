@@ -324,7 +324,13 @@ export function undrawableSymbols(
   return found;
 }
 
-export type SymbolCheckField = { label: string; value: string | null | undefined };
+export type SymbolCheckField = {
+  label: string;
+  value: string | null | undefined;
+  /** The form field it is (`cost`, `saga_chapters.1.text`…) — where a field
+   *  error about it goes (lib/creator/form-schema.ts). */
+  path?: string;
+};
 
 export type UndrawableSymbolField = { label: string; symbols: string[] };
 
@@ -361,18 +367,18 @@ export function cardSymbolFields(v: GlyphCheckValues): SymbolCheckField[] {
     (Boolean(profile.chapters) &&
       chapters.some((row) => row.text.trim() && (row.numerals === undefined || row.numerals.length > 0)));
   const fields: SymbolCheckField[] = [
-    { label: "Mana cost", value: v.cost },
-    ...(rowsDrawn ? [] : [{ label: "Rules text", value: v.rules_text }]),
-    ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text })),
-    { label: "Saga intro", value: v.saga_intro },
-    ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
-    { label: "Creature abilities", value: v.saga_creature_text ?? "" },
+    { label: "Mana cost", value: v.cost, path: "cost" },
+    ...(rowsDrawn ? [] : [{ label: "Rules text", value: v.rules_text, path: "rules_text" }]),
+    ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text, path: `loyalty_abilities.${i}.text` })),
+    { label: "Saga intro", value: v.saga_intro, path: "saga_intro" },
+    ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text, path: `saga_chapters.${i}.text` })),
+    { label: "Creature abilities", value: v.saga_creature_text ?? "", path: "saga_creature_text" },
   ];
   if (v.has_back_face) {
     const part = secondPartLabelOf(v);
     fields.push(
-      { label: `${part} mana cost`, value: v.back_face.cost },
-      { label: `${part} rules text`, value: v.back_face.rules_text },
+      { label: `${part} mana cost`, value: v.back_face.cost, path: "back_face.cost" },
+      { label: `${part} rules text`, value: v.back_face.rules_text, path: "back_face.rules_text" },
     );
   }
   return fields;

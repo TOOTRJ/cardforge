@@ -20,6 +20,7 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { frameAnatomyOf, twoColorPairOf } from "@/lib/cards/anatomy";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { PipOverrides } from "@/lib/pips/override";
+import type { SymbolMeanings } from "@/lib/symbols/symbol-token";
 
 type PipsPanelProps = {
   /** Live frame template from the form — token/land frames hide the cost. */
@@ -27,6 +28,9 @@ type PipsPanelProps = {
   /** The signed-in user's custom pip icons (server-fetched). Drives the
    *  picker's icons and the "Customize pips" dialog beside it. */
   pipOverrides: PipOverrides;
+  /** What the owner's own symbols mean: a `{*CODE}` in the cost implies its
+   *  declared base colour. */
+  symbolMeanings?: SymbolMeanings | null;
   /** Edit / remix lock the frame colour, so a cost that implies another
    *  colour is simply allowed (owner decision 2026-09-16) — no prompt. */
   frameLocked?: boolean;
@@ -35,6 +39,7 @@ type PipsPanelProps = {
 export function PipsPanel({
   frameTemplate,
   pipOverrides,
+  symbolMeanings = null,
   frameLocked = false,
 }: PipsPanelProps) {
   const {
@@ -56,7 +61,7 @@ export function PipsPanel({
   // "Switch" to W|U, then {W}{B}, kept the W|U split with no prompt). A
   // plain "multicolor" card is never prompted for its pair: the follow
   // (useTwoColorPairFollow) fills it, or its owner chose the gold frame.
-  const derived = deriveColorIdentity(cost);
+  const derived = deriveColorIdentity(cost, symbolMeanings);
   const drawsPairs = frameAnatomyOf(frameTemplate).twoColor.length > 0;
   const target = normalizeColorSelection(derived, { keepPair: drawsPairs });
   const heldPair = drawsPairs ? twoColorPairOf(colorIdentity) : null;
