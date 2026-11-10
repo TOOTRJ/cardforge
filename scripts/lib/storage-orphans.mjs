@@ -96,6 +96,7 @@ export const URL_SOURCES = [
   { table: "site_updates", columns: ["summary", "body", "link_href"], note: "news posts (Markdown)" },
   { table: "card_exports", columns: ["file_url", "storage_path"], note: "card-exports history (a bare key in storage_path)" },
   { table: "token_kits", columns: ["items"], note: "the Token Kit's per-token pictures (items.<key>.artUrl, card-art: an upload or an AI picture) — never a card's" },
+  { table: "forged_pips", columns: ["files"], note: "Pip Forge's current pip and its glyph (set-covers pip-<v>.png, glyph-<v>.png); an override is a copy in custom-pips" },
   { table: "set_symbols", columns: ["files"], note: "Set Symbol Studio's current version of each symbol (set-covers sym-<v>-*.png + source, card-art wm-sym-<v>.png); a card's set_icon_url / watermark keeps an older version" },
   {
     table: "deck_reart_cards",

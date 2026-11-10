@@ -51,6 +51,7 @@ export function emptyDb(): Db {
     card_exports: t(["id"], { id: "uuid", file_url: "text", storage_path: "text" }),
     token_kits: t(["id"], { id: "uuid", owner_id: "uuid", items: "jsonb", settings: "jsonb" }),
     set_symbols: t(["id"], { id: "uuid", owner_id: "uuid", files: "jsonb", cutout: "jsonb" }),
+    forged_pips: t(["id"], { id: "uuid", owner_id: "uuid", files: "jsonb", colour_card: "jsonb" }),
     deck_reart_cards: t(["deck_id", "card_id"], {
       deck_id: "uuid",
       card_id: "uuid",

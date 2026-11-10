@@ -595,6 +595,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Migration 0192 — the Pip Forge beta tool's forged pips.
+      forged_pips: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          prompt: string;
+          idea: string | null;
+          disc_color: string;
+          /** The current pip file's version. */
+          version: string;
+          files: Json;
+          colour_card: Json;
+          legibility_16: number;
+          legibility_24: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          prompt: string;
+          idea?: string | null;
+          disc_color: string;
+          version: string;
+          files: Json;
+          colour_card: Json;
+          legibility_16: number;
+          legibility_24: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          prompt?: string;
+          idea?: string | null;
+          disc_color?: string;
+          version?: string;
+          files?: Json;
+          colour_card?: Json;
+          legibility_16?: number;
+          legibility_24?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       // Migration 0187 — the Set Symbol Studio beta tool's symbols.
       set_symbols: {
         Row: {

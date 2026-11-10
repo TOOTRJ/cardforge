@@ -201,6 +201,7 @@ describe("reference detection — every column, any depth, any URL form", () => 
     ["site_updates.body (Markdown, a full stop after the URL)", "card-art", (db, k) => db.site_updates.rows.push({ id: "s1", body: `Look: ![art](${pub("card-art", k)}).` })],
     ["card_exports.storage_path (a bare key)", "card-art", (db, k) => db.card_exports.rows.push({ id: "e1", storage_path: k })],
     ["token_kits.items.<key>.artUrl (the Token Kit)", "card-art", (db, k) => db.token_kits.rows.push({ id: "tk1", items: { "token|treasure": { artUrl: pub("card-art", k) } } })],
+    ["forged_pips.files.glyph (Pip Forge)", "set-covers", (db, k) => db.forged_pips.rows.push({ id: "fp1", files: { glyph: pub("set-covers", k) } })],
     ["set_symbols.files.<variant> (Set Symbol Studio)", "set-covers", (db, k) => db.set_symbols.rows.push({ id: "ss1", files: { auto: pub("set-covers", k) } })],
     ["deck_reart_cards.previous_art_url (Re-art deck: the art to put back)", "card-art", (db, k) => db.deck_reart_cards.rows.push({ deck_id: "d1", card_id: "c9", previous_art_url: pub("card-art", k) })],
     ["a /render-cdn/ path", "card-renders", (db, k) => db.messages.rows.push({ id: "m1", body: `see /render-cdn/${k}?v=3` })],

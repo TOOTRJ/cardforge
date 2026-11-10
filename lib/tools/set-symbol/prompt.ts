@@ -98,13 +98,17 @@ export const PROMPT_PROBLEM_MESSAGES: Record<PromptProblem, string> = {
   hate_symbol: "PipGlyph doesn't make hate symbols. Try another idea.",
 };
 
+/** True when `text` names a hate symbol (shared with Pip Forge's guard). */
+export function namesHateSymbol(text: string): boolean {
+  const words = normalised(text);
+  return HATE_SYMBOL_TERMS.some((term) => words.includes(` ${term} `));
+}
+
 /** Why `subject` can't be sent, or null when it can. */
 export function symbolPromptProblem(subject: string): PromptProblem | null {
   const trimmed = subject.trim();
   if (trimmed.length < SUBJECT_MIN) return "too_short";
   if (trimmed.length > SUBJECT_MAX) return "too_long";
   if (containsProfanity(trimmed)) return "language";
-  const words = normalised(trimmed);
-  if (HATE_SYMBOL_TERMS.some((term) => words.includes(` ${term} `))) return "hate_symbol";
-  return null;
+  return namesHateSymbol(trimmed) ? "hate_symbol" : null;
 }

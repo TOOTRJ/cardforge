@@ -112,7 +112,7 @@ export const TOOL_CATALOG = [
       "Saved to your account, ready for any card",
     ],
     icon: "pip",
-    built: false,
+    built: true,
   },
   {
     slug: "set-symbol-studio",

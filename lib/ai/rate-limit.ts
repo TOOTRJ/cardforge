@@ -59,7 +59,9 @@ export type AiActionLabel =
   | "draft_table_sheet"
   // Re-art deck (beta tool, migration 0191): one row per picture a run
   // paints in the deck's style.
-  | "deck_reart_art";
+  | "deck_reart_art"
+  // Pip Forge (beta tool, migration 0192): one pip and its colour card.
+  | "forge_pip";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -257,6 +259,9 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
   /** One credit: the Rule 0 table sheet's game plan and win conditions,
    *  drafted from the deck's cards (the owner edits them after). */
   draft_table_sheet: 1,
+  /** One credit: one pip drawn by FLUX and its colour card (the Pip Forge
+   *  beta tool) — recolours and using it as an override are free. */
+  forge_pip: 1,
 };
 
 export type CreditSpendResult =
