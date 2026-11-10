@@ -1,6 +1,7 @@
 import "server-only";
 
 import { designCards } from "@/lib/ai/card-design";
+import type { DesignOwnSymbol } from "@/lib/ai/own-symbols";
 import {
   fillPromptNote,
   pickFillResult,
@@ -56,6 +57,9 @@ export type DesignCardFillInput = {
   /** A double-faced kind's frame as the plan's fit reads it (TODO 5.11a:
    *  the lint and the autofix judge a colourless back with its tick). */
   dfcFrame?: DfcDesignFrame;
+  /** The maker's own live symbols (new pips PR 6, lib/ai/own-symbols.ts):
+   *  only while the tool is open to them. */
+  ownSymbols?: readonly DesignOwnSymbol[];
 };
 
 /**
@@ -108,6 +112,7 @@ export async function designCardFill(
     context: input.context,
     variety: input.variety,
     ...(input.assembled ? { assembled: true } : {}),
+    ...(input.ownSymbols && input.ownSymbols.length > 0 ? { ownSymbols: input.ownSymbols } : {}),
     slots: [
       {
         cardType: wantsType ? input.steer.card_type : input.locked.card_type,

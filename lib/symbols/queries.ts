@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { getViewerTool } from "@/lib/tools/queries";
+import type { DesignOwnSymbol } from "@/lib/ai/own-symbols";
 import {
   CUSTOM_SYMBOLS_SLUG,
   isSymbolBaseColor,
@@ -86,4 +87,26 @@ export async function listOwnSymbolChoices(userId: string): Promise<OwnSymbolCho
   return (await listSymbolsOf(userId))
     .filter((symbol) => !symbol.deletedAt)
     .map((symbol) => ({ code: symbol.code, name: symbol.name, imageUrl: symbol.imageUrl }));
+}
+
+/**
+ * The maker's symbols the AI designer is told about (new pips PR 6,
+ * lib/ai/own-symbols.ts): their LIVE ones — never a removed one, never
+ * another user's — only while the tool is open to them (`getViewerTool`,
+ * the same gate as the creator's choices). [] otherwise: the design is
+ * main's (and on a failed read).
+ */
+export async function designSymbolsFor(userId: string): Promise<DesignOwnSymbol[]> {
+  if (!userId) return [];
+  try {
+    const tool = await getViewerTool(CUSTOM_SYMBOLS_SLUG);
+    if (!tool?.allowed) return [];
+    return (await listSymbolsOf(userId))
+      .filter((symbol) => !symbol.deletedAt)
+      .map((symbol) => ({ code: symbol.code, name: symbol.name, manaValue: symbol.manaValue, baseColor: symbol.baseColor }));
+  } catch (error) {
+    // A failed read never blocks a design: it is designed as main's.
+    console.error("[custom-symbols] the designer's symbols could not be read", error);
+    return [];
+  }
 }
