@@ -11620,6 +11620,27 @@ the cost, and the play exports count them too (`BuildContext.symbols`; the
 cost text keeps `{*CODE}`). A code is never read by its LETTERS: `{*FIRE}`
 is not red because of its R.
 
+**Remixes** (new pips PR 5). A remix of another maker's card is the
+remixer's card, so the codes it keeps would name the REMIXER's symbols. The
+save copies the parent owner's symbols the remix names — codes the remix
+draws (the save check's fields: never a cost its frame hides or back-face
+flavour) or prints through `~` (its name, its nickname) that the parent
+names too, removed ones included — into the remixer's set first
+(`adoptRemixSymbols`, `lib/symbols/remix-copy.ts`: the picture copied into
+their custom-pips folder as a new `sym-<uuid>.png`, the name, mana value and
+colour as the maker declared them, written by the service role whether or
+not the tool is open to the remixer). A code the remixer already has (live
+or removed) is never copied: THEIRS is used. 0193's limits still hold — at
+20 live symbols a copy is kept removed (it still draws), at 60 rows the
+remix is refused (a remixer without the tool is told to take the codes
+out, not to delete symbols they can't reach) — and every copy is taken back
+when the card is not saved, but one another card of the remixer's names by
+then (a save in another tab; the service role skips 0193's in-use guard,
+so the take-back asks it first). The creator shows a remix that way before the save
+(`withRemixParentSymbols` on the remix page) and one toast says what was
+copied and which codes stayed the remixer's (`remixSymbolsMessage`). A remix
+of your own card copies nothing.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
