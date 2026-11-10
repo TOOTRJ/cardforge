@@ -4,10 +4,14 @@
 -- stack have a collection and decks to match it against:
 --
 --   dev_pro's collection (dev_pro is the tool's seeded tester, 45_beta_tools)
---     — 71 different printings, 125 copies: two foils, a Japanese
---     Counterspell, basics in bulk, and four commanders (Krenko, Mob Boss;
---     Krenko, Tin Street Kingpin; Meren of Clan Nel Toth; Atraxa,
---     Praetors' Voice) for the builder.
+--     — 79 different printings, 133 copies: two foils, a Japanese
+--     Counterspell, basics in bulk, and twelve commanders for the builder
+--     (Krenko, Mob Boss; Krenko, Tin Street Kingpin; Meren of Clan Nel
+--     Toth; Atraxa, Praetors' Voice; and, since 2026-11-09, so the
+--     commander list folds and ranks across colours: Edgar Markov; Feather,
+--     the Redeemed; Lathril, Blade of the Elves; Rin and Seri, Inseparable;
+--     Sythis, Harvest's Hand; Talrand, Sky Summoner; Tatyova, Benthic
+--     Druid; Teysa Karlov).
 --   Two PUBLIC Commander decks of dev_artist's built from real printings,
 --     for "Decks you can build": Krenko's Goblin Horde (dev_pro is 3 cards
 --     away: Goblin King, Purphoros, Wheel of Fortune) and Meren's Compost
@@ -15,7 +19,7 @@
 --     proxy).
 --
 -- The printings are Scryfall's real ids and pictures (their data, fetched
--- 2026-11-06). Runs after the earlier seeds (filename order). Never against
+-- 2026-11-06; the eight later commanders 2026-11-09). Runs after the earlier seeds (filename order). Never against
 -- production. Idempotent: fixed ids + ON CONFLICT DO NOTHING. No credential
 -- in here (the repo is public). Rows whose accounts are missing are skipped.
 -- Deck ids …030 / …031, entry ids …9001 on.
@@ -145,6 +149,24 @@ Evoke {2}{U} (You may cast this spell for its evoke cost. If you do, it''s sacri
   ('4f616706-ec97-4923-bb1e-11a69fbaa1f8', 'cc187110-1148-4090-bbb8-e205694a39f5', 'nonfoil', 'ja', 1, 'Counterspell', 'Instant', '{U}{U}', '2.0', array['U']::text[], 'Counter target spell.', 'uncommon', 'dsc', 'Duskmourn: House of Horror Commander', '114', 'https://cards.scryfall.io/normal/front/4/f/4f616706-ec97-4923-bb1e-11a69fbaa1f8.jpg', true, false),
   ('d0d33d52-3d28-4635-b985-51e126289259', '7e6b9b59-cd68-4e3c-827b-38833c92d6eb', 'nonfoil', 'en', 1, 'Atraxa, Praetors'' Voice', 'Legendary Creature — Phyrexian Angel Horror', '{G}{W}{U}{B}', '4.0', array['B','G','U','W']::text[], 'Flying, vigilance, deathtouch, lifelink
 At the beginning of your end step, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)', 'mythic', '2xm', 'Double Masters', '190', 'https://cards.scryfall.io/normal/front/d/0/d0d33d52-3d28-4635-b985-51e126289259.jpg', true, true),
+  -- Eight more commanders (fetched 2026-11-09) so the builder's commander
+  -- list folds (two rows, "Show all") and ranks across colours.
+  ('a577ba08-0aa8-45be-aa83-d5078770127c', '41e2790d-49f5-4e98-b8d9-04179f47f13a', 'nonfoil', 'en', 1, 'Edgar Markov', 'Legendary Creature — Vampire Knight', '{3}{R}{W}{B}', '6.0', array['B','R','W']::text[], 'Eminence — Whenever you cast another Vampire spell, if Edgar is in the command zone or on the battlefield, create a 1/1 black Vampire creature token.
+First strike, haste
+Whenever Edgar attacks, put a +1/+1 counter on each Vampire you control.', 'mythic', 'inr', 'Innistrad Remastered', '234', 'https://cards.scryfall.io/normal/front/a/5/a577ba08-0aa8-45be-aa83-d5078770127c.jpg', true, true),
+  ('e4a2d2c6-8eaa-4760-b620-921b807baa2e', 'aa219936-661b-4ccb-8741-78b70cff2b1a', 'nonfoil', 'en', 1, 'Feather, the Redeemed', 'Legendary Creature — Angel', '{R}{W}{W}', '3.0', array['R','W']::text[], 'Flying
+Whenever you cast an instant or sorcery spell that targets a creature you control, exile that card instead of putting it into your graveyard as it resolves. If you do, return it to your hand at the beginning of the next end step.', 'rare', 'war', 'War of the Spark', '197', 'https://cards.scryfall.io/normal/front/e/4/e4a2d2c6-8eaa-4760-b620-921b807baa2e.jpg', true, true),
+  ('8d4e5480-a287-4a25-b855-a26dae555b1c', '9b568c34-ba0a-44a7-a0ee-bee3a37b3396', 'nonfoil', 'en', 1, 'Lathril, Blade of the Elves', 'Legendary Creature — Elf Noble', '{2}{B}{G}', '4.0', array['B','G']::text[], 'Menace (This creature can''t be blocked except by two or more creatures.)
+Whenever Lathril deals combat damage to a player, create that many 1/1 green Elf Warrior creature tokens.
+{T}, Tap ten untapped Elves you control: Each opponent loses 10 life and you gain 10 life.', 'rare', 'fdn', 'Foundations', '242', 'https://cards.scryfall.io/normal/front/8/d/8d4e5480-a287-4a25-b855-a26dae555b1c.jpg', true, true),
+  ('d605c780-a42a-4816-8fb9-63e3114a8246', '28c46eb7-bdfc-44b9-b7e9-b073260851f0', 'nonfoil', 'en', 1, 'Rin and Seri, Inseparable', 'Legendary Creature — Dog Cat', '{1}{R}{G}{W}', '4.0', array['G','R','W']::text[], 'Whenever you cast a Dog spell, create a 1/1 green Cat creature token.
+Whenever you cast a Cat spell, create a 1/1 white Dog creature token.
+{R}{G}{W}, {T}: Rin and Seri deals damage to any target equal to the number of Dogs you control. You gain life equal to the number of Cats you control.', 'mythic', 'm21', 'Core Set 2021', '278', 'https://cards.scryfall.io/normal/front/d/6/d605c780-a42a-4816-8fb9-63e3114a8246.jpg', true, true),
+  ('89511ab5-8ea6-4f07-a80b-c1ec7e89924e', '0fc64fd6-f057-4056-9dca-47accb7ff036', 'nonfoil', 'en', 1, 'Sythis, Harvest''s Hand', 'Legendary Enchantment Creature — Nymph', '{G}{W}', '2.0', array['G','W']::text[], 'Whenever you cast an enchantment spell, you gain 1 life and draw a card.', 'rare', 'cmm', 'Commander Masters', '938', 'https://cards.scryfall.io/normal/front/8/9/89511ab5-8ea6-4f07-a80b-c1ec7e89924e.jpg', true, true),
+  ('1be3ed47-072e-481a-b3d9-dc232ac4b24f', 'ea1eb902-a23c-44ff-9169-19baf71de238', 'nonfoil', 'en', 1, 'Talrand, Sky Summoner', 'Legendary Creature — Merfolk Wizard', '{2}{U}{U}', '4.0', array['U']::text[], 'Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.', 'rare', 'otc', 'Outlaws of Thunder Junction Commander', '116', 'https://cards.scryfall.io/normal/front/1/b/1be3ed47-072e-481a-b3d9-dc232ac4b24f.jpg', true, true),
+  ('eabc978a-0666-472d-bdc6-d4b29d29eca4', '0715e860-3b3b-4331-9718-207973e94fee', 'nonfoil', 'en', 1, 'Tatyova, Benthic Druid', 'Legendary Creature — Merfolk Druid', '{3}{G}{U}', '5.0', array['G','U']::text[], 'Landfall — Whenever a land you control enters, you gain 1 life and draw a card.', 'uncommon', 'fdn', 'Foundations', '247', 'https://cards.scryfall.io/normal/front/e/a/eabc978a-0666-472d-bdc6-d4b29d29eca4.jpg', true, true),
+  ('cd14f1ce-7fcd-485c-b7ca-01c5b45fdc01', '644eeefd-e684-4ca8-8aef-a892ca130c07', 'nonfoil', 'en', 1, 'Teysa Karlov', 'Legendary Creature — Human Advisor', '{2}{W}{B}', '4.0', array['B','W']::text[], 'If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.
+Creature tokens you control have vigilance and lifelink.', 'rare', 'cmm', 'Commander Masters', '359', 'https://cards.scryfall.io/normal/front/c/d/cd14f1ce-7fcd-485c-b7ca-01c5b45fdc01.jpg', true, true),
   ('a82f782e-abc8-4b92-a193-17b2c383f765', 'a3fb7228-e76b-4e96-a40e-20b5fed75685', 'nonfoil', 'en', 24, 'Mountain', 'Basic Land — Mountain', null, '0.0', array['R']::text[], '({T}: Add {R}.)', 'common', 'dmu', 'Dominaria United', '271', 'https://cards.scryfall.io/normal/front/a/8/a82f782e-abc8-4b92-a193-17b2c383f765.jpg', true, false),
   ('5a846f00-ccb9-4ee2-8358-7c7722258601', '56719f6a-1a6c-4c0a-8d21-18f7d7350b68', 'nonfoil', 'en', 14, 'Swamp', 'Basic Land — Swamp', null, '0.0', array['B']::text[], '({T}: Add {B}.)', 'common', 'dmu', 'Dominaria United', '268', 'https://cards.scryfall.io/normal/front/5/a/5a846f00-ccb9-4ee2-8358-7c7722258601.jpg', true, false),
   ('52097f6a-58d3-4176-b3bf-dc94f44adf30', 'b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6', 'nonfoil', 'en', 14, 'Forest', 'Basic Land — Forest', null, '0.0', array['G']::text[], '({T}: Add {G}.)', 'common', 'dmu', 'Dominaria United', '274', 'https://cards.scryfall.io/normal/front/5/2/52097f6a-58d3-4176-b3bf-dc94f44adf30.jpg', true, false)

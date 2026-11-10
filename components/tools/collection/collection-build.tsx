@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Crown, Hammer, Minus, Plus, Sparkles, Undo2, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Crown, Hammer, History, Minus, Plus, Sparkles, Undo2, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { inputClass } from "@/components/ui/field-classes";
@@ -13,6 +13,7 @@ import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { cn } from "@/lib/utils";
 import type { Visibility } from "@/types/card";
 import type { CollectionCard } from "@/lib/tools/collection/card-row";
+import type { CollectionColour } from "@/lib/tools/collection/queries";
 import { draftCollectionDeckAction, saveCollectionDeckAction } from "@/lib/tools/collection/actions";
 import {
   ROLE_LABELS,
@@ -22,9 +23,18 @@ import {
   type DeckRole,
   type DraftBasic,
 } from "@/lib/tools/collection/builder";
+import { describeSupport, type CommanderSupport } from "@/lib/tools/collection/commander-scores";
+import {
+  LAST_AI_DRAFT_DAYS,
+  clearLastAiDraft,
+  readLastAiDraft,
+  writeLastAiDraft,
+  type StoredAiDraft,
+} from "@/lib/tools/collection/last-ai-draft";
 import { COMMANDER_DECK_SIZE } from "@/lib/tools/collection/limits";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
+import { COLOUR_OPTIONS, identityMatchesColours } from "./colour-options";
 
 const n = (value: number) => value.toLocaleString("en-US");
 type Pip = "W" | "U" | "B" | "R" | "G" | "C";
@@ -32,6 +42,45 @@ const pipsOf = (identity: readonly string[]): Pip[] =>
   identity.length === 0 ? ["C"] : (identity.filter((c) => "WUBRG".includes(c)) as Pip[]);
 
 type DraftSource = "rules" | "ai";
+
+/** The commander list's order. "best" reads the free scores
+ *  (lib/tools/collection/commander-scores.ts); until they arrive, or when
+ *  they can't be read, the list keeps its name order. */
+export type CommanderSort = "best" | "colours" | "name";
+
+const SORT_LABELS: Record<CommanderSort, string> = {
+  best: "Best supported by your cards",
+  colours: "Most cards in its colours",
+  name: "Name",
+};
+
+/** Commanders the folded list shows: two rows at every width of its grid
+ *  (3 · 4 · 6 · 8 columns). */
+export const FOLDED_ROWS_MAX = 16;
+
+/**
+ * A folded tile's display, by its place in the list: the first two rows of
+ * whichever column count the grid's container gives. Literal class strings
+ * (Tailwind reads them from here): base 3 columns → 6, @xl 4 → 8, @3xl 6 →
+ * 12, @5xl 8 → 16. Hidden tiles are `display: none` — out of the tab order
+ * and the accessibility tree, as the "Show all" button says.
+ */
+export function foldedTileClass(index: number): string | undefined {
+  if (index < 6) return undefined;
+  if (index < 8) return "hidden @xl:flex";
+  if (index < 12) return "hidden @3xl:flex";
+  if (index < FOLDED_ROWS_MAX) return "hidden @5xl:flex";
+  return "hidden";
+}
+
+/** "Show all" hides itself at the widths where every commander already
+ *  shows. */
+function showAllClass(count: number): string | undefined {
+  if (count <= 8) return "@xl:hidden";
+  if (count <= 12) return "@3xl:hidden";
+  if (count <= FOLDED_ROWS_MAX) return "@5xl:hidden";
+  return undefined;
+}
 
 const VISIBILITY_OPTIONS: { value: Visibility; label: string }[] = [
   { value: "public", label: "Public" },
@@ -45,34 +94,116 @@ const VISIBILITY_HINT: Record<Visibility, string> = {
   private: "Only you can see it.",
 };
 
+type ScoresState = { status: "loading" } | { status: "ready"; scores: Record<string, CommanderSupport> } | { status: "failed" };
+
 export function CollectionBuild({
   commanders,
   initialCommanderId,
   credits,
   aiAvailable,
   collectionSize,
+  viewerId,
 }: {
   commanders: CollectionCard[];
   initialCommanderId: string | null;
   credits: number | null;
   aiAvailable: boolean;
   collectionSize: number;
+  /** The signed-in user — keys the AI draft this browser keeps. */
+  viewerId: string;
 }) {
-  const legal = commanders.filter((c) => c.commanderLegal);
+  const legal = useMemo(() => commanders.filter((c) => c.commanderLegal), [commanders]);
   const [commanderId, setCommanderId] = useState<string | null>(
     legal.find((c) => c.id === initialCommanderId)?.id ?? null,
   );
   const [filter, setFilter] = useState("");
+  const [colours, setColours] = useState<CollectionColour[]>([]);
+  const [sort, setSort] = useState<CommanderSort>("best");
+  const [expanded, setExpanded] = useState(false);
+  /** With a draft on screen the list folds away behind "Change commander". */
+  const [listOpen, setListOpen] = useState(true);
   const [draft, setDraft] = useState<CommanderDraft | null>(null);
   const [source, setSource] = useState<DraftSource>("rules");
   const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState(credits);
   const [working, setWorking] = useState<DraftSource | null>(null);
-  const ids = { filter: useId(), legend: useId() };
+  const [scores, setScores] = useState<ScoresState>({ status: "loading" });
+  const [kept, setKept] = useState<StoredAiDraft | null>(null);
+  const ids = {
+    heading: useId(),
+    filter: useId(),
+    sort: useId(),
+    list: useId(),
+    listHeading: useId(),
+    grid: useId(),
+    reason: useId(),
+  };
   useLeaveWarning(working === "ai");
+  const hasCommanders = collectionSize > 0 && commanders.length > 0;
 
-  if (collectionSize === 0 || commanders.length === 0) {
+  // The free scores: one read of the collection, after the page is up.
+  useEffect(() => {
+    if (!hasCommanders) return;
+    const abort = new AbortController();
+    fetch("/api/tools/collection-builder/commander-scores", { signal: abort.signal, cache: "no-store" })
+      .then(async (response) => {
+        const body = (await response.json()) as { ok: boolean; scores?: Record<string, CommanderSupport> };
+        setScores(body.ok && body.scores ? { status: "ready", scores: body.scores } : { status: "failed" });
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) setScores({ status: "failed" });
+      });
+    return () => abort.abort();
+  }, [hasCommanders]);
+
+  // The paid AI draft this browser kept (7 days), offered back — never
+  // shown by itself. Read after the first paint (storage isn't there on
+  // the server, so reading it while rendering would mismatch the HTML).
+  useEffect(() => {
+    if (!hasCommanders) return;
+    let live = true;
+    queueMicrotask(() => {
+      if (live) setKept(readLastAiDraft(viewerId, { collectionSize, commanderIds: new Set(legal.map((c) => c.id)) }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [hasCommanders, viewerId, collectionSize, legal]);
+
+  // "Change commander" unfolds the list in its place: the focus goes to the
+  // list's heading, not <body>, when the button it was on goes away.
+  const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusListOnOpen = useRef(false);
+  useEffect(() => {
+    if (listOpen && focusListOnOpen.current) {
+      focusListOnOpen.current = false;
+      listHeadingRef.current?.focus();
+    }
+  }, [listOpen]);
+
+  const sorted = useMemo(() => {
+    const ready = scores.status === "ready" ? scores.scores : null;
+    const support = (c: CollectionCard) => (ready ? ready[c.id] : undefined);
+    const byName = (a: CollectionCard, b: CollectionCard) => a.name.localeCompare(b.name);
+    const legalFirst = (a: CollectionCard, b: CollectionCard) => Number(b.commanderLegal) - Number(a.commanderLegal);
+    return [...commanders].sort((a, b) => {
+      const first = legalFirst(a, b);
+      if (first !== 0) return first;
+      if (ready && sort !== "name") {
+        const sa = support(a);
+        const sb = support(b);
+        const diff =
+          sort === "best"
+            ? (sb?.score ?? -1) - (sa?.score ?? -1) || (sb?.inColours ?? -1) - (sa?.inColours ?? -1)
+            : (sb?.inColours ?? -1) - (sa?.inColours ?? -1);
+        if (diff !== 0) return diff;
+      }
+      return byName(a, b);
+    });
+  }, [commanders, scores, sort]);
+
+  if (!hasCommanders) {
     return (
       <EmptyState
         icon={Crown}
@@ -93,12 +224,37 @@ export function CollectionBuild({
   }
 
   const commander = commanders.find((c) => c.id === commanderId) ?? null;
-  const shown = filter.trim()
-    ? commanders.filter((c) => c.name.toLowerCase().includes(filter.trim().toLowerCase()))
-    : commanders;
+  const ready = scores.status === "ready" ? scores.scores : null;
+  const query = filter.trim().toLowerCase();
+  const filtering = query !== "" || colours.length > 0;
+  const matching = sorted.filter(
+    (c) => (!query || c.name.toLowerCase().includes(query)) && identityMatchesColours(c.colorIdentity, colours),
+  );
+  const folded = !expanded && !filtering;
+  // A picked commander past every width's two rows (picked through the
+  // address, or a kept draft) is shown first while the list is folded.
+  const pickedAt = commander ? matching.findIndex((c) => c.id === commander.id) : -1;
+  const shown =
+    folded && pickedAt >= FOLDED_ROWS_MAX
+      ? [matching[pickedAt], ...matching.slice(0, pickedAt), ...matching.slice(pickedAt + 1)]
+      : matching;
+
+  const pick = (card: CollectionCard) => {
+    if (!card.commanderLegal) return;
+    setCommanderId(card.id);
+    setDraft(null);
+    setError(null);
+  };
+
+  const showDraft = (next: CommanderDraft, from: DraftSource, wasTruncated: boolean) => {
+    setDraft(next);
+    setSource(from);
+    setTruncated(wasTruncated);
+    setListOpen(false);
+  };
 
   const draftWithRules = async () => {
-    if (!commanderId) return;
+    if (!commanderId || working) return;
     setWorking("rules");
     setError(null);
     try {
@@ -107,9 +263,7 @@ export function CollectionBuild({
         setError(result.error);
         return;
       }
-      setDraft(result.draft);
-      setSource("rules");
-      setTruncated(result.truncated);
+      showDraft(result.draft, "rules", result.truncated);
     } catch {
       setError("The draft didn't finish. Try again.");
     } finally {
@@ -118,7 +272,7 @@ export function CollectionBuild({
   };
 
   const draftWithAi = async () => {
-    if (!commanderId) return;
+    if (!commanderId || working) return;
     setWorking("ai");
     setError(null);
     try {
@@ -139,9 +293,17 @@ export function CollectionBuild({
         setError(body.error ?? "The AI build didn't finish. Try again.");
         return;
       }
-      setDraft(body.draft);
-      setSource("ai");
-      setTruncated(Boolean(body.truncated));
+      const wasTruncated = Boolean(body.truncated);
+      showDraft(body.draft, "ai", wasTruncated);
+      // Paid for: kept in this browser for a week, so a reload can't lose it.
+      writeLastAiDraft(viewerId, {
+        savedAt: new Date().toISOString(),
+        commanderId,
+        collectionSize,
+        truncated: wasTruncated,
+        draft: body.draft,
+      });
+      setKept(null);
     } catch {
       setError("The AI build didn't answer. If a credit was taken it comes back by itself.");
     } finally {
@@ -149,119 +311,94 @@ export function CollectionBuild({
     }
   };
 
+  const restoreKept = () => {
+    if (!kept) return;
+    setCommanderId(kept.commanderId);
+    setError(null);
+    showDraft(kept.draft, "ai", kept.truncated);
+    setKept(null);
+  };
+
+  const dismissKept = () => {
+    clearLastAiDraft(viewerId);
+    setKept(null);
+  };
+
   const aiOff = !aiAvailable
     ? "AI isn't available right now."
     : balance !== null && balance < 1
       ? "You're out of AI credits."
       : null;
+  // A button that can't act yet stays reachable and says why (aria-disabled,
+  // never `disabled`, which would drop it from the keyboard's path).
+  const draftBlocked = !commander ? "Pick a commander first." : null;
+  const aiBlocked = draftBlocked ?? aiOff;
+  const support = commander && ready ? ready[commander.id] : undefined;
+  const supportFor = (card: CollectionCard) => (ready && card.commanderLegal ? ready[card.id] : undefined);
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
-      <section aria-labelledby={ids.legend} className="flex min-w-0 flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 id={ids.legend} className="font-display text-xl font-semibold text-foreground">
-              Pick your commander
-            </h2>
-            <p className="text-sm text-muted">
-              {n(legal.length)} commander{legal.length === 1 ? "" : "s"} in your collection. The deck is drafted from cards
-              you own in its colours.
-            </p>
-          </div>
-          {commanders.length > 8 ? (
-            <div className="flex w-full min-w-0 flex-col gap-1 sm:w-64">
-              <label htmlFor={ids.filter} className="text-xs font-medium text-muted">
-                Find a commander
-              </label>
-              <input
-                id={ids.filter}
-                type="search"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                className={inputClass(false)}
-              />
-            </div>
-          ) : null}
+      <section aria-labelledby={ids.heading} className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id={ids.heading} className="font-display text-xl font-semibold text-foreground">
+            Pick your commander
+          </h2>
+          <p className="text-sm text-muted">
+            {n(legal.length)} commander{legal.length === 1 ? "" : "s"} in your collection. The deck is drafted from cards
+            you own in its colours.
+          </p>
         </div>
-
-        <fieldset className="min-w-0">
-          <legend className="sr-only">Commander</legend>
-          <div className="@container">
-            <div className="grid grid-cols-3 gap-3 @xl:grid-cols-4 @3xl:grid-cols-6 @5xl:grid-cols-8">
-              {shown.map((card) => {
-                const off = !card.commanderLegal;
-                const active = card.id === commanderId;
-                return (
-                  <label
-                    key={card.id}
-                    className={cn(
-                      "group relative flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg p-1",
-                      "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-bright/60",
-                      active && "bg-primary/15 ring-2 ring-primary",
-                      off && "cursor-not-allowed opacity-50",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="commander"
-                      value={card.id}
-                      checked={active}
-                      // Reachable, its reason in its name; never picked.
-                      aria-disabled={off || undefined}
-                      aria-label={off ? `${card.name} (not legal in Commander)` : card.name}
-                      onChange={() => {
-                        if (off) return;
-                        setCommanderId(card.id);
-                        setDraft(null);
-                        setError(null);
-                      }}
-                      className="sr-only"
-                    />
-                    <PrintingPicture imageUrl={card.imageUrl} name={card.name} size="small" />
-                    <span className="truncate text-xs font-medium text-foreground">{card.name}</span>
-                    {off ? <span className="text-[11px] leading-4 text-subtle">Not legal in Commander</span> : null}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          {shown.length === 0 ? <p className="text-sm text-muted">No commander is called that.</p> : null}
-        </fieldset>
 
         <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface/40 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             {commander ? (
               <>
-                <ColorPips colors={pipsOf(commander.colorIdentity)} label={`Colours: ${commander.colorIdentity.join(", ") || "colourless"}`} />
-                <p className="min-w-0 truncate text-sm text-foreground">
-                  <span className="text-muted">Commander:</span> {commander.name}
-                </p>
+                <div className="w-10 shrink-0">
+                  <PrintingPicture imageUrl={commander.imageUrl} name={commander.name} size="small" />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ColorPips
+                      colors={pipsOf(commander.colorIdentity)}
+                      label={`Colours: ${commander.colorIdentity.join(", ") || "colourless"}`}
+                    />
+                    <p className="min-w-0 truncate text-sm text-foreground">
+                      <span className="text-muted">Commander:</span> {commander.name}
+                    </p>
+                  </div>
+                  {support ? <p className="text-xs leading-5 text-muted">{describeSupport(support)}</p> : null}
+                </div>
               </>
             ) : (
-              <p className="text-sm text-muted">Pick a commander above.</p>
+              <p className="text-sm text-muted">No commander picked yet — pick one from your commanders below.</p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={draftWithRules} disabled={!commander || working !== null}>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Button
+              variant="secondary"
+              onClick={draftBlocked ? undefined : draftWithRules}
+              aria-disabled={draftBlocked || working ? true : undefined}
+              aria-describedby={draftBlocked ? ids.reason : undefined}
+              className={cn("flex-1 sm:flex-none", (draftBlocked || working) && "opacity-50")}
+            >
               <Hammer aria-hidden />
               {working === "rules" ? "Drafting…" : draft ? "Draft again" : "Draft a deck"}
             </Button>
             <Button
-              onClick={aiOff ? undefined : draftWithAi}
-              disabled={!commander || working !== null}
-              aria-disabled={aiOff ? true : undefined}
-              aria-describedby={aiOff ? `${ids.legend}-ai-off` : undefined}
-              className={aiOff ? "opacity-50" : undefined}
+              onClick={aiBlocked ? undefined : draftWithAi}
+              aria-disabled={aiBlocked || working ? true : undefined}
+              aria-describedby={aiBlocked ? ids.reason : undefined}
+              className={cn("flex-1 sm:flex-none", (aiBlocked || working) && "opacity-50")}
             >
               <Sparkles aria-hidden />
               {working === "ai" ? "Building with AI…" : "Build with AI · 1 credit"}
             </Button>
           </div>
         </div>
-        <p className="-mt-2 text-xs text-subtle">
+        <p className="text-xs text-subtle">
           &ldquo;Draft a deck&rdquo; is free and follows the rules. &ldquo;Build with AI&rdquo; reads your cards and plans around
           your commander{balance !== null ? ` — you have ${n(balance)} credit${balance === 1 ? "" : "s"}` : ""}.
-          {aiOff ? <span id={`${ids.legend}-ai-off`}> {aiOff}</span> : null}
+          {draftBlocked || aiOff ? <span id={ids.reason}> {draftBlocked ?? aiOff}</span> : null}
         </p>
         <p role="status" className="text-sm text-muted empty:hidden">
           {working === "ai" ? "The AI is choosing from your cards. This takes up to a minute." : working === "rules" ? "Drafting…" : ""}
@@ -272,10 +409,204 @@ export function CollectionBuild({
             {error}
           </p>
         ) : null}
+        {kept && !draft ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-primary/40 bg-primary/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex min-w-0 items-start gap-2 text-sm text-foreground">
+              <History className="mt-0.5 h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
+              <span>
+                You have an unsaved AI build for <span className="font-medium">{kept.draft.commander.name}</span> from{" "}
+                {new Date(kept.savedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. This browser
+                keeps it for {LAST_AI_DRAFT_DAYS} days.
+              </span>
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button size="sm" onClick={restoreKept}>
+                Show it
+              </Button>
+              <Button size="sm" variant="ghost" onClick={dismissKept}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
+      {draft && !listOpen ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+          <p className="text-sm text-muted">
+            {n(legal.length)} commander{legal.length === 1 ? "" : "s"} in your collection.
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={false}
+            onClick={() => {
+              focusListOnOpen.current = true;
+              setListOpen(true);
+            }}
+          >
+            <ChevronDown aria-hidden />
+            Change commander
+          </Button>
+        </div>
+      ) : (
+        <section id={ids.list} aria-labelledby={ids.listHeading} className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <h3
+                ref={listHeadingRef}
+                tabIndex={-1}
+                id={ids.listHeading}
+                className="text-base font-semibold text-foreground focus:outline-none"
+              >
+                Your commanders <span className="font-normal text-muted">({n(commanders.length)})</span>
+              </h3>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+                {commanders.length > 8 ? (
+                  <div className="flex min-w-0 flex-col gap-1 sm:w-56">
+                    <label htmlFor={ids.filter} className="text-xs font-medium text-muted">
+                      Find a commander
+                    </label>
+                    <input
+                      id={ids.filter}
+                      type="search"
+                      value={filter}
+                      onChange={(event) => setFilter(event.target.value)}
+                      className={inputClass(false)}
+                    />
+                  </div>
+                ) : null}
+                {commanders.length > 1 ? (
+                  <div className="flex min-w-0 flex-col gap-1 sm:w-64">
+                    <label htmlFor={ids.sort} className="text-xs font-medium text-muted">
+                      Sort
+                    </label>
+                    <select
+                      id={ids.sort}
+                      value={sort}
+                      onChange={(event) => setSort(event.target.value as CommanderSort)}
+                      className={inputClass(false)}
+                    >
+                      {(Object.keys(SORT_LABELS) as CommanderSort[]).map((key) => (
+                        <option key={key} value={key}>
+                          {SORT_LABELS[key]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {commanders.length > 8 ? (
+              <ChipGroup
+                multiSelect
+                options={COLOUR_OPTIONS}
+                value={colours}
+                keepCase
+                size="sm"
+                ariaLabel="Commander colours"
+                onChange={setColours}
+              />
+            ) : null}
+            {sort !== "name" && scores.status !== "ready" ? (
+              <p role="status" className="text-xs text-muted">
+                {scores.status === "loading"
+                  ? "Ranking your commanders by your cards…"
+                  : "Your commanders couldn't be ranked right now — they're listed by name."}
+              </p>
+            ) : null}
+          </div>
+
+          <fieldset className="min-w-0">
+            <legend className="sr-only">Commander</legend>
+            <div className="@container flex flex-col gap-3">
+              <div id={ids.grid} className="grid grid-cols-3 gap-3 @xl:grid-cols-4 @3xl:grid-cols-6 @5xl:grid-cols-8">
+                {shown.map((card, index) => {
+                  const off = !card.commanderLegal;
+                  const active = card.id === commanderId;
+                  const cardSupport = supportFor(card);
+                  return (
+                    <label
+                      key={card.id}
+                      className={cn(
+                        "group relative flex min-w-0 cursor-pointer flex-col gap-1.5 rounded-lg p-1",
+                        "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-bright/60",
+                        active && "bg-primary/15 ring-2 ring-primary",
+                        off && "cursor-not-allowed opacity-50",
+                        folded && foldedTileClass(index),
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="commander"
+                        value={card.id}
+                        checked={active}
+                        // Reachable, its reason in its name; never picked.
+                        aria-disabled={off || undefined}
+                        aria-label={
+                          off
+                            ? `${card.name} (not legal in Commander)`
+                            : cardSupport
+                              ? `${card.name}, ${n(cardSupport.fit)} of your cards fit its plan`
+                              : card.name
+                        }
+                        onChange={() => pick(card)}
+                        className="sr-only"
+                      />
+                      <PrintingPicture imageUrl={card.imageUrl} name={card.name} size="small" />
+                      <span className="truncate text-xs font-medium text-foreground">{card.name}</span>
+                      {off ? (
+                        <span className="text-[11px] leading-4 text-subtle">Not legal in Commander</span>
+                      ) : cardSupport ? (
+                        <span aria-hidden className="text-[11px] leading-4 text-subtle">
+                          {n(cardSupport.fit)} fit · {n(cardSupport.inColours)} cards
+                        </span>
+                      ) : null}
+                    </label>
+                  );
+                })}
+              </div>
+              {matching.length === 0 ? <p className="text-sm text-muted">No commander matches.</p> : null}
+              {!filtering && matching.length > 6 ? (
+                expanded ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="self-start"
+                    aria-expanded
+                    aria-controls={ids.grid}
+                    onClick={() => setExpanded(false)}
+                  >
+                    <ChevronUp aria-hidden />
+                    Show fewer
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn("self-start", showAllClass(matching.length))}
+                    aria-expanded={false}
+                    aria-controls={ids.grid}
+                    onClick={() => setExpanded(true)}
+                  >
+                    <ChevronDown aria-hidden />
+                    Show all {n(matching.length)} commanders
+                  </Button>
+                )
+              ) : null}
+            </div>
+          </fieldset>
+        </section>
+      )}
+
       {draft ? (
-        <DraftReview key={`${draft.commander.cardId}-${source}-${draft.total}-${draft.picks.length}`} draft={draft} source={source} truncated={truncated} />
+        <DraftReview
+          key={`${draft.commander.cardId}-${source}-${draft.total}-${draft.picks.length}`}
+          draft={draft}
+          source={source}
+          truncated={truncated}
+          onSaved={source === "ai" ? () => clearLastAiDraft(viewerId) : undefined}
+        />
       ) : null}
     </div>
   );
@@ -285,7 +616,28 @@ export function CollectionBuild({
 // The draft
 // ---------------------------------------------------------------------------
 
-function DraftReview({ draft, source, truncated }: { draft: CommanderDraft; source: DraftSource; truncated: boolean }) {
+function DraftReview({
+  draft,
+  source,
+  truncated,
+  onSaved,
+}: {
+  draft: CommanderDraft;
+  source: DraftSource;
+  truncated: boolean;
+  /** Called once the draft is a deck (the AI draft this browser kept goes). */
+  onSaved?: () => void;
+}) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // A new draft takes the focus — it lands under the build bar, and a
+  // keyboard or screen-reader user should hear it arrived, not hunt for it.
+  useEffect(() => {
+    const heading = headingRef.current;
+    if (!heading) return;
+    heading.focus({ preventScroll: true });
+    const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    heading.scrollIntoView?.({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  }, []);
   const [left, setLeft] = useState<Set<string>>(() => new Set());
   const [basics, setBasics] = useState<DraftBasic[]>(draft.basics);
   const [title, setTitle] = useState(`${draft.commander.name} from my collection`.slice(0, 80));
@@ -349,6 +701,7 @@ function DraftReview({ draft, source, truncated }: { draft: CommanderDraft; sour
         return;
       }
       setSaved({ slug: result.slug, title: result.title });
+      onSaved?.();
       toast.success(`${result.title} is saved as a deck.`);
     });
   };
@@ -359,7 +712,7 @@ function DraftReview({ draft, source, truncated }: { draft: CommanderDraft; sour
     <section aria-labelledby={ids.heading} className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 id={ids.heading} className="font-display text-xl font-semibold text-foreground">
+          <h2 ref={headingRef} tabIndex={-1} id={ids.heading} className="scroll-mt-24 font-display text-xl font-semibold text-foreground focus:outline-none">
             Your draft
           </h2>
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">

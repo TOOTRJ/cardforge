@@ -64,6 +64,7 @@ export default async function CollectionBuilderPage({ searchParams }: { searchPa
         credits={credits}
         aiAvailable={isDesignAiConfigured()}
         collectionSize={stats.cards}
+        viewerId={entry.userId}
       />
     );
   } else if (view === "decks") {

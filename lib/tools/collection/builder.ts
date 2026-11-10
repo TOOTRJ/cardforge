@@ -214,6 +214,23 @@ export function commanderThemes(commander: Pick<CollectionCard, "oracleText">): 
   return THEMES.filter(([, re]) => re.test(text)).map(([name]) => name);
 }
 
+/** The plan themes a card's own text plays into — the same test the
+ *  commander's themes use, read from the other side (the commander scores,
+ *  lib/tools/collection/commander-scores.ts). */
+export const cardThemes = commanderThemes;
+
+/** A card's creature types, lower-cased ("Goblin Warrior" → goblin,
+ *  warrior); none for a card that isn't a creature. */
+export function creatureTypesOf(card: Pick<CollectionCard, "typeLine">): string[] {
+  const front = frontType(card);
+  if (!/\bCreature\b/.test(front)) return [];
+  const subtypes = front.split(/\s+[—-]\s+/)[1] ?? "";
+  return subtypes
+    .split(/\s+/)
+    .map((w) => w.toLowerCase())
+    .filter((w) => w && !CREATURE_TYPE_STOP.has(w));
+}
+
 export function synergyScore(
   card: Pick<CollectionCard, "typeLine" | "oracleText" | "manaValue">,
   plan: { tribes: readonly string[]; themes: readonly string[] },
