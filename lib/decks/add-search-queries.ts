@@ -3,6 +3,8 @@ import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { DECK_PAGE_CARD_COLUMNS, readDeckPageCardRows, type DeckPageCard } from "@/lib/decks/queries";
 import { ADD_RESULTS_PER_SECTION, ADD_SEARCH_MIN_CHARS, normalizeAddQuery, typedFoldPattern } from "@/lib/decks/add-search";
+import { readOwnerSymbolsOf } from "@/lib/pips/queries";
+import { costNamesCustomSymbol, type OwnerSymbols } from "@/lib/symbols/symbol-token";
 
 // ---------------------------------------------------------------------------
 // The add box's two PipGlyph searches (TODO DK5.2), read with the caller's
@@ -30,6 +32,10 @@ export type AddCandidate = {
   card: DeckPageCard;
   /** Another creator's handle (D3); null for the owner's own. */
   maker: string | null;
+  /** The CARD OWNER's own symbols (new pips PR 6), only on a card whose
+   *  cost names one: the result draws their pictures, and the row the box
+   *  adds before the server answers counts them (DeckItem.ownerSymbols). */
+  ownerSymbols?: OwnerSymbols;
 };
 
 export type AddSearchResults = { mine: AddCandidate[]; community: AddCandidate[] };
@@ -79,12 +85,24 @@ export async function searchDeckAddCards(
   const communityCards = communityRows.slice(0, ADD_RESULTS_PER_SECTION).map(pageCardOf);
   const makerIds = Array.from(new Set(communityCards.map((card) => card.owner_id)));
   const handleOf = new Map<string, string | null>();
-  if (makerIds.length > 0) {
-    const { data: makers } = await supabase.from("profiles").select("id, username").in("id", makerIds);
-    for (const maker of makers ?? []) handleOf.set(maker.id, maker.username ?? null);
-  }
+  // The owners' symbols in ONE batch with the makers' handles — only owners
+  // whose card's cost names a symbol (none: no read).
+  const symbolOwners = [...mine.map(({ card }) => card), ...communityCards]
+    .filter(costNamesCustomSymbol)
+    .map((card) => card.owner_id);
+  const [makers, symbols] = await Promise.all([
+    makerIds.length > 0
+      ? supabase.from("profiles").select("id, username").in("id", makerIds).then(({ data }) => data ?? [])
+      : Promise.resolve([] as Array<{ id: string; username: string | null }>),
+    readOwnerSymbolsOf(symbolOwners),
+  ]);
+  for (const maker of makers) handleOf.set(maker.id, maker.username ?? null);
+  const withSymbols = (candidate: AddCandidate): AddCandidate => {
+    const ownerSymbols = costNamesCustomSymbol(candidate.card) ? symbols.get(candidate.card.owner_id) : undefined;
+    return ownerSymbols ? { ...candidate, ownerSymbols } : candidate;
+  };
   return {
-    mine,
-    community: communityCards.map((card) => ({ card, maker: handleOf.get(card.owner_id) ?? null })),
+    mine: mine.map(withSymbols),
+    community: communityCards.map((card) => withSymbols({ card, maker: handleOf.get(card.owner_id) ?? null })),
   };
 }

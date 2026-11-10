@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Check, Loader2, Plus, Search, X } from "lucide-react";
 import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import type { OwnerSymbols } from "@/lib/symbols/symbol-token";
 import { useDeckEditor, type EditorItem } from "@/components/decks/use-deck-editor";
 import { PrivateCardOfferDialog, type PrivateOfferCard } from "@/components/decks/private-card-offer-dialog";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -107,6 +108,8 @@ type AddOption = {
   name: string;
   meta: string | null;
   cost: string | null;
+  /** The card owner's symbol pictures for its cost (new pips PR 6). */
+  costPictures?: OwnerSymbols["pictures"];
   picture: string | null;
   inDeck: string | null;
   pick: AddPick;
@@ -262,13 +265,14 @@ export function DeckAddBox({ className }: { className?: string }) {
   const options = useMemo<AddOption[]>(() => {
     if (!deck) return [];
     const fromCard = (section: SectionKey) => (candidate: AddCandidate): AddOption => {
-      const { card, maker } = candidate;
+      const { card, maker, ownerSymbols } = candidate;
       return {
         key: `${section}:${card.id}`,
         section,
         name: card.title,
         meta: maker ? `by @${maker}` : card.visibility === "public" ? null : card.visibility === "private" ? "Private" : "Unlisted",
         cost: card.cost ?? null,
+        ...(ownerSymbols ? { costPictures: ownerSymbols.pictures } : {}),
         picture: cardThumb(candidate),
         inDeck: inDeckLabel(inDeckCountForCard(entries, card.id)),
         pick: { kind: "card", cardId: card.id, title: card.title },
@@ -281,6 +285,7 @@ export function DeckAddBox({ className }: { className?: string }) {
           entry: pendingEntry(deck.id, to, { name: card.title, card_id: card.id, source: "link" }),
           card,
           cardOwner: maker ? { username: maker } : null,
+          ...(ownerSymbols ? { ownerSymbols } : {}),
         }),
       };
     };
@@ -787,7 +792,7 @@ export function DeckAddBox({ className }: { className?: string }) {
                             <span className="truncate font-medium">{option.name}</span>
                             {option.meta ? <span className="truncate text-xs text-muted">{option.meta}</span> : null}
                           </span>
-                          {option.cost ? <ManaCostGlyphs cost={option.cost} size="sm" /> : null}
+                          {option.cost ? <ManaCostGlyphs cost={option.cost} size="sm" overrides={option.costPictures} /> : null}
                           {option.inDeck ? (
                             <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{option.inDeck}</span>
                           ) : null}

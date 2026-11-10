@@ -1385,7 +1385,8 @@ Rules and gotchas:
   tool is open to them (`listOwnSymbolChoices` → `OwnSymbolsProvider`); a
   list of OTHER people's cards reads each card owner's symbols in ONE batch
   (`readOwnerSymbolsOf` → `DeckItem.ownerSymbols`, the play exports'
-  `BuildContext.symbols`) — never a code's letters as colours. PR 5: a
+  `BuildContext.symbols`) — never a code's letters as colours; the deck
+  add box's results too (`AddCandidate.ownerSymbols`, PR 6). PR 5: a
   remix of ANOTHER maker's card brings the parent owner's symbols it names
   (codes the remix DRAWS or prints through `~` that its parent names too,
   `carriedSymbolCodes`) into the
@@ -1395,7 +1396,17 @@ Rules and gotchas:
   kept REMOVED at 20 live, refused at 60 rows, taken back when the card
   isn't saved — but one another card of theirs names by then); a code the remixer already has stays THEIRS, and the
   creator shows the remix that way (`withRemixParentSymbols`) and says so
-  (`remixSymbolsMessage`). `docs/FRAMES.md` "The owner's own symbols".
+  (`remixSymbolsMessage`). PR 6: the AI
+  designer is told the maker's LIVE symbols only while the tool is open to
+  them (`designSymbolsFor` → `DesignBatchInput.ownSymbols`, the card job and
+  the fills; never another user's, never a removed one) and may use them on
+  the front face / first part; none = main's prompt and payloads. Every
+  other `{*CODE}` a design holds after the judge is replaced — on a back
+  face or second part every code (`withoutUnknownSymbols`,
+  `lib/ai/own-symbols.ts`) — and the card job's step refuses one deleted for
+  good since the plan BEFORE the paid picture (`generatedCardSaveRefusal`;
+  the paused deck remix builds its own payload and is not covered).
+  `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes

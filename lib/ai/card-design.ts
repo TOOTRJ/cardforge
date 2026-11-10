@@ -25,6 +25,8 @@ import {
 } from "@/lib/ai/station-design";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { varietyPromptLines, type DesignVariety } from "@/lib/ai/design-variety";
+import { designSymbolMeanings, ownSymbolPromptLines, withoutUnknownSymbols, type DesignOwnSymbol } from "@/lib/ai/own-symbols";
+import type { SymbolMeanings } from "@/lib/symbols/symbol-token";
 import {
   autofixLayoutFront,
   autofixLayoutParts,
@@ -260,6 +262,10 @@ export type DesignBatchInput = {
    *  already clipped there, so the composed line is read up to
    *  ASSEMBLED_PROMPT_MAX rather than the free text's 300 / 200. */
   assembled?: boolean;
+  /** The maker's own LIVE mana symbols (new pips PR 6, lib/ai/own-symbols.ts)
+   *  — only while the tool is open to them (designSymbolsFor). Absent or
+   *  empty: the prompt and the lint are main's. */
+  ownSymbols?: readonly DesignOwnSymbol[];
 };
 
 /** The longest assembled theme / style line (a 160-character twist and a
@@ -290,8 +296,13 @@ export type DesignSlot = {
 };
 
 /** The lint of one design: the one-faced rules, and its layout's. */
-function lintDesign(card: DesignedCard, layout: DesignLayout | undefined, dfcFrame?: DfcDesignFrame) {
-  const lint = lintCardDesign(card);
+function lintDesign(
+  card: DesignedCard,
+  layout: DesignLayout | undefined,
+  dfcFrame?: DfcDesignFrame,
+  symbolMeanings?: SymbolMeanings | null,
+) {
+  const lint = symbolMeanings ? lintCardDesign(card, { symbolMeanings }) : lintCardDesign(card);
   if (!layout) return lint;
   const own = isAiDfcKind(layout) ? lintDfcDesign(card, layout, dfcFrame) : lintLayoutDesign(card, layout);
   return { errors: [...lint.errors, ...own.errors], warnings: [...lint.warnings, ...own.warnings] };
@@ -305,10 +316,16 @@ function normalizeDesign(card: DesignedCard, layout: DesignLayout | undefined): 
 }
 
 /** The last-resort repair of one design, its layout's fields included. */
-function autofixDesign(card: DesignedCard, layout: DesignLayout | undefined, dfcFrame?: DfcDesignFrame): DesignedCard {
-  if (!layout) return autofixCard(card);
-  if (isAiDfcKind(layout)) return autofixDfcParts(autofixCard(autofixDfcFront(card, layout)), layout, dfcFrame);
-  return autofixLayoutParts(autofixCard(autofixLayoutFront(card, layout)), layout);
+function autofixDesign(
+  card: DesignedCard,
+  layout: DesignLayout | undefined,
+  dfcFrame?: DfcDesignFrame,
+  symbolMeanings?: SymbolMeanings | null,
+): DesignedCard {
+  const fixFront = (front: DesignedCard) => (symbolMeanings ? autofixCard(front, { symbolMeanings }) : autofixCard(front));
+  if (!layout) return fixFront(card);
+  if (isAiDfcKind(layout)) return autofixDfcParts(fixFront(autofixDfcFront(card, layout)), layout, dfcFrame);
+  return autofixLayoutParts(fixFront(autofixLayoutFront(card, layout)), layout, symbolMeanings);
 }
 
 // ---------------------------------------------------------------------------
@@ -387,6 +404,7 @@ export function batchPrompt(input: DesignBatchInput): string {
     `Design exactly ${input.slots.length} card${input.slots.length === 1 ? "" : "s"}:`,
   );
   input.slots.forEach((slot, index) => lines.push(slotLine(slot, index)));
+  lines.push(...ownSymbolPromptLines(input.ownSymbols));
   if (input.variety) lines.push(...varietyPromptLines(input.variety));
   if (input.slots.length > 1) {
     lines.push(
@@ -413,15 +431,19 @@ const DFC_JUDGE_RULE =
 async function judgeRepair(
   flawed: Array<{ card: DesignedCard; issues: LintIssue[] }>,
   layout?: DesignLayout,
+  ownSymbols?: readonly DesignOwnSymbol[],
 ): Promise<DesignedCard[] | null> {
-  const prompt = flawed
-    .map(({ card, issues }, index) =>
-      [
-        `Card ${index + 1}: ${JSON.stringify(card)}`,
-        `Findings: ${issues.map((issue) => `[${issue.field}] ${issue.message}`).join(" | ")}`,
-      ].join("\n"),
-    )
-    .join("\n\n");
+  const prompt = [
+    ...ownSymbolPromptLines(ownSymbols),
+    flawed
+      .map(({ card, issues }, index) =>
+        [
+          `Card ${index + 1}: ${JSON.stringify(card)}`,
+          `Findings: ${issues.map((issue) => `[${issue.field}] ${issue.message}`).join(" | ")}`,
+        ].join("\n"),
+      )
+      .join("\n\n"),
+  ].join("\n");
   // The judge keeps each card's type: an emblem only when one is under
   // repair (a fill on an open emblem is a batch of one).
   const allowEmblem = flawed.some(({ card }) => card.card_type === "emblem");
@@ -547,8 +569,12 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
     .slice(0, input.slots.length)
     .map((card, index) => normalizeDesign(card, layoutOf(index)));
 
+  // The maker's own symbols (new pips PR 6): none = main's lint.
+  const meanings = designSymbolMeanings(input.ownSymbols);
+  const lintAt = (card: DesignedCard, index: number) => lintDesign(card, layoutOf(index), dfcFrameOf(index), meanings);
+
   // ---- Lint ----
-  let lints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
+  let lints = cards.map(lintAt);
   const flawedIndexes = lints
     .map((lint, index) => ({ lint, index }))
     .filter(({ lint }) => lint.errors.length > 0 || lint.warnings.length > 0)
@@ -564,25 +590,35 @@ async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> 
         issues: [...lints[index].errors, ...lints[index].warnings],
       })),
       layout,
+      input.ownSymbols,
     );
     if (repaired) {
       cards = cards.map((card, index) => {
         const repairIndex = flawedIndexes.indexOf(index);
         return repairIndex === -1 ? card : normalizeDesign(repaired[repairIndex]!, layoutOf(index));
       });
-      lints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
+      lints = cards.map(lintAt);
     }
   }
+
+  // ---- A symbol the designer wasn't given, still there: replaced ----
+  // (lib/ai/own-symbols.ts — the save would refuse it after the picture.) A
+  // design that names none is the same object, its lint unchanged.
+  cards = cards.map((card, index) => {
+    const kept = withoutUnknownSymbols(card, meanings);
+    if (kept !== card) lints[index] = lintAt(kept, index);
+    return kept;
+  });
 
   // ---- Autofix any surviving hard errors ----
   const autofixed: number[] = [];
   cards = cards.map((card, index) => {
     if (lints[index].errors.length === 0) return card;
     autofixed.push(index);
-    return autofixDesign(card, layoutOf(index), dfcFrameOf(index));
+    return autofixDesign(card, layoutOf(index), dfcFrameOf(index), meanings);
   });
 
-  const finalLints = cards.map((card, index) => lintDesign(card, layoutOf(index), dfcFrameOf(index)));
+  const finalLints = cards.map(lintAt);
   return {
     cards,
     report: {
@@ -699,6 +735,8 @@ export type SingleCardOptions = {
   variety?: DesignVariety;
   /** Types the design must not come back as (no published frame yet). */
   avoidTypes?: readonly CardType[];
+  /** The maker's own live symbols (new pips PR 6; DesignBatchInput). */
+  ownSymbols?: readonly DesignOwnSymbol[];
 };
 
 /** Design one card. Used by the random-card flow and the options dialog. */
@@ -710,6 +748,7 @@ export async function designSingleCard(
     style: options.style,
     context: options.context,
     variety: options.variety,
+    ...(options.ownSymbols && options.ownSymbols.length > 0 ? { ownSymbols: options.ownSymbols } : {}),
     slots: [
       {
         cardType: options.cardType,

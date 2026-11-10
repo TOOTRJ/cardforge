@@ -32,6 +32,7 @@
 // adventure's or Prepare's page and a flip side have no window of their own.
 // ---------------------------------------------------------------------------
 
+import type { SymbolMeanings } from "@/lib/symbols/symbol-token";
 import { z } from "zod";
 import { colorWord } from "@/components/cards/frame-layer";
 import {
@@ -498,7 +499,9 @@ export function autofixLayoutFront<T extends LayoutDesignCard>(card: T, kind: Ai
 /** Repair of the layout fields after the one-faced autofix: the saga's rows
  *  (and its text from them), the second part's shape, and the whole card's
  *  colours from both parts. */
-export function autofixLayoutParts<T extends LayoutDesignCard>(card: T, kind: AiLayoutKind): T {
+/** `symbolMeanings` = the maker's own symbols (new pips PR 6): the FRONT's
+ *  colours count them (a second part never names one). */
+export function autofixLayoutParts<T extends LayoutDesignCard>(card: T, kind: AiLayoutKind, symbolMeanings?: SymbolMeanings | null): T {
   const fixed = { ...card };
   if (kind === "saga") {
     fixed.power = null;
@@ -534,7 +537,7 @@ export function autofixLayoutParts<T extends LayoutDesignCard>(card: T, kind: Ai
   fixed.second_part = part;
   // The whole card's colours: both parts' symbols (M2).
   const letters = new Set<ColorLetter>([
-    ...deriveColorLetters(fixed.cost, fixed.rules_text),
+    ...deriveColorLetters(fixed.cost, fixed.rules_text, symbolMeanings ?? null),
     ...deriveColorLetters(part.cost, part.rules_text),
   ]);
   if (letters.size > 0) fixed.color_identity = colorWordsFromLetters([...letters].sort());

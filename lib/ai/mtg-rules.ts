@@ -548,7 +548,7 @@ export function withDrawableSymbols(text: string): string {
  * card that violates its own type's shape. Never touches design intent
  * (costs/rules text stay as generated, except outdated-phrase swaps).
  */
-export function autofixCard<T extends LintableCard>(card: T): T {
+export function autofixCard<T extends LintableCard>(card: T, options: LintOptions = {}): T {
   const fixed = { ...card };
   const type = fixed.card_type;
   // A token with a P/T and no type word was designed as a creature token
@@ -584,7 +584,8 @@ export function autofixCard<T extends LintableCard>(card: T): T {
     fixed.color_identity = ["colorless"];
   } else {
     // Realign declared identity with the symbols actually used.
-    const derived = deriveColorLetters(fixed.cost, fixed.rules_text);
+    // (The owner's own symbols count their declared colour — new pips PR 6.)
+    const derived = deriveColorLetters(fixed.cost, fixed.rules_text, options.symbolMeanings ?? null);
     if (derived.length > 0 || type !== "land") {
       fixed.color_identity = colorWordsFromLetters(derived);
     }

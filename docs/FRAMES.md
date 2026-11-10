@@ -11619,6 +11619,26 @@ colour symbols count what each declares, the list draws their pictures in
 the cost, and the play exports count them too (`BuildContext.symbols`; the
 cost text keeps `{*CODE}`). A code is never read by its LETTERS: `{*FIRE}`
 is not red because of its R.
+The deck page's add box draws its results' costs the same way (one
+batched read per search, `AddCandidate.ownerSymbols`), and the row it adds
+before the server answers counts them (new pips PR 6).
+
+**The AI designer** (new pips PR 6). While the tool is open to the maker,
+the card job and the per-field fills tell the designer the maker's LIVE
+symbols — code, name, mana value, colour (`designSymbolsFor`,
+`ownSymbolPromptLines`) — and it may use them in a card's cost and rules
+text (never a back face or second part, whose lints read no symbols); the
+lint counts them as declared and the autofix takes their colour (a split
+card's whole colour too). Never another user's symbols, never a removed
+one. Any other `{*CODE}` still in a design after the judge — and any code
+at all on a back face or second part — is replaced: a cost's by `{1}`, a
+rules text's by `{C}`, elsewhere dropped (`withoutUnknownSymbols`,
+`lib/ai/own-symbols.ts`). The card job's step refuses a code deleted for
+good since the plan before it paints (`generatedCardSaveRefusal`; a
+removed symbol is still the maker's), so a generated card is never refused
+after its paid picture for a symbol (the deck remix, paused, builds its own
+payload and is not covered). A maker without the tool or without symbols
+gets main's prompt and payloads.
 
 **Remixes** (new pips PR 5). A remix of another maker's card is the
 remixer's card, so the codes it keeps would name the REMIXER's symbols. The

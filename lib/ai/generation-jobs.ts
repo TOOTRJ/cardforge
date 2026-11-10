@@ -55,6 +55,9 @@ import {
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
 import { designCardFill } from "@/lib/ai/card-fill";
+import { designSymbolsFor } from "@/lib/symbols/queries";
+import { unknownSymbolFieldError } from "@/lib/symbols/card-check";
+import { hasCustomSymbol } from "@/lib/symbols/symbol-token";
 import type {
   CardFillField,
   CardFillLocked,
@@ -795,7 +798,7 @@ async function runGeneratedCardStep(
     // The save's cheap refusals before a paid picture (the capacity check
     // ran before the reserve): a frame the card can't be saved on fails the
     // step as the create would — the same words, refunded — with no paint.
-    const refusal = await generatedCardSaveRefusal(payload);
+    const refusal = await generatedCardSaveRefusal(userId, payload);
     if (refusal) {
       return { ...step, status: "failed", attempts: attempt, error: refusal, failure: "save_failed" };
     }
@@ -1084,7 +1087,9 @@ export async function createCardGenerationJob(
   // Never the same card twice (2026-10-28): a fresh spark per design and the
   // user's recent AI titles named as off-limits; a repeat title is designed
   // again once, here, before anything is reserved (lib/ai/design-variety.ts).
-  const recent = await recentAiTitles(user.id);
+  // The maker's own live symbols, only while the tool is open to them (new
+  // pips PR 6): none = main's prompt and lint.
+  const [recent, ownSymbols] = await Promise.all([recentAiTitles(user.id), designSymbolsFor(user.id)]);
   const avoidTypes = typesWithoutPublishedFrame(verifiedKeys);
   let card: DesignedCard;
   try {
@@ -1100,6 +1105,7 @@ export async function createCardGenerationJob(
           context: deckBrief?.context,
           variety,
           avoidTypes,
+          ...(ownSymbols.length > 0 ? { ownSymbols } : {}),
         }),
       (designed) => designed.title,
       {
@@ -1283,7 +1289,9 @@ export async function createCardFillJob(
   // Never the same card twice (2026-10-28) — see createCardGenerationJob.
   // Only a fill that WRITES the title is checked against the recent titles
   // (a kept title is the maker's); the spark rides every fill.
-  const recent = await recentAiTitles(user.id);
+  // The maker's own live symbols, only while the tool is open to them (new
+  // pips PR 6): none = main's prompt and lint.
+  const [recent, ownSymbols] = await Promise.all([recentAiTitles(user.id), designSymbolsFor(user.id)]);
   const avoidTypes =
     wantsType && !input.steer.card_type
       ? input.designKind
@@ -1334,6 +1342,7 @@ export async function createCardFillJob(
           avoidTypes,
           ...(briefNow ? { frameBrief: briefNow } : {}),
           ...(input.assembled ? { assembled: true } : {}),
+          ...(ownSymbols.length > 0 ? { ownSymbols } : {}),
         });
       },
       (result) => (input.want.includes("title") ? result.fields.title : null),
@@ -1569,7 +1578,9 @@ async function createLayoutFillJob(
   const brief = layoutFrameBrief(layout, wantsColors ? layoutColorKeys(layout, verifiedKeys) : undefined);
 
   await logAiCall(userId, "fill_card");
-  const recent = await recentAiTitles(userId);
+  // The maker's own live symbols, only while the tool is open to them (new
+  // pips PR 6): none = main's prompt and lint.
+  const [recent, ownSymbols] = await Promise.all([recentAiTitles(userId), designSymbolsFor(userId)]);
   type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
   // (The card's Variations skin of the frame — the extended-art Prepare
   // dress — is kept where the filled card fits there, TODO 4.27b.)
@@ -1613,6 +1624,7 @@ async function createLayoutFillJob(
           frameBrief: designs > 1 && redoNote ? `${brief} ${redoNote}` : brief,
           layout,
           ...(input.assembled ? { assembled: true } : {}),
+          ...(ownSymbols.length > 0 ? { ownSymbols } : {}),
         });
       },
       (result) => (wants("title") ? result.fields.title : null),
@@ -1729,7 +1741,9 @@ async function createDfcFillJob(
   const roll = Math.random();
 
   await logAiCall(userId, "fill_card");
-  const recent = await recentAiTitles(userId);
+  // The maker's own live symbols, only while the tool is open to them (new
+  // pips PR 6): none = main's prompt and lint.
+  const [recent, ownSymbols] = await Promise.all([recentAiTitles(userId), designSymbolsFor(userId)]);
   type DesignedFill = Awaited<ReturnType<typeof designCardFill>>;
   const fitOf = (result: DesignedFill): DfcFit => {
     const f = result.fields;
@@ -1773,6 +1787,7 @@ async function createDfcFillJob(
           layout: kind,
           dfcFrame: { verifiedKeys, picked, family: input.dfcIcon ?? null },
           ...(input.assembled ? { assembled: true } : {}),
+          ...(ownSymbols.length > 0 ? { ownSymbols } : {}),
         });
       },
       (result) => (wants("title") ? result.fields.title : null),
@@ -2444,7 +2459,7 @@ async function paintAndPublishCard(
  * costs no paint. The action still gates the insert itself; this is the
  * same three calls on the same fields, never a looser or a stricter rule.
  */
-async function generatedCardSaveRefusal(payload: Record<string, unknown>): Promise<string | null> {
+async function generatedCardSaveRefusal(userId: string, payload: Record<string, unknown>): Promise<string | null> {
   const frameStyle = (payload.frame_style ?? undefined) as
     | (FrameAnatomyStyle & { template?: string })
     | undefined;
@@ -2469,7 +2484,18 @@ async function generatedCardSaveRefusal(payload: Record<string, unknown>): Promi
     );
     if (partError) return partError;
   }
-  return frameKindGateError(template, cardFieldsFace(payload as CardKindFields));
+  const kindError = frameKindGateError(template, cardFieldsFace(payload as CardKindFields));
+  if (kindError) return kindError;
+  // A `{*CODE}` the maker has no symbol for (new pips PR 6): the design was
+  // linted against the symbols they had at PLAN time, and one deleted for
+  // good since (a removed one is still theirs) would fail the save after the
+  // picture — refused here instead, unpainted. No read unless the card names
+  // a code.
+  if (hasCustomSymbol(JSON.stringify(payload))) {
+    const unknown = await unknownSymbolFieldError(await createClient(), userId, payload, null);
+    if (unknown) return unknown.message;
+  }
+  return null;
 }
 
 function createFailureMessage(result: Extract<CreateCardResult, { ok: false }>): string {
