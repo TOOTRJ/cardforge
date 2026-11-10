@@ -3,20 +3,25 @@ import type { LanguageModel } from "ai";
 // ---------------------------------------------------------------------------
 // The model + sampling options of every TEXT call (generateObject).
 //
-// Claude Sonnet 5.5 and Haiku 5.5 (the defaults since Sonnet 4.5's retirement
-// on 2026-11-30) answer a request that sets `temperature`, `top_p` or `top_k`
+// Claude Sonnet 5.5 (the design default since Sonnet 4.5's retirement on
+// 2026-11-30) and Haiku 5.5 answer a request that sets `temperature`, `top_p` or `top_k`
 // with a 400 ("`temperature` is deprecated for this model"), and so do Opus
 // 4.7 / 4.8, every Claude 5 model, Fable and Mythos. The AI Gateway drops the
 // field today before it reaches Anthropic, but that is the gateway's rewrite,
 // not a contract (its fallbacks are Bedrock and Vertex) — so a call never
 // SENDS a sampling parameter a model refuses. A model that still takes one
-// (Claude 4.6 and older, a non-Anthropic id set through AI_DESIGN_MODEL /
-// AI_JUDGE_MODEL) keeps the temperature the call asks for.
+// (Claude 4.6 and older, a non-reasoning id set through AI_DESIGN_MODEL /
+// AI_JUDGE_MODEL) keeps the temperature the call asks for. That "still takes
+// one" holds on the API version the gateway sends today: Anthropic's
+// 2026-10-21 version refuses sampling on EVERY model, Haiku 4.5 included.
 //
-// Nothing else model-specific is sent: no thinking / effort options (the
-// gateway runs these calls without thinking, as Sonnet 4.5 did), no
-// tool_choice (generateObject asks for a JSON response format, which the
-// gateway serves as native structured output) and no assistant prefill.
+// Nothing else model-specific is sent: no thinking / effort options, no
+// tool_choice and no assistant prefill. Measured through the gateway on
+// 2026-11-09: these calls ran on Sonnet 5.5 with 0 thinking tokens (as
+// Sonnet 4.5 did; the gateway set that, whatever thinking options were sent)
+// and generateObject's JSON response format came back as native structured
+// output (a text block, never a forced tool call, which 5.x refuses). Both
+// are the gateway's choices, not a contract.
 // ---------------------------------------------------------------------------
 
 function modelIdOf(model: LanguageModel): string {
@@ -34,6 +39,8 @@ const VERSION_FIRST = /claude-(\d+)(?:[.-](\d{1,2})(?!\d))?-(?:opus|sonnet|haiku
 /** True when a request to `model` may carry temperature / top_p / top_k. */
 export function acceptsSamplingParams(model: LanguageModel): boolean {
   const id = modelIdOf(model).toLowerCase();
+  // OpenAI's reasoning models (o1, o3, o4-mini, gpt-5…) refuse a temperature.
+  if (/(?:^|\/)(?:o\d|gpt-5)/.test(id)) return false;
   if (!id.includes("claude")) return true;
   if (/claude-(?:fable|mythos)/.test(id)) return false;
   const match = FAMILY_FIRST.exec(id) ?? VERSION_FIRST.exec(id);

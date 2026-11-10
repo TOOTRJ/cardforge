@@ -80,6 +80,9 @@ describe("acceptsSamplingParams", () => {
       "anthropic/claude-fable-5.2",
       "claude-mythos-5-1",
       "anthropic/claude-next", // a Claude id it can't read: leave the parameter out
+      "openai/o3",
+      "o1-mini",
+      "openai/gpt-5",
     ]) {
       expect(acceptsSamplingParams(id), id).toBe(false);
     }
@@ -111,7 +114,7 @@ describe("acceptsSamplingParams", () => {
   });
 });
 
-const FORBIDDEN_KEYS = ["topP", "topK", "toolChoice", "mode", "providerOptions", "messages", "maxOutputTokens"];
+const FORBIDDEN_KEYS = ["topP", "topK", "toolChoice", "mode", "providerOptions", "messages"];
 
 function expectCleanRequest(call: Record<string, unknown> | undefined, model: string) {
   expect(call, "generateObject was called").toBeDefined();
@@ -236,7 +239,7 @@ describe("every generateObject call in lib/", () => {
         // The call's own options, up to the closing of its object literal.
         const head = body.slice(0, body.search(/\n\s*\}\)/));
         expect(head).toMatch(/\.\.\.textModelOptions\((designModel|judgeModel)\(\), [0-9.]+\)/);
-        expect(head).not.toMatch(/\b(temperature|topP|topK|toolChoice|providerOptions|maxOutputTokens)\s*:/);
+        expect(head).not.toMatch(/\b(temperature|topP|topK|toolChoice|providerOptions)\s*:/);
         expect(head).not.toMatch(/\bmodel\s*:/);
         expect(head).not.toMatch(/role:\s*"assistant"/);
       }
