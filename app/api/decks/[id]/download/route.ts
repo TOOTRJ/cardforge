@@ -200,10 +200,11 @@ export async function GET(
 }
 
 function toExportEntries(items: Awaited<ReturnType<typeof listDeckCards>>) {
-  return items.map(({ entry, card }) => {
+  return items.map(({ entry, card, ownerSymbols }) => {
     // The entry's effective type line and cost (TODO DK2.7): an edited
-    // card's own, an unchanged import's printing.
-    const fields = effectiveEntryFields(entry, card);
+    // card's own, an unchanged import's printing; a `{*CODE}` counted as its
+    // owner's symbol declares.
+    const fields = effectiveEntryFields(entry, card, undefined, ownerSymbols?.meanings);
     return {
       name: entry.name,
       quantity: entry.quantity,

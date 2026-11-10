@@ -1,6 +1,7 @@
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { importEditStateOf } from "@/lib/cards/import-fingerprint";
 import { manaValueOfCost } from "@/lib/cards/mana-value";
+import type { SymbolMeanings } from "@/lib/symbols/symbol-token";
 import { deckEntryStatus, type StatusCard, type StatusEntry } from "@/lib/decks/entry-status";
 import type { CardType, ColorIdentity } from "@/types/card";
 import type { DeckEntryStatus } from "@/types/deck";
@@ -31,6 +32,9 @@ import type { DeckEntryStatus } from "@/types/deck";
 //         is one on the split / aftermath frame, or one imported from the
 //         entry's own split printing (the split frame is unverified today,
 //         so such an import lands on m15 with a second face);
+//       - a `{*CODE}` in its cost counts the mana value the card OWNER's
+//         symbol declares (the deck read's `ownerSymbols`, PR 4 of the new
+//         pips; without them, 0 — a printing's cost never names one);
 //       - its colours are the card's FRAME colour (`cards.color_identity`),
 //         not the game's colour identity: where the entry knows the real
 //         letters, they win whenever the frame names no colour, names gold
@@ -135,12 +139,16 @@ function printingSumsHalves(entry: EffectiveEntry): boolean {
 
 /** The card's cost and mana value — both halves of a split card (its frame
  *  says so, or it was imported from the entry's split printing). */
-function cardCost(card: EffectiveCard, splitPrinting: boolean): { cost: string | null; manaValue: number | null } {
+function cardCost(
+  card: EffectiveCard,
+  splitPrinting: boolean,
+  meanings: SymbolMeanings | null | undefined,
+): { cost: string | null; manaValue: number | null } {
   const front = card.cost?.trim() ? card.cost : null;
   const back = SPLIT_TEMPLATES.has(templateOf(card) ?? "") || splitPrinting ? backCostOf(card) : null;
-  if (!back) return { cost: front, manaValue: manaValueOfCost(front) };
-  const frontValue = manaValueOfCost(front);
-  const backValue = manaValueOfCost(back);
+  if (!back) return { cost: front, manaValue: manaValueOfCost(front, meanings) };
+  const frontValue = manaValueOfCost(front, meanings);
+  const backValue = manaValueOfCost(back, meanings);
   return {
     cost: front ? `${front} // ${back}` : back,
     manaValue: frontValue === null && backValue === null ? null : (frontValue ?? 0) + (backValue ?? 0),
@@ -186,10 +194,13 @@ export function effectiveEntryRarity(
   return printingIsAuthority(entry, card, status) ? (fromEntry ?? fromCard) : (fromCard ?? fromEntry);
 }
 
+/** `meanings` = the CARD OWNER's symbols (DeckItem.ownerSymbols): a
+ *  `{*CODE}` in the card's cost counts what it declares, else 0. */
 export function effectiveEntryFields(
   entry: EffectiveEntry,
   card: EffectiveCard | null | undefined,
   status: DeckEntryStatus = deckEntryStatus(entry, card),
+  meanings?: SymbolMeanings | null,
 ): EffectiveEntryFields {
   const fromEntry = {
     typeLine: entry.type_line?.trim() ? entry.type_line : null,
@@ -208,7 +219,7 @@ export function effectiveEntryFields(
     Boolean(entry.scryfall_id) &&
     Boolean(card.import_scryfall_id) &&
     entry.scryfall_id!.toLowerCase() === card.import_scryfall_id!.toLowerCase();
-  const priced = cardCost(card, fromThisPrinting && printingSumsHalves(entry));
+  const priced = cardCost(card, fromThisPrinting && printingSumsHalves(entry), meanings);
   const fromCard = {
     typeLine: cardTypeLine(card),
     cost: priced.cost,

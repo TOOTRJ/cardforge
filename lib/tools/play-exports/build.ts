@@ -1,6 +1,7 @@
 import { cardTextFacesOf, type CardTextFace } from "@/lib/cards/card-text-faces";
 import { dfcBodyOf } from "@/lib/cards/dfc";
 import { manaValueOfCost } from "@/lib/cards/mana-value";
+import type { OwnerSymbols, SymbolMeanings } from "@/lib/symbols/symbol-token";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { buildCardUrl } from "@/lib/cards/utils";
 import { entryPrintingImage } from "@/lib/decks/entry-image";
@@ -84,6 +85,10 @@ export type BuildContext = {
   baseUrl: string;
   /** card owner id → handle, for the card page links. */
   usernames: ReadonlyMap<string, string | null>;
+  /** card owner id → their own mana symbols (new pips PR 4), for the owners
+   *  whose cards name one: what a `{*CODE}` in a cost counts. The cost TEXT
+   *  keeps `{*CODE}` as typed. */
+  symbols?: ReadonlyMap<string, OwnerSymbols>;
 };
 
 const WORD_LETTER: Readonly<Record<string, ColorLetter>> = {
@@ -117,8 +122,12 @@ function frameLetters(colors: readonly string[] | null | undefined): ColorLetter
 
 /** A face's colours: its cost's, else its frame's (a land's frame is its
  *  mana's; an artifact's grey frame names none). */
-function faceColors(cost: string | null, frameColors: readonly string[] | null | undefined): ColorLetter[] {
-  const fromCost = costColors(cost);
+function faceColors(
+  cost: string | null,
+  frameColors: readonly string[] | null | undefined,
+  meanings: SymbolMeanings | null | undefined,
+): ColorLetter[] {
+  const fromCost = costColors(cost, meanings);
   return fromCost.length > 0 ? fromCost : frameLetters(frameColors);
 }
 
@@ -156,27 +165,30 @@ function templateOf(card: PlayCardRow): string | null {
 export function customCardOf(card: PlayCardRow, name: string, ctx: BuildContext): PlayCustomCard {
   const faces = cardTextFacesOf(card);
   const backRow = (card.back_face as CardBackFace | null) ?? null;
-  const front = playFace(faces.front, card, faceColors(faces.front.cost, card.color_identity), {
+  const meanings = ctx.symbols?.get(card.owner_id)?.meanings;
+  const front = playFace(faces.front, card, faceColors(faces.front.cost, card.color_identity, meanings), {
     image: bakeUrl(card, card.rendered_image_url, ctx),
     thumb: bakeUrl(card, card.rendered_thumb_url, ctx),
   });
   const back = faces.back
-    ? playFace(faces.back, backRow ?? {}, faceColors(faces.back.cost, backRow?.color_identity ?? card.color_identity), {
+    ? playFace(faces.back, backRow ?? {}, faceColors(faces.back.cost, backRow?.color_identity ?? card.color_identity, meanings), {
         image: bakeUrl(card, card.rendered_back_image_url, ctx),
         thumb: bakeUrl(card, card.rendered_back_thumb_url, ctx),
       })
     : null;
   const secondPart = faces.secondPart
-    ? playFace(faces.secondPart, backRow ?? {}, faceColors(faces.secondPart.cost, backRow?.color_identity ?? card.color_identity), {
+    ? playFace(faces.secondPart, backRow ?? {}, faceColors(faces.secondPart.cost, backRow?.color_identity ?? card.color_identity, meanings), {
         image: null,
         thumb: null,
       })
     : null;
   const template = templateOf(card);
   const layout: PlayLayout = back ? (dfcBodyOf(template)?.layout === "modal" ? "modal" : "transform") : secondPart ? "split" : "normal";
-  const frontValue = manaValueOfCost(front.cost) ?? 0;
+  const frontValue = manaValueOfCost(front.cost, meanings) ?? 0;
   const manaValue =
-    secondPart && SPLIT_TEMPLATES.has(template ?? "") ? frontValue + (manaValueOfCost(secondPart.cost) ?? 0) : frontValue;
+    secondPart && SPLIT_TEMPLATES.has(template ?? "")
+      ? frontValue + (manaValueOfCost(secondPart.cost, meanings) ?? 0)
+      : frontValue;
   const rarity: PlayRarity = card.rarity && RARITIES.has(card.rarity) ? (card.rarity as PlayRarity) : "common";
   const username = ctx.usernames.get(card.owner_id) ?? null;
   return {

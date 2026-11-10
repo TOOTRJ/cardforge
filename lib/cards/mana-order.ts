@@ -300,3 +300,34 @@ export function normalizeManaCost(cost: string): string {
 
   return sorted.map((t) => t.symbol).join("");
 }
+
+/**
+ * The cost picker's order when the cost holds the card owner's own symbols
+ * (`{*CODE}`, new pips PR 4): every other symbol in normalizeManaCost's
+ * order, the owner's symbols — in the order they were added, as typed —
+ * after the coloured ones and before {T} / {Q} / {E}. A cost with no own
+ * symbol is normalizeManaCost's answer; one with anything outside the
+ * grammar (stray text, an unknown `{*…}`) is returned unchanged.
+ *
+ * The PICKER's alone: the card actions keep normalizeManaCost, which leaves
+ * a cost holding an own symbol as it was saved.
+ */
+export function normalizeManaCostWithSymbols(cost: string): string {
+  if (!cost) return cost;
+  const tokens = [...cost.matchAll(/\{([^}]*)\}/g)];
+  const own = tokens.filter((match) => /^\*[A-Za-z][A-Za-z0-9]{0,5}$/.test(match[1]));
+  if (own.length === 0) return normalizeManaCost(cost);
+  if (cost.replace(/\{[^}]*\}/g, "").trim() !== "") return cost;
+  const rest = tokens.filter((match) => !own.includes(match)).map((match) => match[0]).join("");
+  // A lone {0} beside an own symbol goes, as it does beside any other mana
+  // (normalizeManaCost keeps it only when it is the whole cost).
+  const sorted = rest ? normalizeManaCost(rest).replace(/^\{0\}$/, "") : "";
+  // The standard part must have sorted (normalizeManaCost leaves anything
+  // outside its grammar alone — and so does this).
+  if (rest && [...rest.matchAll(/\{([^}]*)\}/g)].some((match) => parseToken(match[1]) === null)) {
+    return cost;
+  }
+  const symbols = own.map((match) => match[0]).join("");
+  const tail = sorted.search(/\{[TQE]\}/);
+  return tail === -1 ? sorted + symbols : sorted.slice(0, tail) + symbols + sorted.slice(tail);
+}

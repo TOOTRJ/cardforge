@@ -3,10 +3,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
+import { getViewerTool } from "@/lib/tools/queries";
 import {
+  CUSTOM_SYMBOLS_SLUG,
   isSymbolBaseColor,
   SYMBOL_CODE_RE,
   type CustomSymbol,
+  type OwnSymbolChoice,
 } from "@/lib/symbols/symbols";
 
 // ---------------------------------------------------------------------------
@@ -67,4 +70,20 @@ export async function listSymbolsOf(ownerId: string): Promise<CustomSymbol[]> {
   return ((data ?? []) as SymbolRow[])
     .map((row) => symbolFromRow(row, ownerId))
     .filter((symbol): symbol is CustomSymbol => symbol !== null);
+}
+
+/**
+ * The symbols the creator OFFERS the viewer (PR 4): their live ones (never a
+ * removed one — it still draws where a card names it, but is not offered
+ * again), by code — only while the tool is open to them (admins and testers
+ * in beta; `getViewerTool`, the tool page's own rule). [] otherwise: the
+ * picker and the toolbar then look as they always did.
+ */
+export async function listOwnSymbolChoices(userId: string): Promise<OwnSymbolChoice[]> {
+  if (!userId) return [];
+  const tool = await getViewerTool(CUSTOM_SYMBOLS_SLUG);
+  if (!tool?.allowed) return [];
+  return (await listSymbolsOf(userId))
+    .filter((symbol) => !symbol.deletedAt)
+    .map((symbol) => ({ code: symbol.code, name: symbol.name, imageUrl: symbol.imageUrl }));
 }

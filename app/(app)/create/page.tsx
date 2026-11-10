@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
+import { listOwnSymbolChoices } from "@/lib/symbols/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
 import { isModerationLocked, MODERATION_LOCKED_REMIX_MESSAGE } from "@/lib/moderation/lock";
@@ -214,6 +215,15 @@ export default async function CreatePage({
         })
       : null;
 
+  // The maker's pips and own symbols, read together: the picture map and the
+  // meanings share one custom_symbols read; the choices only while the tool
+  // is open to them (new pips PR 4).
+  const [pipOverrides, symbolMeanings, ownSymbols] = await Promise.all([
+    getPipOverrides(user.id),
+    getSymbolMeanings(user.id),
+    listOwnSymbolChoices(user.id),
+  ]);
+
   return (
     // The creator keeps the standard frame until its redesign (TODO WD7,
     // owner decision D8; page-container-structure.test.ts lists it).
@@ -319,8 +329,9 @@ export default async function CreatePage({
           printingPrefill={printingPrefill}
           returnTo={returnTo}
           aiConfigured={isDesignAiConfigured()}
-          pipOverrides={await getPipOverrides(user.id)}
-          symbolMeanings={await getSymbolMeanings(user.id)}
+          pipOverrides={pipOverrides}
+          symbolMeanings={symbolMeanings}
+          ownSymbols={ownSymbols}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
           framePreview={
             framePreview

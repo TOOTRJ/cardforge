@@ -5,6 +5,7 @@ import { KEYWORD_REMINDERS, keywordInsert } from "@/lib/cards/keyword-reminders"
 import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 import { MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
 import { cn } from "@/lib/utils";
+import { OWN_SYMBOLS_LABEL, ownSymbolToken, useOwnSymbols, type OwnSymbolChoice } from "@/components/cards/own-symbols";
 
 // ---------------------------------------------------------------------------
 // RulesSymbolToolbar — one-click symbol insertion for the rules-text editor.
@@ -15,6 +16,10 @@ import { cn } from "@/lib/utils";
 // the brace code at the caret — users see the syntax as they click, so the
 // keyboard path teaches itself. The pips render with the same mana-font
 // classes the card preview uses, so the palette doubles as a legend.
+//
+// Inside the creator, while the `custom-symbols` tool is open to the maker,
+// a "Your symbols" row offers their own symbols (new pips PR 4), each
+// inserting `{*CODE}` (components/cards/own-symbols.tsx).
 // ---------------------------------------------------------------------------
 
 const CORE = ["{W}", "{U}", "{B}", "{R}", "{G}", "{C}"];
@@ -60,6 +65,24 @@ function SymbolButton({
       className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-elevated/40 transition-colors hover:border-border-strong hover:bg-elevated"
     >
       <i aria-hidden className={cn("ms ms-cost", `ms-${suffix}`)} style={{ fontSize: 13 }} />
+    </button>
+  );
+}
+
+/** One of the maker's own symbols: its picture, inserting `{*CODE}`. */
+function OwnSymbolButton({ symbol, onInsert }: { symbol: OwnSymbolChoice; onInsert: (token: string) => void }) {
+  const token = ownSymbolToken(symbol);
+  return (
+    <button
+      type="button"
+      title={`${symbol.name} — inserts ${token}`}
+      aria-label={`Insert ${symbol.name} ${token}`}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => onInsert(token)}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-elevated/40 transition-colors hover:border-border-strong hover:bg-elevated"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={symbol.imageUrl} alt="" aria-hidden className="h-[15px] w-[15px] rounded-full object-cover" />
     </button>
   );
 }
@@ -188,6 +211,7 @@ export function RulesSymbolToolbar({
    *  given, the toolbar offers the words row (TODO 6.2). */
   selfReference?: string;
 }) {
+  const ownSymbols = useOwnSymbols();
   const symbols = (
     // A group with its own name: the editor under it is named for the field
     // ("Rules text"), the buttons for what they do — never both under one
@@ -210,6 +234,16 @@ export function RulesSymbolToolbar({
           <CharacterButton key={c.char} {...c} onInsert={onInsert} />
         ))}
       </div>
+      {ownSymbols.length > 0 ? (
+        <div role="group" aria-label={OWN_SYMBOLS_LABEL} className="flex flex-wrap items-center gap-1">
+          <span aria-hidden className="mr-1 text-xs text-subtle">
+            {OWN_SYMBOLS_LABEL}
+          </span>
+          {ownSymbols.map((symbol) => (
+            <OwnSymbolButton key={symbol.code} symbol={symbol} onInsert={onInsert} />
+          ))}
+        </div>
+      ) : null}
       <details>
         <summary className="cursor-pointer list-none text-xs text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
           {MORE_SYMBOLS_LABEL}

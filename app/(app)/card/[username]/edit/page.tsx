@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
+import { listOwnSymbolChoices } from "@/lib/symbols/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getEntitlements, ownerExportStamp } from "@/lib/billing/entitlements";
 import { getFantasyGameSystem, getMyCardBySlug } from "@/lib/cards/queries";
@@ -123,6 +124,15 @@ export default async function EditCardPage({
   });
   const previewCard = card.frame_preview === true;
 
+  // The maker's pips and own symbols, read together: the picture map and the
+  // meanings share one custom_symbols read; the choices only while the tool
+  // is open to them (new pips PR 4).
+  const [pipOverrides, symbolMeanings, ownSymbols] = await Promise.all([
+    getPipOverrides(user.id),
+    getSymbolMeanings(user.id),
+    listOwnSymbolChoices(user.id),
+  ]);
+
   return (
     // The creator keeps the standard frame until its redesign (TODO WD7,
     // owner decision D8; page-container-structure.test.ts lists it).
@@ -207,8 +217,9 @@ export default async function EditCardPage({
           }))}
           canDesignForDeck={entitlements.effectiveTier === "pro"}
           aiConfigured={isDesignAiConfigured()}
-          pipOverrides={await getPipOverrides(user.id)}
-          symbolMeanings={await getSymbolMeanings(user.id)}
+          pipOverrides={pipOverrides}
+          symbolMeanings={symbolMeanings}
+          ownSymbols={ownSymbols}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
           framePreview={
             framePreview

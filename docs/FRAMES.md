@@ -11602,9 +11602,23 @@ lint's cost grammar and colour check (`parseManaCost` /
 `deriveColorLetters`). With no map a `{*CODE}` counts 0 and no colour —
 what every reader did before. A code the owner has no symbol for is
 refused where it is added (the creator's field, both card actions); a
-removed symbol is still the owner's. Decks and exports read the map in a
-later PR (until then a `{*CODE}` counts 0 there). Nothing here changes a
-drawing: no layout bump.
+removed symbol is still the owner's. Nothing here changes a drawing: no
+layout bump.
+
+**Picking them, and lists** (new pips PR 4). Inside the creator, while the
+tool is open to the maker, the cost picker and the rules toolbar offer a
+"Your symbols" row of their LIVE symbols (`listOwnSymbolChoices`, through
+`OwnSymbolsProvider`; a removed one is never offered), each adding
+`{*CODE}`; the picker keeps them after the coloured symbols, before
+{T} / {Q} / {E}, in the order added (`normalizeManaCostWithSymbols` — the
+picker's alone: the card actions' `normalizeManaCost` leaves a saved cost
+holding one as it is). A deck's rows carry their card OWNER's symbols
+(`DeckItem.ownerSymbols`: one `readOwnerSymbolsOf` batch for every owner
+whose card's cost names one), so the deck's mana value, curve, total and
+colour symbols count what each declares, the list draws their pictures in
+the cost, and the play exports count them too (`BuildContext.symbols`; the
+cost text keeps `{*CODE}`). A code is never read by its LETTERS: `{*FIRE}`
+is not red because of its R.
 
 ## Text sizes on the M15-era family
 

@@ -1379,8 +1379,13 @@ Rules and gotchas:
   symbol context) and both card actions (`lib/symbols/card-check.ts`, every
   caller; an edit never about a code its stored card already named); the
   AI's lint refuses any code it wasn't given. The delete guard's in-use
-  check reads the name and nickname too (0195). `docs/FRAMES.md` "The
-  owner's own symbols".
+  check reads the name and nickname too (0195). PR 4: the creator's cost
+  picker and rules toolbar offer the maker's live symbols only while the
+  tool is open to them (`listOwnSymbolChoices` → `OwnSymbolsProvider`); a
+  list of OTHER people's cards reads each card owner's symbols in ONE batch
+  (`readOwnerSymbolsOf` → `DeckItem.ownerSymbols`, the play exports'
+  `BuildContext.symbols`) — never a code's letters as colours.
+  `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes

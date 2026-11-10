@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Delete, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ManaCostGlyphs, offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
-import { normalizeManaCost } from "@/lib/cards/mana-order";
+import { normalizeManaCostWithSymbols } from "@/lib/cards/mana-order";
+import { OWN_SYMBOLS_LABEL, ownSymbolToken, useOwnSymbols } from "@/components/cards/own-symbols";
 import { MORE_SYMBOLS, MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
 import { CARD_COST_MAX } from "@/lib/validation/card";
 import {
@@ -36,6 +37,11 @@ import {
 // label, as the rules-text toolbar's (lib/cards/more-symbols.ts is the one
 // list). The picker is the same on every frame and every cost field (the
 // front's, a second face's, a modal back's): nothing here reads a template.
+//
+// The maker's own symbols (new pips PR 4): inside the creator, while the
+// `custom-symbols` tool is open to them, a "Your symbols" row of their live
+// symbols, each adding `{*CODE}` — kept after the coloured symbols in the
+// order added (normalizeManaCostWithSymbols). Empty everywhere else.
 //
 // A cost holds CARD_COST_MAX characters (the schema's and the database's
 // limit). A symbol that would take the cost past it is NOT added: its button
@@ -117,7 +123,8 @@ export function ManaCostPicker({
   // <details>) so the summary's click can be cancelled: see `onClick` below.
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const withToken = (token: string) => normalizeManaCost(value + `{${token}}`);
+  const ownSymbols = useOwnSymbols();
+  const withToken = (token: string) => normalizeManaCostWithSymbols(value + `{${token}}`);
   /** False when the symbol would take the cost past the limit. A generic
    *  number merges into the one already there, so it is asked token by
    *  token, never by length alone. */
@@ -130,7 +137,8 @@ export function ManaCostPicker({
   const someRefused =
     !fits(String(generic)) ||
     [...COLOR_BUTTONS, ...SYMBOL_BUTTONS].some((b) => !fits(b.token)) ||
-    MORE_SYMBOLS.some((symbol) => !fits(symbol.token.slice(1, -1)));
+    MORE_SYMBOLS.some((symbol) => !fits(symbol.token.slice(1, -1))) ||
+    ownSymbols.some((symbol) => !fits(ownSymbolToken(symbol).slice(1, -1)));
   // The focus hand-off (3b.32): asked for by a press that empties the cost,
   // done once the buttons have gone off.
   const rootRef = useRef<HTMLDivElement>(null);
@@ -291,6 +299,34 @@ export function ManaCostPicker({
           />
         ))}
       </div>
+
+      {/* The maker's own symbols (PR 4) — only inside the creator, while the
+          tool is open to them. */}
+      {ownSymbols.length > 0 ? (
+        <div role="group" aria-label={OWN_SYMBOLS_LABEL} className="flex flex-col gap-1.5">
+          <span aria-hidden className="text-[11px] uppercase tracking-wider text-subtle">
+            {OWN_SYMBOLS_LABEL}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {ownSymbols.map((symbol) => {
+              const token = ownSymbolToken(symbol);
+              const inner = token.slice(1, -1);
+              return (
+                <PipButton
+                  key={symbol.code}
+                  label={`${symbol.name} ${token}`}
+                  title={`${symbol.name} — adds ${token}`}
+                  iconSuffix=""
+                  onClick={() => append(inner)}
+                  refused={!fits(inner)}
+                  ring="from-slate-500/20 to-slate-400/0"
+                  overrideUrl={symbol.imageUrl}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {/* Hybrid, twobrid and Phyrexian — the rules toolbar's group, collapsed
           until asked for. A <details>: its summary is in the tab order and

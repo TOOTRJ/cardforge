@@ -110,3 +110,29 @@ export function unknownSymbolCodesIn(
 ): string[] {
   return customSymbolCodesIn(text).filter((code) => !symbolMeaningOf(code, meanings));
 }
+
+// ---------------------------------------------------------------------------
+// A card owner's symbols where a LIST shows other people's cards (PR 4: the
+// deck page, its breakdown, the exports). Each row carries its card owner's
+// symbols — what they mean and their pictures (`*CODE` keys only: a list
+// draws the six pips the standard way) — read in ONE batch for every owner
+// whose card names a symbol in its cost (lib/pips/queries.ts
+// readOwnerSymbolsOf).
+// ---------------------------------------------------------------------------
+
+export type OwnerSymbols = {
+  meanings: SymbolMeanings;
+  /** `*CODE` → the picture (the renderers' PipOverrides keys). */
+  pictures: Readonly<Record<`*${string}`, string>>;
+};
+
+/** True when a card's cost — or its second face's / half's — names a
+ *  symbol: the costs a list draws and counts. */
+export function costNamesCustomSymbol(card: { cost?: string | null; back_face?: unknown } | null | undefined): boolean {
+  if (!card) return false;
+  if (hasCustomSymbol(card.cost)) return true;
+  const back = card.back_face;
+  if (!back || typeof back !== "object") return false;
+  const cost = (back as { cost?: unknown }).cost;
+  return typeof cost === "string" && hasCustomSymbol(cost);
+}

@@ -1,4 +1,5 @@
 import { DECK_ENTRY_STATUS_VALUES, type DeckBoard, type DeckCardEntry, type DeckEntryStatus } from "@/types/deck";
+import type { OwnerSymbols } from "@/lib/symbols/symbol-token";
 import { effectiveEntryFields, type EffectiveEntryCard } from "@/lib/decks/effective-entry";
 import { deckEntryStatus } from "@/lib/decks/entry-status";
 
@@ -159,7 +160,7 @@ function emptyCounter<K extends string>(keys: readonly K[]): Record<K, number> {
 const COLOR_KEYS = ["W", "U", "B", "R", "G", "C"] as const;
 
 export function computeDeckAnalytics(
-  items: Array<{ entry: DeckCardEntry; card?: EffectiveEntryCard | null }>,
+  items: Array<{ entry: DeckCardEntry; card?: EffectiveEntryCard | null; ownerSymbols?: OwnerSymbols }>,
 ): DeckAnalytics {
   const byBoard = emptyCounter<DeckBoard>([
     "main",
@@ -180,7 +181,7 @@ export function computeDeckAnalytics(
   let mvTotal = 0;
   let mvSample = 0;
 
-  for (const { entry, card } of items) {
+  for (const { entry, card, ownerSymbols } of items) {
     byBoard[entry.board] += entry.quantity;
     if (entry.board === "maybe") continue;
 
@@ -191,7 +192,7 @@ export function computeDeckAnalytics(
     // printing.
     const status = deckEntryStatus(entry, card);
     byStatus[status] += entry.quantity;
-    const fields = effectiveEntryFields(entry, card, status);
+    const fields = effectiveEntryFields(entry, card, status, ownerSymbols?.meanings);
 
     if (fields.colors.length === 0) {
       // A custom card saved as "multicolor" without naming its colours is

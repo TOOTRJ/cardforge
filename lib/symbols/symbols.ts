@@ -169,3 +169,7 @@ export const symbolIdSchema = z.object({ id: z.uuid() });
 
 /** A new symbol from one of the maker's forged pips (Pip Forge). */
 export const symbolFromForgeSchema = symbolDetailsSchema.extend({ forgedPipId: z.uuid() });
+
+/** A symbol the creator's cost picker and rules toolbar offer (PR 4):
+ *  lib/symbols/queries.ts listOwnSymbolChoices. */
+export type OwnSymbolChoice = { code: string; name: string; imageUrl: string };

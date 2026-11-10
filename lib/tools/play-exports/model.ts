@@ -1,3 +1,5 @@
+import { customSymbolCodeOfInner, symbolMeaningOf, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+
 // ---------------------------------------------------------------------------
 // Play-surface exports (the `play-exports` beta tool) — the ONE shape every
 // exporter reads: a deck or a selection of cards as a play client needs it.
@@ -157,10 +159,18 @@ export function lineCount(lines: readonly PlayLine[]): number {
 }
 
 /** WUBRG letters of a cost (hybrid and Phyrexian symbols count every colour
- *  they name), in WUBRG order. */
-export function costColors(cost: string | null | undefined): ColorLetter[] {
+ *  they name), in WUBRG order. An owner's own symbol (`{*CODE}`) is the base
+ *  colour its maker declared, given the card owner's `meanings` — never the
+ *  letters of its code ({*FIRE} is not red because of its R). */
+export function costColors(cost: string | null | undefined, meanings?: SymbolMeanings | null): ColorLetter[] {
   const found = new Set<ColorLetter>();
   for (const match of (cost ?? "").matchAll(/\{([^}]*)\}/g)) {
+    const code = customSymbolCodeOfInner(match[1]);
+    if (code !== null || match[1].startsWith("*")) {
+      const color = code ? symbolMeaningOf(code, meanings)?.baseColor : null;
+      if (color) found.add(color);
+      continue;
+    }
     for (const ch of match[1].toUpperCase()) {
       if ((COLOR_LETTERS as readonly string[]).includes(ch)) found.add(ch as ColorLetter);
     }

@@ -24,6 +24,8 @@ const s = vi.hoisted(() => ({
   cardOwner: {} as Record<string, string>,
   /** A linked card's visibility, by card id (default: public). */
   cardVisibility: {} as Record<string, string>,
+  /** A linked card's cost, by card id (default: none). */
+  cardCost: {} as Record<string, string>,
   /** RPC calls made, and what the next one answers. */
   rpcCalls: [] as Array<[string, unknown]>,
   rpcAnswer: { data: null as unknown, error: null as unknown },
@@ -64,7 +66,7 @@ function client() {
           return { data: null, error: { code: "42703", message: `column cards.${s.missingColumn} does not exist` } };
         }
         const ids = (call.ops.find((op) => op[0] === "in")?.[2] ?? []) as string[];
-        return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public" })), error: null };
+        return { data: ids.map((id) => ({ id, title: id, color_identity: [], owner_id: s.cardOwner[id] ?? "owner-1", visibility: s.cardVisibility[id] ?? "public", cost: s.cardCost[id] ?? null })), error: null };
       }
       return { data: s.rows[table] ?? [], error: null, count: (s.rows[table] ?? []).length };
     };
@@ -155,6 +157,7 @@ beforeEach(() => {
   s.withCount = true;
   s.cardOwner = {};
   s.cardVisibility = {};
+  s.cardCost = {};
   s.rpcCalls = [];
   s.rpcAnswer = { data: null, error: null };
   s.missingColumn = null;
@@ -241,6 +244,38 @@ describe("listDeckCards reads a whole deck", () => {
     expect(cardCalls.map((c) => (c.ops.find((op) => op[0] === "in")?.[2] as string[]).length)).toEqual([
       100, 100, 100, 100, 50,
     ]);
+  });
+
+  it("a card whose cost names an own symbol carries its OWNER's symbols — one read for every such owner (new pips PR 4)", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.cardOwner = { "card-theirs": "artist-1" };
+    s.cardCost = { "card-own": "{1}{*FIRE}", "card-theirs": "{*ICE}", "card-plain": "{2}" };
+    s.rows.custom_symbols = [
+      { owner_id: "owner-1", code: "FIRE", image_url: "https://example.com/x.png", mana_value: 3, base_color: "R" },
+      { owner_id: "artist-1", code: "ICE", image_url: "https://example.com/y.png", mana_value: 1, base_color: "U" },
+    ];
+    s.entries = ["card-own", "card-theirs", "card-plain"].map((card_id, i) => ({
+      id: `e-${i}`, deck_id: "d", board: "main", quantity: 1, position: i, card_id, name: card_id, source: "creator",
+    }));
+    const items = await listDeckCards("d");
+    expect(items.map((item) => item.ownerSymbols?.meanings ?? null)).toEqual([
+      { FIRE: { manaValue: 3, baseColor: "R" } },
+      { ICE: { manaValue: 1, baseColor: "U" } },
+      null,
+    ]);
+    // A picture off our storage is never drawn.
+    expect(items[0]!.ownerSymbols?.pictures).toEqual({});
+    const reads = s.calls.filter((c) => c.table === "custom_symbols");
+    expect(reads).toHaveLength(1);
+    expect(reads[0]!.ops.find((op) => op[0] === "in")).toEqual(["in", "owner_id", ["owner-1", "artist-1"]]);
+  });
+
+  it("no symbol read when no card's cost names one", async () => {
+    s.rows.decks = [{ owner_id: "owner-1" }];
+    s.entries = [{ id: "e", deck_id: "d", board: "main", quantity: 1, position: 0, card_id: "c", name: "C", source: "creator" }];
+    const items = await listDeckCards("d");
+    expect(items[0]).not.toHaveProperty("ownerSymbols");
+    expect(s.calls.some((c) => c.table === "custom_symbols")).toBe(false);
   });
 
   it("another creator's card names its maker (D3); the owner's own cards and printings don't", async () => {

@@ -185,7 +185,7 @@ export function DeckPreviewPane({
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           {row.privateName ? <span>{row.privateName}</span> : null}
           {row.fields.typeLine ? <span className="min-w-0 truncate">{row.fields.typeLine}</span> : null}
-          {row.fields.cost ? <ManaCostGlyphs cost={row.fields.cost} size="sm" /> : null}
+          {row.fields.cost ? <ManaCostGlyphs cost={row.fields.cost} size="sm" overrides={row.item.ownerSymbols?.pictures} /> : null}
         </p>
         <p className="text-xs text-subtle">
           {DECK_BOARD_LABELS[row.board]} · {row.quantity} {row.quantity === 1 ? "copy" : "copies"}
