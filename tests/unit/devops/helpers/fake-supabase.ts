@@ -42,6 +42,7 @@ export function emptyDb(): Db {
     decks: t(["id"], { id: "uuid", cover_url: "text", cover_position: "jsonb" }),
     deck_cards: t(["id"], { id: "uuid", deck_id: "uuid", image_url: "text" }),
     custom_pips: t(["id"], { id: "uuid", symbol: "text", image_url: "text" }),
+    custom_symbols: t(["id"], { id: "uuid", owner_id: "uuid", code: "text", image_url: "text" }),
     challenges: t(["id"], { id: "uuid", hero_image_url: "text" }),
     ai_generation_jobs: t(["id"], { id: "uuid", request: "jsonb", plan: "jsonb", steps: "jsonb" }),
     card_idea_batches: t(["id"], { id: "uuid", request: "jsonb", ideas: "jsonb" }),

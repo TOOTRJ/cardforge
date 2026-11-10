@@ -8,6 +8,9 @@ import { CustomPipsPanel } from "@/components/settings/custom-pips-panel";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { CUSTOM_PIPS_HREF } from "@/lib/pips/href";
+import { getViewerTool } from "@/lib/tools/queries";
+import { toolHref } from "@/lib/tools/catalog";
+import { CUSTOM_SYMBOLS_SLUG } from "@/lib/symbols/symbols";
 
 // ---------------------------------------------------------------------------
 // /dashboard/tools/pips — the custom pips manager's home (owner 2026-11-06:
@@ -26,7 +29,10 @@ export const dynamic = "force-dynamic";
 export default async function CustomPipsToolPage() {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?redirectTo=${encodeURIComponent(CUSTOM_PIPS_HREF)}`);
-  const overrides = await getPipOverrides(user.id);
+  const [overrides, symbolsTool] = await Promise.all([
+    getPipOverrides(user.id),
+    getViewerTool(CUSTOM_SYMBOLS_SLUG),
+  ]);
 
   return (
     <DashboardShell readable>
@@ -45,6 +51,18 @@ export default async function CustomPipsToolPage() {
       <div className="mt-8">
         <CustomPipsPanel overrides={overrides} />
       </div>
+      {symbolsTool?.allowed ? (
+        <p className="mt-6 text-sm text-muted">
+          Need a symbol beyond these six?{" "}
+          <Link
+            href={toolHref(CUSTOM_SYMBOLS_SLUG)}
+            className="text-primary-bright underline-offset-4 hover:underline"
+          >
+            New mana symbols
+          </Link>{" "}
+          (beta) lets you make your own, written {"{*CODE}"}.
+        </p>
+      ) : null}
     </DashboardShell>
   );
 }

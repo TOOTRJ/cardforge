@@ -2,6 +2,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import { deckStatCards, type DeckAnalytics } from "@/lib/decks/analytics";
@@ -86,7 +87,7 @@ export async function generateDeckGuide(input: DeckGuideInput): Promise<DeckGuid
   // Repaired where a machine can (a seventh combo or key card cut off), else
   // asked once more; a second miss is AiOutputError.
   const { object } = await structuredCall("deck-guide", repairStructuredText(deckGuideSchema), (experimental_repairText) => generateObject({
-    model: judgeModel(),
+    ...textModelOptions(judgeModel(), 0.6),
     schema: deckGuideSchema,
     experimental_repairText,
     system: SYSTEM,
@@ -102,7 +103,6 @@ export async function generateDeckGuide(input: DeckGuideInput): Promise<DeckGuid
     ]
       .filter(Boolean)
       .join("\n"),
-    temperature: 0.6,
   }));
   return object;
 }

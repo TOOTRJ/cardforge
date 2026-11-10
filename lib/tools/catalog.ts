@@ -25,7 +25,16 @@
 // Client-safe: plain data, no server imports.
 // ---------------------------------------------------------------------------
 
-export type ToolIconKey = "collection" | "tokens" | "pip" | "set-symbol" | "customize" | "play" | "table-sheet" | "reart";
+export type ToolIconKey =
+  | "collection"
+  | "tokens"
+  | "pip"
+  | "set-symbol"
+  | "customize"
+  | "play"
+  | "table-sheet"
+  | "reart"
+  | "symbol";
 
 export type ToolDefinition = {
   /** Stable key — never rename (rows in four tables carry it). */
@@ -112,6 +121,20 @@ export const TOOL_CATALOG = [
       "Saved to your account, ready for any card",
     ],
     icon: "pip",
+    built: true,
+  },
+  {
+    slug: "custom-symbols",
+    name: "New mana symbols",
+    tagline: "Invent mana symbols beyond the six, written {*CODE} on your cards.",
+    description:
+      "Make up to 20 mana symbols of your own: a picture, a short code you write as {*CODE} in a cost or rules text, a mana value and a colour. Your cards draw your symbols for everyone who sees them, and a removed symbol stays on the cards that use it.",
+    highlights: [
+      "Your own symbols beside W, U, B, R, G and C",
+      "A mana value and a colour you choose for each one",
+      "Upload a picture, or use a pip from Pip Forge",
+    ],
+    icon: "symbol",
     built: true,
   },
   {

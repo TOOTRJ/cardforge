@@ -3,6 +3,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
+import { textModelOptions } from "@/lib/ai/sampling";
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { isKeywordName } from "@/lib/cards/keyword-reminders";
 import { containsProfanity } from "@/lib/moderation/profanity";
@@ -158,7 +159,7 @@ export async function designColourCard(input: {
     input.signal?.throwIfAborted();
     const { object } = await structuredCall("pip-forge-colour", repairStructuredText(answerSchema), (experimental_repairText) =>
       generateObject({
-        model: judgeModel(),
+        ...textModelOptions(judgeModel(), 0.9),
         schema: answerSchema,
         experimental_repairText,
         abortSignal: input.signal,
@@ -173,7 +174,6 @@ export async function designColourCard(input: {
         ]
           .filter(Boolean)
           .join("\n"),
-        temperature: 0.9,
       }),
     );
     const result = cardFromAnswer(object);
