@@ -7,6 +7,8 @@ import {
   prepareScoringCards,
   rankCommanders,
   scoreCommander,
+  scoringPlan,
+  tribeKey,
   type ScoringCard,
 } from "@/lib/tools/collection/commander-scores";
 
@@ -130,3 +132,47 @@ describe("rankCommanders / describeSupport", () => {
     );
   });
 });
+
+describe("the plan the scores count (stricter than the drafter's weighting)", () => {
+  it("reads creature-type words to their singular", () => {
+    expect(tribeKey("Goblins")).toBe("goblin");
+    expect(tribeKey("Allies")).toBe("ally");
+    expect(tribeKey("Foxes")).toBe("fox");
+    expect(tribeKey("Sphinxes")).toBe("sphinx");
+    expect(tribeKey("Elves")).toBe("elf");
+    expect(tribeKey("Octopus")).toBe("octopus");
+    expect(tribeKey("Wizard")).toBe("wizard");
+  });
+
+  it("a type only on the type line is no plan — the text must name it", () => {
+    const teysa = {
+      typeLine: "Legendary Creature — Human Advisor",
+      oracleText: "If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+    };
+    expect(scoringPlan(teysa).tribes).toEqual([]);
+    expect(scoringPlan({ typeLine: "Legendary Creature — Goblin Warrior", oracleText: KRENKO.oracleText }).tribes).toEqual(["goblin"]);
+    expect(
+      scoringPlan({ typeLine: "Legendary Creature — Kor Ally", oracleText: "Whenever another Ally you control enters, draw a card. Allies you control get +1/+1." }).tribes,
+    ).toEqual(["ally"]);
+  });
+
+  it("a theme only in its own keyword line is no plan", () => {
+    const atraxa = {
+      typeLine: "Legendary Creature — Phyrexian Angel Horror",
+      oracleText: "Flying, vigilance, deathtouch, lifelink\nAt the beginning of your end step, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+    };
+    const plan = scoringPlan(atraxa);
+    expect([...plan.themes]).toEqual(["counters"]);
+    // So a pile of flyers and lifelinkers doesn't "fit" Atraxa.
+    const s = scoreCommander(
+      { name: "Atraxa", colorIdentity: ["W", "U", "B", "G"], ...atraxa },
+      prepareScoringCards([
+        card("Serra Angel", "Creature — Angel", "Flying, vigilance", ["W"]),
+        card("Vampire Nighthawk", "Creature — Vampire Shaman", "Flying, deathtouch, lifelink", ["B"]),
+        card("Hardened Scales", "Enchantment", "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.", ["G"]),
+      ]),
+    );
+    expect(s.fit).toBe(1);
+  });
+});
+

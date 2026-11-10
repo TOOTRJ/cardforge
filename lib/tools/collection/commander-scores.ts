@@ -26,8 +26,12 @@ import {
 //
 //   * inColours — the non-land cards it could play;
 //   * fit       — of those, the ones that play into ITS plan: a theme its
-//                 text rewards (tokens, counters, sacrifice …) or one of its
-//                 creature types (a changeling is every type);
+//                 rules text rewards (tokens, counters, sacrifice …) or a
+//                 creature type its text names (a changeling is every
+//                 type). Stricter than the drafter's soft weighting: a type
+//                 that is only on its type line ("Human Advisor") and a
+//                 theme that is only one of its own keywords ("Flying,
+//                 lifelink") don't count — every Human or flyer would fit;
 //   * roles     — ramp, card draw, removal and sweepers among them;
 //   * lands     — the non-basic lands it could play;
 //   * score     — 0–100: plan support (45 %), role coverage against the
@@ -70,12 +74,60 @@ export function identityMask(identity: readonly string[]): number {
 }
 
 /** Plural and irregular creature-type words → the singular a type line uses. */
-const IRREGULAR: Record<string, string> = { elves: "elf", dwarves: "dwarf", wolves: "wolf", werewolves: "werewolf", mice: "mouse" };
+const IRREGULAR: Record<string, string> = {
+  elves: "elf",
+  dwarves: "dwarf",
+  wolves: "wolf",
+  werewolves: "werewolf",
+  mice: "mouse",
+  octopi: "octopus",
+};
 
-function tribeKey(word: string): string {
+/** "Goblins" → goblin, "Allies" → ally, "Foxes" / "Sphinxes" → fox / sphinx. */
+export function tribeKey(word: string): string {
   const w = word.toLowerCase();
   if (IRREGULAR[w]) return IRREGULAR[w];
-  return w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w;
+  if (w.length > 4 && w.endsWith("ies")) return `${w.slice(0, -3)}y`;
+  if (w.length > 4 && /(x|ch|sh|ss|z)es$/.test(w)) return w.slice(0, -2);
+  return w.length > 3 && w.endsWith("s") && !/(ss|us)$/.test(w) ? w.slice(0, -1) : w;
+}
+
+/** The words a text may name a creature type by: "goblin", "goblins";
+ *  "ally", "allies"; "fox", "foxes"; "elf", "elves". */
+function namesOf(key: string): string[] {
+  const forms = [key, `${key}s`, `${key}es`];
+  if (key.endsWith("y")) forms.push(`${key.slice(0, -1)}ies`);
+  for (const [plural, one] of Object.entries(IRREGULAR)) if (one === key) forms.push(plural);
+  return forms;
+}
+
+/** A keyword line ("Flying, vigilance, deathtouch, lifelink"; "First
+ *  strike, haste"): words and commas, no sentence. */
+const KEYWORD_LINE = /^[A-Za-z' -]+(?:, [A-Za-z' -]+)*$/;
+
+function textOf(card: Pick<CollectionCard, "oracleText">): string {
+  return (card.oracleText ?? "").replace(/\([^)]*\)/g, "");
+}
+
+/** What a commander's plan is, for the scores: the themes its rules text
+ *  rewards (keyword lines left out) and the creature types its text names
+ *  (as singular keys). */
+export function scoringPlan(commander: Pick<CollectionCard, "typeLine" | "oracleText">): {
+  themes: ReadonlySet<string>;
+  tribes: readonly string[];
+} {
+  const text = textOf(commander);
+  const rules = text
+    .split("\n")
+    .filter((line) => !KEYWORD_LINE.test(line.trim()))
+    .join("\n");
+  const themes = new Set(commanderThemes({ oracleText: rules }));
+  const lower = text.toLowerCase();
+  const words = new Set(lower.match(/[a-z][a-z'-]*/g) ?? []);
+  const tribes = [...new Set(commanderTribes(commander).map(tribeKey))].filter((key) =>
+    namesOf(key).some((form) => words.has(form)),
+  );
+  return { themes, tribes };
 }
 
 type Prepared = {
@@ -116,8 +168,7 @@ export function scoreCommander(
 ): CommanderSupport {
   const own = cardKey(commander.name);
   const mask = identityMask(commander.colorIdentity);
-  const themes = new Set(commanderThemes(commander));
-  const tribes = new Set(commanderTribes(commander).map(tribeKey));
+  const { themes, tribes } = scoringPlan(commander);
   const roles: Record<ScoredRole, number> = { ramp: 0, draw: 0, removal: 0, wipe: 0 };
   let inColours = 0;
   let fit = 0;
@@ -133,7 +184,7 @@ export function scoreCommander(
       inColours += 1;
       if (card.role !== "core" && card.role !== "land") roles[card.role] += 1;
       const onTheme = card.themes.some((t) => themes.has(t));
-      const onTribe = tribes.size > 0 && (card.changeling || [...card.types].some((t) => tribes.has(t)));
+      const onTribe = tribes.length > 0 && (card.changeling || tribes.some((t) => card.types.has(t)));
       if (onTheme || onTribe) fit += 1;
     }
   }

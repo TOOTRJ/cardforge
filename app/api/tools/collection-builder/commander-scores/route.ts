@@ -31,7 +31,7 @@ export async function GET() {
     );
   }
   try {
-    const [commanders, cards] = await Promise.all([listOwnedCommanders(), listScoringCards()]);
+    const [commanders, cards] = await Promise.all([listOwnedCommanders({ throwOnError: true }), listScoringCards()]);
     const scores = rankCommanders(
       commanders.filter((c) => c.commanderLegal),
       cards,

@@ -39,19 +39,38 @@ export function lastAiDraftKey(viewerId: string): string {
   return `${KEY_PREFIX}${viewerId}`;
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** Everything the draft review reads, checked — a kept draft of another
+ *  shape (an older build of the page) must be dropped, never drawn: the
+ *  review would throw and take the page with it. */
 function isStored(value: unknown): value is StoredAiDraft {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Partial<StoredAiDraft>;
+  if (!isRecord(value)) return false;
+  const draft = value.draft;
+  if (
+    typeof value.savedAt !== "string" ||
+    typeof value.commanderId !== "string" ||
+    typeof value.collectionSize !== "number" ||
+    typeof value.truncated !== "boolean" ||
+    !isRecord(draft)
+  ) {
+    return false;
+  }
+  const commander = draft.commander;
+  const pickOk = (p: unknown) =>
+    isRecord(p) && typeof p.cardId === "string" && typeof p.name === "string" && typeof p.role === "string";
+  const basicOk = (b: unknown) => isRecord(b) && typeof b.name === "string" && typeof b.count === "number";
   return (
-    typeof v.savedAt === "string" &&
-    typeof v.commanderId === "string" &&
-    typeof v.collectionSize === "number" &&
-    typeof v.truncated === "boolean" &&
-    !!v.draft &&
-    typeof v.draft === "object" &&
-    Array.isArray(v.draft.picks) &&
-    Array.isArray(v.draft.basics) &&
-    !!v.draft.commander
+    pickOk(commander) &&
+    Array.isArray(draft.picks) &&
+    draft.picks.every(pickOk) &&
+    Array.isArray(draft.basics) &&
+    draft.basics.every(basicOk) &&
+    Array.isArray(draft.curve) &&
+    draft.curve.every((n) => typeof n === "number") &&
+    isRecord(draft.counts) &&
+    Array.isArray(draft.warnings) &&
+    typeof draft.total === "number"
   );
 }
 

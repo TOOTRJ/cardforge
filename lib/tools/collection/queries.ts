@@ -120,8 +120,10 @@ export async function listCollectionPage(query: CollectionQuery): Promise<Collec
   };
 }
 
-/** Every commander the user owns (legal ones first), for the builder. */
-export async function listOwnedCommanders(): Promise<CollectionCard[]> {
+/** Every commander the user owns (legal ones first), for the builder. A
+ *  failed read is an empty list — unless `throwOnError` (the ranking
+ *  route, which must not answer "ranked" over nothing). */
+export async function listOwnedCommanders(options: { throwOnError?: boolean } = {}): Promise<CollectionCard[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("collection_cards")
@@ -131,6 +133,7 @@ export async function listOwnedCommanders(): Promise<CollectionCard[]> {
     .order("name")
     .limit(1000);
   if (error) {
+    if (options.throwOnError) throw new Error(`commanders read failed: ${error.message}`);
     console.error("[collection] commanders read failed:", error.message);
     return [];
   }
@@ -180,15 +183,21 @@ export async function listBuilderPool(commander: CollectionCard): Promise<{ card
 export async function listScoringCards(): Promise<ScoringCard[]> {
   const supabase = await createClient();
   const cards: ScoringCard[] = [];
-  for (let from = 0; from < COLLECTION_CARD_CAP; from += READ_PAGE) {
-    const { data, error } = await supabase
+  // Keyset pages (after the last id read), never offsets: a page costs the
+  // same however deep into the collection it is.
+  let after: string | null = null;
+  for (let read = 0; read < COLLECTION_CARD_CAP; read += READ_PAGE) {
+    let request = supabase
       .from("collection_cards")
-      .select("name, type_line, oracle_text, color_identity, commander_legal")
+      .select("id, name, type_line, oracle_text, color_identity, commander_legal")
       .eq("commander_legal", true)
       .order("id")
-      .range(from, from + READ_PAGE - 1);
+      .limit(READ_PAGE);
+    if (after) request = request.gt("id", after);
+    const { data, error } = await request;
     if (error) throw new Error(`scoring read failed: ${error.message}`);
     const rows = (data ?? []) as Array<{
+      id: string;
       name: string;
       type_line: string | null;
       oracle_text: string | null;
@@ -205,6 +214,7 @@ export async function listScoringCards(): Promise<ScoringCard[]> {
       });
     }
     if (rows.length < READ_PAGE) return cards;
+    after = rows[rows.length - 1].id;
   }
   return cards;
 }

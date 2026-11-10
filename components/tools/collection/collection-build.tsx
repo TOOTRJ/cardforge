@@ -174,6 +174,7 @@ export function CollectionBuild({
   // "Change commander" unfolds the list in its place: the focus goes to the
   // list's heading, not <body>, when the button it was on goes away.
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const focusListOnOpen = useRef(false);
   useEffect(() => {
     if (listOpen && focusListOnOpen.current) {
@@ -231,16 +232,15 @@ export function CollectionBuild({
     (c) => (!query || c.name.toLowerCase().includes(query)) && identityMatchesColours(c.colorIdentity, colours),
   );
   const folded = !expanded && !filtering;
-  // A picked commander past every width's two rows (picked through the
-  // address, or a kept draft) is shown first while the list is folded.
-  const pickedAt = commander ? matching.findIndex((c) => c.id === commander.id) : -1;
-  const shown =
-    folded && pickedAt >= FOLDED_ROWS_MAX
-      ? [matching[pickedAt], ...matching.slice(0, pickedAt), ...matching.slice(pickedAt + 1)]
-      : matching;
+  // The picked commander is never folded away (picked through the address,
+  // a kept draft, or re-sorted by the scores): it stays where the list puts
+  // it, shown at every width — a hidden checked radio would take the whole
+  // group out of the Tab order, and nobody would see which one is picked.
+  const shown = matching;
 
   const pick = (card: CollectionCard) => {
-    if (!card.commanderLegal) return;
+    // Not mid-draft: the draft that lands must match the bar's commander.
+    if (!card.commanderLegal || working) return;
     setCommanderId(card.id);
     setDraft(null);
     setError(null);
@@ -322,6 +322,9 @@ export function CollectionBuild({
   const dismissKept = () => {
     clearLastAiDraft(viewerId);
     setKept(null);
+    // The notice (and the button pressed) goes: the focus goes to the
+    // section's heading, never <body>.
+    headingRef.current?.focus();
   };
 
   const aiOff = !aiAvailable
@@ -340,7 +343,12 @@ export function CollectionBuild({
     <div className="flex min-w-0 flex-col gap-8">
       <section aria-labelledby={ids.heading} className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <h2 id={ids.heading} className="font-display text-xl font-semibold text-foreground">
+          <h2
+            ref={headingRef}
+            tabIndex={-1}
+            id={ids.heading}
+            className="font-display text-xl font-semibold text-foreground focus:outline-none"
+          >
             Pick your commander
           </h2>
           <p className="text-sm text-muted">
@@ -533,7 +541,7 @@ export function CollectionBuild({
                         "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-bright/60",
                         active && "bg-primary/15 ring-2 ring-primary",
                         off && "cursor-not-allowed opacity-50",
-                        folded && foldedTileClass(index),
+                        folded && !active && foldedTileClass(index),
                       )}
                     >
                       <input

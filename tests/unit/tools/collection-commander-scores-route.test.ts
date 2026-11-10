@@ -53,6 +53,8 @@ describe("commander scores route", () => {
     expect(body.ok).toBe(true);
     expect(Object.keys(body.scores)).toEqual(["k"]);
     expect(body.scores.k.fit).toBe(1);
+    // A failed commanders read must not answer "ranked over nothing".
+    expect(m.commanders).toHaveBeenCalledWith({ throwOnError: true });
   });
 
   it("a failed read answers 503", async () => {

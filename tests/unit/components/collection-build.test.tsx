@@ -220,6 +220,31 @@ describe("the commander list", () => {
     expect(radios().every((r) => !(r.closest("label") as HTMLElement).className.match(/(^|\s)hidden(\s|$)/))).toBe(true);
   });
 
+  it("the picked commander is never folded away, and stays where the list puts it", async () => {
+    // Commander 01 sorts last (least supported): picked through the address.
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    const picked = radios().find((r) => r.value === COMMANDERS[0].id) as HTMLInputElement;
+    expect(radios().indexOf(picked)).toBe(19);
+    expect(picked.checked).toBe(true);
+    expect((picked.closest("label") as HTMLElement).className).not.toMatch(/(^|\s)hidden(\s|$)/);
+  });
+
+  it("a pick is ignored while a draft is being made", async () => {
+    let finish: (value: unknown) => void = () => {};
+    m.draft.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderBuild({ initialCommanderId: COMMANDERS[19].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(draftButton());
+    });
+    fireEvent.click(radios().find((r) => r.value === COMMANDERS[18].id) as HTMLInputElement);
+    expect((radios().find((r) => r.value === COMMANDERS[19].id) as HTMLInputElement).checked).toBe(true);
+    await act(async () => {
+      finish({ ok: true, draft: draftFor(COMMANDERS[19]), truncated: false });
+    });
+  });
+
   it("foldedTileClass gives two rows of each grid width", () => {
     expect(foldedTileClass(5)).toBeUndefined();
     expect(foldedTileClass(6)).toBe("hidden @xl:flex");
@@ -292,6 +317,8 @@ describe("the AI draft this browser keeps", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(window.localStorage.getItem(lastAiDraftKey("viewer-1"))).toBeNull();
     expect(screen.queryByText(/You have an unsaved AI build for/)).toBeNull();
+    // The button went with the notice: the focus goes to the heading.
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Pick your commander" }));
   });
 
   it("is not offered for a collection that changed", async () => {

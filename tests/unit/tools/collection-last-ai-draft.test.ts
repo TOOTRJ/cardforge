@@ -71,8 +71,16 @@ describe("the kept AI draft", () => {
     expect(storage.map.size).toBe(0);
   });
 
-  it("drops what isn't a draft", () => {
-    for (const raw of ["not json", JSON.stringify({ savedAt: "x" }), JSON.stringify(null)]) {
+  it("drops what isn't a draft, or a draft of another shape the review can't draw", () => {
+    const { curve: _curve, ...noCurve } = DRAFT;
+    for (const raw of [
+      "not json",
+      JSON.stringify({ savedAt: "x" }),
+      JSON.stringify(null),
+      JSON.stringify(stored({ draft: noCurve as unknown as CommanderDraft })),
+      JSON.stringify(stored({ draft: { ...DRAFT, picks: [{ cardId: 1 }] } as unknown as CommanderDraft })),
+      JSON.stringify(stored({ draft: { ...DRAFT, commander: null } as unknown as CommanderDraft })),
+    ]) {
       const storage = memoryStorage({ [lastAiDraftKey("u1")]: raw });
       expect(readLastAiDraft("u1", context, storage)).toBeNull();
       expect(storage.map.size).toBe(0);
