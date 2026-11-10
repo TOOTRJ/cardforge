@@ -42,6 +42,9 @@ const state = vi.hoisted(() => ({
   limitChecks: 0,
   /** Per insert: the answer, in order (default: an id). */
   inserts: [] as ChainAnswer[],
+  /** Codes a card of the remixer names (0193's in-use check). */
+  inUse: new Set<string>(),
+  copyThrows: false,
   chain: null as null | ReturnType<typeof import("@/tests/stubs/supabase-chain").chainClient>,
 }));
 
@@ -49,9 +52,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => ({
     from: (table: string) => state.chain!.client.from(table),
+    rpc: async (fn: string, args: { p_owner: string; p_code: string }) =>
+      fn === "custom_symbol_in_use" ? { data: state.inUse.has(args.p_code), error: null } : { data: null, error: { message: "no" } },
     storage: {
       from: (bucket: string) => ({
         copy: async (from: string, to: string) => {
+          if (state.copyThrows && state.copies.length > 0) throw new Error("network");
           state.copies.push({ from: `${bucket}:${from}`, to: `${bucket}:${to}` });
           return state.copyError ? { data: null, error: state.copyError } : { data: { path: to }, error: null };
         },
@@ -79,7 +85,12 @@ vi.mock("@/lib/media/upload-rate-limit", async (importOriginal) => {
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({}) }));
 vi.mock("@/lib/tools/queries", () => ({ getViewerTool: async () => null }));
 
-import { adoptRemixSymbols, REMIX_SYMBOLS_FAILED_MESSAGE, REMIX_SYMBOLS_FULL_MESSAGE } from "@/lib/symbols/remix-copy";
+import {
+  adoptRemixSymbols,
+  carriedSymbolCodes,
+  REMIX_SYMBOLS_FAILED_MESSAGE,
+  REMIX_SYMBOLS_FULL_MESSAGE,
+} from "@/lib/symbols/remix-copy";
 import { remixedSymbolCodes, remixSymbolsMessage, symbolCodesNamedBy, withRemixParentSymbols } from "@/lib/symbols/remix";
 
 let insertIndex = 0;
@@ -108,6 +119,8 @@ beforeEach(() => {
   state.limited = false;
   state.limitChecks = 0;
   state.inserts = [];
+  state.inUse = new Set();
+  state.copyThrows = false;
   insertIndex = 0;
   state.chain = chainClient(resolve);
 });
@@ -136,6 +149,15 @@ describe("the codes a remix carries", () => {
     expect(remixedSymbolCodes(parent, { cost: "{*FIRE}", rules_text: "{*NEW} and {*BUG}" })).toEqual(["FIRE", "BUG"]);
     expect(remixedSymbolCodes(null, { cost: "{*FIRE}" })).toEqual([]);
   });
+
+  it("the save carries only what the card draws or prints through ~ — never back flavour or a hidden cost", () => {
+    const both = { ...parent, title: "{*BUG} Pyre", back_face: { flavor_text: "{*FIRE}" } };
+    expect(carriedSymbolCodes(both, { title: "Pyre", back_face: { flavor_text: "{*FIRE}" } })).toEqual([]);
+    expect(carriedSymbolCodes(both, { title: "{*BUG} Pyre" })).toEqual(["BUG"]);
+    // A land's cost is never drawn.
+    expect(carriedSymbolCodes(both, { cost: "{*FIRE}", frame_style: { template: "m15land" } })).toEqual([]);
+    expect(carriedSymbolCodes(both, { cost: "{*FIRE}", frame_style: { template: "m15" } })).toEqual(["FIRE"]);
+  });
 });
 
 describe("the creator's view of a remix's symbols", () => {
@@ -149,6 +171,11 @@ describe("the creator's view of a remix's symbols", () => {
     const view = withRemixParentSymbols(own, theirs, ["FIRE", "BUG"]);
     expect(view.pictures).toEqual({ "*BUG": "mine-bug.png", R: "mine-red.png", "*FIRE": "their-fire.png" });
     expect(view.meanings).toEqual({ BUG: { manaValue: 5, baseColor: "G" }, FIRE: { manaValue: 3, baseColor: "R" } });
+  });
+
+  it("never accepts a parent code whose picture the app can't trust (the save won't copy it)", () => {
+    const view = withRemixParentSymbols(own, { pictures: {}, meanings: theirs.meanings }, ["FIRE"]);
+    expect(view.meanings).not.toHaveProperty("FIRE");
   });
 
   it("is the remixer's own without a parent map or codes", () => {
@@ -235,6 +262,27 @@ describe("adoptRemixSymbols", () => {
     const result = await adoptRemixSymbols(ME, parent, { cost: "{*FIRE}" });
     expect(result).toMatchObject({ ok: true, notice: { copied: [], keptYours: ["FIRE"] } });
     expect(state.removed.flat()).toHaveLength(1);
+  });
+
+  it("a throw part-way takes back the copies before it", async () => {
+    state.copyThrows = true;
+    const result = await adoptRemixSymbols(ME, parent, { cost: "{*FIRE}{*BUG}" });
+    expect(result).toEqual({ ok: false, error: REMIX_SYMBOLS_FAILED_MESSAGE });
+    const deleted = state.chain!.forTable("custom_symbols").find((e) => e.calls.some((c) => c.method === "delete"));
+    expect(deleted?.calls.find((c) => c.method === "in")?.args).toEqual(["id", ["new-0"]]);
+  });
+
+  it("its undo keeps a copy another card of the remixer's names by then", async () => {
+    const result = await adoptRemixSymbols(ME, parent, { cost: "{*FIRE}{*BUG}" });
+    if (!result.ok) throw new Error("expected ok");
+    state.inUse = new Set(["FIRE"]);
+    await result.undo();
+    const deleted = state.chain!.forTable("custom_symbols").find((e) => e.calls.some((c) => c.method === "delete"));
+    expect(deleted?.calls.find((c) => c.method === "in")?.args).toEqual(["id", ["new-1"]]);
+    expect(state.removed.flat()).toHaveLength(1);
+    // Run once: a second undo does nothing.
+    await result.undo();
+    expect(state.chain!.forTable("custom_symbols").filter((e) => e.calls.some((c) => c.method === "delete"))).toHaveLength(1);
   });
 
   it("refuses when a picture can't be copied, or the symbols can't be read", async () => {

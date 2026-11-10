@@ -57,10 +57,13 @@ export function withRemixParentSymbols(
   for (const code of codes) {
     const key = customSymbolKey(code);
     if (own.meanings[code] || own.pictures[key]) continue;
+    // Both or neither: a symbol whose picture the app can't trust is never
+    // copied, so the form must not accept its code either.
     const picture = parent.pictures[key];
     const meaning = parent.meanings[code];
-    if (picture) pictures[key] = picture;
-    if (meaning) meanings[code] = meaning;
+    if (!picture || !meaning) continue;
+    pictures[key] = picture;
+    meanings[code] = meaning;
   }
   return { pictures, meanings };
 }

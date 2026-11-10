@@ -1387,12 +1387,13 @@ Rules and gotchas:
   (`readOwnerSymbolsOf` → `DeckItem.ownerSymbols`, the play exports'
   `BuildContext.symbols`) — never a code's letters as colours. PR 5: a
   remix of ANOTHER maker's card brings the parent owner's symbols it names
-  (codes the remix AND its parent name, `remixedSymbolCodes`) into the
+  (codes the remix DRAWS or prints through `~` that its parent names too,
+  `carriedSymbolCodes`) into the
   remixer's set before the save's symbol check (`adoptRemixSymbols`,
   `lib/symbols/remix-copy.ts`: a new picture in their folder, one upload
   counted, the row written by the service role whatever their tool access;
-  kept REMOVED at 20 live, refused at 60 rows, all taken back when the card
-  isn't saved); a code the remixer already has stays THEIRS, and the
+  kept REMOVED at 20 live, refused at 60 rows, taken back when the card
+  isn't saved — but one another card of theirs names by then); a code the remixer already has stays THEIRS, and the
   creator shows the remix that way (`withRemixParentSymbols`) and says so
   (`remixSymbolsMessage`). `docs/FRAMES.md` "The owner's own symbols".
 - Print typography (TODO 6.11): `printTypography(text, field)`
