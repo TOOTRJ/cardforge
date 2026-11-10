@@ -16,7 +16,8 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
-import { getPipOverrides, getSymbolMeanings } from "@/lib/pips/queries";
+import { getPipOverrides, getSymbolMeanings, readOwnerSymbolsOf } from "@/lib/pips/queries";
+import { symbolCodesNamedBy, withRemixParentSymbols } from "@/lib/symbols/remix";
 import { listOwnSymbolChoices } from "@/lib/symbols/queries";
 import { getCurrentChallenge } from "@/lib/challenges/queries";
 import { getCardById, getFantasyGameSystem } from "@/lib/cards/queries";
@@ -215,14 +216,26 @@ export default async function CreatePage({
         })
       : null;
 
+  // A remix of another maker's card shows the parent owner's symbols it
+  // names — the save copies them into the remixer's set, a code the remixer
+  // already has staying theirs (new pips PR 5, lib/symbols/remix.ts).
+  const remixParentCodes =
+    remixParent && remixParent.owner_id !== user.id ? symbolCodesNamedBy(remixParent) : [];
+
   // The maker's pips and own symbols, read together: the picture map and the
   // meanings share one custom_symbols read; the choices only while the tool
   // is open to them (new pips PR 4).
-  const [pipOverrides, symbolMeanings, ownSymbols] = await Promise.all([
+  const [ownPipOverrides, ownSymbolMeanings, ownSymbols, parentSymbols] = await Promise.all([
     getPipOverrides(user.id),
     getSymbolMeanings(user.id),
     listOwnSymbolChoices(user.id),
+    remixParent && remixParentCodes.length > 0 ? readOwnerSymbolsOf([remixParent.owner_id]) : null,
   ]);
+  const { pictures: pipOverrides, meanings: symbolMeanings } = withRemixParentSymbols(
+    { pictures: ownPipOverrides, meanings: ownSymbolMeanings },
+    remixParent ? parentSymbols?.get(remixParent.owner_id) : null,
+    remixParentCodes,
+  );
 
   return (
     // The creator keeps the standard frame until its redesign (TODO WD7,

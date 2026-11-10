@@ -395,6 +395,7 @@ import {
 } from "@/components/creator/panels/anatomy-panel";
 import { cardFormSchemaFor } from "@/lib/creator/form-schema";
 import { customSymbolCodesIn, type SymbolMeanings } from "@/lib/symbols/symbol-token";
+import { remixSymbolsMessage } from "@/lib/symbols/remix";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
@@ -4639,6 +4640,11 @@ export function CardCreatorForm({
         if (result.deckEntryError) {
           toast.error(`Not added to the deck: ${result.deckEntryError}`);
         }
+        // A remix of another maker's card brought their symbols into the
+        // maker's set, or used the maker's own where a code clashed (new pips
+        // PR 5) — one toast says which.
+        const symbolsNotice = remixSymbolsMessage(result.remixSymbols);
+        if (symbolsNotice) toast.info(symbolsNotice);
         // Every create leaves this page: stop guarding and take the Back
         // sentinel off first, so Back from the saved card doesn't land on a
         // blank /create (TODO 3b.7).
