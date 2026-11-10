@@ -319,10 +319,12 @@ export function normalizeManaCostWithSymbols(cost: string): string {
   if (own.length === 0) return normalizeManaCost(cost);
   if (cost.replace(/\{[^}]*\}/g, "").trim() !== "") return cost;
   const rest = tokens.filter((match) => !own.includes(match)).map((match) => match[0]).join("");
-  const sorted = rest ? normalizeManaCost(rest) : "";
+  // A lone {0} beside an own symbol goes, as it does beside any other mana
+  // (normalizeManaCost keeps it only when it is the whole cost).
+  const sorted = rest ? normalizeManaCost(rest).replace(/^\{0\}$/, "") : "";
   // The standard part must have sorted (normalizeManaCost leaves anything
   // outside its grammar alone — and so does this).
-  if (rest && sorted === rest && [...rest.matchAll(/\{([^}]*)\}/g)].some((match) => parseToken(match[1]) === null)) {
+  if (rest && [...rest.matchAll(/\{([^}]*)\}/g)].some((match) => parseToken(match[1]) === null)) {
     return cost;
   }
   const symbols = own.map((match) => match[0]).join("");

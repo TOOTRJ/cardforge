@@ -796,16 +796,18 @@ async function readDeckItems<
       new Set([...cardById.values()].map((card) => card.owner_id).filter((id) => id !== deckOwnerId)),
     );
     const usernameOf = new Map<string, string | null>();
-    if (makerIds.length > 0) {
-      const { data: makers } = await supabase.from("profiles").select("id, username").in("id", makerIds);
-      for (const maker of makers ?? []) usernameOf.set(maker.id, maker.username ?? null);
-    }
-
-    // The makers' own mana symbols, one read for every owner whose card's
-    // cost names one (PR 4): what they count and how the list draws them.
-    const symbolsOf = await readOwnerSymbolsOf(
-      [...cardById.values()].filter((card) => costNamesCustomSymbol(card)).map((card) => card.owner_id),
-    );
+    // Beside it, the makers' own mana symbols: one read for every owner whose
+    // card's cost names one (PR 4) — what they count and how the list draws
+    // them.
+    const [makers, symbolsOf] = await Promise.all([
+      makerIds.length > 0
+        ? supabase.from("profiles").select("id, username").in("id", makerIds).then(({ data }) => data)
+        : Promise.resolve(null),
+      readOwnerSymbolsOf(
+        [...cardById.values()].filter((card) => costNamesCustomSymbol(card)).map((card) => card.owner_id),
+      ),
+    ]);
+    for (const maker of makers ?? []) usernameOf.set(maker.id, maker.username ?? null);
 
     return entries.map((row) => {
       const card = row.card_id ? (cardById.get(row.card_id) ?? null) : null;

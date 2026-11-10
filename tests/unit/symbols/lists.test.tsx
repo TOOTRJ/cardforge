@@ -15,6 +15,7 @@ import { OwnSymbolsProvider, type OwnSymbolChoice } from "@/components/cards/own
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import type { DeckCardEntry } from "@/types/deck";
 import { CARD_COST_MAX } from "@/lib/validation/card";
+import { publicDeckItems } from "@/lib/decks/private-card-name";
 import { BASE_URL, OTHER, OWNER, cardRow } from "../tools/play-exports-fixtures";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,15 @@ describe("the picker's order", () => {
     expect(normalizeManaCostWithSymbols("{*FIRE}{G}{1}{*BUG}{1}")).toBe("{2}{G}{*FIRE}{*BUG}");
     expect(normalizeManaCostWithSymbols("{T}{*fire}{U}")).toBe("{U}{*fire}{T}");
     expect(normalizeManaCostWithSymbols("{*FIRE}")).toBe("{*FIRE}");
+  });
+
+  it("drops a lone {0} beside an own symbol, as beside any other mana", () => {
+    // The stepper at 0, "Add", then the symbol: never a printed "0".
+    expect(normalizeManaCostWithSymbols("{0}{*FIRE}")).toBe("{*FIRE}");
+    expect(normalizeManaCostWithSymbols("{*FIRE}{0}")).toBe("{*FIRE}");
+    expect(normalizeManaCost("{0}{R}")).toBe("{R}");
+    // A {0} on its own is still a cost (Ornithopter).
+    expect(normalizeManaCostWithSymbols("{0}")).toBe("{0}");
   });
 
   it("is normalizeManaCost's answer without an own symbol, and leaves anything outside the grammar alone", () => {
@@ -125,7 +135,10 @@ describe("the rules toolbar", () => {
     const form = read("components/creator/card-creator-form.tsx");
     expect(form.match(/<OwnSymbolsProvider symbols=\{ownSymbols\}>/g)).toHaveLength(2);
     for (const page of ["app/(app)/create/page.tsx", "app/(app)/card/[username]/edit/page.tsx"]) {
-      expect(read(page)).toContain("ownSymbols={await listOwnSymbolChoices(user.id)}");
+      // Read beside the pips and the meanings (one Promise.all), never a
+      // serial await in the JSX.
+      expect(read(page)).toMatch(/await Promise\.all\(\[\s*getPipOverrides\(user\.id\),\s*getSymbolMeanings\(user\.id\),\s*listOwnSymbolChoices\(user\.id\),\s*\]\)/);
+      expect(read(page)).toContain("ownSymbols={ownSymbols}");
     }
     const queries = read("lib/symbols/queries.ts");
     expect(queries).toMatch(/getViewerTool\(CUSTOM_SYMBOLS_SLUG\)[\s\S]*if \(!tool\?\.allowed\) return \[\];/);
@@ -194,6 +207,11 @@ describe("decks", () => {
     expect(costColorSymbols("{*BUG}")).toMatchObject({ B: 0, U: 0, G: 0 });
   });
 
+  it("a visitor's masked list keeps each row's owner symbols", () => {
+    const items = [{ entry: entry(), card: deckCard(), ownerSymbols: SYMBOLS, cardOwner: null }];
+    expect(publicDeckItems(items, false)[0]!.ownerSymbols).toBe(SYMBOLS);
+  });
+
   it("the deck rows draw the owner's pictures in the cost", () => {
     for (const file of ["components/decks/deck-card-views.tsx", "components/decks/deck-preview-pane.tsx", "components/decks/deck-card-modal.tsx"]) {
       expect(read(file)).toMatch(/overrides=\{(row\.)?item\.ownerSymbols\?\.pictures\}/);
@@ -228,6 +246,16 @@ describe("play exports", () => {
 });
 
 describe("the batched read", () => {
+  it("reads nothing for no owners, and a failed read is an empty map (every code then counts 0)", async () => {
+    const { readOwnerSymbolsOf } = await import("@/lib/pips/queries");
+    expect((await readOwnerSymbolsOf([])).size).toBe(0);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // The mocked client has no `from`: the read throws.
+    expect((await readOwnerSymbolsOf([OWNER])).size).toBe(0);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it("groups the rows by owner: meanings by the table's CHECKs, pictures only the owner's own objects", async () => {
     const { ownerSymbolsFromRows } = await import("@/lib/pips/queries");
     const pic = (owner: string) => `https://zkwkisxoqdhdchqyjwdc.supabase.co/storage/v1/object/public/custom-pips/${owner}/sym-1.png?v=1`;

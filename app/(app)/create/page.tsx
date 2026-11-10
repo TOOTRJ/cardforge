@@ -215,6 +215,15 @@ export default async function CreatePage({
         })
       : null;
 
+  // The maker's pips and own symbols, read together: the picture map and the
+  // meanings share one custom_symbols read; the choices only while the tool
+  // is open to them (new pips PR 4).
+  const [pipOverrides, symbolMeanings, ownSymbols] = await Promise.all([
+    getPipOverrides(user.id),
+    getSymbolMeanings(user.id),
+    listOwnSymbolChoices(user.id),
+  ]);
+
   return (
     // The creator keeps the standard frame until its redesign (TODO WD7,
     // owner decision D8; page-container-structure.test.ts lists it).
@@ -320,9 +329,9 @@ export default async function CreatePage({
           printingPrefill={printingPrefill}
           returnTo={returnTo}
           aiConfigured={isDesignAiConfigured()}
-          pipOverrides={await getPipOverrides(user.id)}
-          symbolMeanings={await getSymbolMeanings(user.id)}
-          ownSymbols={await listOwnSymbolChoices(user.id)}
+          pipOverrides={pipOverrides}
+          symbolMeanings={symbolMeanings}
+          ownSymbols={ownSymbols}
           verifiedFrameKeys={framePreview?.pickableKeys ?? verifiedFrameKeys}
           framePreview={
             framePreview

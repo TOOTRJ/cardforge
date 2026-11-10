@@ -73,8 +73,9 @@ export function costColorSymbols(
   if (!cost) return out;
   for (const match of cost.matchAll(/\{([^}]+)\}/g)) {
     const code = customSymbolCodeOfInner(match[1]);
-    if (code) {
-      const color = symbolMeaningOf(code, meanings)?.baseColor;
+    // A malformed `{*…}` is no symbol of anyone's: no colour either.
+    if (code !== null || match[1].startsWith("*")) {
+      const color = code ? symbolMeaningOf(code, meanings)?.baseColor : null;
       if (color) out[color] += 1;
       continue;
     }

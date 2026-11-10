@@ -191,7 +191,9 @@ describe("the creator's field error", () => {
     expect(form).toMatch(/cardFormSchemaFor\(\s*[\s\S]*?formBackBody,\s*formSymbols,\s*\)/);
     expect(form).toContain("symbolMeanings={symbolMeanings}");
     for (const page of ["app/(app)/create/page.tsx", "app/(app)/card/[username]/edit/page.tsx"]) {
-      expect(readFileSync(join(process.cwd(), page), "utf8"), page).toContain("symbolMeanings={await getSymbolMeanings(user.id)}");
+      const source = readFileSync(join(process.cwd(), page), "utf8");
+      expect(source, page).toContain("getSymbolMeanings(user.id),");
+      expect(source, page).toContain("symbolMeanings={symbolMeanings}");
     }
   });
 
