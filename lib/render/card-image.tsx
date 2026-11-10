@@ -48,6 +48,7 @@ import { RARITY_INK, RARITY_SET_MARK } from "@/lib/brand/constants";
 import {
   pipOverrideForSuffix,
   pipOverrideForToken,
+  pipOverridesNamedIn,
   type PipOverrides,
 } from "@/lib/pips/override";
 import { type RulesItem } from "@/lib/cards/rules-text";
@@ -2475,6 +2476,16 @@ function ManaGem({
     );
   }
 
+  if (gem.kind === "blank") {
+    // An owner's own symbol with no picture (layout v76): a plain
+    // colourless disc, nothing on it — the preview's CardPip twin.
+    return (
+      <span
+        style={{ display: "flex", width: size, height: size, borderRadius: size, background: gem.bg, ...shadow, ...style }}
+      />
+    );
+  }
+
   if (gem.kind === "image") {
     // A style's own symbol IMAGE (the 1993 frame's five colour symbols,
     // TODO 4.10c): the whole pip, in the disc's box — the same element an
@@ -4173,7 +4184,11 @@ export function readPrintArtBox(node: {
 async function withRenderableImages(
   card: CardPreviewData,
 ): Promise<CardPreviewData> {
-  const pipEntries = Object.entries(card.pipOverrides ?? {});
+  // The owner's symbols this card names, never the rest of their set
+  // (pipOverridesNamedIn): the card's data, every face and row, serialized.
+  const pipEntries = Object.entries(
+    pipOverridesNamedIn(card.pipOverrides, JSON.stringify({ ...card, pipOverrides: null })) ?? {},
+  );
   const [artUrl, secondArtUrl, watermarkUrl, setIconUrl, ...pipUrls] =
     await Promise.all([
       resolveRenderableImage(card.artUrl),
@@ -4189,7 +4204,7 @@ async function withRenderableImages(
       ? (Object.fromEntries(
           pipEntries.map(([symbol], i) => [symbol, pipUrls[i] ?? null]),
         ) as CardPreviewData["pipOverrides"])
-      : card.pipOverrides;
+      : card.pipOverrides && {};
   return {
     ...card,
     artUrl: artUrl ?? card.artUrl,

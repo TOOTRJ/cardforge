@@ -31,9 +31,9 @@ const V = WALKER_BADGES_LAYOUT_VERSION;
 const WALKER = { card_type: "planeswalker", rules_text: "+1: Draw a card.", face_content: null } as const;
 
 describe("v75 — the walker's badges on print", () => {
-  it("is the current version, a sweep (a correction, never a badge)", () => {
+  it("is shipped, a sweep (a correction, never a badge)", () => {
     expect(V).toBe(75);
-    expect(CARD_LAYOUT_VERSION).toBe(V);
+    expect(CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
     expect(VERSION_ROLLOUT[V]).toBe("sweep");
   });
 

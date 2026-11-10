@@ -43,10 +43,10 @@ describe("codes", () => {
   });
 });
 
-describe("`*` is free in every parser today", () => {
-  it("the cost tokenizer reads a {*CODE} as one unknown symbol, never a known one", () => {
-    const [token] = tokenize("{*ABC}");
-    expect(token).toEqual({ kind: "solid", color: "C", label: "*A" });
+describe("`*` is free in every parser", () => {
+  it("the cost tokenizer reads a {*CODE} as the owner's symbol, never a known one (layout v76)", () => {
+    const [token] = tokenize("{*abc}");
+    expect(token).toEqual({ kind: "custom", code: "ABC" });
   });
 
   it("mana value counts it as nothing (PR 3 gives it the declared value)", () => {

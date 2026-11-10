@@ -11555,6 +11555,41 @@ cost bakes byte-identical and is stamped. Verification-neutral (owner
 cost box a tick verified — no slot, master or plate moves — and the owner
 signs the row off on the before / after sheet, so every tick stays fresh.
 
+### The owner's own symbols (layout v76; owner 2026-11-09)
+
+A card's maker can invent mana symbols beyond the six (the beta tool
+"New mana symbols", `custom-symbols`, migration 0193) and write one as
+`{*CODE}` — a letter, then up to five letters or digits, any case — in a
+cost or a rules-style text (rules, walker / saga / station rows, a back
+face or second part). ONE reading, `lib/symbols/symbol-token.ts`: the
+cost tokenizer's `{ kind: "custom", code }` (only `{*CODE}` exactly —
+`{ *abc }` or `{*ABCDEFG}` stay the unknown tokens they always were, and
+an unknown `*…` keeps its star alone as its label, so its suffix never
+reads as a code), the suffix `*code` it carries through the rules layout
+and both renderers, and the key `*CODE` in the CARD OWNER's pip map
+(`PipOverrides`, beside W…C; `getPipOverrides` reads `custom_symbols`
+too, removed symbols included). What it draws:
+
+- **the owner's picture** — the custom pip's `<img>`, at a plain pip's
+  disc and place with the disc's shadow, in both renderers;
+- **a placeholder** where the owner has no symbol by that code (or one a
+  card was saved with in the instant it was deleted): `manaGemSpec`'s
+  `kind: "blank"`, a plain colourless disc (`MANA_GEM_BG.c`) with nothing
+  on it, at a plain pip's size and with its shadow, on every symbol style.
+
+The bake fetches only the symbols the card names (`pipOverridesNamedIn`,
+in `withRenderableImages`), never the owner's whole set. A symbol made or
+given a new picture re-bakes the owner's cards that name its code after
+the response (`lib/symbols/rebake.ts`, capped like a custom pip's).
+
+**Rollout.** Until v76 neither renderer drew anything for `{*CODE}`.
+`CUSTOM_SYMBOLS_LAYOUT_VERSION`, card-scoped on any template
+(`customSymbolsChanged`: a cost, rules text, rows or back face that names
+a code); every other card bakes byte-identical. `"sweep"` in the table,
+never a badge: no public or unlisted card named a code at merge; a private
+one is re-baked by the platform to draw what its text says.
+Verification-neutral. The parity case is `m15/g/creature-short@symbol-placeholder`.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
