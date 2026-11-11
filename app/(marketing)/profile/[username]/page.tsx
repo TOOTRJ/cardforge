@@ -70,6 +70,8 @@ import {
   type ProfileCardParams,
 } from "@/lib/profile/card-params";
 import { cn } from "@/lib/utils";
+import { ProfileUnlistedCards } from "@/components/admin/profile-unlisted-cards";
+import { ADMIN_UNLISTED_PARAM, parseUnlistedPage } from "@/lib/admin/unlisted-cards";
 
 // ---------------------------------------------------------------------------
 // /profile/[username] — a creator's public page: the hero (banner, avatar,
@@ -84,6 +86,13 @@ import { cn } from "@/lib/utils";
 // handle is a real 404 before any Suspense boundary; a THIN profile (no
 // public card, no bio) and every filtered / paged variant are noindex,
 // follow; the canonical is always the bare profile.
+//
+// ADMINS ONLY, for debugging (owner 2026-11-11): a signed-in ADMIN also gets
+// the creator's UNLISTED cards, in a section of their own under the public
+// ones (components/admin/profile-unlisted-cards.tsx). The gate is in its
+// reader (lib/admin/unlisted-cards.ts: null unless the viewer is an admin),
+// it streams in its own Suspense so the check never holds the page, and a
+// signed-out visitor costs no read at all. Nobody else's HTML changes.
 // ---------------------------------------------------------------------------
 
 type Params = { username: string };
@@ -155,7 +164,8 @@ export default async function ProfilePage({
     notFound();
   }
 
-  const cardParams = parseProfileCardParams(await searchParams);
+  const rawSearch = await searchParams;
+  const cardParams = parseProfileCardParams(rawSearch);
   const handle = profile.username ?? username;
   const viewer = await getCurrentUser();
   const isOwnProfile = Boolean(viewer && viewer.id === profile.id);
@@ -244,6 +254,19 @@ export default async function ProfilePage({
           </div>
         </ProfileCardsLiveRegion>
       </section>
+
+      {/* Admins only (the reader answers null for everyone else, and the
+          section then renders nothing); never asked for a signed-out visitor. */}
+      {viewer ? (
+        <Suspense fallback={null}>
+          <ProfileUnlistedCards
+            ownerId={profile.id}
+            ownerUsername={handle}
+            displayName={displayName}
+            page={parseUnlistedPage(rawSearch[ADMIN_UNLISTED_PARAM])}
+          />
+        </Suspense>
+      ) : null}
 
       {publicDeckCount > 0 ? (
         <section id="decks" aria-labelledby="decks-heading" className="mt-14 scroll-mt-24">
