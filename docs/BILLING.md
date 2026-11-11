@@ -13,7 +13,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. What the plan card says about the plan's future is ONE decision, `planStatusOf()` (`lib/billing/plan-status.ts`), drawn by `components/billing/plan-status.tsx` — see "A cancelled subscription" below. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | Before anything is sold the customer's subscription list is read ONCE (`findCheckoutSubscriptions`); if Stripe can't answer, the checkout is REFUSED ("Couldn't check your plan with Stripe. Try again in a moment.") — never a second subscription on a guess (audit 2026-11-05). New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` (+ `lib/stripe/charge-events.ts`) | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`, and since 0174 `charge.refunded`, `charge.dispute.{created,closed}`, `radar.early_fraud_warning.created`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all **thirteen**. |
-| Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
+| Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue tab on `/admin/analytics` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
 | Credits | `lib/billing/credit-refill.ts` (the ONE-TIME grants — see "AI credits are ONE-TIME", 2026-11-06), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Plan credits land once per account and tier with the first PAID invoice (`plan-once:<user>:<tier>`), the free-period 10 once per account; nothing recurs. The paragraph that follows describes the MONTHLY rule that ran until 2026-11-06 and is kept for the ledger's older `refill:` rows: refill was idempotent per user per month; upgrades topped up the difference against everything the month already granted. Since 0175 the cron knows the plan's interval (`profiles.billing_interval`, written by the sync): a MONTHLY plan's base allotment is the paying invoice's — the cron, AND any non-paying webhook sync (a cancel click, a resume, a portal change: `grantCreditsForSync`'s `paid`), grant it only as a backstop (the newest base grant older than 35 days — a missed webhook — and then under the MISSED month's key), so a plan paid on the 31st never gets a second allotment from the cron on the 1st or from a click on the 2nd; a row synced before 0175 keeps the old rule until its next event, and a cron outage spanning two whole months loses an annual plan the earlier one (accepted); an ANNUAL plan is the cron's every calendar month, the previous month backfilled when the plan already ran then. `grant_credits` takes the user's row lock before its idempotency check (a webhook + cron race used to 23505 and page the admins). Checkout links a freshly minted Stripe customer only where none is linked (`… where stripe_customer_id is null`) and otherwise uses the one another request linked first. |
 
@@ -197,9 +197,9 @@ arrived" signal — does three things:
    (upsert by invoice id, so retries are harmless) with the user, amount,
    `billing_reason` (`subscription_create` / `subscription_cycle` /
    `subscription_update` / `manual`), tier + interval, the billed period,
-   `paid_at`, invoice number and hosted URL. The admin **Revenue** panel on
-   `/admin/users` shows last-30-days and all-time totals plus the newest
-   payments; it reads this table and `billing_pack_payments` (below), never
+   `paid_at`, invoice number and hosted URL. The admin **Revenue** tab on
+   `/admin/analytics` shows the period's and all-time totals, revenue per day
+   and the period's payments; it reads this table and `billing_pack_payments` (below), never
    Stripe. Seeds give `dev_pro` three renewals and `dev_artist` a $0 trial
    start so branches show rows.
 
@@ -317,7 +317,7 @@ reads production's service-role key on the terminal (`promptHidden`, never
 an env var) and lists every active Plus / Pro subscriber with what they
 would get — nothing is written. Add `--apply` to grant; a rerun grants
 nothing twice (the `plan-once:<user>:<tier>` key), a trialing plan is left
-to its first paid invoice, and `/admin/users` → "Credits granted" shows the
+to its first paid invoice, and `/admin/analytics` → Credits and AI → "Credits granted" shows the
 `Plan credits` total afterwards.
 
 Copy: every surface says "with your first payment" / "to start" — the plan
@@ -506,7 +506,7 @@ money by itself.
    asks the customer why, with all seven of Stripe's options). The answer
    lands on the `subscription_cancelled` funnel row (`cancelReason` /
    `cancelFeedback`) and, since the audit's nice-to-haves PR, on the admin
-   Funnel panel as "Cancellations by reason · 30d". Nothing to do.
+   Funnel tab (`/admin/analytics`) as "Cancellations by reason". Nothing to do.
 
 Two audit notes that turned out to need no change: **`pause_collection`**
 (a Dashboard "Pause payment collection") keeps the subscription `active`
@@ -525,7 +525,8 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   in `lib/analytics/funnel-events.ts` — adding a step is a code change), an
   allow-listed scalar `props` object, `user_id` when signed in (anonymous
   rows carry nothing), `source` server/client. Admins read it through
-  `admin_funnel_counts(p_since)`; the webhook and checkout action write it
+  `admin_funnel_counts(p_since, p_include_admins, p_until)` (0200: a period,
+  admins left out unless asked); the webhook and checkout action write it
   through the service role; `/api/cron/prune-funnel-events` drops rows older
   than 180 days weekly.
 - **Server steps** (exact, unblockable): `checkout_started` in
@@ -546,8 +547,10 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   clicked), `upgrade_modal_open` (with the gate `reason` — the best signal of
   which perk sells). Ad blockers drop some client rows; the panel pairs
   client-with-client and server-with-server steps so the ratios stay honest.
-- **Admin Funnel panel** (`/admin/users`, `lib/admin/funnel-queries.ts`):
-  last 7 and 30 days, counts with distinct users, chained rates for
+- **Admin Funnel tab** (`/admin/analytics?tab=funnel`, `lib/admin/funnel-queries.ts`;
+  it sat on `/admin/users` until 2026-11): the page's period (7 / 30 / 90
+  days) beside the period before it, a signup COHORT in place of the old
+  "Rate 30d" column (which divided unrelated event counts), and the steps of
   Storefront (views → clicks → checkouts → completed), Trials (started →
   converted) and Out of credits (modal opens → packs), plus Money and Leaks
   as counts. At this volume the counts matter more than the rates; trial
@@ -567,10 +570,12 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   as hidden inputs; `signupAction` sanitizes them and records a `signup`
   event — for REAL new users only (an already-registered address returns an
   obfuscated user with no identities and records nothing). The panel groups
-  30-day signups by `utm_source`, else referrer host, else "direct".
-- **Trial engagement**: `admin_trial_engagement()` (0113) lists trials
-  started in the window with outcome (converted / lapsed / ongoing), distinct
-  active days and saves / generations / downloads inside the 7-day window.
+  the period's signups by `utm_source`, else referrer host, else "direct".
+- **Trial engagement**: `admin_trial_engagement()` (0113; 0200) lists trials
+  started in the period with their outcome (converted / lapsed / ongoing),
+  distinct active days and saves / generations / downloads — each trial
+  measured over ITS OWN length (start to the event that ended it, or to now,
+  never more than 60 days), not a fixed 7 days.
 - **Bots**: `/api/events` drops requests whose User-Agent `isbot` recognises,
   matching Vercel Analytics' policy.
 - **Screen widths** (TODO WD9, no migration): `ScreenWidthBeacon` (root
@@ -1344,7 +1349,7 @@ one marked, the two-bar counts, the friends-this-month count, the
 viewer's bank with a link to Apply, and the friends table (status, the
 reward and its step). The sign-up / onboarding note and every share
 surface carry the two bars (`/api/referrals/share` answers `cardsRequired`
-/ `windowDays` beside `friendGets`). `/admin/users` → "Referrals and the
+/ `windowDays` beside `friendGets`). `/admin/analytics` → Referrals → "Referrals and the
 days bank": the chain (signed up → cards → plan → rewarded, capped, blocked,
 expired, waiting, grants owed, credits through the ladder) for 30 days and
 all time, the top referrers with their step, the last 30 days day by day,
@@ -1370,7 +1375,7 @@ and what each side gets is a SETTING an admin changes without a deploy.
 
 **The settings** (`site_settings` key `referrals`, `lib/referrals/settings.ts`;
 0177 seeds the defaults; the form sits in the admin Referrals panel on
-`/admin/users`, saved whole through `adminSaveReferralSettingsAction` with a
+`/admin/analytics` (the Referrals tab), saved whole through `adminSaveReferralSettingsAction` with a
 confirm step): `enabled` (OFF = a PAUSE: the page says so and hides the
 link, a signup through a link records nothing, a friend's first card is
 left WAITING — rewarded once the program is on again, expired after the
@@ -1544,7 +1549,9 @@ numbers (`buildReferralSummary`: joined, first card, rewards earned of the
 lifetime cap, this UTC month of the monthly cap) and the friends with their
 status (`getMyReferralDashboard`, the viewer's own session and column
 grant; the settings ride along). Paused: one sentence, no link. The admin
-**Referrals** panel sits under Funnel on `/admin/users` (`getReferralStats`
+**Referrals** panel sits on `/admin/analytics`' Referrals tab, under the
+"Referred friends" table — who was referred, by whom, and where they stand
+(`admin_referred_friends`, 0202) — (`getReferralStats`
 → `admin_referral_stats` for 30 days and all time): signups → first card →
 rewarded, capped, blocked (by reason), expired, rewards granted on both
 sides, the rows waiting and the grants still owed, the top referrers linked

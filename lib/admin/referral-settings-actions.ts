@@ -30,7 +30,8 @@ export async function adminSaveReferralSettingsAction(input: unknown): Promise<S
     console.warn("adminSaveReferralSettingsAction: upsert error", error.message);
     return { ok: false, error: "Couldn't save the referral settings." };
   }
-  revalidatePath("/admin/users");
+  // The form lives on the Referrals tab of /admin/analytics.
+  revalidatePath("/admin/analytics");
   revalidatePath("/dashboard/referrals");
   return { ok: true, settings: parsed.data };
 }

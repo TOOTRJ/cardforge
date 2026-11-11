@@ -1,19 +1,15 @@
 import Link from "next/link";
 import { Gift } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { activationRate, qualificationRate, type ReferralStatsSummary, type ReferralStatsWindow } from "@/lib/admin/referral-queries";
+import {
+  REFERRAL_BLOCK_LABELS,
+  activationRate,
+  qualificationRate,
+  type ReferralStatsSummary,
+  type ReferralStatsWindow,
+} from "@/lib/admin/referral-queries";
 import { ReferralSettingsForm } from "@/components/admin/referral-settings-form";
 import type { ReferralSettings } from "@/lib/referrals/settings";
-
-const BLOCK_LABEL: Record<string, string> = {
-  same_email: "Same inbox",
-  same_card: "Same card",
-  same_domain: "Same company domain (friend rewarded)",
-  disposable_email: "Throwaway email",
-  not_new: "Not a new account",
-  email_reused: "Email already used",
-  account_deleted: "Friend's account deleted",
-};
 
 const SOURCE_LABEL: Record<string, string> = {
   signup: "Signup days",
@@ -64,8 +60,9 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
           {qual30 == null ? "—" : `${qual30}%`}
         </span>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="min-w-0 rounded-lg border border-border/60 bg-background/40 p-3">
+          <div className="relative overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-subtle">
@@ -84,6 +81,7 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
               ))}
             </tbody>
           </table>
+          </div>
           {allTime.grantsOwed > 0 ? (
             <p className="mt-2 text-xs text-gold-strong">
               {allTime.grantsOwed} reward{allTime.grantsOwed === 1 ? " is" : "s are"} still owed — the hourly sweep
@@ -92,7 +90,7 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
           ) : null}
           {reasons.length > 0 ? (
             <p className="mt-2 text-xs text-muted">
-              Blocked, all time: {reasons.map(([k, n]) => `${BLOCK_LABEL[k] ?? k} ${n}`).join(" · ")}
+              Blocked, all time: {reasons.map(([k, n]) => `${REFERRAL_BLOCK_LABELS[k] ?? k} ${n}`).join(" · ")}
             </p>
           ) : null}
           {steps.length > 0 ? (
@@ -101,11 +99,12 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
             </p>
           ) : null}
         </div>
-        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+        <div className="min-w-0 rounded-lg border border-border/60 bg-background/40 p-3">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Top referrers · all time</h3>
           {allTime.topReferrers.length === 0 ? (
             <p className="text-sm text-muted">No referrals yet.</p>
           ) : (
+            <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-subtle">
@@ -134,16 +133,18 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="min-w-0 rounded-lg border border-border/60 bg-background/40 p-3">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">Last 30 days, day by day</h3>
           {busy.length === 0 ? (
             <p className="text-sm text-muted">Nothing moved in the last 30 days.</p>
           ) : (
+            <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-subtle">
@@ -166,6 +167,7 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           <p className="mt-2 text-xs text-subtle">Days with nothing to show are left out.</p>
         </div>
@@ -197,8 +199,9 @@ function BankStats({ last30, allTime }: { last30: ReferralStatsWindow; allTime: 
   ];
   const sources = Object.entries(all.bySource).sort((a, b) => b[1].days - a[1].days);
   return (
-    <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+    <div className="min-w-0 rounded-lg border border-border/60 bg-background/40 p-3">
       <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-subtle">The days bank · entries made in the window</h3>
+      <div className="relative overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-[11px] uppercase tracking-wider text-subtle">
@@ -217,6 +220,7 @@ function BankStats({ last30, allTime }: { last30: ReferralStatsWindow; allTime: 
           ))}
         </tbody>
       </table>
+      </div>
       {sources.length > 0 ? (
         <p className="mt-2 text-xs text-muted">
           By source, all time: {sources.map(([k, v]) => `${SOURCE_LABEL[k] ?? k} ${v.days} d / ${v.entries}`).join(" · ")}

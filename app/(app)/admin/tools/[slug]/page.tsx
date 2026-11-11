@@ -22,6 +22,7 @@ import {
   type ToolDetail,
 } from "@/lib/tools/admin-queries";
 import { toolBySlug, toolHref } from "@/lib/tools/catalog";
+import { toolAnalyticsHref } from "@/lib/admin/analytics/tools-view";
 import { releaseLabel } from "@/lib/tools/access";
 import { formatRelativeTime, formatShortDate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
@@ -94,14 +95,22 @@ export default async function AdminToolPage({ params, searchParams }: Props) {
             ) : null}
           </div>
         </div>
-        {tool.built ? (
+        <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={toolHref(tool.slug)}
+            href={toolAnalyticsHref(tool.slug, days)}
             className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm text-foreground hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
           >
-            Open the tool
+            See who used it →
           </Link>
-        ) : null}
+          {tool.built ? (
+            <Link
+              href={toolHref(tool.slug)}
+              className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm text-foreground hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+            >
+              Open the tool
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       {detail === null ? (

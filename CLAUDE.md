@@ -1673,6 +1673,33 @@ Rules and gotchas:
   (`lib/cards/sweep-coalesce.ts`: one at a time per instance; the newest
   change waits, then sweeps in its own request). A route that draws a card for a tool counts each call
   with `hitKeyedLimit` (`lib/api/keyed-limit.ts`, no table of its own).
+- The admin's numbers are ONE page, `/admin/analytics` (2026-11; they sat
+  one under the other on `/admin/users`, each with its own hard-coded
+  windows): tabs Overview, Funnel, Revenue, Credits and AI, Referrals,
+  Tools, Content. The ADDRESS is the state (`lib/admin/analytics/params.ts`:
+  `tab`, `days` 7 / 30 / 90, `admins=1`, a tab's own `tool` / `user` /
+  `page`; `analyticsHref`, and `analyticsPeriod` = the last N UTC days and
+  the same length before it) — tabs and filters are links, and the page
+  renders ONE tab, an async server component that reads its own data, so
+  only the open tab's queries run; never load a tab's data in the page.
+  Every reader takes the period as `[p_since, p_until)` and, where it means
+  something, `p_include_admins` (default false: in beta the team is most of
+  the activity; Revenue and Referrals count everyone). A new number goes on
+  a tab, never back on the Users page (which keeps the directory, the user
+  detail with "Tools used", and the on-demand billing health check).
+  Charts are the pieces in `components/admin/analytics/charts.tsx`,
+  server-rendered: ONE hue (`--color-chart-1`), a second measure is a
+  second chart (never two axes, never a colour per category or by value), a
+  single number is a `KpiTile`, and every chart sits in a `ChartCard` with
+  its table twin. "Revenue" is money TAKEN, refunds beside it, on every tab
+  (`revenue-one-definition.test.ts`); a tool's COST is the credit ledger's
+  by reason (`CREDIT_REASON_TOOLS`, `lib/admin/analytics/credits.ts` — a new
+  tool with its own AI label adds a row), never an event prop; a funnel
+  RATE is a cohort (`admin_funnel_cohort`: of the people who signed up in
+  the period, who reached each step), never one event count over another;
+  a trial is measured over its own length. A list of people on an admin
+  page links each to `/admin/users?u=<id>`; a public title only for public
+  content.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
@@ -1775,7 +1802,8 @@ Rules and gotchas:
   applies them; later days wait for the user's own Apply. WHAT each side
   gets is a SETTING (`site_settings` key `referrals`, v2 shape:
   `activation`, `friend {days}`, `ladder[]`, `tail`, `caps
-  {friendsPerMonth}`; edited on `/admin/users`, read at grant time).
+  {friendsPerMonth}`; edited on `/admin/analytics` (the Referrals tab), read
+  at grant time).
   Every surface says "free days", never "a free month". Users read their
   rows through a COLUMN grant (the two stamps and the step; no fraud
   reason, no Stripe detail); writes are the service role's. The admin

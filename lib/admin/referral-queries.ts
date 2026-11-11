@@ -3,7 +3,7 @@ import "server-only";
 import { requireAdminClient } from "./users-queries";
 
 // ---------------------------------------------------------------------------
-// The admin Referrals panel's data (beside the Funnel panel on /admin/users):
+// The admin Referrals panel's data (the Referrals tab of /admin/analytics):
 // 0180's admin_referral_stats() for the last 30 days and all time, parsed
 // defensively (it is jsonb) by parseReferralStats — pure, unit-tested. The
 // v2 shape adds the second bar (card on file), the per-day chain, the
@@ -84,6 +84,20 @@ export type ReferralStatsWindow = {
 };
 
 export type ReferralStatsSummary = { last30: ReferralStatsWindow; allTime: ReferralStatsWindow };
+
+/** Why a referral was blocked, in an admin's words — ONE list for the
+ *  panel's "Blocked, all time" line and the Referred friends table
+ *  (lib/admin/analytics/referrals.ts). The keys are 0177's block_reason
+ *  CHECK; a user never reads these (their page says "Not eligible"). */
+export const REFERRAL_BLOCK_LABELS: Record<string, string> = {
+  same_email: "Same inbox",
+  same_card: "Same card",
+  same_domain: "Same company domain (friend rewarded)",
+  disposable_email: "Throwaway email",
+  not_new: "Not a new account",
+  email_reused: "Email already used",
+  account_deleted: "Friend's account deleted",
+};
 
 const num = (v: unknown): number =>
   typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : 0;

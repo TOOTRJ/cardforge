@@ -3857,7 +3857,6 @@ export type Database = {
           opens: number;
           uses: number;
           failures: number;
-          credits: number;
           last_event_at: string | null;
         }[];
       };

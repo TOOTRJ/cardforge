@@ -58,8 +58,11 @@ export function AnalyticsNav({ params }: { params: AnalyticsParams }) {
         {adminFilter ? (
           <Link
             href={analyticsHref(params, { admins: !params.admins, page: 1 })}
-            role="switch"
-            aria-checked={params.admins}
+            aria-label={
+              params.admins
+                ? "Include admins: on. Leave the team's own accounts out"
+                : "Include admins: off. Count the team's own accounts too"
+            }
             scroll={false}
             className="group inline-flex items-center gap-2 rounded-md px-1 py-1 text-xs font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
           >

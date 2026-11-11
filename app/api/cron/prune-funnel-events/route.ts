@@ -9,8 +9,9 @@ import { COLLECTION_AI_RESULT_DAYS } from "@/lib/tools/collection/ai-results";
 // ---------------------------------------------------------------------------
 // /api/cron/prune-funnel-events — weekly: drop funnel rows older than the
 // retention window (180 days), except the once-per-user milestones (signup,
-// first_*), which are the activation record and stay. The Funnel panel looks
-// at 7/30-day windows; anything older is history the revenue log and Stripe
+// first_*), which are the activation record and stay. The analytics page looks
+// at 7 / 30 / 90 days and the period before (under 180 days in all);
+// anything older is history the revenue log and Stripe
 // already keep better. Secured by CRON_SECRET like every cron route.
 //
 // The deck view log rides the same run (migration 0151, lib/decks/views.ts):

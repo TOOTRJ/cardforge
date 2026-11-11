@@ -3,7 +3,6 @@ import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { DeckChartCard } from "@/components/decks/deck-chart-card";
 import { DataTable } from "@/components/decks/deck-chart-parts";
 import { niceTicks } from "@/components/admin/tools/usage-chart";
-import { formatUtcDate } from "@/lib/format/dates";
 import { changeOf, changeText, formatCount, type DayPoint } from "@/lib/admin/analytics/series";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +78,10 @@ export function TablePanel({ title, description, children }: { title: string; de
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {description ? <p className="mt-1 text-xs leading-5 text-muted">{description}</p> : null}
       </header>
-      <div className="min-w-0 overflow-x-auto">{children}</div>
+      {/* `relative`: an sr-only label far along a wide row is positioned
+          against THIS box — without it, it sits outside the scroller and
+          makes the whole page scroll sideways on a phone. */}
+      <div className="relative min-w-0 overflow-x-auto">{children}</div>
     </section>
   );
 }
@@ -101,6 +103,7 @@ export function KpiTile({
   previous,
   previousLabel,
   upIsGood = true,
+  formatPrevious = formatCount,
   hint,
 }: {
   label: string;
@@ -112,6 +115,8 @@ export function KpiTile({
   /** "the previous 30 days". */
   previousLabel?: string;
   upIsGood?: boolean;
+  /** How the previous period's figure is written (money for a money tile). */
+  formatPrevious?: (value: number) => string;
   hint?: ReactNode;
 }) {
   const change = current !== undefined && previous !== undefined ? changeOf(current, previous) : null;
@@ -130,7 +135,7 @@ export function KpiTile({
           <span>
             <span className="font-medium text-foreground">{changeText(change)}</span>
             {previousLabel ? ` vs ${previousLabel}` : null}
-            {previous !== undefined ? ` (${formatCount(previous)})` : null}
+            {previous !== undefined ? ` (${formatPrevious(previous)})` : null}
           </span>
         </dd>
       ) : null}
@@ -138,6 +143,12 @@ export function KpiTile({
     </div>
   );
 }
+
+const dayOf = (day: string) => new Date(`${day.slice(0, 10)}T00:00:00Z`);
+/** "Nov 10" — an axis label, a tooltip. */
+const shortDay = (day: string) => dayOf(day).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+/** "Nov 10, 2026" — a table row. */
+const fullDay = (day: string) => dayOf(day).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 /** A row of tiles. */
 export function KpiRow({ children, className }: { children: ReactNode; className?: string }) {
@@ -196,16 +207,16 @@ export function DailyColumns({
                 <p className="font-semibold text-foreground">
                   {formatValue(point.value)} {point.value === 1 ? unit[0] : unit[1]}
                 </p>
-                <p className="text-muted">{formatUtcDate(point.day, "short")}</p>
+                <p className="text-muted">{shortDay(point.day)}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
       <div className="flex justify-between pl-[3.25rem] font-mono text-[10px] text-subtle">
-        <span>{formatUtcDate(points[0].day, "short")}</span>
-        {points.length > 14 && middle ? <span>{formatUtcDate(middle.day, "short")}</span> : null}
-        <span>{formatUtcDate(points[points.length - 1].day, "short")}</span>
+        <span>{shortDay(points[0].day)}</span>
+        {points.length > 14 && middle ? <span>{shortDay(middle.day)}</span> : null}
+        <span>{shortDay(points[points.length - 1].day)}</span>
       </div>
     </div>
   );
@@ -231,7 +242,7 @@ export function DailyTable({
       <DataTable
         caption={caption}
         columns={["Day (UTC)", column]}
-        rows={rows.map((p) => ({ key: p.day, cells: [formatUtcDate(p.day, "short"), formatValue(p.value)] }))}
+        rows={rows.map((p) => ({ key: p.day, cells: [fullDay(p.day), formatValue(p.value)] }))}
       />
     </div>
   );
@@ -268,8 +279,11 @@ export function RankedBars({
   return (
     <ul className="flex flex-col gap-2.5">
       {rows.map((row) => (
-        <li key={row.key} className="grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] items-center gap-x-3 text-xs">
-          <span className="truncate text-foreground">{row.label}</span>
+        <li
+          key={row.key}
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-xs sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]"
+        >
+          <span className="col-span-2 break-words leading-4 text-foreground sm:col-span-1">{row.label}</span>
           <span className="flex h-2 min-w-0 items-center">
             <span
               className="h-2 rounded-r-[4px] bg-chart-1"

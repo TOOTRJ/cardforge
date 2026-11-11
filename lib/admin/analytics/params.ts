@@ -96,11 +96,20 @@ export function analyticsHref(params: AnalyticsParams, patch: Partial<AnalyticsP
 export type AnalyticsPeriod = {
   days: AnalyticsRange;
   /** The period: [since, until). `since` is the start of a UTC day, so the
-   *  totals and a per-day chart count the same rows. */
+   *  totals and a per-day chart count the same rows; `until` is now, so
+   *  today counts as far as it has got. */
   since: Date;
   until: Date;
-  /** The same length of time just before it, for "vs the previous N days". */
+  /**
+   * What it is compared with: [previousSince, previousUntil) — the SAME
+   * stretch `days` days earlier, cut at the same time of day. So the two are
+   * exactly as long as each other. (Comparing a period whose last day is
+   * part-way through with N whole days read every steady number as a fall:
+   * −13% on the 7-day view in the small hours.) The rest of that earlier
+   * day belongs to neither period.
+   */
   previousSince: Date;
+  previousUntil: Date;
   /** The period's UTC days, oldest first: `days` of them, ending today. */
   dayKeys: string[];
 };
@@ -112,8 +121,9 @@ export function analyticsPeriod(days: AnalyticsRange, now: Date = new Date()): A
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const since = new Date(today - (days - 1) * DAY_MS);
   const previousSince = new Date(since.getTime() - days * DAY_MS);
+  const previousUntil = new Date(now.getTime() - days * DAY_MS);
   const dayKeys = Array.from({ length: days }, (_, i) => new Date(since.getTime() + i * DAY_MS).toISOString().slice(0, 10));
-  return { days, since, until: now, previousSince, dayKeys };
+  return { days, since, until: now, previousSince, previousUntil, dayKeys };
 }
 
 /** "the last 30 days" / "the previous 30 days". */

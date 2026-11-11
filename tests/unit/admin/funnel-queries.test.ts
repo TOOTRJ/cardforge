@@ -2,7 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { SIGNUP_NOT_RECORDED, buildFunnel, groupCancelReasons, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
+import {
+  FUNNEL_LIST_REST,
+  SIGNUP_NOT_RECORDED,
+  buildFunnel,
+  groupCancelReasons,
+  groupSignupSources,
+  groupSignupSurfaces,
+} from "@/lib/admin/funnel-queries";
 
 describe("groupCancelReasons", () => {
   it("groups ended plans by the portal's feedback, else Stripe's reason, biggest first — in the customer's words", () => {
@@ -25,14 +32,18 @@ describe("groupCancelReasons", () => {
       { reason: "something_new", label: "something_new", n: 1 },
       { reason: "unused", label: "Didn't use it enough", n: 1 },
     ]);
-    expect(groupCancelReasons(rows, 2)).toHaveLength(2);
+    // Past the limit the rest is ONE closing row: the list still adds up.
+    const short = groupCancelReasons(rows, 2);
+    expect(short).toHaveLength(3);
+    expect(short[2]).toMatchObject({ reason: FUNNEL_LIST_REST, label: "Everything else" });
+    expect(short.reduce((sum, row) => sum + row.n, 0)).toBe(rows.length);
     expect(groupCancelReasons([])).toEqual([]);
   });
 });
 
 describe("buildFunnel", () => {
-  it("chains rates inside the storefront, trial and out-of-credits sections and leaves counts elsewhere", () => {
-    const w = buildFunnel(
+  it("sets every step's count beside the previous period's — counts only, no step divided by the one above it", () => {
+    const sections = buildFunnel(
       {
         pricing_view: { n: 200, users: 20 },
         cta_click: { n: 50, users: 30 },
@@ -45,41 +56,56 @@ describe("buildFunnel", () => {
         payment_received: { n: 9, users: 6 },
         subscription_cancelled: { n: 1, users: 1 },
       },
-      30,
+      {
+        pricing_view: { n: 100, users: 10 },
+        checkout_completed: { n: 5, users: 4 },
+        trial_started: { n: 16, users: 15 },
+      },
     );
-    expect(w.days).toBe(30);
-    const storefront = w.sections.find((x) => x.title === "Storefront")!;
-    expect(storefront.steps.map((st) => [st.key, st.n, st.rate])).toEqual([
-      ["pricing_view", 200, null],
-      ["cta_click", 50, 25],
-      ["checkout_started", 20, 40],
-      ["checkout_completed", 5, 25],
+    const storefront = sections.find((x) => x.title === "Storefront")!;
+    expect(storefront.steps.map((st) => [st.key, st.n, st.users, st.previousN, st.previousUsers])).toEqual([
+      ["pricing_view", 200, 20, 100, 10],
+      ["cta_click", 50, 30, 0, 0],
+      ["checkout_started", 20, 18, 0, 0],
+      ["checkout_completed", 5, 5, 5, 4],
     ]);
-    expect(w.sections.find((x) => x.title === "Trials")!.steps[1]).toMatchObject({ n: 2, rate: 25 });
-    expect(w.sections.find((x) => x.title === "Out of credits")!.steps[1]).toMatchObject({ n: 3, rate: 7.5 });
-    // Money and Leaks are counts only.
-    expect(w.sections.find((x) => x.title === "Money")!.steps.every((st) => st.rate === null)).toBe(true);
-    expect(w.sections.find((x) => x.title === "Leaks")!.steps.every((st) => st.rate === null)).toBe(true);
+    expect(sections.find((x) => x.title === "Trials")!.steps[0]).toMatchObject({ n: 8, previousN: 16 });
+    // The 2026-11 audit: "Rate 30d" divided one step's events by the step before's — 109 first cards over 42 signups.
+    for (const step of sections.flatMap((x) => x.steps)) expect(step).not.toHaveProperty("rate");
   });
 
-  it("lists the deck plan's moments as counts (TODO DK3.8) — no cap event: decks are unlimited", () => {
-    const w = buildFunnel({ deck_created: { n: 12, users: 9 }, deck_card_customized: { n: 4, users: 3 } }, 7);
-    const decks = w.sections.find((x) => x.title === "Decks")!;
-    expect(decks.steps.map((st) => [st.key, st.label, st.n, st.rate])).toEqual([
-      ["deck_created", "Decks created", 12, null],
-      ["deck_card_customized", "Deck cards customized", 4, null],
-      ["deck_export_clicked", "Deck export clicks", 0, null],
+  it("keeps the nine sections and their steps in order", () => {
+    expect(buildFunnel({}).map((section) => [section.title, section.steps.map((st) => st.key)])).toEqual([
+      ["Activation", ["signup", "first_card_saved", "first_ai_generation", "first_download"]],
+      ["Storefront", ["pricing_view", "cta_click", "checkout_started", "checkout_completed"]],
+      ["Trials", ["trial_started", "trial_converted"]],
+      ["Out of credits", ["upgrade_modal_open", "pack_purchased"]],
+      ["Money", ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled", "subscription_resumed"]],
+      ["Leaks", ["checkout_expired", "trial_lapsed", "payment_failed"]],
+      ["Decks", ["deck_created", "deck_card_customized", "deck_export_clicked"]],
+      ["Home create buttons", ["create_cta_click"]],
+      ["Guest creator", ["guest_save_gate"]],
     ]);
   });
 
-  it("activation chains signup → first save → first generation → first download", () => {
-    const w = buildFunnel({ signup: { n: 20, users: 20 }, first_card_saved: { n: 8, users: 8 }, first_ai_generation: { n: 4, users: 4 }, first_download: { n: 2, users: 2 } }, 30);
-    expect(w.sections[0].title).toBe("Activation");
-    expect(w.sections[0].steps.map((s) => [s.key, s.n, s.rate])).toEqual([
-      ["signup", 20, null],
-      ["first_card_saved", 8, 40],
-      ["first_ai_generation", 4, 50],
-      ["first_download", 2, 50],
+  it("lists the deck plan's moments (TODO DK3.8) — no cap event: decks are unlimited", () => {
+    const sections = buildFunnel({ deck_created: { n: 12, users: 9 }, deck_card_customized: { n: 4, users: 3 } });
+    const decks = sections.find((x) => x.title === "Decks")!;
+    expect(decks.steps.map((st) => [st.key, st.label, st.n])).toEqual([
+      ["deck_created", "Decks created", 12],
+      ["deck_card_customized", "Deck cards customized", 4],
+      ["deck_export_clicked", "Deck export clicks", 0],
+    ]);
+  });
+
+  it("activation lists signup, first save, first generation, first download", () => {
+    const sections = buildFunnel({ signup: { n: 20, users: 20 }, first_card_saved: { n: 8, users: 8 }, first_ai_generation: { n: 4, users: 4 }, first_download: { n: 2, users: 2 } });
+    expect(sections[0].title).toBe("Activation");
+    expect(sections[0].steps.map((s) => [s.key, s.n])).toEqual([
+      ["signup", 20],
+      ["first_card_saved", 8],
+      ["first_ai_generation", 4],
+      ["first_download", 2],
     ]);
   });
 
@@ -100,9 +126,9 @@ describe("buildFunnel", () => {
     ]);
   });
 
-  it("an empty window renders zeros with no rates (no division by zero)", () => {
-    const w = buildFunnel({}, 7);
-    expect(w.sections.flatMap((x) => x.steps).every((st) => st.n === 0 && st.rate === null)).toBe(true);
+  it("an empty period is zeros on both sides", () => {
+    const steps = buildFunnel({}, {}).flatMap((x) => x.steps);
+    expect(steps.every((st) => st.n === 0 && st.users === 0 && st.previousN === 0 && st.previousUsers === 0)).toBe(true);
   });
 });
 
@@ -124,17 +150,17 @@ describe("groupSignupSurfaces", () => {
   });
 });
 
-describe("the Storefront chain is billing moments alone (TODO HM2)", () => {
+describe("the Storefront list is billing moments alone (TODO HM2)", () => {
   it("is exactly pricing view → CTA → checkout, and a home create click is counted apart", () => {
-    const w = buildFunnel({ cta_click: { n: 4, users: 4 }, create_cta_click: { n: 90, users: 60 } }, 7);
-    expect(w.sections.find((x) => x.title === "Storefront")!.steps.map((st) => st.key)).toEqual([
+    const sections = buildFunnel({ cta_click: { n: 4, users: 4 }, create_cta_click: { n: 90, users: 60 } });
+    expect(sections.find((x) => x.title === "Storefront")!.steps.map((st) => st.key)).toEqual([
       "pricing_view",
       "cta_click",
       "checkout_started",
       "checkout_completed",
     ]);
-    const home = w.sections.find((x) => x.title === "Home create buttons")!;
-    expect(home.steps).toEqual([expect.objectContaining({ key: "create_cta_click", n: 90, rate: null })]);
+    const home = sections.find((x) => x.title === "Home create buttons")!;
+    expect(home.steps).toEqual([expect.objectContaining({ key: "create_cta_click", n: 90 })]);
   });
 
   it("cta_click is sent only by the billing components (admin_funnel_counts groups by event alone)", async () => {
@@ -176,5 +202,35 @@ describe("signups whose first touch was never recorded", () => {
       { surface: "home_hero", n: 1 },
       { surface: "none", n: 1 },
     ]);
+  });
+});
+
+describe("a long list always adds up to what it breaks down", () => {
+  // Ten sources, the last five with one signup each.
+  const rows = [
+    ...Array.from({ length: 6 }, () => ({ props: { utmSource: "reddit" } })),
+    ...Array.from({ length: 4 }, () => ({ props: { utmSource: "discord" } })),
+    ...Array.from({ length: 3 }, () => ({ props: { utmSource: "newsletter" } })),
+    ...["a", "b", "c", "d", "e", "f", "g"].map((source) => ({ props: { utmSource: source } })),
+  ];
+
+  it("signups by source: the 8 biggest, then everything else in one row — the total is every signup", () => {
+    const sources = groupSignupSources(rows);
+    expect(sources).toHaveLength(9);
+    expect(sources[0]).toEqual({ source: "reddit", n: 6 });
+    expect(sources[8]).toEqual({ source: FUNNEL_LIST_REST, n: 2 });
+    expect(sources.reduce((sum, row) => sum + row.n, 0)).toBe(rows.length);
+  });
+
+  it("a list that fits has no closing row", () => {
+    expect(groupSignupSources(rows.slice(0, 13)).map((row) => row.source)).toEqual(["reddit", "discord", "newsletter"]);
+    expect(groupSignupSurfaces([{ props: {} }]).some((row) => row.surface === FUNNEL_LIST_REST)).toBe(false);
+  });
+
+  it("signups by button pressed adds up the same way", () => {
+    const pressed = Array.from({ length: 12 }, (_, i) => ({ props: { surface: `surface_${i}` } }));
+    const surfaces = groupSignupSurfaces(pressed, 3);
+    expect(surfaces.reduce((sum, row) => sum + row.n, 0)).toBe(12);
+    expect(surfaces.at(-1)?.surface).toBe(FUNNEL_LIST_REST);
   });
 });

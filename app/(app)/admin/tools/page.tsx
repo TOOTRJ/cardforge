@@ -14,6 +14,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { getAdminToolsOverview, type AdminToolRow } from "@/lib/tools/admin-queries";
 import { adminToolHref } from "@/lib/tools/catalog";
+import { toolsAnalyticsHref } from "@/lib/admin/analytics/tools-view";
 import { releaseLabel } from "@/lib/tools/access";
 import { formatRelativeTime } from "@/lib/format/dates";
 
@@ -42,6 +43,14 @@ export default async function AdminToolsPage() {
         eyebrow="Admin"
         title="Tools"
         description="New tools start in beta: admins and the testers you let in. Release one to Free, Plus or Pro when it's ready, or pause it to close it to everyone but admins."
+        actions={
+          <Link
+            href={toolsAnalyticsHref()}
+            className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm text-foreground hover:border-border-strong hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+          >
+            See who used each tool →
+          </Link>
+        }
       />
 
       {rows === null ? (
@@ -99,13 +108,21 @@ function Totals({ rows }: { rows: AdminToolRow[] }) {
     <dl className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatTile icon={Users} label="Testers" value={sum((r) => r.testers)} hint="Live grants, all tools" />
       <StatTile icon={BellRing} label="Waiting list" value={sum((r) => r.interested)} hint="Pressed Notify me" />
+      {/* Added up per tool and with the team's own accounts in: the release
+          page's rough gauge. People counted once, admins left out, any
+          period: /admin/analytics → Tools. */}
       <StatTile
         icon={Users}
-        label="Active users, 7 days"
+        label="Tool users, 7 days"
         value={sum((r) => r.users7d)}
-        hint="Summed per tool"
+        hint="Added up per tool (one person on three tools counts three times), admins included"
       />
-      <StatTile icon={MousePointerClick} label="Uses, 30 days" value={sum((r) => r.uses30d)} hint="Actions, not page opens" />
+      <StatTile
+        icon={MousePointerClick}
+        label="Uses, 30 days"
+        value={sum((r) => r.uses30d)}
+        hint="What each tool counts as a use, admins included"
+      />
     </dl>
   );
 }
