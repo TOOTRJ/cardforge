@@ -2,12 +2,14 @@
 // The home page's numbers (owner 2026-11-03: ALL TIME, not this week). The
 // pure half — what the stat strip and the "Live from the forge" line say
 // for a set of counts; the reads are the page's (cookie-free, so it stays
-// ISR). Every number is a count of PUBLIC rows: what a visitor can go and
-// see in the gallery, /creators and /decks.
+// ISR). The CARDS are every card saved on the site, whatever its visibility
+// (owner 2026-11-11: "cards forged" is what people made, not what they
+// published); creators and decks are the PUBLIC ones — what a visitor can
+// go and see on /creators and /decks.
 // ---------------------------------------------------------------------------
 
 export type HomeCounts = {
-  /** Public cards, all time (`countPublicCards`). */
+  /** Every saved card, all time (`getSavedCardCounts`, migration 0207). */
   cards: number;
   /** Real creators with a public card (`countPublicCreators`: /creators' total). */
   creators: number;
@@ -15,7 +17,7 @@ export type HomeCounts = {
   decks: number;
   /** Frame templates the creator offers today (the verified set). */
   frameStyles: number;
-  /** Public cards made in the last 7 days — the pulse line's small print. */
+  /** Saved cards made in the last 7 days — the pulse line's small print. */
   cardsThisWeek: number;
 };
 

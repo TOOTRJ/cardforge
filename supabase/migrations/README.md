@@ -409,6 +409,12 @@ instead. Each bullet: what the header says, and what is true now.
   redefines the function with `(bits + 0.5) / 4294967296.0`, in (0, 1),
   and nothing else changed (`tests/unit/db/discover-shuffle-migration.test.ts`
   holds every live shuffle to that range).
+- **0202 (`admin_referred_friends`: the nineteen columns its header
+  lists)** — since 0206 the function returns eight more after them: each
+  side's recorded reward and its detail, the failed grant attempts, whether
+  each account's email is confirmed (a flag read from `auth.users`, never
+  an address) and whether the friend holds a plan with a card on file. The
+  first nineteen are unchanged, in their places.
 - **0193 (header: "the owner inserts, edits, removes and restores only while
   the tool is open to them")** — since 0205 the owner's own role no longer
   INSERTs a symbol or UPDATEs its `name`: both are public words the app must

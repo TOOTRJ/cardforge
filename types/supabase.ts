@@ -3823,6 +3823,10 @@ export type Database = {
         Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
         Returns: Json;
       };
+      saved_card_counts: {
+        Args: Record<string, never>;
+        Returns: { cards: number; cards_this_week: number }[];
+      };
       admin_referred_friends: {
         Args: { p_limit?: number; p_offset?: number };
         Returns: {
@@ -3845,6 +3849,14 @@ export type Database = {
           referee_last_card_at: string | null;
           referee_banked_days: number;
           total_count: number;
+          referrer_reward: string | null;
+          referee_reward: string | null;
+          referrer_reward_detail: Json;
+          referee_reward_detail: Json;
+          grant_attempts: number;
+          referee_email_confirmed: boolean | null;
+          referrer_email_confirmed: boolean | null;
+          referee_has_plan: boolean | null;
         }[];
       };
       admin_content_stats: {

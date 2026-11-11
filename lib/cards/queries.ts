@@ -1210,53 +1210,64 @@ export async function hasUserLikedCard(
   }
 }
 
-/**
- * Count of cards visible to the public gallery (RLS keeps this to
- * public/unlisted rows for anonymous viewers). Powers the marketing
- * stat strip; returns 0 on any failure so the strip degrades quietly.
- */
-export type CommunityPulse = {
-  /** Public cards created in the last 7 days. */
+export type SavedCardCounts = {
+  /** Every saved card, whatever its visibility (0207 `saved_card_counts`). */
+  cards: number;
+  /** Those of them created in the last 7 days. */
   cardsThisWeek: number;
 };
 
-/**
- * "Live from the forge"'s small print on the landing page — how many public
- * cards were made this week. An exact head count (a row read would stop at
- * PostgREST's 1000-row cap). Cookie-free public client so the homepage
- * stays ISR.
- */
-export async function getCommunityPulse(): Promise<CommunityPulse> {
-  if (!isSupabaseConfigured()) return { cardsThisWeek: 0 };
-  try {
-    const supabase = createPublicClient();
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { count, error } = await supabase
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .eq("visibility", "public")
-      .gte("created_at", since);
-    if (error) return { cardsThisWeek: 0 };
-    return { cardsThisWeek: count ?? 0 };
-  } catch {
-    return { cardsThisWeek: 0 };
-  }
-}
+const NO_SAVED_CARDS: SavedCardCounts = { cards: 0, cardsThisWeek: 0 };
 
-export async function countPublicCards(): Promise<number> {
-  if (!isSupabaseConfigured()) return 0;
+const countOf = (v: unknown): number => {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+};
+
+/**
+ * The home page's card numbers (owner 2026-11-11): EVERY card saved on the
+ * site — public, unlisted and private — and how many of them were made this
+ * week. The page is static and reads no cookie, so a plain count would be a
+ * signed-out visitor's (RLS: no private row); migration 0207's
+ * `saved_card_counts()` hands out the two totals and nothing else. Zeros on
+ * any failure, so the strip degrades quietly.
+ *
+ * The app can deploy before the migration lands: a database with no such
+ * function (PGRST202) gets the numbers main showed — the PUBLIC cards.
+ * Remove that fallback once 0207 is on production and dev.
+ */
+export async function getSavedCardCounts(): Promise<SavedCardCounts> {
+  if (!isSupabaseConfigured()) return NO_SAVED_CARDS;
   try {
     // Viewer-independent by definition — cookie-free client keeps the
     // marketing pages that render this static/ISR-cacheable.
     const supabase = createPublicClient();
-    const { count, error } = await supabase
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .eq("visibility", "public");
-    if (error) return 0;
-    return count ?? 0;
+    const { data, error } = await supabase.rpc("saved_card_counts");
+    if (error) {
+      if (error.code === "PGRST202") return publicCardCounts();
+      return NO_SAVED_CARDS;
+    }
+    const row = (Array.isArray(data) ? data[0] : data) as { cards?: unknown; cards_this_week?: unknown } | null | undefined;
+    if (!row) return NO_SAVED_CARDS;
+    return { cards: countOf(row.cards), cardsThisWeek: countOf(row.cards_this_week) };
   } catch {
-    return 0;
+    return NO_SAVED_CARDS;
+  }
+}
+
+/** Main's numbers before 0207: the PUBLIC cards, as exact head counts (a
+ *  row read would stop at PostgREST's 1000-row cap). */
+async function publicCardCounts(): Promise<SavedCardCounts> {
+  try {
+    const supabase = createPublicClient();
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const [all, week] = await Promise.all([
+      supabase.from("cards").select("id", { count: "exact", head: true }).eq("visibility", "public"),
+      supabase.from("cards").select("id", { count: "exact", head: true }).eq("visibility", "public").gte("created_at", since),
+    ]);
+    return { cards: all.error ? 0 : (all.count ?? 0), cardsThisWeek: week.error ? 0 : (week.count ?? 0) };
+  } catch {
+    return NO_SAVED_CARDS;
   }
 }
 

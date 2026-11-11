@@ -6,7 +6,7 @@ import { Loader2, Lock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { textareaClass } from "@/components/creator/field-group";
-import { adminSendMessageAction, sendMessageAction } from "@/lib/messages/actions";
+import { adminReplyToFeedbackAction, adminSendMessageAction, sendMessageAction } from "@/lib/messages/actions";
 import { MESSAGE_BODY_MAX, messageBodySchema } from "@/lib/messages/schemas";
 
 // ---------------------------------------------------------------------------
@@ -15,17 +15,26 @@ import { MESSAGE_BODY_MAX, messageBodySchema } from "@/lib/messages/schemas";
 // counter turns red past the limit (the schema rejects it before a round
 // trip). A closed thread shows a locked notice instead (users can't reopen;
 // an admin reply reopens it server-side).
+//
+// An admin's FIRST reply to a feedback submission uses it too (`feedbackId`
+// in place of `threadId`; owner 2026-11-11: the conversation opens with the
+// reply box under the message, no dialog): there is no thread yet — sending
+// opens one (adminReplyToFeedbackAction) and the form moves on to it.
 // ---------------------------------------------------------------------------
 
 type ReplyFormProps = {
-  threadId: string;
   side: "user" | "admin";
   closed?: boolean;
   placeholder?: string;
-};
+} & (
+  | { threadId: string; feedbackId?: undefined }
+  // Admin side only: the feedback row the first reply answers.
+  | { feedbackId: string; threadId?: undefined }
+);
 
 export function ReplyForm({
   threadId,
+  feedbackId,
   side,
   closed = false,
   placeholder = "Write a reply…",
@@ -35,17 +44,40 @@ export function ReplyForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLTextAreaElement | null>(null);
+  // One send at a time: ⌘/Ctrl+Enter reaches `submit` without the button,
+  // so a second press before the first answer would post the reply twice.
+  const sending = useRef(false);
 
   const submit = () => {
+    if (sending.current) return;
     const parsed = messageBodySchema.safeParse(body);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Check your message.");
       return;
     }
     setError(null);
+    sending.current = true;
     startTransition(async () => {
+      if (feedbackId !== undefined) {
+        // The first reply: it opens the thread, and the conversation is
+        // that thread's page from here on (replace — Back goes to the
+        // inbox, not to a page that no longer has anything to send).
+        const opened = await adminReplyToFeedbackAction({ feedbackId, body: parsed.data });
+        if (!opened.ok) {
+          sending.current = false;
+          setError(opened.error);
+          toast.error(opened.error);
+          return;
+        }
+        // Stays "sending" from here: the page is on its way to the thread.
+        toast.success("Reply sent — the user has been notified.");
+        setBody("");
+        router.replace(`/admin/messages/${opened.threadId}`);
+        return;
+      }
       const action = side === "admin" ? adminSendMessageAction : sendMessageAction;
       const result = await action({ threadId, body: parsed.data });
+      sending.current = false;
       if (!result.ok) {
         setError(result.error);
         toast.error(result.error);
@@ -67,6 +99,7 @@ export function ReplyForm({
   }
 
   const over = body.length > MESSAGE_BODY_MAX;
+  const fieldId = `reply-${threadId ?? feedbackId}`;
 
   return (
     <form
@@ -76,11 +109,11 @@ export function ReplyForm({
         submit();
       }}
     >
-      <label className="sr-only" htmlFor={`reply-${threadId}`}>
+      <label className="sr-only" htmlFor={fieldId}>
         Reply
       </label>
       <textarea
-        id={`reply-${threadId}`}
+        id={fieldId}
         ref={ref}
         value={body}
         onChange={(event) => setBody(event.target.value)}

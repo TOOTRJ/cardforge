@@ -10,6 +10,11 @@ import {
   type ReferredFriend,
   type ReferredFriendsPage,
 } from "@/lib/admin/analytics/referrals";
+import {
+  referralRewardLines,
+  referralRewardWords,
+  type RewardContext,
+} from "@/lib/admin/analytics/referral-rewards";
 import { formatCount } from "@/lib/admin/analytics/series";
 import { formatUtcDate } from "@/lib/format/dates";
 
@@ -18,6 +23,9 @@ import { formatUtcDate } from "@/lib/format/dates";
 // with their data"): one row per referral, newest first — the friend, who
 // brought them, where the referral stands in plain words, and what the
 // friend has done since (cards, plan, the days this referral banked them).
+// "Rewards" (owner 2026-11-11) says what each side was given — or WHY a
+// side has nothing yet: the reward step's own conditions, in plain words
+// (lib/admin/analytics/referral-rewards.ts).
 // A page of 50; the pager is two links, so a page can be bookmarked.
 // ---------------------------------------------------------------------------
 
@@ -29,19 +37,37 @@ function cardsCell(row: ReferredFriend): string {
   return `${formatCount(row.cards)} · ${formatCount(row.publicCards)} public`;
 }
 
+/** What each side got, or why not (yet). The one cell of the table that
+ *  wraps: its reasons are sentences. */
+function RewardsCell({ row, context }: { row: ReferredFriend; context: RewardContext }) {
+  const rewards = referralRewardWords(row, context);
+  if (!rewards) return <>{DASH}</>;
+  return (
+    <ul className="flex min-w-64 max-w-md flex-col gap-0.5 whitespace-normal" data-testid="referral-rewards">
+      {referralRewardLines(rewards).map((line) => (
+        <li key={line.who}>
+          <span className="font-medium text-foreground">{line.who}:</span> {line.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 const pagerLink =
   "rounded-md border border-border px-2.5 py-1 font-medium text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60";
 
 export function ReferredFriendsTable({
   page,
   params,
-  cardsRequired,
+  rewardContext,
 }: {
   page: ReferredFriendsPage;
   params: AnalyticsParams;
-  /** The program's setting, for "Saved 5 cards". */
-  cardsRequired?: number;
+  /** The program's settings and the server's switches, for "Saved 5 cards"
+   *  and the Rewards column's reasons. */
+  rewardContext: RewardContext;
 }) {
+  const { cardsRequired } = rewardContext;
   if (page.rows.length === 0) {
     return page.page > 1 ? (
       <div className="flex flex-col items-center gap-3">
@@ -65,6 +91,7 @@ export function ReferredFriendsTable({
           { label: "Referred by" },
           { label: "Joined" },
           { label: "Where they are" },
+          { label: "Rewards" },
           { label: "Cards" },
           { label: "Last card" },
           { label: "Plan" },
@@ -85,6 +112,7 @@ export function ReferredFriendsTable({
             <span key="where" className="text-foreground">
               {referralStandingText(row.status, row.blockReason, cardsRequired)}
             </span>,
+            <RewardsCell key="rewards" row={row} context={rewardContext} />,
             cardsCell(row),
             day(row.lastCardAt),
             tierName(row.tier) ?? DASH,

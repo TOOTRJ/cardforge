@@ -379,6 +379,53 @@ export async function getThreadForAdmin(threadId: string): Promise<AdminThreadDe
   };
 }
 
+/** A feedback submission as the conversation it is about to become. */
+export type FeedbackConversationStart = {
+  feedback: NonNullable<ThreadDetail["feedback"]>;
+  /** Who sent it. Null once their account is gone — nobody to reply to. */
+  user: { id: string; username: string | null; displayName: string | null } | null;
+  /** The conversation this feedback already has (one per row, 0070). */
+  threadId: string | null;
+};
+
+/**
+ * The admin's view of a feedback row BEFORE its first reply (owner
+ * 2026-11-11: "Reply" opens the conversation — their message with the reply
+ * box under it — instead of a dialog). No thread exists yet, and none is
+ * made by looking: the first reply opens it (adminReplyToFeedbackAction), so
+ * the user never finds an empty conversation. Null for a non-admin or an id
+ * with no feedback row.
+ */
+export async function getFeedbackConversationStart(feedbackId: string): Promise<FeedbackConversationStart | null> {
+  const admin = await requireAdminClient();
+  if (!admin) return null;
+  const { data: row } = await admin
+    .from("feedback")
+    .select("id, user_id, category, subject, message, created_at, status")
+    .eq("id", feedbackId)
+    .maybeSingle();
+  if (!row) return null;
+  const [{ data: thread }, people] = await Promise.all([
+    admin.from("message_threads").select("id").eq("feedback_id", feedbackId).maybeSingle(),
+    profilesById(admin, row.user_id ? [row.user_id] : []),
+  ]);
+  const sender = row.user_id ? people.get(row.user_id) : undefined;
+  return {
+    feedback: {
+      id: row.id,
+      category: row.category,
+      subject: row.subject,
+      message: row.message,
+      createdAt: row.created_at,
+      status: row.status,
+    },
+    user: row.user_id
+      ? { id: row.user_id, username: sender?.username ?? null, displayName: sender?.display_name ?? null }
+      : null,
+    threadId: thread?.id ?? null,
+  };
+}
+
 /** Threads awaiting an admin reply — the admin inbox badge. */
 export const getAdminUnreadThreadCount = cache(async (): Promise<number> => {
   const admin = await requireAdminClient();

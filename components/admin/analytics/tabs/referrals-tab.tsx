@@ -9,10 +9,13 @@ import {
   type ReferralPeriodStats,
   type ReferredFriendsPage,
 } from "@/lib/admin/analytics/referrals";
+import type { RewardContext } from "@/lib/admin/analytics/referral-rewards";
 import { formatCount } from "@/lib/admin/analytics/series";
 import { getReferralStats, type ReferralStatsSummary } from "@/lib/admin/referral-queries";
 import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referrals/settings";
 import { readReferralSettings } from "@/lib/referrals/settings-server";
+import { referralEmailHashKey } from "@/lib/referrals/email-fingerprint";
+import { isBillingEnabled } from "@/lib/billing/flags";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // ---------------------------------------------------------------------------
@@ -21,7 +24,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //      referred, saved the cards, card on file, rewarded — each counted by
 //      its own date;
 //   2. friends referred per day;
-//   3. WHO WAS REFERRED, with their data (owner 2026-11-10) — a page of 50;
+//   3. WHO WAS REFERRED, with their data (owner 2026-11-10) — a page of 50,
+//      each row saying what both sides were given or why a side has
+//      nothing yet (owner 2026-11-11);
 //   4. the program's panel as it stood on the Users page (the chain over 30
 //      days and all time, top referrers, the days bank) and its settings.
 // A referral is a referral whoever made it: this tab has no "Include
@@ -36,8 +41,22 @@ export async function ReferralsTab({ params }: { params: AnalyticsParams }) {
     getReferralStats(),
     readReferralSettings(createAdminClient()),
   ]);
-  return <ReferralsTabView params={params} stats={stats} friends={friends} summary={summary} settings={settings} />;
+  return (
+    <ReferralsTabView
+      params={params}
+      stats={stats}
+      friends={friends}
+      summary={summary}
+      settings={settings}
+      // What the reward step checks beside the settings: read here, on the
+      // server, so the reasons name the switch that is really off.
+      server={{ billingEnabled: isBillingEnabled(), hashKeySet: referralEmailHashKey() !== null, now: new Date() }}
+    />
+  );
 }
+
+/** The server's side of a reward's conditions (the settings are the rest). */
+export type ReferralServerState = Pick<RewardContext, "billingEnabled" | "hashKeySet" | "now">;
 
 /** The tab's markup, from data already read (null = that read failed). */
 export function ReferralsTabView({
@@ -46,14 +65,25 @@ export function ReferralsTabView({
   friends,
   summary,
   settings = DEFAULT_REFERRAL_SETTINGS,
+  server,
 }: {
   params: AnalyticsParams;
   stats: ReferralPeriodStats | null;
   friends: ReferredFriendsPage | null;
   summary: ReferralStatsSummary | null;
   settings?: ReferralSettings;
+  /** Absent = everything on, now (a test of the markup). */
+  server?: ReferralServerState;
 }) {
   const { cardsRequired, windowDays } = settings.activation;
+  const rewardContext: RewardContext = {
+    cardsRequired,
+    windowDays,
+    programEnabled: settings.enabled,
+    billingEnabled: server?.billingEnabled ?? true,
+    hashKeySet: server?.hashKeySet ?? true,
+    now: server?.now ?? new Date(),
+  };
   const cards = `${cardsRequired} ${cardsRequired === 1 ? "card" : "cards"}`;
   const before = previousPeriodLabel(params.days);
   return (
@@ -113,10 +143,10 @@ export function ReferralsTabView({
 
       <TablePanel
         title="Referred friends"
-        description="Everyone who joined through a referral link, newest first, with what they have done since. This list covers all time, whatever period is picked above. Dates are UTC."
+        description="Everyone who joined through a referral link, newest first, with what they have done since. Rewards says what each side was given, or why a side has nothing yet. This list covers all time, whatever period is picked above. Dates are UTC."
       >
         {friends ? (
-          <ReferredFriendsTable page={friends} params={params} cardsRequired={cardsRequired} />
+          <ReferredFriendsTable page={friends} params={params} rewardContext={rewardContext} />
         ) : (
           <AdminLoadError what="the referred friends" />
         )}

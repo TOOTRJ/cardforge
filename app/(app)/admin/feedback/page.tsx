@@ -70,7 +70,7 @@ export default async function AdminFeedbackPage({
       <PageHeader
         eyebrow="Admin · Feedback"
         title="Feedback inbox"
-        description="Bug reports, frame issues, feature/frame requests and the deck builder's feedback from users. New submissions ping the notification bell; Reply opens a conversation the user sees under Messages."
+        description="Bug reports, frame issues, feature/frame requests and the deck builder's feedback from users. New submissions ping the notification bell; Reply opens the conversation — their message with a reply box under it — and the user sees it under Messages once you answer."
       />
 
       <nav aria-label="Status" className="mt-4 flex flex-wrap items-center gap-2">
@@ -192,7 +192,6 @@ export default async function AdminFeedbackPage({
                 <span className="ml-auto flex flex-wrap items-center gap-2">
                   <FeedbackReplyButton
                     feedbackId={item.id}
-                    subject={item.subject}
                     existingThreadId={threadByFeedback.get(item.id) ?? null}
                     disabledReason={item.user ? null : "The sender's account was deleted."}
                   />
