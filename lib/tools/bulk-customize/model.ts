@@ -248,6 +248,73 @@ export function bulkCostLine(cost: BulkCost): string {
 }
 
 // ---------------------------------------------------------------------------
+// How a run ended (the tool's analytics)
+// ---------------------------------------------------------------------------
+
+/** What the summary reads of a job step (lib/ai/generation-jobs.ts JobStep). */
+type BulkRunStep = { status: string; credits?: number; spend_ref?: string | null };
+
+export type BulkRunEnd = {
+  steps: readonly BulkRunStep[];
+  /** The plan limit the run stopped on, if any. */
+  stoppedBy: "CARD_CAPACITY" | "INSUFFICIENT_CREDITS" | null;
+  /** A door error the run couldn't get past (offline, the job is gone). */
+  error: string | null;
+  /** Cards were still waiting to be made when the run ended. */
+  paused: boolean;
+  /** Which run of the batch this was: 1 = the first, more = continued or
+   *  retried. */
+  run: number;
+};
+
+/** The batch's running totals at the end of a run (what the next run's
+ *  numbers are counted from). */
+export type BulkRunTotals = { made: number; credits: number };
+
+/**
+ * What ONE ended run of a batch records (`run_finished` — the browser runs
+ * the steps, so only the dialog knows a run is over). `made` and `credits`
+ * are THIS run's (so they add up across a batch's runs — a batch continued
+ * after a stop is two runs): the cards it made, and the credits really
+ * spent on them (a made card's settled charge; a failed card's credit went
+ * back). `failed` and `left` are where the batch stands now. `stopped` is
+ * why the run ended short: the card limit, the credits, a door error, the
+ * maker's own Stop ("cancelled") — or "none". Counts and codes only.
+ */
+export function bulkRunSummary(
+  end: BulkRunEnd,
+  before: BulkRunTotals = { made: 0, credits: 0 },
+): { props: Record<string, string | number>; totals: BulkRunTotals } {
+  const made = end.steps.filter((step) => step.status === "done");
+  const failed = end.steps.filter((step) => step.status === "failed").length;
+  const totals: BulkRunTotals = {
+    made: made.length,
+    credits: made.reduce((sum, step) => sum + (step.spend_ref ? (step.credits ?? BULK_AI_ART_CREDITS_PER_FACE) : 0), 0),
+  };
+  return {
+    totals,
+    props: {
+      total: end.steps.length,
+      made: Math.max(0, totals.made - before.made),
+      failed,
+      left: end.steps.length - made.length - failed,
+      credits: Math.max(0, totals.credits - before.credits),
+      stopped:
+        end.stoppedBy === "CARD_CAPACITY"
+          ? "capacity"
+          : end.stoppedBy === "INSUFFICIENT_CREDITS"
+            ? "credits"
+            : end.error
+              ? "error"
+              : end.paused
+                ? "cancelled"
+                : "none",
+      run: end.run,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // One card on its own
 // ---------------------------------------------------------------------------
 

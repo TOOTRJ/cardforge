@@ -263,6 +263,10 @@ export type ReartPlannedEntry = {
   cardId: string | null;
   /** Paint it even if it is in the style already (a sample, a re-roll). */
   repaint: boolean;
+  /** Re-art has painted this card on this deck before (in any style). The
+   *  tool's log alone reads it: a first paint of one card is `paint_one`, a
+   *  later one `reroll`. Never in the job's plan. */
+  paintedBefore: boolean;
   notes: string[];
 };
 
@@ -359,6 +363,7 @@ export async function planReartRun(
         credits: REART_CREDITS_PER_FACE * (twoFaces ? 2 : 1),
         cardId: card.id,
         repaint: Boolean(explicit),
+        paintedBefore: Boolean(done),
         notes: twoFaces ? ["Two faces: two pictures."] : [],
       });
       continue;
@@ -376,6 +381,7 @@ export async function planReartRun(
         credits: REART_CREDITS_PER_FACE * (made.backArtUrl ? 2 : 1),
         cardId: made.cardId,
         repaint: Boolean(explicit),
+        paintedBefore: true,
         notes: ["Made by an earlier run — linked to its entry again."],
       });
       continue;
@@ -423,6 +429,7 @@ export async function planReartRun(
         credits: plan.credits,
         cardId: null,
         repaint: Boolean(explicit),
+        paintedBefore: false,
         notes: plan.doubleFaced ? ["Two faces: two pictures."] : [],
       });
     }

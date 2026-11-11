@@ -7,6 +7,7 @@ import type { Database } from "@/types/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { isUserStorageConfigured, userFolder } from "@/lib/media/user-storage";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
+import { coalesceSweep } from "@/lib/cards/sweep-coalesce";
 import type { CustomPipSymbol } from "@/lib/pips/override";
 
 // ---------------------------------------------------------------------------
@@ -78,7 +79,10 @@ export function finishPipChange(
 
   after(async () => {
     try {
-      await rebakeCardsUsingSymbol(options.cardsClient ?? (await createClient()), ownerId, symbol);
+      const cards = options.cardsClient ?? (await createClient());
+      // One sweep at a time per owner and pip: a change while one runs waits
+      // for it, then sweeps (lib/cards/sweep-coalesce.ts).
+      await coalesceSweep(`pip:${ownerId}:${symbol}`, () => rebakeCardsUsingSymbol(cards, ownerId, symbol));
     } catch (error) {
       console.error("[custom-pips] rebake sweep failed", error);
     }

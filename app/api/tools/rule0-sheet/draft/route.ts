@@ -22,7 +22,7 @@ import { listDeckCards } from "@/lib/decks/queries";
 import { countsTowardDeckStats } from "@/lib/decks/analytics";
 import { isDeckFormat } from "@/types/deck";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { draftTableSheet } from "@/lib/tools/rule0/ai-draft";
 import { RULE0_TOOL_SLUG } from "@/lib/tools/rule0/model";
 import { tableSheetFromRow } from "@/lib/tools/rule0/queries";
@@ -35,6 +35,10 @@ import { tableSheetFromRow } from "@/lib/tools/rule0/queries";
 // The draft is WRITTEN to the sheet (game plan + win conditions, the notes
 // untouched) so a paid answer survives a reload; the owner edits it after.
 // Beta tools run AI although deck AI is paused (owner 2026-11-06).
+//
+// Recorded (tool_events, after the response): `ai_draft` with the `credits`
+// charged, and every refusal or failure past the tool's gate as
+// `ai_draft_failed` with a `reason` — and `refunded` once a credit was taken.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -53,7 +57,16 @@ export async function POST(request: Request) {
   if (!access) {
     return NextResponse.json({ ok: false, error: "The Rule 0 table sheet isn't open to you." }, { status: 404 });
   }
+  const refused = (reason: string, props: ToolEventProps = {}) =>
+    recordToolEventLater({
+      slug: RULE0_TOOL_SLUG,
+      userId: access.userId,
+      event: "ai_draft_failed",
+      access: access.via,
+      props: { reason, ...props },
+    });
   if (!isDesignAiConfigured()) {
+    refused("ai_unavailable");
     return NextResponse.json({ ok: false, error: "AI drafting isn't configured on this deployment." }, { status: 503 });
   }
 
@@ -61,10 +74,12 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    refused("invalid");
     return NextResponse.json({ ok: false, error: "Request body must be JSON." }, { status: 400 });
   }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
+    refused("invalid");
     return NextResponse.json({ ok: false, error: "That deck doesn't exist." }, { status: 400 });
   }
 
@@ -77,6 +92,7 @@ export async function POST(request: Request) {
     .eq("owner_id", access.userId)
     .maybeSingle();
   if (!deck) {
+    refused("not_owner");
     return NextResponse.json({ ok: false, error: "Only the deck's owner can draft its table sheet." }, { status: 404 });
   }
   // The deck's own cards (the main deck and the commander), as every AI
@@ -85,11 +101,15 @@ export async function POST(request: Request) {
     (item) => countsTowardDeckStats(item.entry.board) && item.entry.quantity > 0,
   );
   if (items.length === 0) {
+    refused("empty_deck");
     return NextResponse.json({ ok: false, error: "Add cards to the deck first: the draft is written from them." }, { status: 400 });
   }
 
   const rate = await checkAiRateLimit(access.userId);
-  if (!rate.ok) return rateLimitedResponse(rate);
+  if (!rate.ok) {
+    refused("rate_limited", { window: rate.reason, cards: items.length });
+    return rateLimitedResponse(rate);
+  }
 
   if (isBillingEnabled() && isAdminConfigured()) {
     await reconcileUserSpends(createAdminClient(), access.userId);
@@ -98,6 +118,7 @@ export async function POST(request: Request) {
   const ref = `spend:table-sheet:${randomUUID()}`;
   const spend = await spendCredits(1, LABEL, { failClosed: true, ref });
   if (!spend.ok) {
+    refused(spend.reason === "insufficient_credits" ? "insufficient_credits" : "credit_check_failed", { cards: items.length });
     return NextResponse.json(
       {
         ok: false,
@@ -137,6 +158,14 @@ export async function POST(request: Request) {
         ? "design_unreadable"
         : designFailureKind(classifyProviderError(detail));
     console.error(`[ai:design] table sheet draft failed (${code}): ${detail.replace(/\s+/g, " ").slice(0, 300)}`);
+    refused(code, {
+      // The credit this call took is back (or still owed: the reconcile
+      // sweep returns it) — never counted as spent.
+      refunded: spend.charged && landed,
+      refund_pending: spend.charged && !landed,
+      cards: items.length,
+      ms: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -166,12 +195,19 @@ export async function POST(request: Request) {
     .single();
   if (writeError) console.error("[rule0] AI draft not saved:", writeError.message);
 
-  await recordToolEvent({
+  recordToolEventLater({
     slug: RULE0_TOOL_SLUG,
     userId: access.userId,
     event: "ai_draft",
     access: access.via,
-    props: { cards: items.length, win_conditions: draft.winConditions.length, saved: !writeError },
+    props: {
+      cards: items.length,
+      win_conditions: draft.winConditions.length,
+      saved: !writeError,
+      plan: Boolean(draft.gamePlan),
+      credits: spend.charged ? 1 : 0,
+      ms: Date.now() - startedAt,
+    },
   });
   return NextResponse.json({
     ok: true,

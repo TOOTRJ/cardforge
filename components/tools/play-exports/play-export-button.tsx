@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import { cn } from "@/lib/utils";
 import type { PlayExportDialogProps } from "./play-export-dialog";
 
@@ -53,6 +54,12 @@ export function PlayExportButton({
           if (disabledReason) return;
           setOpened(true);
           setOpen(true);
+          // The dialog opened (tool_events): best effort, never in its way.
+          try {
+            trackToolEvent("play-exports", "dialog_opened", { source: source.kind });
+          } catch {
+            // Tracking never stops the dialog.
+          }
         }}
       >
         <Gamepad2 className="h-4 w-4" aria-hidden />

@@ -4,6 +4,7 @@ import { cronRouteGuard } from "@/lib/api/cron-auth";
 import { PERMANENT_FUNNEL_EVENTS } from "@/lib/analytics/funnel-events";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { DECK_HISTORY_MAX_ROWS, DECK_HISTORY_PLUS_DAYS, DECK_HISTORY_PRO_GRACE_DAYS } from "@/lib/decks/deck-history";
+import { COLLECTION_AI_RESULT_DAYS } from "@/lib/tools/collection/ai-results";
 
 // ---------------------------------------------------------------------------
 // /api/cron/prune-funnel-events — weekly: drop funnel rows older than the
@@ -38,6 +39,12 @@ import { DECK_HISTORY_MAX_ROWS, DECK_HISTORY_PLUS_DAYS, DECK_HISTORY_PRO_GRACE_D
 // the rows after that were an ever-growing table nothing read (audit
 // 2026-11-05, nice-to-have). Processed and stale-unprocessed alike; a claim
 // younger than the window is never touched.
+//
+// …and the kept Collection AI answers (migration 0198,
+// lib/tools/collection/ai-results.ts) past COLLECTION_AI_RESULT_DAYS: a kept
+// answer is only asked for in the two minutes after its call, and the
+// browser's own copy lives a week. A database 0198 has not reached yet has
+// nothing to prune — never a failed run.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -78,6 +85,12 @@ export async function GET(request: Request) {
   const stripeEventsCutoff = new Date(Date.now() - STRIPE_EVENTS_RETENTION_DAYS * DAY_MS).toISOString();
   const stripeEvents = await admin.from("stripe_events").delete({ count: "exact" }).lt("claimed_at", stripeEventsCutoff);
 
+  const aiResultCutoff = new Date(Date.now() - COLLECTION_AI_RESULT_DAYS * DAY_MS).toISOString();
+  const aiResults = await admin.from("collection_ai_results").delete({ count: "exact" }).lt("created_at", aiResultCutoff);
+  // The table arrives with 0198 (the app can deploy first).
+  const aiResultsError =
+    aiResults.error && !["PGRST205", "42P01"].includes(aiResults.error.code ?? "") ? aiResults.error : null;
+
   const history = await admin.rpc("prune_deck_entry_changes", {
     p_keep_days: DECK_HISTORY_PLUS_DAYS,
     p_by_plan: isBillingEnabled(),
@@ -90,7 +103,7 @@ export async function GET(request: Request) {
   const historyError =
     history.error && !["PGRST202", "42883"].includes(history.error.code ?? "") ? history.error : null;
 
-  const failed = [error, views.error, salts.error, cardViews.error, cardSalts.error, receipts.error, stripeEvents.error, historyError].find(Boolean);
+  const failed = [error, views.error, salts.error, cardViews.error, cardSalts.error, receipts.error, stripeEvents.error, aiResultsError, historyError].find(Boolean);
   if (failed) return NextResponse.json({ ok: false, error: failed.message }, { status: 500 });
   return NextResponse.json({
     ok: true,
@@ -101,6 +114,7 @@ export async function GET(request: Request) {
     cardViewsDeleted: cardViews.count ?? 0,
     aiReceiptsDeleted: receipts.count ?? 0,
     stripeEventsDeleted: stripeEvents.count ?? 0,
+    collectionAiResultsDeleted: aiResultsError === null ? (aiResults.count ?? 0) : 0,
     deckHistoryDeleted: history.data ?? 0,
   });
 }

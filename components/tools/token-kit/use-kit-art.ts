@@ -5,8 +5,15 @@ import { toast } from "sonner";
 import { useCreditConfirm } from "@/components/billing/credit-confirm-provider";
 import { publishCredits } from "@/components/billing/credits-bus";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
-import { AI_FILL_NO_ANSWER_MESSAGE, AI_PLAN_NO_ANSWER_MESSAGE, failedStepMessage } from "@/lib/ai/failure";
+import { AI_FILL_NO_ANSWER_MESSAGE, AI_PLAN_NO_ANSWER_MESSAGE, failedStepMessage, isAiFailureKind } from "@/lib/ai/failure";
 import { uploadCardArtFile } from "@/lib/cards/art-upload-client";
+import {
+  CARD_ART_NOT_IMAGE_MESSAGE,
+  CARD_ART_TOO_LARGE_MESSAGE,
+  CARD_ART_TYPE_MESSAGE,
+  CARD_ART_UPLOAD_FAILED_MESSAGE,
+} from "@/lib/cards/art-upload-limits";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import { kitCardFields, type KitFace, type KitSettings } from "@/lib/tools/token-kit/model";
 import type { FrameTemplate } from "@/types/card";
 
@@ -17,7 +24,30 @@ import type { FrameTemplate } from "@/types/card";
 // (`card_fill`, `want: ["art"]` — one credit, confirmed first, refunded by
 // the step when it fails), named as the Token Kit's (`tool`: the beta gate
 // and the tool's analytics). Never a new AI path.
+//
+// Both are seen by the Token Kit only here (the upload is the creator's, the
+// paint's outcome arrives in the browser), so the browser records them —
+// codes, sizes and counts only, never the token's words or the file's name:
+//   - `art_uploaded` / `art_upload_failed` (a `reason` code, the file's kB);
+//   - `ai_art_done` (the credit spent) / `ai_art_failed` with a `reason`
+//     code and whether the credit came back. The jobs route records the
+//     picture ASKED for (`ai_art`).
 // ---------------------------------------------------------------------------
+
+type KitArtEvent = "art_uploaded" | "art_upload_failed" | "ai_art_done" | "ai_art_failed";
+
+/** Best effort, never in the picture's way (and never able to throw into it). */
+function track(event: KitArtEvent, props: Record<string, string | number | boolean>) {
+  trackToolEvent("token-kit", event, props);
+}
+
+/** Why an upload was refused, from the upload's own sentences. */
+function uploadFailureReason(message: string): string {
+  if (message === CARD_ART_TOO_LARGE_MESSAGE) return "too_large";
+  if (message === CARD_ART_TYPE_MESSAGE || message === CARD_ART_NOT_IMAGE_MESSAGE) return "wrong_type";
+  if (message === CARD_ART_UPLOAD_FAILED_MESSAGE) return "upload_failed";
+  return "refused";
+}
 
 export type KitArt = { artUrl: string; artistCredit: string | null };
 
@@ -28,6 +58,9 @@ type FillStep = {
   failure?: string | null;
   refunded?: number | null;
   refund_pending?: boolean | null;
+  /** Set on a done step whose credit was really charged (null for an admin
+   *  or with billing off). */
+  spend_ref?: string | null;
   fill?: { art_url?: string; artist_credit?: string };
 };
 
@@ -48,10 +81,13 @@ export function useKitArt() {
     mark(key, "upload");
     try {
       const result = await uploadCardArtFile(file);
+      const kb = Math.round(file.size / 1024);
       if (!result.ok) {
+        track("art_upload_failed", { reason: uploadFailureReason(result.error), kb });
         toast.error(result.error);
         return null;
       }
+      track("art_uploaded", { kb });
       return { artUrl: result.publicUrl, artistCredit: null };
     } finally {
       mark(key, null);
@@ -67,6 +103,9 @@ export function useKitArt() {
       });
       if (!ok) return null;
       mark(key, "paint");
+      const startedAt = Date.now();
+      const failed = (reason: string, props: Record<string, string | number | boolean> = {}) =>
+        track("ai_art_failed", { reason, kind: face.kind, style: settings.artStyle, ms: Date.now() - startedAt, ...props });
       try {
         const fields = kitCardFields(face);
         const planResponse = await fetch("/api/ai/jobs", {
@@ -94,7 +133,13 @@ export function useKitArt() {
         });
         const plan = await planResponse.json().catch(() => null);
         if (!planResponse.ok || !plan?.ok) {
-          if (planResponse.status === 402 || plan?.code === "INSUFFICIENT_CREDITS") upgrade.open("credits", "token_kit");
+          const outOfCredits = planResponse.status === 402 || plan?.code === "INSUFFICIENT_CREDITS";
+          // Nothing was charged: the job was never planned.
+          failed(outOfCredits ? "insufficient_credits" : planResponse.status === 429 ? "rate_limited" : "plan_refused", {
+            status: planResponse.status,
+            refunded: false,
+          });
+          if (outOfCredits) upgrade.open("credits", "token_kit");
           else toast.error(plan?.error ?? AI_PLAN_NO_ANSWER_MESSAGE);
           return null;
         }
@@ -109,6 +154,7 @@ export function useKitArt() {
           });
           const payload = await response.json().catch(() => null);
           if (!response.ok || !payload?.ok) {
+            failed(response.status === 429 ? "rate_limited" : "step_refused", { status: response.status });
             toast.error(payload?.error ?? AI_FILL_NO_ANSWER_MESSAGE);
             return null;
           }
@@ -122,11 +168,24 @@ export function useKitArt() {
           break;
         }
         if (!step || step.status !== "done" || !step.fill?.art_url) {
+          // The step's own failure kind (lib/ai/failure.ts) and what it says
+          // about the credit; a step that never answered has neither.
+          if (step?.status === "failed") {
+            failed(isAiFailureKind(step.failure) ? step.failure : "step_failed", {
+              refunded: Boolean(step.refunded),
+              refund_pending: Boolean(step.refund_pending),
+            });
+          } else {
+            failed("no_answer");
+          }
           toast.error(step?.status === "failed" ? failedStepMessage(step) : AI_FILL_NO_ANSWER_MESSAGE);
           return null;
         }
+        // The credit really charged: none for an admin or with billing off.
+        track("ai_art_done", { kind: face.kind, style: settings.artStyle, credits: step.spend_ref ? 1 : 0, ms: Date.now() - startedAt });
         return { artUrl: step.fill.art_url, artistCredit: step.fill.artist_credit ?? null };
       } catch {
+        failed("no_connection");
         toast.error(AI_FILL_NO_ANSWER_MESSAGE);
         return null;
       } finally {

@@ -10,7 +10,8 @@ import { isUuid } from "@/lib/ids";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { recordToolEvent } from "@/lib/tools/events";
+import { toolReasonOfCode } from "@/lib/tools/catalog";
+import { recordToolEventLater } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
 import type { KitItem } from "@/lib/tools/token-kit/collect";
 import {
@@ -29,8 +30,10 @@ import { buildKitFromLines, kitLinesOfDeck, kitLinesOfList, listSourceKey, type 
 // ---------------------------------------------------------------------------
 // The Token Kit's server actions (beta tool `token-kit`). Every one checks
 // the viewer's access first (checkToolAccess: admins and testers while the
-// tool is in beta) and records what it did (recordToolEvent — counts and
-// kinds only, never a card's text). The token list is Scryfall's data and
+// tool is in beta) and records what it did (recordToolEventLater — after the
+// response; counts and kinds only, never a card's text): a success under the
+// action's name, a refusal under `<name>_failed` with a `reason` code. The
+// token list is Scryfall's data and
 // FREE on every plan (Scryfall's terms forbid paywalling it): the tool's
 // gate is the beta, never a tier. A kit's tokens are never cards — "Save to
 // My Cards" makes one a normal card through createCardAction, which counts
@@ -78,6 +81,15 @@ function savedKitOf(row: { settings: unknown; items: unknown } | null): SavedKit
 export async function buildTokenKitAction(source: KitSource): Promise<BuiltKitResult> {
   const access = await checkToolAccess(SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  /** A refused build, recorded with why (a code — never the list). */
+  const refused = (reason: string, props: Record<string, string | number> = {}) =>
+    recordToolEventLater({
+      slug: SLUG,
+      userId: access.userId,
+      event: "kit_built_failed",
+      access: access.via,
+      props: { reason, source: source?.kind === "deck" || source?.kind === "list" ? source.kind : "unknown", ...props },
+    });
 
   let lines: KitSourceLine[];
   let sourceKey: string;
@@ -85,29 +97,51 @@ export async function buildTokenKitAction(source: KitSource): Promise<BuiltKitRe
   let deckId: string | null = null;
   let sourceText: string | null = null;
   if (source?.kind === "deck") {
-    if (!isUuid(source.deckId)) return { ok: false, error: "Pick one of your decks." };
+    if (!isUuid(source.deckId)) {
+      refused("invalid");
+      return { ok: false, error: "Pick one of your decks." };
+    }
     const deck = await getDeckById(source.deckId);
-    if (!deck || deck.owner_id !== access.userId) return { ok: false, error: "That deck isn't one of yours." };
+    if (!deck || deck.owner_id !== access.userId) {
+      refused("not_your_deck");
+      return { ok: false, error: "That deck isn't one of yours." };
+    }
     lines = kitLinesOfDeck(await listDeckCards(deck.id));
     sourceKey = `deck:${deck.id}`;
     deckId = deck.id;
     title = deck.title;
   } else if (source?.kind === "list") {
     const text = typeof source.text === "string" ? source.text : "";
-    if (!text.trim()) return { ok: false, error: "Paste a decklist first." };
-    if (text.length > MAX_DECKLIST_CHARS) return { ok: false, error: "That list is too long to read." };
+    if (!text.trim()) {
+      refused("empty_list");
+      return { ok: false, error: "Paste a decklist first." };
+    }
+    if (text.length > MAX_DECKLIST_CHARS) {
+      refused("list_too_long");
+      return { ok: false, error: "That list is too long to read." };
+    }
     lines = kitLinesOfList(text).lines;
-    if (lines.length === 0) return { ok: false, error: "No cards were found in that list — one card a line, like “1 Goldspan Dragon”." };
+    if (lines.length === 0) {
+      refused("no_cards_found");
+      return { ok: false, error: "No cards were found in that list — one card a line, like “1 Goldspan Dragon”." };
+    }
     sourceKey = listSourceKey(lines);
     sourceText = text;
     title = "Pasted list";
   } else {
+    refused("invalid");
     return { ok: false, error: "Pick a deck or paste a list." };
   }
-  if (lines.length === 0) return { ok: false, error: "That deck has no cards yet." };
+  if (lines.length === 0) {
+    refused("empty_deck");
+    return { ok: false, error: "That deck has no cards yet." };
+  }
 
   const limit = await checkScryfallRateLimit(access.userId, "deck_tokens");
-  if (!limit.ok) return { ok: false, error: limit.message };
+  if (!limit.ok) {
+    refused("rate_limited", { lines: lines.length });
+    return { ok: false, error: limit.message };
+  }
 
   const built = await buildKitFromLines(lines);
   if (built.calls > 0) await logScryfallCall(access.userId, "deck_tokens");
@@ -122,7 +156,7 @@ export async function buildTokenKitAction(source: KitSource): Promise<BuiltKitRe
 
   const counts = { token: 0, emblem: 0, helper: 0 };
   for (const item of built.items) counts[item.face.kind] += 1;
-  await recordToolEvent({
+  recordToolEventLater({
     slug: SLUG,
     userId: access.userId,
     event: "kit_built",
@@ -177,28 +211,43 @@ export type SaveKitResult = { ok: true } | { ok: false; error: string };
 export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult> {
   const access = await checkToolAccess(SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  /** The autosave is recorded only when it FAILS (it runs after every
+   *  change — a success each time would drown the tool's numbers). */
+  const refused = (reason: string, props: Record<string, string | number> = {}) =>
+    recordToolEventLater({ slug: SLUG, userId: access.userId, event: "kit_save_failed", access: access.via, props: { reason, ...props } });
   const parsed = saveKitSchema.safeParse(input);
   if (!parsed.success) {
     console.warn("[token-kit] save refused:", parsed.error.issues.slice(0, 3).map((issue) => `${issue.path.join(".")}: ${issue.message}`));
+    refused("invalid");
     return { ok: false, error: "That kit couldn't be saved." };
   }
   const kit = parsed.data;
-  if (Object.keys(kit.items).length > MAX_SAVED_ITEMS) return { ok: false, error: "That kit has too many tokens to save." };
+  if (Object.keys(kit.items).length > MAX_SAVED_ITEMS) {
+    refused("too_many_tokens", { tokens: Object.keys(kit.items).length });
+    return { ok: false, error: "That kit has too many tokens to save." };
+  }
 
   let sourceKey: string;
   let deckId: string | null = null;
   let sourceText: string | null = null;
   if (kit.deckId) {
-    if (!isUuid(kit.deckId)) return { ok: false, error: "That kit couldn't be saved." };
+    if (!isUuid(kit.deckId)) {
+      refused("invalid");
+      return { ok: false, error: "That kit couldn't be saved." };
+    }
     sourceKey = `deck:${kit.deckId}`;
     deckId = kit.deckId;
   } else if (kit.sourceText) {
     sourceKey = listSourceKey(kitLinesOfList(kit.sourceText).lines);
     sourceText = kit.sourceText;
   } else {
+    refused("invalid");
     return { ok: false, error: "That kit couldn't be saved." };
   }
-  if (sourceKey !== kit.sourceKey) return { ok: false, error: "That kit changed — build it again to save." };
+  if (sourceKey !== kit.sourceKey) {
+    refused("source_changed");
+    return { ok: false, error: "That kit changed — build it again to save." };
+  }
 
   const items: Record<string, KitItemState> = {};
   for (const [key, state] of Object.entries(kit.items)) {
@@ -221,6 +270,7 @@ export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult>
     .maybeSingle();
   if (readError) {
     console.error("[token-kit] save read failed:", readError.message);
+    refused("read_failed");
     return { ok: false, error: "The kit didn't save. Try again in a moment." };
   }
   const merged = mergeKitItems(storedKitItems(stored?.items), items, MAX_SAVED_ITEMS);
@@ -238,6 +288,7 @@ export async function saveTokenKitAction(input: unknown): Promise<SaveKitResult>
   );
   if (error) {
     console.error("[token-kit] save failed:", error.message);
+    refused("write_failed", { tokens: Object.keys(merged).length });
     return { ok: false, error: "The kit didn't save. Try again in a moment." };
   }
   return { ok: true };
@@ -274,16 +325,27 @@ export type SaveKitTokenResult =
 export async function saveKitTokenToCardsAction(input: unknown): Promise<SaveKitTokenResult> {
   const access = await checkToolAccess(SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: Record<string, string | boolean> = {}) =>
+    recordToolEventLater({ slug: SLUG, userId: access.userId, event: "token_save_failed", access: access.via, props: { reason, ...props } });
   const parsed = saveTokenSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "That token couldn't be saved." };
+  if (!parsed.success) {
+    refused("invalid");
+    return { ok: false, error: "That token couldn't be saved." };
+  }
   const { face, settings, state } = parsed.data;
 
   const verified = new Set(await getVerifiedFrameKeys());
   const artUrl = state.artUrl && isAllowedMediaUrl("card-art", state.artUrl, access.userId) ? state.artUrl : null;
   const preview = kitPreviewData(face, settings, { ...state, artUrl }, verified);
-  if (!preview) return { ok: false, error: "This one can't be drawn yet, so it can't be saved." };
+  if (!preview) {
+    refused("no_frame", { kind: face.kind });
+    return { ok: false, error: "This one can't be drawn yet, so it can't be saved." };
+  }
   const system = await getFantasyGameSystem();
-  if (!system) return { ok: false, error: "Saving isn't available right now." };
+  if (!system) {
+    refused("unavailable", { kind: face.kind });
+    return { ok: false, error: "Saving isn't available right now." };
+  }
 
   const fields = kitCardFields(face);
   const data = preview.data;
@@ -312,11 +374,18 @@ export async function saveKitTokenToCardsAction(input: unknown): Promise<SaveKit
     watermark: data.watermark ?? null,
   });
   if (!result.ok) {
-    if (result.reason === "capacity") return { ok: false, error: result.formError ?? "Your card limit is full.", capacity: true };
+    const about = { kind: face.kind, design: preview.frame.design, with_art: Boolean(artUrl) };
+    if (result.reason === "capacity") {
+      refused("capacity", about);
+      return { ok: false, error: result.formError ?? "Your card limit is full.", capacity: true };
+    }
     const field = Object.values(result.fieldErrors ?? {})[0];
+    // The card action's own code where it names one (lower-cased), else
+    // which kind of refusal it was.
+    refused(result.code ? toolReasonOfCode(result.code) : field ? "field_error" : "refused", about);
     return { ok: false, error: result.formError ?? field ?? "That token couldn't be saved." };
   }
-  await recordToolEvent({
+  recordToolEventLater({
     slug: SLUG,
     userId: access.userId,
     event: "token_saved",

@@ -8,7 +8,7 @@ import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-lim
 import { createDeckAction } from "@/lib/decks/actions";
 import { commitImportLines } from "@/lib/decks/import-commit";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater } from "@/lib/tools/events";
 import { toolHref } from "@/lib/tools/catalog";
 import { collectionRowFor } from "./card-row";
 import {
@@ -43,8 +43,11 @@ import { getBracketCards } from "./bracket-cards";
 // The Collection Deck Builder's server actions (migration 0185). Every one
 // starts with the tool's gate (`checkToolAccess`: admins and testers while
 // in beta, a plan once an admin releases it) and records what matters with
-// `recordToolEvent`. The collection's rows are the caller's own (RLS, gated
-// by has_tool_access in SQL as well).
+// `recordToolEventLater` (after the response, never awaited): a success
+// under the action's name, a refusal under `<name>_failed` with a `reason`
+// code — counts and codes only, never a card's or a deck's name. The
+// collection's rows are the caller's own (RLS, gated by has_tool_access in
+// SQL as well).
 // ---------------------------------------------------------------------------
 
 const PAGE = toolHref(COLLECTION_TOOL_SLUG);
@@ -54,6 +57,13 @@ type Fail = { ok: false; error: string; retryAfterSeconds?: number };
 
 async function gate() {
   return checkToolAccess(COLLECTION_TOOL_SLUG);
+}
+
+type Access = NonNullable<Awaited<ReturnType<typeof gate>>>;
+
+/** One tool event of the viewer the gate let in, after the response. */
+function record(access: Access, event: string, props: Record<string, string | number | boolean | null> = {}): void {
+  recordToolEventLater({ slug: COLLECTION_TOOL_SLUG, userId: access.userId, event, access: access.via, props });
 }
 
 // ---------------------------------------------------------------------------
@@ -70,10 +80,19 @@ export async function importCollectionChunkAction(payload: unknown): Promise<Imp
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = importChunkSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "Those lines couldn't be read. Reload the page and try again." };
+  if (!parsed.success) {
+    record(access, "import_failed", { reason: "invalid" });
+    return { ok: false, error: "Those lines couldn't be read. Reload the page and try again." };
+  }
+  // Where in the import this chunk is (its index, its size) — with every
+  // failure, so a stop can be read from the log.
+  const at = { mode: parsed.data.mode, chunk: parsed.data.chunk, lines: parsed.data.lines.length };
 
   const rate = await checkScryfallRateLimit(access.userId, "collection_import");
-  if (!rate.ok) return { ok: false, error: rate.message, retryAfterSeconds: rate.retryAfterSeconds };
+  if (!rate.ok) {
+    record(access, "import_failed", { reason: "rate_limited", ...at });
+    return { ok: false, error: rate.message, retryAfterSeconds: rate.retryAfterSeconds };
+  }
   await logScryfallCall(access.userId, "collection_import");
 
   let resolved;
@@ -81,6 +100,7 @@ export async function importCollectionChunkAction(payload: unknown): Promise<Imp
     resolved = await resolveImportLines(parsed.data.lines);
   } catch (error) {
     if (error instanceof ScryfallUnavailableError) {
+      record(access, "import_failed", { reason: "scryfall_unavailable", ...at });
       return { ok: false, error: "Scryfall didn't respond — this part wasn't added. Try again in a moment.", retryAfterSeconds: 5 };
     }
     throw error;
@@ -91,7 +111,16 @@ export async function importCollectionChunkAction(payload: unknown): Promise<Imp
     mode: parsed.data.mode,
     chunk: parsed.data.chunk,
   });
-  if (!write.ok) return { ok: false, error: write.error };
+  if (!write.ok) {
+    record(access, "import_failed", { reason: "write_failed", ...at });
+    return { ok: false, error: write.error };
+  }
+  // The first chunk in = an import under way (its end is `import`, recorded
+  // by the finish action); a full collection is where one stops.
+  if (at.chunk === 0) record(access, "import_started", { mode: at.mode, chunk_lines: at.lines });
+  if (write.overCap.length > 0) {
+    record(access, "import_failed", { reason: "collection_full", ...at, over_cap: write.overCap.length });
+  }
   const overCap: ImportProblem[] = write.overCap.map(({ line }) => ({
     line: line?.line ?? 0,
     raw: line?.raw ?? "",
@@ -117,7 +146,10 @@ export async function finishCollectionImportAction(payload: unknown): Promise<Fi
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = finishImportSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "That import couldn't be finished." };
+  if (!parsed.success) {
+    record(access, "import_failed", { reason: "invalid_finish" });
+    return { ok: false, error: "That import couldn't be finished." };
+  }
   const { batchId, mode, complete } = parsed.data;
   let removed = 0;
   if (mode === "replace" && complete) {
@@ -133,24 +165,19 @@ export async function finishCollectionImportAction(payload: unknown): Promise<Fi
         .or(`import_batch.is.null,import_batch.neq.${batchId}`);
       if (error) {
         console.error("[collection] replace sweep failed:", error.message);
+        record(access, "import_failed", { reason: "replace_sweep_failed", mode, lines: parsed.data.lines });
         return { ok: false, error: "The new cards are in, but the old ones couldn't be removed. Try the import again." };
       }
       removed = count ?? 0;
     }
   }
-  await recordToolEvent({
-    slug: COLLECTION_TOOL_SLUG,
-    userId: access.userId,
-    event: "import",
-    access: access.via,
-    props: {
-      format: parsed.data.format,
-      mode,
-      lines: parsed.data.lines,
-      matched: parsed.data.matched,
-      unmatched: parsed.data.unmatched,
-      removed,
-    },
+  record(access, "import", {
+    format: parsed.data.format,
+    mode,
+    lines: parsed.data.lines,
+    matched: parsed.data.matched,
+    unmatched: parsed.data.unmatched,
+    removed,
   });
   revalidatePath(PAGE);
   return { ok: true, removed };
@@ -167,10 +194,18 @@ export async function addToCollectionAction(payload: unknown): Promise<AddCardRe
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = addCardSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "That card couldn't be added." };
+  if (!parsed.success) {
+    record(access, "add_card_failed", { reason: "invalid" });
+    return { ok: false, error: "That card couldn't be added." };
+  }
+  const refused = (reason: string) =>
+    record(access, "add_card_failed", { reason, surface: parsed.data.surface, quantity: parsed.data.quantity });
 
   const rate = await checkScryfallRateLimit(access.userId, "named");
-  if (!rate.ok) return { ok: false, error: rate.message, retryAfterSeconds: rate.retryAfterSeconds };
+  if (!rate.ok) {
+    refused("rate_limited");
+    return { ok: false, error: rate.message, retryAfterSeconds: rate.retryAfterSeconds };
+  }
   await logScryfallCall(access.userId, "named");
   let card;
   try {
@@ -178,7 +213,10 @@ export async function addToCollectionAction(payload: unknown): Promise<AddCardRe
   } catch {
     card = null;
   }
-  if (!card) return { ok: false, error: "Scryfall didn't find that printing. Try again in a moment." };
+  if (!card) {
+    refused("printing_not_found");
+    return { ok: false, error: "Scryfall didn't find that printing. Try again in a moment." };
+  }
 
   const row = collectionRowFor(card, {
     finish: finishFor(card, parsed.data.finish),
@@ -186,19 +224,19 @@ export async function addToCollectionAction(payload: unknown): Promise<AddCardRe
     quantity: parsed.data.quantity,
   });
   const write = await writeCollectionRows([{ line: null, row }], { batchId: null, mode: "add" });
-  if (!write.ok) return { ok: false, error: write.error };
-  if (write.overCap.length > 0) return { ok: false, error: COLLECTION_FULL_MESSAGE };
+  if (!write.ok) {
+    refused("write_failed");
+    return { ok: false, error: write.error };
+  }
+  if (write.overCap.length > 0) {
+    refused("collection_full");
+    return { ok: false, error: COLLECTION_FULL_MESSAGE };
+  }
 
   const supabase = await createClient();
   const { data } = await supabase.from("collection_cards").select("quantity").eq("scryfall_id", row.scryfall_id);
   const owned = (data ?? []).reduce((sum, r) => sum + (r.quantity ?? 0), 0);
-  await recordToolEvent({
-    slug: COLLECTION_TOOL_SLUG,
-    userId: access.userId,
-    event: "add_card",
-    access: access.via,
-    props: { surface: parsed.data.surface, quantity: parsed.data.quantity },
-  });
+  record(access, "add_card", { surface: parsed.data.surface, quantity: parsed.data.quantity });
   revalidatePath(PAGE);
   return { ok: true, name: card.name, owned };
 }
@@ -222,14 +260,21 @@ export async function updateCollectionQuantityAction(payload: unknown): Promise<
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = updateQuantitySchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "Enter a number of copies from 1 to 9,999." };
+  if (!parsed.success) {
+    record(access, "edit_quantity_failed", { reason: "invalid" });
+    return { ok: false, error: "Enter a number of copies from 1 to 9,999." };
+  }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("collection_cards")
     .update({ quantity: parsed.data.quantity })
     .eq("id", parsed.data.id)
     .select("id");
-  if (error || !data?.length) return { ok: false, error: "That change didn't save. Try again." };
+  if (error || !data?.length) {
+    record(access, "edit_quantity_failed", { reason: error ? "write_failed" : "row_not_found" });
+    return { ok: false, error: "That change didn't save. Try again." };
+  }
+  record(access, "edit_quantity", { quantity: parsed.data.quantity });
   revalidatePath(PAGE);
   return { ok: true };
 }
@@ -238,10 +283,17 @@ export async function removeCollectionCardAction(payload: unknown): Promise<Simp
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = removeCardSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "That card couldn't be removed." };
+  if (!parsed.success) {
+    record(access, "remove_card_failed", { reason: "invalid" });
+    return { ok: false, error: "That card couldn't be removed." };
+  }
   const supabase = await createClient();
   const { error } = await supabase.from("collection_cards").delete().eq("id", parsed.data.id);
-  if (error) return { ok: false, error: "That card couldn't be removed. Try again." };
+  if (error) {
+    record(access, "remove_card_failed", { reason: "write_failed" });
+    return { ok: false, error: "That card couldn't be removed. Try again." };
+  }
+  record(access, "remove_card", { cards: 1 });
   revalidatePath(PAGE);
   return { ok: true };
 }
@@ -255,8 +307,11 @@ export async function clearCollectionAction(payload: unknown): Promise<{ ok: tru
     .from("collection_cards")
     .delete({ count: "exact" })
     .eq("owner_id", access.userId);
-  if (error) return { ok: false, error: "The collection couldn't be cleared. Try again." };
-  await recordToolEvent({ slug: COLLECTION_TOOL_SLUG, userId: access.userId, event: "clear", access: access.via, props: { removed: count ?? 0 } });
+  if (error) {
+    record(access, "clear_failed", { reason: "write_failed" });
+    return { ok: false, error: "The collection couldn't be cleared. Try again." };
+  }
+  record(access, "clear", { removed: count ?? 0 });
   revalidatePath(PAGE);
   return { ok: true, removed: count ?? 0 };
 }
@@ -272,29 +327,41 @@ export async function draftCollectionDeckAction(payload: unknown): Promise<Draft
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = draftSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: "Pick a commander first." };
+  if (!parsed.success) {
+    record(access, "draft_failed", { reason: "invalid" });
+    return { ok: false, error: "Pick a commander first." };
+  }
   const { commanderId, ...choice } = parsed.data;
+  const failed = (reason: string) =>
+    record(access, "draft_failed", {
+      reason,
+      ...(choice.deckType ? { deck_type: choice.deckType } : {}),
+      ...(choice.bracket ? { bracket: choice.bracket } : {}),
+    });
   const refused = choiceError(choice);
-  if (refused) return { ok: false, error: refused };
+  if (refused) {
+    failed("invalid_choice");
+    return { ok: false, error: refused };
+  }
   const commander = await getCollectionCard(commanderId);
-  if (!commander) return { ok: false, error: "That commander isn't in your collection any more." };
+  if (!commander) {
+    failed("commander_gone");
+    return { ok: false, error: "That commander isn't in your collection any more." };
+  }
   const why = commanderReason(commander);
-  if (why) return { ok: false, error: `${commander.name} ${why}.` };
+  if (why) {
+    failed("commander_ineligible");
+    return { ok: false, error: `${commander.name} ${why}.` };
+  }
   const [pool, lists] = await Promise.all([listBuilderPool(commander), choice.bracket ? getBracketCards() : null]);
   const draft = draftCommanderDeck({ commander, collection: pool.cards, plan: draftPlanFor(choice, lists) });
-  await recordToolEvent({
-    slug: COLLECTION_TOOL_SLUG,
-    userId: access.userId,
-    event: "draft",
-    access: access.via,
-    props: {
-      pool: draft.poolSize,
-      total: draft.total,
-      colours: commander.colorIdentity.join("") || "C",
-      ...(choice.deckType ? { deck_type: choice.deckType } : {}),
-      ...(choice.tribe ? { tribe: choice.tribe } : {}),
-      ...(choice.bracket ? { bracket: choice.bracket } : {}),
-    },
+  record(access, "draft", {
+    pool: draft.poolSize,
+    total: draft.total,
+    colours: commander.colorIdentity.join("") || "C",
+    ...(choice.deckType ? { deck_type: choice.deckType } : {}),
+    ...(choice.tribe ? { tribe: choice.tribe } : {}),
+    ...(choice.bracket ? { bracket: choice.bracket } : {}),
   });
   return { ok: true, draft, truncated: pool.truncated };
 }
@@ -313,15 +380,26 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
   const access = await gate();
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = saveDeckSchema.safeParse(payload);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "That deck couldn't be saved." };
+  if (!parsed.success) {
+    record(access, "save_deck_failed", { reason: "invalid" });
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "That deck couldn't be saved." };
+  }
   const { commanderId, cardIds, basics, title, visibility, deckType, tribe, bracket } = parsed.data;
+  const failed = (reason: string, props: Record<string, number> = {}) =>
+    record(access, "save_deck_failed", { reason, visibility, retry: parsed.data.retry, ...props });
 
   const rows = await listCollectionCardsById([commanderId, ...cardIds]);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const commander = byId.get(commanderId);
-  if (!commander) return { ok: false, error: "That commander isn't in your collection any more." };
+  if (!commander) {
+    failed("commander_gone");
+    return { ok: false, error: "That commander isn't in your collection any more." };
+  }
   const why = commanderReason(commander);
-  if (why) return { ok: false, error: `${commander.name} ${why}.` };
+  if (why) {
+    failed("commander_ineligible");
+    return { ok: false, error: `${commander.name} ${why}.` };
+  }
 
   const seen = new Set<string>([cardKey(commander.name)]);
   const lines: Array<{ name: string; quantity: number; board: "commander" | "main"; resolved: { scryfall_id: string } }> = [
@@ -329,18 +407,30 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
   ];
   for (const id of cardIds) {
     const card = byId.get(id);
-    if (!card) return { ok: false, error: "A card in this draft isn't in your collection any more. Draft it again." };
+    if (!card) {
+      failed("card_gone");
+      return { ok: false, error: "A card in this draft isn't in your collection any more. Draft it again." };
+    }
     if (isBasicLand(card)) continue;
     const reason = ineligibleReason(card, commander);
-    if (reason) return { ok: false, error: `${card.name} ${reason}.` };
+    if (reason) {
+      failed("card_ineligible");
+      return { ok: false, error: `${card.name} ${reason}.` };
+    }
     const key = cardKey(card.name);
-    if (seen.has(key)) return { ok: false, error: `${card.name} is in the draft twice — a Commander deck has one of each card.` };
+    if (seen.has(key)) {
+      failed("duplicate_card");
+      return { ok: false, error: `${card.name} is in the draft twice — a Commander deck has one of each card.` };
+    }
     seen.add(key);
     lines.push({ name: card.name, quantity: 1, board: "main", resolved: { scryfall_id: card.scryfallId } });
   }
   const allowedBasics = new Set<string>(["Wastes", ...commander.colorIdentity.map((c) => BASIC_FOR_COLOR[c])]);
   for (const basic of basics) {
-    if (!allowedBasics.has(basic.name)) return { ok: false, error: `${basic.name} is outside ${commander.name}'s colours.` };
+    if (!allowedBasics.has(basic.name)) {
+      failed("basic_off_colour");
+      return { ok: false, error: `${basic.name} is outside ${commander.name}'s colours.` };
+    }
     lines.push({
       name: basic.name,
       quantity: basic.count,
@@ -350,6 +440,7 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
   }
   const total = lines.reduce((sum, l) => sum + l.quantity, 0);
   if (total > COMMANDER_DECK_SIZE) {
+    failed("too_many_cards", { cards: total });
     return { ok: false, error: `That's ${total} cards — a Commander deck is ${COMMANDER_DECK_SIZE}. Remove ${total - COMMANDER_DECK_SIZE}.` };
   }
 
@@ -371,6 +462,7 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
     { reuseRecentTwin: parsed.data.retry },
   );
   if (!created.ok) {
+    failed("deck_not_created", { cards: total });
     return { ok: false, error: created.formError ?? Object.values(created.fieldErrors ?? {})[0] ?? "The deck couldn't be made. Try again." };
   }
   const supabase = await createClient();
@@ -396,6 +488,8 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
       { quota: "deck_import_commit" },
     );
   } finally {
+    // A commit that THREW leaves here with the error: recorded on the way.
+    if (!commit) failed("commit_error", { cards: total });
     if (!commit?.ok && (await cardCount()) === 0) {
       // An empty deck the user didn't ask for is removed again (their own,
       // made a moment ago) — whether the commit refused or threw; the draft
@@ -405,14 +499,9 @@ export async function saveCollectionDeckAction(payload: unknown): Promise<SaveDe
   }
   if (!commit.ok) {
     if (commit.alreadyImported) return { ok: true, slug: created.slug, title, placeholders: 0 };
+    failed(commit.retryAfterSeconds ? "rate_limited" : "commit_refused", { cards: total });
     return { ok: false, error: commit.error, retryAfterSeconds: commit.retryAfterSeconds };
   }
-  await recordToolEvent({
-    slug: COLLECTION_TOOL_SLUG,
-    userId: access.userId,
-    event: "save_deck",
-    access: access.via,
-    props: { cards: total, visibility, placeholders: commit.placeholders },
-  });
+  record(access, "save_deck", { cards: total, visibility, placeholders: commit.placeholders });
   return { ok: true, slug: created.slug, title, placeholders: commit.placeholders };
 }

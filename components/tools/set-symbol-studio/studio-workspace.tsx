@@ -15,6 +15,8 @@ import { CutoutControls } from "@/components/tools/set-symbol-studio/cutout-cont
 import { forgetStudioSymbols } from "@/components/tools/set-symbol-studio/studio-symbol-picker";
 import { SymbolShowcase, type SymbolLooks } from "@/components/tools/set-symbol-studio/symbol-showcase";
 import { cn } from "@/lib/utils";
+import { trackToolEvent } from "@/lib/tools/track-client";
+import type { ToolSlug } from "@/lib/tools/catalog";
 import { autoCutoutMode, type RgbaImage } from "@/lib/tools/set-symbol/cutout";
 import { decodeForPreview, decodeUrlForPreview, previewLooks, type PreviewLooks } from "@/lib/tools/set-symbol/browser";
 import {
@@ -47,6 +49,14 @@ import {
 // set icon (following the card's rarity) or its watermark, or is picked on
 // any card's Set icon step / Watermark picker ("Your symbols").
 // ---------------------------------------------------------------------------
+
+/** The tool's slug (lib/tools/set-symbol/server.ts SET_SYMBOL_SLUG, which is
+ *  server-only), for the one click no server action sees: the PNG opened in
+ *  a new tab. The two "New card with this…" links are NOT logged from here:
+ *  a server action dispatched on a <Link>'s click is pre-empted by that
+ *  link's own navigation (Next's router queue) — the creator's page, which
+ *  reads `?setSymbol=&use=`, is where that use can be recorded. */
+const TOOL_SLUG: ToolSlug = "set-symbol-studio";
 
 const DEFAULT_SETTINGS: CutoutSettings = cutoutSettingsSchema.parse({});
 const PREVIEW_DELAY_MS = 120;
@@ -463,6 +473,7 @@ export function SetSymbolStudio({ initialSymbols, aiReady }: { initialSymbols: S
                   href={selected.files.plain}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => trackToolEvent(TOOL_SLUG, "open_png", { source: selected.source })}
                   className={buttonVariants({ variant: "ghost", size: "sm" })}
                 >
                   <ExternalLink aria-hidden />

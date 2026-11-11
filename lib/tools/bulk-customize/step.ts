@@ -24,6 +24,7 @@ import { AI_FAILURE_COPY, type AiFailureKind } from "@/lib/ai/failure";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import type { CardType } from "@/types/card";
 import { checkToolAccess } from "@/lib/tools/queries";
+import { recordToolEventLater } from "@/lib/tools/events";
 import type { JobStep } from "@/lib/ai/generation-jobs";
 import {
   BULK_CUSTOMIZE_MAX_CARDS,
@@ -49,6 +50,10 @@ import { importPatchOf, resolveBulkSources, writeCollectionCustomized } from "@/
 // card has (frames in the colour, the kind, strong language, capacity,
 // import provenance: no fingerprint, so the card reads "Edited") — and the
 // deck entry is linked through linkDeckCardAction, never a direct write.
+//
+// A card that FAILED is recorded for the tool's analytics (`card_failed`,
+// after the response: why, and whether its credit came back). The cards
+// made are counted once a run, by the dialog (`run_finished`).
 // ---------------------------------------------------------------------------
 
 export type BulkPlanEntry = {
@@ -156,7 +161,38 @@ export async function runBulkCustomizeStep(
   const entry = plan.entries[stepIndex];
   if (!entry || step.key !== bulkStepKey(stepIndex)) return failed(step, "Missing card plan.");
 
-  return customizeSourceStep(userId, jobId, step, { source: entry.source, choices: plan.choices, aiLabel: "bulk_customize_art" }, deps);
+  const result = await customizeSourceStep(
+    userId,
+    jobId,
+    step,
+    { source: entry.source, choices: plan.choices, aiLabel: "bulk_customize_art" },
+    deps,
+  );
+  if (result.status === "failed") {
+    recordToolEventLater({
+      slug: BULK_CUSTOMIZE_TOOL_SLUG,
+      userId,
+      event: "card_failed",
+      access: access.via,
+      props: {
+        reason: bulkStepFailureReason(result),
+        art: plan.choices.art,
+        source: entry.source.kind,
+        refunded: Boolean(result.refunded),
+        refund_pending: Boolean(result.refund_pending),
+      },
+    });
+  }
+  return result;
+}
+
+/** Why a step failed, as a code: the plan limit it stopped on, else its
+ *  failure kind (lib/ai/failure.ts), else "other" (the source is gone,
+ *  Scryfall didn't answer, the card came out unchanged…). */
+export function bulkStepFailureReason(step: Pick<JobStep, "error_code" | "failure">): string {
+  if (step.error_code === "CARD_CAPACITY") return "capacity";
+  if (step.error_code === "INSUFFICIENT_CREDITS") return "insufficient_credits";
+  return step.failure ?? "other";
 }
 
 /** What a tool built on Bulk Customize hands its one-card core (Re-art

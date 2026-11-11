@@ -23,6 +23,14 @@ vi.mock("@/lib/tools/collection/actions", () => ({
   saveCollectionDeckAction: m.save,
 }));
 vi.mock("@/components/ai/use-leave-warning", () => ({ useLeaveWarning: () => {} }));
+vi.mock("@/lib/tools/track-client", () => ({ trackToolEvent: vi.fn() }));
+// The asking-again itself is held in collection-ai-recovery.test.ts; here
+// only what the page does with its answer.
+const recover = vi.hoisted(() => ({ ask: vi.fn() }));
+vi.mock("@/lib/tools/collection/ai-recover", async (original) => ({
+  ...(await original<typeof import("@/lib/tools/collection/ai-recover")>()),
+  recoverAiAnswer: recover.ask,
+}));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { CollectionBuild, foldedTileClass } from "@/components/tools/collection/collection-build";
@@ -287,6 +295,159 @@ describe("after a draft", () => {
   });
 });
 
+describe("a paid answer whose response was lost", () => {
+  const lostOn = (path: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("commander-scores")) return { json: async () => scoresBody };
+      if (url.includes(path)) throw new TypeError("Failed to fetch");
+      return { json: async () => suggestBody };
+    });
+  };
+
+  it("the build is asked for again by the request's id, and lands as if it had arrived", async () => {
+    lostOn("ai-build");
+    recover.ask.mockResolvedValue({ state: "done", result: { draft: draftFor(COMMANDERS[0]), truncated: false }, credits: 4 });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    const call = fetchMock.mock.calls.find(([url]) => String(url).includes("ai-build"))!;
+    const sent = JSON.parse(String((call[1] as RequestInit).body)) as { requestId: string };
+    expect(recover.ask).toHaveBeenCalledWith("build", sent.requestId, expect.any(Number), {
+      signal: expect.any(AbortSignal),
+      onReach: expect.any(Function),
+    });
+    // The draft is on the page and kept in this browser, and nothing is said to have failed.
+    expect(screen.getByRole("heading", { name: "Your draft" })).toBeTruthy();
+    expect(window.localStorage.getItem(lastAiDraftKey("viewer-1"))).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says it is checking while it asks, and exactly what happened when there is no answer", async () => {
+    lostOn("ai-build");
+    let answer: (value: { state: string; credits: number | null }) => void = () => {};
+    let onReach: (reached: boolean) => void = () => {};
+    recover.ask.mockImplementation((_kind: string, _id: string, _at: number, options: { onReach: (reached: boolean) => void }) => {
+      onReach = options.onReach;
+      return new Promise((resolve) => (answer = resolve));
+    });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    expect(screen.getByText(/The connection dropped\. Checking whether the AI build finished/)).toBeTruthy();
+    // Still working: a second press must not start (and charge) another build.
+    expect(screen.getByRole("button", { name: /Building with AI/ }).getAttribute("aria-disabled")).toBe("true");
+    // Offline: it says so, and does not promise "two minutes".
+    await act(async () => {
+      onReach(false);
+    });
+    expect(screen.getByText(/You seem to be offline\. This page will check whether the AI build finished as soon as the connection is back\./)).toBeTruthy();
+    await act(async () => {
+      onReach(true);
+    });
+    expect(screen.getByText(/The connection dropped\. Checking whether the AI build finished/)).toBeTruthy();
+    await act(async () => {
+      answer({ state: "none", credits: 5 });
+    });
+    await settle();
+    // The request never reached the charge: said so, not "it comes back".
+    expect(screen.getByRole("alert").textContent).toContain("We have no record of that request, so nothing was made and nothing was charged for it.");
+    expect(screen.queryByText(/Checking whether the AI build finished/)).toBeNull();
+    expect(aiButton().getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it.each([
+    ["failed", "The AI build failed. The credit it took was returned"],
+    ["refused", "The AI build was turned down before anything was made, and nothing was charged."],
+    ["unfinished", "The AI build didn't finish. The credit it took comes back by itself within the hour."],
+    ["unknown", "We couldn't check whether the AI build finished."],
+  ])("a %s call says so", async (state, text) => {
+    lostOn("ai-build");
+    recover.ask.mockResolvedValue({ state, credits: 3 });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    expect(screen.getByRole("alert").textContent).toContain(text);
+    expect(screen.queryByRole("heading", { name: "Your draft" })).toBeNull();
+  });
+
+  it("a page that went away lands nothing and says nothing", async () => {
+    lostOn("ai-build");
+    recover.ask.mockImplementation(
+      (_kind: string, _id: string, _at: number, options: { signal: AbortSignal }) =>
+        new Promise((resolve) => options.signal.addEventListener("abort", () => resolve({ state: "aborted" }))),
+    );
+    const view = renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    view.unmount();
+    await settle();
+    expect(window.localStorage.getItem(lastAiDraftKey("viewer-1"))).toBeNull();
+  });
+
+  it("a platform answer that is no JSON (a timeout page) is a lost response too", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("commander-scores")) return { json: async () => scoresBody };
+      return {
+        json: async () => {
+          throw new SyntaxError("Unexpected token <");
+        },
+      };
+    });
+    recover.ask.mockResolvedValue({ state: "unfinished", credits: null });
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    expect(recover.ask).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert").textContent).toContain("didn't finish");
+  });
+
+  it("the suggestions are asked for again the same way", async () => {
+    lostOn("suggest");
+    recover.ask.mockResolvedValue({
+      state: "done",
+      result: { overview: "Your collection leans red.", suggestions: [] },
+      credits: 4,
+    });
+    renderBuild();
+    await settle();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Suggest a commander/ }));
+    });
+    await settle();
+    expect(recover.ask).toHaveBeenCalledWith("suggest", expect.stringMatching(/^[0-9a-f-]{36}$/), expect.any(Number), {
+      signal: expect.any(AbortSignal),
+      onReach: expect.any(Function),
+    });
+    expect(screen.getByText("Your collection leans red.")).toBeTruthy();
+    expect(window.localStorage.getItem("pipglyph.collection-builder.last-suggestions.v1:viewer-1")).toBeTruthy();
+  });
+
+  it("an answer that arrived asks for nothing", async () => {
+    renderBuild({ initialCommanderId: COMMANDERS[0].id });
+    await settle();
+    await act(async () => {
+      fireEvent.click(aiButton());
+    });
+    await settle();
+    expect(recover.ask).not.toHaveBeenCalled();
+  });
+});
+
 describe("the AI draft this browser keeps", () => {
   it("is written when an AI build lands", async () => {
     renderBuild({ initialCommanderId: COMMANDERS[0].id });
@@ -538,7 +699,13 @@ describe("Suggest a commander", () => {
     });
     await settle();
     const call = fetchMock.mock.calls.find(([url]) => String(url).includes("suggest"))!;
-    expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({ deckType: null, bracket: null, colours: [] });
+    // …with the page's own id for the request, so a lost answer can be asked for again.
+    expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({
+      deckType: null,
+      bracket: null,
+      colours: [],
+      requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f-]{27}$/),
+    });
     const heading = screen.getByRole("heading", { name: "Suggested for your collection" });
     expect(document.activeElement).toBe(heading);
     expect(screen.getByText("Your collection leans red.")).toBeTruthy();

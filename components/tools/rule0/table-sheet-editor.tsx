@@ -11,7 +11,7 @@ import { FieldGroup } from "@/components/creator/field-group";
 import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { publishCredits } from "@/components/billing/credits-bus";
-import { trackToolEventAction } from "@/lib/tools/actions";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import { saveTableSheetAction, setTableSheetSharedAction } from "@/lib/tools/rule0/actions";
 import { RULE0_TOOL_SLUG, type TableSheetRow } from "@/lib/tools/rule0/model";
 import type { TableSheetFacts } from "@/lib/tools/rule0/sheet";
@@ -133,14 +133,14 @@ export function TableSheetEditor({
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.success("Link copied.");
-      void trackToolEventAction(RULE0_TOOL_SLUG, "copy_link");
+      trackToolEvent(RULE0_TOOL_SLUG, "copy_link");
     } catch {
       toast.error("Couldn't copy — the link is in your address bar.");
     }
   };
 
   const print = () => {
-    void trackToolEventAction(RULE0_TOOL_SLUG, "print", { shared, custom: facts.customCount });
+    trackToolEvent(RULE0_TOOL_SLUG, "print", { shared, custom: facts.customCount });
     window.print();
   };
 
@@ -151,6 +151,20 @@ export function TableSheetEditor({
     setDrafting(true);
     setFormError(null);
     setStatus("Drafting the game plan from your cards. This takes up to a minute.");
+    // Tracking only: an answer that never reached this page is one the
+    // route may not have recorded (a dropped connection, a stopped function).
+    const startedAt = Date.now();
+    const lost = (reason: "no_answer" | "network", status?: number) => {
+      try {
+        trackToolEvent(RULE0_TOOL_SLUG, "ai_draft_lost", {
+          reason,
+          ...(status === undefined ? {} : { status }),
+          ms: Date.now() - startedAt,
+        });
+      } catch {
+        // Tracking never changes what the page says.
+      }
+    };
     try {
       const response = await fetch("/api/tools/rule0-sheet/draft", {
         method: "POST",
@@ -163,6 +177,7 @@ export function TableSheetEditor({
         | null;
       if (body && typeof body.credits === "number") publishCredits(body.credits);
       if (!body || !body.ok) {
+        if (!body) lost("no_answer", response.status);
         const message = body?.error ?? "The draft didn't finish. Try again.";
         if (body?.code === "INSUFFICIENT_CREDITS") upgrade.open("credits", "rule0_sheet");
         setFormError(message);
@@ -180,7 +195,11 @@ export function TableSheetEditor({
       toast.success(words);
       focusField("gamePlan");
     } catch {
-      const message = "We lost the answer. If a credit was taken, it comes back by itself within the hour.";
+      lost("network");
+      // The route writes the draft to the sheet before it answers: a lost
+      // answer is often a draft that is already saved.
+      const message =
+        "We lost the answer. If the draft was written, it is saved on your sheet and shows after a reload (save what you have typed first). If it wasn't, the credit comes back by itself within the hour.";
       setFormError(message);
       setStatus("");
     } finally {

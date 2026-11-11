@@ -15,7 +15,8 @@ import {
 import { scanImageBytes } from "@/lib/moderation/image-scan";
 import { BLOCKED_CATEGORIES } from "@/lib/moderation/image-scan-core";
 import { containsProfanity } from "@/lib/moderation/profanity";
-import { recordToolEvent } from "@/lib/tools/events";
+import type { ToolAccessPath } from "@/lib/tools/access";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
 import { PIP_FORGE_SLUG } from "@/lib/tools/pip-forge/model";
 import { decodePng, fetchOwnPipFile, readOwnPip } from "@/lib/tools/pip-forge/server";
@@ -44,7 +45,10 @@ import {
 // New mana symbols — the manager's writes (beta tool `custom-symbols`,
 // migration 0193). Every action checks the viewer's access first
 // (checkToolAccess: admins and testers while in beta) and records what it did
-// (recordToolEvent — counts and choices, never a name or a picture).
+// (recordToolEventLater, after the response — counts and choices, never a
+// name, a code or a picture): a success under the action's name (`create`,
+// `edit`, `replace_picture`, `remove`, `restore`), a refusal under
+// `<name>_failed` with a short `reason` (recordRefusal).
 //
 // A picture follows every upload path's rules: the upload rate limit right
 // after the checks that need no bytes, a byte sniff, prepareUploadBytes
@@ -88,6 +92,23 @@ export type RemoveSymbolResult =
   | { ok: true; outcome: "deleted" | "kept"; symbol: CustomSymbol | null }
   | { ok: false; error: string };
 
+type Viewer = { userId: string; via: ToolAccessPath | null };
+
+type RefusedEvent = `${"create" | "edit" | "replace_picture" | "remove" | "restore"}_failed`;
+
+/** A refused write, for the tool's analytics (after the response, never
+ *  able to fail the action): why, as a short code — never the symbol's
+ *  words. */
+function recordRefusal(viewer: Viewer, event: RefusedEvent, reason: string, props: ToolEventProps = {}): void {
+  recordToolEventLater({
+    slug: CUSTOM_SYMBOLS_SLUG,
+    userId: viewer.userId,
+    event,
+    access: viewer.via,
+    props: { reason, ...props },
+  });
+}
+
 function ready(): string | null {
   if (!isSupabaseConfigured() || !isUserStorageConfigured()) return UNAVAILABLE;
   return null;
@@ -117,6 +138,18 @@ function writeError(error: { code?: string; message?: string } | null, code?: st
   return { error: "The symbol couldn't be saved. Try again in a moment." };
 }
 
+/** The same refusal as a short code (writeError's branches, in its order),
+ *  for the tool's analytics. */
+function writeErrorReason(error: { code?: string; message?: string } | null): string {
+  const message = error?.message ?? "";
+  if (error?.code === "23505") return "duplicate";
+  if (message.includes("custom_symbol_limit")) return "cap";
+  if (message.includes("custom_symbol_row_limit")) return "row_cap";
+  if (message.includes("media_url_not_allowed")) return "media_refused";
+  if (error?.code === "42501") return "no_access";
+  return "write_failed";
+}
+
 async function readOwnSymbol(ownerId: string, id: string): Promise<CustomSymbol | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -130,8 +163,12 @@ async function readOwnSymbol(ownerId: string, id: string): Promise<CustomSymbol 
 }
 
 /** The early, friendly checks before any bytes: the code is free and there
- *  is room. The database checks both again on the write. */
-async function roomFor(ownerId: string, code: string): Promise<string | null> {
+ *  is room. The database checks both again on the write. `reason` is the
+ *  refusal's short code, for the tool's analytics. */
+async function roomFor(
+  ownerId: string,
+  code: string,
+): Promise<{ error: string; reason: "duplicate" | "duplicate_removed" | "cap" | "row_cap" } | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("custom_symbols")
@@ -141,39 +178,54 @@ async function roomFor(ownerId: string, code: string): Promise<string | null> {
   if (data.some((row) => row.code === code)) {
     const removed = data.find((row) => row.code === code)?.deleted_at;
     return removed
-      ? `You removed ${symbolToken(code)} earlier — restore it under "Removed symbols", or pick another code.`
-      : `You already have a symbol ${symbolToken(code)}. Pick another code.`;
+      ? {
+          error: `You removed ${symbolToken(code)} earlier — restore it under "Removed symbols", or pick another code.`,
+          reason: "duplicate_removed",
+        }
+      : { error: `You already have a symbol ${symbolToken(code)}. Pick another code.`, reason: "duplicate" };
   }
   if (data.filter((row) => row.deleted_at === null).length >= LIVE_SYMBOL_CAP) {
-    return `You have ${LIVE_SYMBOL_CAP} symbols, the most you can keep. Remove one to make another.`;
+    return { error: `You have ${LIVE_SYMBOL_CAP} symbols, the most you can keep. Remove one to make another.`, reason: "cap" };
   }
   if (data.length >= SYMBOL_ROW_CAP) {
-    return `You have ${SYMBOL_ROW_CAP} symbols counting removed ones. Delete a removed symbol no card uses to make another.`;
+    return {
+      error: `You have ${SYMBOL_ROW_CAP} symbols counting removed ones. Delete a removed symbol no card uses to make another.`,
+      reason: "row_cap",
+    };
   }
   return null;
 }
 
-/** An uploaded file → the 256 px PNG to store, or the reason it can't be. */
-async function pictureFromUpload(file: FormDataEntryValue | null): Promise<{ png: Buffer } | { error: string }> {
-  if (!(file instanceof File)) return { error: "Choose a picture for the symbol." };
-  if (file.size === 0) return { error: "That file is empty." };
-  if (file.size > MAX_BYTES) return { error: "Pictures can be up to 4 MB." };
-  if (file.type && !ALLOWED_DECLARED_TYPES.has(file.type)) return { error: "Use a PNG, JPEG or WebP picture." };
+type PictureRefusal = "no_file" | "empty_file" | "too_large" | "bad_type" | "not_an_image" | "blocked";
+
+/** An uploaded file → the 256 px PNG to store, or the reason it can't be
+ *  (in words, and as a short code for the tool's analytics). */
+async function pictureFromUpload(
+  file: FormDataEntryValue | null,
+): Promise<{ png: Buffer } | { error: string; reason: PictureRefusal }> {
+  if (!(file instanceof File)) return { error: "Choose a picture for the symbol.", reason: "no_file" };
+  if (file.size === 0) return { error: "That file is empty.", reason: "empty_file" };
+  if (file.size > MAX_BYTES) return { error: "Pictures can be up to 4 MB.", reason: "too_large" };
+  if (file.type && !ALLOWED_DECLARED_TYPES.has(file.type)) {
+    return { error: "Use a PNG, JPEG or WebP picture.", reason: "bad_type" };
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   let metadata: sharp.Metadata;
   try {
     metadata = await sharp(buffer).metadata();
   } catch {
-    return { error: "That doesn't look like a valid image." };
+    return { error: "That doesn't look like a valid image.", reason: "not_an_image" };
   }
-  if (!metadata.format || !ALLOWED_FORMATS.has(metadata.format)) return { error: "Use a PNG, JPEG or WebP picture." };
+  if (!metadata.format || !ALLOWED_FORMATS.has(metadata.format)) {
+    return { error: "Use a PNG, JPEG or WebP picture.", reason: "bad_type" };
+  }
 
   let stored: Buffer;
   try {
     stored = await prepareUploadBytes(buffer, metadata, { maxBytes: MAX_BYTES });
   } catch {
-    return { error: "That doesn't look like a valid image." };
+    return { error: "That doesn't look like a valid image.", reason: "not_an_image" };
   }
 
   // The upload scan, on the bytes BEFORE they are stored: a flagged picture
@@ -182,7 +234,9 @@ async function pictureFromUpload(file: FormDataEntryValue | null): Promise<{ png
     categories: BLOCKED_CATEGORIES,
     timeoutMs: UPLOAD_SCAN_TIMEOUT_MS,
   });
-  if (scan.flagged) return { error: "That image was flagged by our content filter and can't be used." };
+  if (scan.flagged) {
+    return { error: "That image was flagged by our content filter and can't be used.", reason: "blocked" };
+  }
 
   try {
     // Cover-crop to a square: an off-square picture still fills the pip.
@@ -192,7 +246,7 @@ async function pictureFromUpload(file: FormDataEntryValue | null): Promise<{ png
       .toBuffer();
     return { png };
   } catch {
-    return { error: "That doesn't look like a valid image." };
+    return { error: "That doesn't look like a valid image.", reason: "not_an_image" };
   }
 }
 
@@ -226,9 +280,14 @@ async function insertSymbol(
   details: SymbolDetails,
   png: Buffer,
   source: "upload" | "forge",
+  /** Told why, as a short code, when the symbol isn't made (analytics only). */
+  refused: (reason: string) => void,
 ): Promise<SymbolResult> {
   const stored = await storeSymbolPicture(ownerId, png);
-  if (!stored.ok) return { ok: false, error: stored.error, field: "file" };
+  if (!stored.ok) {
+    refused("storage_failed");
+    return { ok: false, error: stored.error, field: "file" };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -246,10 +305,14 @@ async function insertSymbol(
     .single();
   if (error || !data) {
     await removeSymbolPictures(ownerId, [stored.fileName]);
+    refused(writeErrorReason(error));
     return { ok: false, ...writeError(error, details.code) };
   }
   const symbol = symbolFromRow(data as SymbolRow, ownerId);
-  if (!symbol) return { ok: false, error: "The symbol couldn't be saved. Try again in a moment." };
+  if (!symbol) {
+    refused("write_failed");
+    return { ok: false, error: "The symbol couldn't be saved. Try again in a moment." };
+  }
   return { ok: true, symbol };
 }
 
@@ -260,27 +323,43 @@ export async function createSymbolAction(formData: FormData): Promise<SymbolResu
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
 
+  const refused = (reason: string, props: ToolEventProps = {}) =>
+    recordRefusal(access, "create_failed", reason, { source: "upload", ...props });
+
   const details = detailsFrom(formData);
   if (!details.success) {
     const issue = details.error.issues[0];
+    refused("invalid", { field: fieldOf(issue?.path) ?? "other" });
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
   const strong = strongLanguageIn(details.data);
-  if (strong) return { ok: false, ...strong };
+  if (strong) {
+    refused("profanity", { field: strong.field });
+    return { ok: false, ...strong };
+  }
   const full = await roomFor(access.userId, details.data.code);
-  if (full) return { ok: false, error: full, field: full.includes("code") ? "code" : undefined };
+  if (full) {
+    refused(full.reason);
+    return { ok: false, error: full.error, field: full.error.includes("code") ? "code" : undefined };
+  }
 
   // One symbol is one upload, counted before any bytes are read.
   const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
+  if (!limit.ok) {
+    refused("rate_limited", { window: limit.window });
+    return uploadRateLimitFailure(limit);
+  }
 
   const picture = await pictureFromUpload(formData.get("file"));
-  if ("error" in picture) return { ok: false, error: picture.error, field: "file" };
+  if ("error" in picture) {
+    refused(picture.reason);
+    return { ok: false, error: picture.error, field: "file" };
+  }
 
-  const result = await insertSymbol(access.userId, details.data, picture.png, "upload");
+  const result = await insertSymbol(access.userId, details.data, picture.png, "upload", refused);
   if (result.ok) {
     rebakeCardsNamingSymbol(access.userId, result.symbol.code);
-    await recordToolEvent({
+    recordToolEventLater({
       slug: CUSTOM_SYMBOLS_SLUG,
       userId: access.userId,
       event: "create",
@@ -298,30 +377,47 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
   if (notReady) return { ok: false, error: notReady };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: ToolEventProps = {}) =>
+    recordRefusal(access, "create_failed", reason, { source: "forge", ...props });
   if (!(await checkToolAccess(PIP_FORGE_SLUG))) {
+    refused("no_forge_access");
     return { ok: false, error: "Pip Forge isn't open to your account right now." };
   }
 
   const parsed = symbolFromForgeSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
+    refused("invalid", { field: fieldOf(issue?.path) ?? "other" });
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
   const strong = strongLanguageIn(parsed.data);
-  if (strong) return { ok: false, ...strong };
+  if (strong) {
+    refused("profanity", { field: strong.field });
+    return { ok: false, ...strong };
+  }
   const full = await roomFor(access.userId, parsed.data.code);
-  if (full) return { ok: false, error: full, field: full.includes("code") ? "code" : undefined };
+  if (full) {
+    refused(full.reason);
+    return { ok: false, error: full.error, field: full.error.includes("code") ? "code" : undefined };
+  }
 
   const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
+  if (!limit.ok) {
+    refused("rate_limited", { window: limit.window });
+    return uploadRateLimitFailure(limit);
+  }
 
   const pip = await readOwnPip(access.userId, parsed.data.forgedPipId);
-  if (!pip) return { ok: false, error: "That forged pip is gone." };
+  if (!pip) {
+    refused("pip_gone");
+    return { ok: false, error: "That forged pip is gone." };
+  }
   const bytes = await fetchOwnPipFile(access.userId, pip.files.pip, "pip");
   // The forge's file IS a 256 px PNG made by the server: checked, never
   // trusted blindly — a file of another size is refused, not resized.
   const pixels = bytes ? await decodePng(bytes) : null;
   if (!bytes || !pixels || pixels.width !== SYMBOL_PICTURE_PX || pixels.height !== SYMBOL_PICTURE_PX) {
+    refused("pip_unreadable");
     return { ok: false, error: "The pip's picture couldn't be read. Try again in a moment." };
   }
 
@@ -331,10 +427,10 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
     manaValue: parsed.data.manaValue,
     baseColor: parsed.data.baseColor,
   };
-  const result = await insertSymbol(access.userId, details, Buffer.from(bytes), "forge");
+  const result = await insertSymbol(access.userId, details, Buffer.from(bytes), "forge", refused);
   if (result.ok) {
     rebakeCardsNamingSymbol(access.userId, result.symbol.code);
-    await recordToolEvent({
+    recordToolEventLater({
       slug: CUSTOM_SYMBOLS_SLUG,
       userId: access.userId,
       event: "create",
@@ -350,16 +446,27 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
   if (!isSupabaseConfigured()) return { ok: false, error: UNAVAILABLE };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: ToolEventProps = {}) => recordRefusal(access, "edit_failed", reason, props);
   const parsed = symbolEditSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
+    refused("invalid", { field: fieldOf(issue?.path) ?? "other" });
     return { ok: false, error: issue?.message ?? "Check the symbol's details.", field: fieldOf(issue?.path) };
   }
   const strong = strongLanguageIn({ name: parsed.data.name });
-  if (strong) return { ok: false, ...strong };
+  if (strong) {
+    refused("profanity", { field: strong.field });
+    return { ok: false, ...strong };
+  }
   const before = await readOwnSymbol(access.userId, parsed.data.id);
-  if (!before) return { ok: false, error: "That symbol is gone." };
-  if (before.deletedAt) return { ok: false, error: "Restore the symbol to change it." };
+  if (!before) {
+    refused("gone");
+    return { ok: false, error: "That symbol is gone." };
+  }
+  if (before.deletedAt) {
+    refused("removed");
+    return { ok: false, error: "Restore the symbol to change it." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -371,8 +478,11 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
     .select(SYMBOL_COLUMNS)
     .maybeSingle();
   const symbol = data ? symbolFromRow(data as SymbolRow, access.userId) : null;
-  if (error || !symbol) return { ok: false, ...writeError(error ?? null) };
-  await recordToolEvent({
+  if (error || !symbol) {
+    refused(writeErrorReason(error ?? null));
+    return { ok: false, ...writeError(error ?? null) };
+  }
+  recordToolEventLater({
     slug: CUSTOM_SYMBOLS_SLUG,
     userId: access.userId,
     event: "edit",
@@ -392,20 +502,40 @@ export async function replaceSymbolPictureAction(formData: FormData): Promise<Sy
   if (notReady) return { ok: false, error: notReady };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: ToolEventProps = {}) =>
+    recordRefusal(access, "replace_picture_failed", reason, props);
   const id = symbolIdSchema.safeParse({ id: formData.get("id") });
-  if (!id.success) return { ok: false, error: "That symbol is gone." };
+  if (!id.success) {
+    refused("gone");
+    return { ok: false, error: "That symbol is gone." };
+  }
   const before = await readOwnSymbol(access.userId, id.data.id);
-  if (!before) return { ok: false, error: "That symbol is gone." };
-  if (before.deletedAt) return { ok: false, error: "Restore the symbol to change it." };
+  if (!before) {
+    refused("gone");
+    return { ok: false, error: "That symbol is gone." };
+  }
+  if (before.deletedAt) {
+    refused("removed");
+    return { ok: false, error: "Restore the symbol to change it." };
+  }
 
   const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
+  if (!limit.ok) {
+    refused("rate_limited", { window: limit.window });
+    return uploadRateLimitFailure(limit);
+  }
 
   const picture = await pictureFromUpload(formData.get("file"));
-  if ("error" in picture) return { ok: false, error: picture.error, field: "file" };
+  if ("error" in picture) {
+    refused(picture.reason);
+    return { ok: false, error: picture.error, field: "file" };
+  }
 
   const stored = await storeSymbolPicture(access.userId, picture.png);
-  if (!stored.ok) return { ok: false, error: stored.error, field: "file" };
+  if (!stored.ok) {
+    refused("storage_failed");
+    return { ok: false, error: stored.error, field: "file" };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -418,14 +548,18 @@ export async function replaceSymbolPictureAction(formData: FormData): Promise<Sy
     .maybeSingle();
   if (error || !data) {
     await removeSymbolPictures(access.userId, [stored.fileName]);
+    refused(writeErrorReason(error ?? null));
     return { ok: false, ...writeError(error ?? null) };
   }
   const symbol = symbolFromRow(data as SymbolRow, access.userId);
-  if (!symbol) return { ok: false, error: "The picture couldn't be saved. Try again in a moment." };
+  if (!symbol) {
+    refused("write_failed");
+    return { ok: false, error: "The picture couldn't be saved. Try again in a moment." };
+  }
   const old = ownSymbolFileName(access.userId, before.imageUrl);
   if (old && old !== stored.fileName) await removeSymbolPictures(access.userId, [old]);
   rebakeCardsNamingSymbol(access.userId, symbol.code);
-  await recordToolEvent({
+  recordToolEventLater({
     slug: CUSTOM_SYMBOLS_SLUG,
     userId: access.userId,
     event: "replace_picture",
@@ -441,10 +575,17 @@ export async function removeSymbolAction(input: unknown): Promise<RemoveSymbolRe
   if (!isSupabaseConfigured()) return { ok: false, error: UNAVAILABLE };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: ToolEventProps = {}) => recordRefusal(access, "remove_failed", reason, props);
   const parsed = symbolIdSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "That symbol is already gone." };
+  if (!parsed.success) {
+    refused("gone");
+    return { ok: false, error: "That symbol is already gone." };
+  }
   const before = await readOwnSymbol(access.userId, parsed.data.id);
-  if (!before) return { ok: false, error: "That symbol is already gone." };
+  if (!before) {
+    refused("gone");
+    return { ok: false, error: "That symbol is already gone." };
+  }
 
   const supabase = await createClient();
   const { data: deleted, error: deleteError } = await supabase
@@ -462,6 +603,7 @@ export async function removeSymbolAction(input: unknown): Promise<RemoveSymbolRe
     if (file && isUserStorageConfigured()) await removeSymbolPictures(access.userId, [file]);
   } else if (deleteError?.message?.includes("custom_symbol_in_use")) {
     if (before.deletedAt) {
+      refused("in_use", { was_removed: true });
       return {
         ok: false,
         error: `A card still uses ${symbolToken(before.code)}, so it stays here for that card. Take it off your cards first.`,
@@ -476,14 +618,21 @@ export async function removeSymbolAction(input: unknown): Promise<RemoveSymbolRe
       .select(SYMBOL_COLUMNS)
       .maybeSingle();
     symbol = data ? symbolFromRow(data as SymbolRow, access.userId) : null;
-    if (error || !symbol) return { ok: false, error: "The symbol couldn't be removed. Try again in a moment." };
+    if (error || !symbol) {
+      refused("write_failed", { was_removed: false });
+      return { ok: false, error: "The symbol couldn't be removed. Try again in a moment." };
+    }
     outcome = "kept";
   } else {
-    if (deleteError?.code === "42501") return { ok: false, error: NO_ACCESS };
+    if (deleteError?.code === "42501") {
+      refused("no_access", { was_removed: before.deletedAt !== null });
+      return { ok: false, error: NO_ACCESS };
+    }
+    refused("write_failed", { was_removed: before.deletedAt !== null });
     return { ok: false, error: "The symbol couldn't be removed. Try again in a moment." };
   }
 
-  await recordToolEvent({
+  recordToolEventLater({
     slug: CUSTOM_SYMBOLS_SLUG,
     userId: access.userId,
     event: "remove",
@@ -498,8 +647,12 @@ export async function restoreSymbolAction(input: unknown): Promise<SymbolResult>
   if (!isSupabaseConfigured()) return { ok: false, error: UNAVAILABLE };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string) => recordRefusal(access, "restore_failed", reason);
   const parsed = symbolIdSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "That symbol is gone." };
+  if (!parsed.success) {
+    refused("gone");
+    return { ok: false, error: "That symbol is gone." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -511,8 +664,14 @@ export async function restoreSymbolAction(input: unknown): Promise<SymbolResult>
     .select(SYMBOL_COLUMNS)
     .maybeSingle();
   const symbol = data ? symbolFromRow(data as SymbolRow, access.userId) : null;
-  if (error) return { ok: false, ...writeError(error) };
-  if (!symbol) return { ok: false, error: "That symbol isn't in your removed symbols any more." };
-  await recordToolEvent({ slug: CUSTOM_SYMBOLS_SLUG, userId: access.userId, event: "restore", access: access.via });
+  if (error) {
+    refused(writeErrorReason(error));
+    return { ok: false, ...writeError(error) };
+  }
+  if (!symbol) {
+    refused("gone");
+    return { ok: false, error: "That symbol isn't in your removed symbols any more." };
+  }
+  recordToolEventLater({ slug: CUSTOM_SYMBOLS_SLUG, userId: access.userId, event: "restore", access: access.via });
   return { ok: true, symbol };
 }

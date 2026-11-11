@@ -10,6 +10,7 @@ import { ChipGroup } from "@/components/ui/chip-group";
 import { inputClass, textareaClass } from "@/components/ui/field-classes";
 import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { cn } from "@/lib/utils";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   addToCollectionAction,
   finishCollectionImportAction,
@@ -49,6 +50,17 @@ type Phase =
   | { kind: "done"; progress: Progress; removed: number; full: boolean };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** An import that STOPPED part-way, and one taken up again: only the page
+ *  sees these (the server sees chunks — `import_failed` says why one
+ *  failed). Line counts only; best effort, never in the import's way. */
+function trackImport(event: "import_stopped" | "import_resumed", at: { chunk: number; done: number; total: number }) {
+  trackToolEvent("collection-builder", event, {
+    chunk: at.chunk,
+    lines_done: at.done,
+    lines_total: at.total,
+  });
+}
 
 export function CollectionAdd({ stats }: { stats: CollectionStats }) {
   return (
@@ -122,6 +134,7 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
           nextChunk: chunk,
         });
         router.refresh();
+        trackImport("import_stopped", { chunk, done: progress.done, total: progress.total });
         return;
       }
       progress.done += lines.length;
@@ -330,7 +343,15 @@ function ImportPanel({ stats }: { stats: CollectionStats }) {
 
           {phase.kind === "stopped" ? (
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void run(phase.nextChunk, phase.progress)}>Continue the import</Button>
+              <Button
+                onClick={() => {
+                  // The chunk is sent first: the note of the resume queues behind it.
+                  void run(phase.nextChunk, phase.progress);
+                  trackImport("import_resumed", { chunk: phase.nextChunk, done: phase.progress.done, total: phase.progress.total });
+                }}
+              >
+                Continue the import
+              </Button>
               <Button variant="ghost" onClick={reset}>
                 Start over
               </Button>

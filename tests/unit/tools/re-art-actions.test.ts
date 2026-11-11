@@ -6,6 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // credits are judged BEFORE the job row exists; one run of a deck at a time
 // (a run still painting is waited for, an older stopped run is closed); the
 // style the run paints in is saved first and the plan carries its version.
+//
+// And what each action tells the tool's log (lib/tools/events.ts, after the
+// response): its own name when it worked — a run's start by what it is
+// (`start`, `start_sample`, `paint_one`, `reroll`) — `<name>_failed` with a
+// `reason` code when it didn't. Counts and codes, never a name.
 // ---------------------------------------------------------------------------
 
 const m = vi.hoisted(() => ({
@@ -31,7 +36,7 @@ const m = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
-vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event }));
+vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event, recordToolEventLater: m.event }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: () => {
@@ -78,13 +83,29 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
-import { restoreReartArtAction, startReartAction } from "@/lib/tools/re-art/actions";
+import {
+  planReartAction,
+  restoreReartArtAction,
+  saveReartStyleAction,
+  startReartAction,
+} from "@/lib/tools/re-art/actions";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const STYLE = { preset: "storybook", theme: "a goblin warren" };
 
-function planned(entries: Array<{ kind: "own" | "printing"; credits?: number }>) {
+/** The lines the action wrote to the tool's log, as `[event, props]`. */
+function logged(): Array<[string, Record<string, unknown> | undefined]> {
+  return m.event.mock.calls.map(([input]) => {
+    expect(input).toMatchObject({ slug: "re-art-deck", userId: "u1", access: "grant" });
+    // Never a deck's or a card's name, the style's words or an id.
+    expect(JSON.stringify(input.props ?? {})).not.toMatch(/Sampler|Card \d|goblin|0000-4000|Cinderwing/i);
+    expect(Object.keys(input.props ?? {}).length).toBeLessThanOrEqual(12);
+    return [input.event, input.props];
+  });
+}
+
+function planned(entries: Array<{ kind: "own" | "printing"; credits?: number; paintedBefore?: boolean }>) {
   return {
     ok: true,
     deck: { id: DECK, slug: "s", title: "Sampler", visibility: "private" },
@@ -100,6 +121,7 @@ function planned(entries: Array<{ kind: "own" | "printing"; credits?: number }>)
       credits: entry.credits ?? 1,
       cardId: entry.kind === "own" ? `card-${i}` : null,
       repaint: false,
+      paintedBefore: entry.paintedBefore ?? false,
       notes: [],
     })),
   };
@@ -123,6 +145,7 @@ describe("startReartAction", () => {
     expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(false);
     expect(m.plan).not.toHaveBeenCalled();
     expect(m.insert).not.toHaveBeenCalled();
+    expect(m.event).not.toHaveBeenCalled();
   });
 
   it("plans on the commit quota and inserts one deck_reart job, a step a card, each priced", async () => {
@@ -140,6 +163,42 @@ describe("startReartAction", () => {
       { key: "reart:1", label: "Card 1", status: "pending", credits: 2 },
     ]);
     expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, STYLE);
+    expect(logged()).toEqual([
+      [
+        "start",
+        {
+          cards: 2,
+          makes: 1,
+          credits: 3,
+          skipped: 1,
+          in_style: 0,
+          scope: "all",
+          preset: "storybook",
+          style_changed: true,
+          visibility: "private",
+        },
+      ],
+    ]);
+  });
+
+  it("logs a run by what it is: a sample, a first paint of one card, a re-roll", async () => {
+    await startReartAction({ deckId: DECK, style: STYLE, entryIds: [ID(1), ID(2)], sample: true });
+    // One named card Re-art never painted on this deck: `paint_one`.
+    m.plan.mockResolvedValue(planned([{ kind: "own" }]));
+    await startReartAction({ deckId: DECK, entryIds: [ID(1)] });
+    m.plan.mockResolvedValue(planned([{ kind: "printing" }]));
+    await startReartAction({ deckId: DECK, entryIds: [ID(1)] });
+    // …and one it has: a `reroll`.
+    m.plan.mockResolvedValue(planned([{ kind: "own", paintedBefore: true }]));
+    await startReartAction({ deckId: DECK, entryIds: [ID(1)] });
+    expect(logged().map(([event]) => event)).toEqual(["start_sample", "paint_one", "paint_one", "reroll"]);
+    // The job's own request is as it was: named cards that aren't a sample.
+    expect(m.insert.mock.calls.map(([row]) => [row.request.sample, row.request.reroll])).toEqual([
+      [true, false],
+      [false, true],
+      [false, true],
+      [false, true],
+    ]);
   });
 
   it("the job makes its cards private unless the run names a visibility (owner 2026-11-10)", async () => {
@@ -157,6 +216,7 @@ describe("startReartAction", () => {
     m.plan.mockResolvedValue(planned([{ kind: "printing" }, { kind: "printing" }]));
     const result = await startReartAction({ deckId: DECK, style: STYLE });
     expect(result).toMatchObject({ ok: false, code: "CARD_CAPACITY" });
+    expect(logged()[1]).toEqual(["start_failed", { reason: "capacity", mode: "deck", cards: 2, makes: 2 }]);
   });
 
   it("short of credits → INSUFFICIENT_CREDITS before any job", async () => {
@@ -165,6 +225,9 @@ describe("startReartAction", () => {
     expect(result).toMatchObject({ ok: false, code: "INSUFFICIENT_CREDITS" });
     expect(m.insert).not.toHaveBeenCalled();
     expect(m.saveStyle).not.toHaveBeenCalled();
+    expect(logged()).toEqual([
+      ["start_failed", { reason: "insufficient_credits", mode: "deck", cards: 2, makes: 1, credits: 3 }],
+    ]);
   });
 
   it("billing off: the daily picture limit decides", async () => {
@@ -172,12 +235,14 @@ describe("startReartAction", () => {
     m.daily.mockResolvedValue({ ok: false, message: "Daily limit.", retryAfterSeconds: 60 });
     expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, code: "RATE_LIMITED" });
     expect(m.daily.mock.calls[0][1]).toBe("deck_reart_art");
+    expect(logged()).toEqual([["start_failed", { reason: "daily_limit", mode: "deck", cards: 2, makes: 1 }]]);
   });
 
   it("waits for a run of the deck still painting; closes an older stopped one", async () => {
     m.open.mockReturnValue([{ id: "old-1", steps: [{ status: "running", claimed_at: new Date().toISOString() }] }]);
     expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, code: "BUSY" });
     expect(m.insert).not.toHaveBeenCalled();
+    expect(logged()).toEqual([["start_failed", { reason: "busy", mode: "deck" }]]);
 
     m.open.mockReturnValue([{ id: "old-2", steps: [{ status: "pending" }] }]);
     expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(true);
@@ -189,12 +254,69 @@ describe("startReartAction", () => {
     const result = await startReartAction({ deckId: DECK, style: STYLE });
     expect(result).toMatchObject({ ok: false });
     expect(m.insert).not.toHaveBeenCalled();
+    expect(logged()).toEqual([["start_failed", { reason: "all_in_style", mode: "deck" }]]);
   });
 
   it("no AI → nothing starts", async () => {
     m.gateway.mockReturnValue(false);
     expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(false);
     expect(m.plan).not.toHaveBeenCalled();
+    expect(logged()).toEqual([["start_failed", { reason: "ai_unavailable", mode: "deck" }]]);
+  });
+
+  it("a plan that was refused is logged with its own code, a style that couldn't be saved too", async () => {
+    m.plan.mockResolvedValue({ ok: false, error: "Slow down.", code: "RATE_LIMITED", retryAfterSeconds: 30 });
+    expect((await startReartAction({ deckId: DECK, style: STYLE, entryIds: [ID(1)], sample: true })).ok).toBe(false);
+    m.plan.mockResolvedValue({ ok: false, error: "That deck isn't one of yours." });
+    expect((await startReartAction({ deckId: DECK, entryIds: [ID(1)] })).ok).toBe(false);
+    m.plan.mockResolvedValue(planned([{ kind: "own" }]));
+    m.saveStyle.mockResolvedValue(null);
+    expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(false);
+    expect(logged()).toEqual([
+      ["start_failed", { reason: "rate_limited", mode: "sample" }],
+      ["start_failed", { reason: "plan_refused", mode: "cards" }],
+      ["start_failed", { reason: "style_not_saved", mode: "deck" }],
+    ]);
+    expect(m.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("planReartAction — the confirm, as the log reads it", () => {
+  it("logs what the run would paint and cost, and a plan limit in its way", async () => {
+    const result = await planReartAction({ deckId: DECK, style: STYLE });
+    expect(result).toMatchObject({ ok: true, cost: { cards: 2, makes: 1, credits: 3, slotsLeftAfter: 39 } });
+    expect(m.plan.mock.calls[0][2]).toBe("deck_import");
+
+    m.balance.mockResolvedValue(1);
+    m.capacity.mockResolvedValue({ used: 50, cap: 50, tier: "free" });
+    await planReartAction({ deckId: DECK, entryIds: [ID(1)] });
+    const base = { cards: 2, makes: 1, credits: 3, skipped: 1, in_style: 0, style_changed: true };
+    expect(logged()).toEqual([
+      ["plan", { mode: "deck", ...base, over_capacity: false, short_of_credits: false }],
+      ["plan", { mode: "cards", ...base, over_capacity: true, short_of_credits: true }],
+    ]);
+  });
+
+  it("a plan that can't be made is `plan_failed`; a closed tool logs nothing", async () => {
+    m.plan.mockResolvedValue({ ok: false, error: "Pick the deck's style first." });
+    expect((await planReartAction({ deckId: DECK })).ok).toBe(false);
+    expect(logged()).toEqual([["plan_failed", { reason: "plan_refused", mode: "deck" }]]);
+    m.event.mockClear();
+    m.access.mockResolvedValue(null);
+    expect((await planReartAction({ deckId: DECK })).ok).toBe(false);
+    expect(m.event).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveReartStyleAction", () => {
+  it("logs the preset and the size of the words, never the words", async () => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "Sampler", visibility: "private" });
+    expect(await saveReartStyleAction(DECK, STYLE)).toMatchObject({ ok: true, version: 2 });
+    expect(logged()).toEqual([["save_style", { preset: "storybook", theme_chars: STYLE.theme.length, version: 2 }]]);
+    m.event.mockClear();
+    m.saveStyle.mockResolvedValue(null);
+    expect((await saveReartStyleAction(DECK, STYLE)).ok).toBe(false);
+    expect(logged()).toEqual([["save_style_failed", { reason: "not_saved" }]]);
   });
 });
 
@@ -237,6 +359,7 @@ describe("restoreReartArtAction", () => {
     expect(payload.back_face).toEqual({ title: "Back", card_type: "creature", subtypes: [] });
     expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-front.jpg"));
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: null, previousArtUrl: null, styleVersion: 2 });
+    expect(logged()).toEqual([["restore", { faces: 2 }]]);
   });
 
   it("refuses a card whose art changed since, and a card Re-art made", async () => {
@@ -245,5 +368,15 @@ describe("restoreReartArtAction", () => {
     m.painted.mockResolvedValue(new Map([[CARD, { ...row, made: true }]]));
     expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
     expect(m.update).not.toHaveBeenCalled();
+    expect(logged()).toEqual([
+      ["restore_failed", { reason: "art_changed" }],
+      ["restore_failed", { reason: "no_earlier_art" }],
+    ]);
+  });
+
+  it("an edit the card action refused is `restore_failed`", async () => {
+    m.update.mockResolvedValue({ ok: false, formError: "No." });
+    expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
+    expect(logged()).toEqual([["restore_failed", { reason: "save_failed" }]]);
   });
 });

@@ -3,6 +3,9 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkToolAccess } from "@/lib/tools/queries";
+import { recordToolEventLater } from "@/lib/tools/events";
+import { hitKeyedLimit } from "@/lib/api/keyed-limit";
+import { rateLimitedResponse } from "@/lib/api/responses";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { renderCardPrint } from "@/lib/render/card-print";
 import { isPrintRequest, parsePpiParam, parsePrintBleedParam, parsePrintParam, PRINT_800_PPI_PAID_ONLY } from "@/lib/cards/print-export";
@@ -11,6 +14,7 @@ import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { kitFaceSchema, kitItemStateSchema, kitPreviewData, kitSettingsSchema } from "@/lib/tools/token-kit/model";
+import { KIT_RENDERS_PER_HOUR, KIT_RENDERS_PER_MINUTE } from "@/lib/tools/token-kit/workspace";
 
 // ---------------------------------------------------------------------------
 // POST /api/tools/token-kit/render — ONE kit token's PNG, for the Token Kit's
@@ -32,6 +36,18 @@ import { kitFaceSchema, kitItemStateSchema, kitPreviewData, kitSettingsSchema } 
 //
 // Beta: the tool's access rule (checkToolAccess) is the gate; a 404 for
 // anyone it doesn't let in, like the tool's page.
+//
+// Recorded (after the response): only what went WRONG for a viewer the tool
+// lets in — `render_refused` (a print file their plan doesn't have, a token
+// with no verified frame) and `render_failed` (the renderer threw). A
+// render that worked is one of an export's many; the export is the event.
+//
+// Limited per user (the 2026-11-10 tools audit: the one tool route that
+// draws a card had no limit at all — a loop over it was free Satori + sharp
+// time). The numbers sit ABOVE anything the kit's own export can do: it
+// renders at most 300 tokens (MAX_SAVED_ITEMS), three at a time, and does
+// not retry a refused one — so a limit an honest export could reach would
+// show as tokens missing from the file. Fail-open (lib/api/keyed-limit.ts).
 // ---------------------------------------------------------------------------
 
 const bodySchema = z.object({
@@ -53,6 +69,8 @@ export async function POST(request: NextRequest) {
   }
   const access = await checkToolAccess("token-kit");
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const record = (event: "render_refused" | "render_failed", props: Record<string, string | number | boolean>) =>
+    recordToolEventLater({ slug: "token-kit", userId: access.userId, event, access: access.via, props });
 
   const declared = Number(request.headers.get("content-length") ?? 0);
   if (declared > MAX_BODY_BYTES) {
@@ -72,6 +90,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid token." }, { status: 400 });
   }
+  const limit = await hitKeyedLimit({
+    context: "token-kit-render",
+    subject: access.userId,
+    perMinute: KIT_RENDERS_PER_MINUTE,
+    perHour: KIT_RENDERS_PER_HOUR,
+    message: "That's a lot of tokens in a short time. Wait a few minutes, then run the export again.",
+  });
+  if (!limit.ok) return rateLimitedResponse(limit);
+
   const { face, settings, state } = parsed.data;
   // The viewer's own card-art object, or no picture (never a host the body
   // names).
@@ -91,6 +118,11 @@ export async function POST(request: NextRequest) {
   // viewer may have is the plain 800 ppi one while the switch is off.
   const freePrint = print.ppi === 800 && !print.bleed && !PRINT_800_PPI_PAID_ONLY;
   if (printMode && watermark && !freePrint) {
+    record("render_refused", {
+      reason: "upgrade_required",
+      file: print.bleed === "mpc" ? "mpc" : print.bleed ? "bleed" : "print",
+      kind: face.kind,
+    });
     return NextResponse.json(
       {
         error: print.bleed === "mpc"
@@ -109,6 +141,7 @@ export async function POST(request: NextRequest) {
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
   const built = kitPreviewData(face, settings, { ...state, artUrl }, verifiedKeys);
   if (!built) {
+    record("render_refused", { reason: "no_frame", kind: face.kind, design: settings.design });
     return NextResponse.json({ error: "This token has no verified frame to print on yet." }, { status: 422 });
   }
   const data = { ...built.data, profileOverrides: await getFrameProfileOverrides() };
@@ -125,6 +158,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
+    record("render_failed", { reason: "render_error", kind: face.kind, design: built.frame.design, print: printMode });
     return NextResponse.json({ error: `Render failed: ${detail}` }, { status: 500 });
   }
 

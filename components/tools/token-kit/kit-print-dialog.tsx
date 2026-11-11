@@ -8,7 +8,7 @@ import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useDeckExport } from "@/components/decks/deck-export-provider";
 import { perSheetLabel, PrintBleedCheckbox, PrintField as Field, SheetOptionsFields } from "@/components/cards/print-sheet-options";
-import { trackToolEventAction } from "@/lib/tools/actions";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import { APPROX_BYTES_PER_CARD, formatBytes } from "@/lib/decks/export-client";
 import {
   loadPrintSelectionSettings,
@@ -134,14 +134,14 @@ function KitPrintBody({ title, items, states, frames, settings: kitSettings, cle
       sheet: { gap: settings.gap, marks: settings.marks, cardSize: settings.cardSize },
       bleed,
     });
-    void trackToolEventAction("token-kit", "kit_exported", {
+    trackToolEvent("token-kit", "kit_exported", {
       kind: settings.kind,
       layout: isPdf ? settings.layout : settings.quality,
       bleed,
       tokens: tokens.length,
       cards: physical,
       design: kitSettings.design,
-    }).catch(() => undefined);
+    });
     onClose();
   };
 

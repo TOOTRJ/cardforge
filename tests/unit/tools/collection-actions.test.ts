@@ -25,7 +25,9 @@ const m = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
-vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event }));
+// The actions record after the response (recordToolEventLater); the same spy
+// stands in for both writers.
+vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event, recordToolEventLater: m.event }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: m.createClient, getCurrentUser: vi.fn() }));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/decks/actions", () => ({ createDeckAction: m.createDeck }));
@@ -53,6 +55,17 @@ import { POST } from "@/app/api/tools/collection-builder/ai-build/route";
 
 const UUID = "11111111-1111-4111-8111-111111111111";
 const ACCESS = { userId: "u1", via: "grant" };
+
+/** The tool event an action recorded: its name and its props, under the
+ *  viewer and the access path the gate handed it. */
+const recorded = (event: string, props: Record<string, unknown> = {}) =>
+  expect.objectContaining({
+    slug: "collection-builder",
+    userId: "u1",
+    access: "grant",
+    event,
+    props: expect.objectContaining(props),
+  });
 
 let seq = 0;
 function row(over: Partial<CollectionCard> & { name: string }): CollectionCard {
@@ -126,6 +139,7 @@ describe("the AI route refuses before the charge", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).code).toBe("POOL_TOO_SMALL");
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_build_failed", { reason: "pool_too_small", pool: 1 }));
   });
 
   it("a deck type the collection can't begin to fill (below half its floor)", async () => {
@@ -144,6 +158,9 @@ describe("the AI route refuses before the charge", () => {
     expect(body.error).toMatch(/9 Enchantress cards/);
     expect(m.spend).not.toHaveBeenCalled();
     expect(m.bracketCards).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(
+      recorded("ai_build_failed", { reason: "theme_too_thin", deck_type: "enchantress", have: 9, pool: 69 }),
+    );
   });
 
   it("Stax below Bracket 3, before reading anything", async () => {
@@ -155,6 +172,7 @@ describe("the AI route refuses before the charge", () => {
     expect((await response.json()).error).toMatch(/Bracket 3 and up/);
     expect(m.oneRow).not.toHaveBeenCalled();
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_build_failed", { reason: "invalid_choice", deck_type: "stax", bracket: 2 }));
   });
 
   it("a card that can't lead", async () => {
@@ -162,6 +180,19 @@ describe("the AI route refuses before the charge", () => {
     m.oneRow.mockResolvedValue(row({ name: "Grunt" }));
     const response = await POST(new Request("http://x/api", { method: "POST", body: JSON.stringify({ commanderId: UUID }) }));
     expect(response.status).toBe(400);
+    expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_build_failed", { reason: "commander_ineligible" }));
+  });
+
+  it("a commander that left the collection, and a body that isn't one", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    m.oneRow.mockResolvedValue(null);
+    const gone = await POST(new Request("http://x/api", { method: "POST", body: JSON.stringify({ commanderId: UUID }) }));
+    expect(gone.status).toBe(404);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("ai_build_failed", { reason: "commander_gone" }));
+    const bad = await POST(new Request("http://x/api", { method: "POST", body: JSON.stringify({ commanderId: "nope" }) }));
+    expect(bad.status).toBe(400);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("ai_build_failed", { reason: "invalid" }));
     expect(m.spend).not.toHaveBeenCalled();
   });
 });
@@ -215,6 +246,10 @@ describe("saving a draft", () => {
       { name: "Goblin Guide", quantity: 1, board: "main", resolved: { scryfall_id: goblin.scryfallId } },
       { name: "Mountain", quantity: 30, board: "main", resolved: { scryfall_id: expect.any(String) } },
     ]);
+    // Recorded once, with counts — never the deck's or a card's name.
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(recorded("save_deck", { cards: 32, visibility: "public", placeholders: 0 }));
+    expect(JSON.stringify(m.event.mock.calls)).not.toMatch(/Goblin|Krenko/);
   });
 
   it("refuses a card the caller doesn't own (RLS hands back no row)", async () => {
@@ -222,6 +257,7 @@ describe("saving a draft", () => {
     const result = await save([UUID]);
     expect(result.ok).toBe(false);
     expect(m.createDeck).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("save_deck_failed", { reason: "card_gone", visibility: "public", retry: false }));
   });
 
   it("refuses an off-colour card, a second copy and an off-colour basic", async () => {
@@ -233,6 +269,11 @@ describe("saving a draft", () => {
     expect(await save([a.id, b.id])).toMatchObject({ ok: false, error: expect.stringContaining("twice") });
     expect(await save([], [{ name: "Island", count: 1 }])).toEqual({ ok: false, error: "Island is outside Krenko, Mob Boss's colours." });
     expect(m.createDeck).not.toHaveBeenCalled();
+    expect(m.event.mock.calls.map(([input]) => [input.event, input.props.reason])).toEqual([
+      ["save_deck_failed", "card_ineligible"],
+      ["save_deck_failed", "duplicate_card"],
+      ["save_deck_failed", "basic_off_colour"],
+    ]);
   });
 
   it("refuses more than 100 cards", async () => {
@@ -240,6 +281,7 @@ describe("saving a draft", () => {
     const result = await save([], [{ name: "Mountain", count: 99 }, { name: "Wastes", count: 5 }]);
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("105 cards") });
     expect(m.createDeck).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("save_deck_failed", { reason: "too_many_cards", cards: 105 }));
   });
 
   it("a refused commit removes the empty deck it made", async () => {
@@ -251,6 +293,8 @@ describe("saving a draft", () => {
     expect(result).toMatchObject({ ok: false, error: "Scryfall didn't respond." });
     expect(eqId).toHaveBeenCalledWith("id", "d1");
     expect(eqOwner).toHaveBeenCalledWith("owner_id", "u1");
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(recorded("save_deck_failed", { reason: "commit_refused", cards: 1 }));
   });
 
   it("a commit that throws still removes the empty deck", async () => {
@@ -260,6 +304,7 @@ describe("saving a draft", () => {
     const { eqId } = decksTable(0);
     await expect(save([])).rejects.toThrow("socket hang up");
     expect(eqId).toHaveBeenCalledWith("id", "d1");
+    expect(m.event).toHaveBeenCalledWith(recorded("save_deck_failed", { reason: "commit_error", cards: 1 }));
   });
 
   it("a press after a lost answer takes back that deck — never a second one", async () => {
@@ -271,6 +316,18 @@ describe("saving a draft", () => {
     expect(result).toEqual({ ok: true, slug: "goblins", title: "Goblins", placeholders: 0 });
     expect(m.commit).not.toHaveBeenCalled();
     expect(del).not.toHaveBeenCalled();
+  });
+
+  it("a deck that couldn't be made, and a commit the quota refused, say so in the log", async () => {
+    m.rowsById.mockResolvedValue([commander]);
+    m.createDeck.mockResolvedValue({ ok: false, formError: "No." });
+    expect((await save([])).ok).toBe(false);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("save_deck_failed", { reason: "deck_not_created", cards: 1 }));
+    m.createDeck.mockResolvedValue({ ok: true, deckId: "d1", slug: "goblins" });
+    m.commit.mockResolvedValue({ ok: false, error: "Slow down.", retryAfterSeconds: 30 });
+    decksTable(0);
+    expect(await save([])).toMatchObject({ ok: false, retryAfterSeconds: 30 });
+    expect(m.event).toHaveBeenLastCalledWith(recorded("save_deck_failed", { reason: "rate_limited" }));
   });
 });
 
@@ -309,6 +366,21 @@ describe("finishing a replace import", () => {
     expect(result).toEqual({ ok: true, removed: 4 });
     expect(eqBatch).toHaveBeenCalledWith("import_batch", UUID);
     expect(or).toHaveBeenCalledWith(`import_batch.is.null,import_batch.neq.${UUID}`);
+    expect(m.event).toHaveBeenCalledWith(
+      recorded("import", { format: "csv", mode: "replace", lines: 10, matched: 8, unmatched: 2, removed: 4 }),
+    );
+  });
+
+  it("a sweep that failed is an import that failed, not one that finished", async () => {
+    m.createClient.mockResolvedValue({
+      from: vi.fn(() => ({
+        select: () => ({ eq: async () => ({ count: 8 }) }),
+        delete: () => ({ or: async () => ({ error: { message: "boom" }, count: null }) }),
+      })),
+    });
+    expect((await finish(true)).ok).toBe(false);
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(recorded("import_failed", { reason: "replace_sweep_failed", mode: "replace", lines: 10 }));
   });
 });
 
@@ -348,6 +420,21 @@ describe("the deck type and bracket a draft was built with", () => {
     expect(bracketed.ok && bracketed.draft.bracket).toBe(2);
     expect(bracketed.ok && bracketed.draft.gameChangers).toBe(0);
     expect(bracketed.ok && bracketed.draft.focus?.[0].label).toBe("Tokens");
+    expect(m.event).toHaveBeenLastCalledWith(recorded("draft", { deck_type: "tokens", bracket: 2, colours: "R" }));
+  });
+
+  it("a draft that was refused says why", async () => {
+    m.access.mockResolvedValue(ACCESS);
+    expect((await actions.draftCollectionDeckAction({ commanderId: "nope" })).ok).toBe(false);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("draft_failed", { reason: "invalid" }));
+    expect((await actions.draftCollectionDeckAction({ commanderId: UUID, deckType: "stax", bracket: 2 })).ok).toBe(false);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("draft_failed", { reason: "invalid_choice", deck_type: "stax", bracket: 2 }));
+    m.oneRow.mockResolvedValue(null);
+    expect((await actions.draftCollectionDeckAction({ commanderId: UUID })).ok).toBe(false);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("draft_failed", { reason: "commander_gone" }));
+    m.oneRow.mockResolvedValue(row({ name: "Grunt" }));
+    expect((await actions.draftCollectionDeckAction({ commanderId: UUID })).ok).toBe(false);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("draft_failed", { reason: "commander_ineligible" }));
   });
 });
 

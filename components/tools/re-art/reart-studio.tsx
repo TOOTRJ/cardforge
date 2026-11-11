@@ -13,7 +13,8 @@ import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { BulkProgress } from "@/components/tools/bulk-customize/bulk-progress";
 import { useBulkRunner } from "@/components/tools/bulk-customize/use-bulk-runner";
 import { remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-copy";
-import type { GenerationJobView } from "@/lib/ai/generation-jobs";
+import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   EMPTY_REART_STYLE,
   REART_DEFAULT_VISIBILITY,
@@ -21,8 +22,11 @@ import {
   REART_SCOPE_HINTS,
   REART_SCOPE_LABELS,
   REART_SCOPE_VALUES,
+  REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
   normalizeReartStyle,
+  reartRunMode,
+  reartRunOutcome,
   reartStyleProblem,
   sameReartStyle,
   scopeTakes,
@@ -47,6 +51,12 @@ import { ReartRunList } from "./reart-run-list";
 // one, put its old art back). A run goes through Bulk Customize's runner
 // (the AI jobs' one step door) and its progress panel; the page behind is
 // refreshed as cards land.
+//
+// The runner lives in the browser, so what a run came to is the studio's to
+// say (the tool's log, lib/tools/track-client.ts trackToolEvent):
+// `run_finished` each time the runner ends — painted, failed, credits
+// really charged, why it stopped — and the maker's `stop`, `continue` and
+// `retry`. Numbers and codes only.
 // ---------------------------------------------------------------------------
 
 const VISIBILITY_LABELS: Record<ReartVisibility, string> = {
@@ -151,7 +161,40 @@ export function ReartStudio({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runner.stoppedBy]);
 
-  const begin = (next: GenerationJobView, left: Array<{ name: string; reason: string }>) => {
+  // The run's outcome for the tool's log, once each time the runner ends
+  // (after the refresh above, so the page's re-read never waits for it).
+  // `passStart` is the job's steps as this pass began: a continued run
+  // reports each pass's own cards and credits.
+  const passStart = useRef<JobStep[]>([]);
+  const reportedPass = useRef<string | null>(null);
+  const resumedRun = useRef(false);
+  useEffect(() => {
+    if (!job || runner.runsEnded === 0) return;
+    const pass = `${job.id}:${runner.runsEnded}`;
+    if (reportedPass.current === pass) return;
+    reportedPass.current = pass;
+    const outcome = reartRunOutcome({
+      before: passStart.current,
+      after: runner.steps,
+      retried: runner.runsEnded > 1,
+      stoppedBy: runner.stoppedBy,
+      error: runner.error !== null,
+    });
+    passStart.current = runner.steps;
+    trackToolEvent(REART_TOOL_SLUG, "run_finished", {
+      ...outcome,
+      mode: reartRunMode(job.request),
+      pass: runner.runsEnded,
+      resumed: resumedRun.current,
+    });
+    // Only the end of a pass reports; the values are that render's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner.runsEnded]);
+
+  const begin = (next: GenerationJobView, left: Array<{ name: string; reason: string }>, resumed = false) => {
+    passStart.current = next.steps;
+    reportedPass.current = null;
+    resumedRun.current = resumed;
     setConfirmOpen(false);
     setSkipped(left);
     setJob(next);
@@ -238,7 +281,27 @@ export function ReartStudio({
       toast.error("That run can't be continued — start a new one.");
       return;
     }
-    begin(body.job, []);
+    begin(body.job, [], true);
+    trackToolEvent(REART_TOOL_SLUG, "continue", { earlier_visit: true });
+  };
+
+  // The progress panel's Stop and Continue / Try the failed ones again, said
+  // to the tool's log as they are pressed; the runner does what it did.
+  const waitingCount = total - doneCount - failedCount;
+  const loggedRunner: typeof runner = {
+    ...runner,
+    stop: () => {
+      trackToolEvent(REART_TOOL_SLUG, "stop", { painted: doneCount, failed: failedCount, waiting: waitingCount });
+      runner.stop();
+    },
+    retryFailed: () => {
+      trackToolEvent(REART_TOOL_SLUG, paused ? "continue" : "retry", {
+        earlier_visit: false,
+        failed: failedCount,
+        waiting: waitingCount,
+      });
+      runner.retryFailed();
+    },
   };
 
   return (
@@ -451,7 +514,7 @@ export function ReartStudio({
                 {settled ? "The run is done" : paused ? "The run is paused" : "Painting…"}
               </h2>
               <BulkProgress
-                runner={runner}
+                runner={loggedRunner}
                 total={total}
                 doneCount={doneCount}
                 failedCount={failedCount}

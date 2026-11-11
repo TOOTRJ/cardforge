@@ -168,6 +168,15 @@ export function describeNotification(
       const name = str(payload.toolName) ?? "a new tool";
       const slug = str(payload.tool);
       const built = payload.built === true;
+      // The tool was released to the reader's plan and they had asked to
+      // hear of it ("Notify me"): no early access, it is simply open.
+      if (payload.released === true) {
+        return {
+          subject: "PipGlyph team",
+          body: `opened ${name} — you asked us to tell you. It's on your Tools page.`,
+          href: slug ? `/dashboard/tools/${slug}` : "/dashboard/tools",
+        };
+      }
       return {
         subject: "PipGlyph team",
         body: built

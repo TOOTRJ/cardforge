@@ -1635,6 +1635,44 @@ Rules and gotchas:
   it to the label's control. The Power /
   Toughness inputs are described by the "frame draws no P/T" note while it
   shows (`usePtNotDrawnNoteId`).
+- Beta tools record what happens in `tool_events` (0182; the 2026-11-10
+  tools audit, `lib/tools/events.ts`): an action's OUTCOME — the success
+  under its name with what it made and, for a paid one, `credits`; a refusal
+  or failure under `<name>_failed` with a `reason` code and `refunded` /
+  `refund_pending` (never `credits`) — through `recordToolEventLater` (after
+  the response, never awaited). Reasons share ONE vocabulary (`invalid`,
+  `ai_unavailable`, `rate_limited`, `capacity`, `insufficient_credits`, an
+  AI failure kind; `toolReasonOfCode`). A page's visit is `openTool` →
+  `recordToolOpen`: ONE `open` per 30 minutes (a tool page renders again
+  after every action and refresh), and any other event a page RENDER records
+  goes through `recordToolEventOncePerVisit`. A moment only the browser sees
+  goes through `trackToolEvent` (`lib/tools/track-client.ts`: a beacon to
+  `POST /api/tools/usage` — never a server action, which Next queues ahead
+  of the tool's own actions), is kept only if the tool lists its name in
+  `TOOL_CLIENT_EVENTS`, and its `credits` is stored as `credits_seen`: a
+  tool's cost is the server's rows and the credit ledger, never what a
+  browser reports. Props are counts, codes and booleans with snake_case keys
+  (at most 12; a camelCase key is dropped) — never a name, a prompt or typed
+  text; one user writes at most 120 rows a minute per tool from an instance.
+  WHAT COUNTS AS A USE is `TOOL_USE_EVENTS` (`lib/tools/catalog.ts`), handed
+  to the admin readers as `p_uses` (0199) and read at query time — a new
+  success event is added there in the same change, or it counts as nothing;
+  never restate the list in SQL. An event that is a user's ACTION is never
+  named `…_failed` / `_refused` / `_lost` (those suffixes ARE the failure
+  kind). A paid call that saves nothing puts its request on record
+  (`collection_ai_results`, 0198, `withCollectionAiRecord`): `running`
+  BEFORE anything is charged (a call that can't be recorded is refused),
+  the answer `done` BEFORE the credit is settled (only a kept answer is
+  settled), `refused` / `failed` otherwise — so the page that lost its
+  response asks (`recoverAiAnswer`) and says exactly what happened, and "no
+  record" can only mean "never reached us, nothing charged". Only an ask
+  the server answered with a state decides anything there; never read a
+  verdict from a stale answer, a 5xx or a page that is not ours.
+  Settle-then-respond alone loses a paid answer with a dropped connection.
+  Re-bake sweeps of one subject go through `coalesceSweep`
+  (`lib/cards/sweep-coalesce.ts`: one at a time per instance; the newest
+  change waits, then sweeps in its own request). A route that draws a card for a tool counts each call
+  with `hitKeyedLimit` (`lib/api/keyed-limit.ts`, no table of its own).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
