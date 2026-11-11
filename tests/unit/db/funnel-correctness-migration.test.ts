@@ -47,6 +47,21 @@ describe("0197_funnel_correctness", () => {
     expect(statements).toMatch(/on public\.funnel_events \(user_id, event\)\s+where user_id is not null\s+and event in \(/);
   });
 
+  it("takes the lock, cleans up and builds the index in ONE statement — the runner sends statements one at a time, and a bare LOCK TABLE is refused there", () => {
+    // 25P01 "LOCK TABLE can only be used in transaction blocks": the first version failed its preview branch on it.
+    const open = statements.indexOf("do $$");
+    const close = statements.indexOf("end\n$$;", open);
+    expect(open).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(open);
+    const block = statements.slice(open, close);
+    expect(block).toContain("lock table public.funnel_events in share row exclusive mode;");
+    expect(block).toContain("delete from public.funnel_events f");
+    expect(block).toContain("create unique index if not exists funnel_events_once_per_user_idx");
+    // …and nowhere outside a block: no top-level statement of this file needs a transaction of its own.
+    expect(statements.slice(0, open) + statements.slice(close)).not.toMatch(/\block table\b/);
+    expect(statements).not.toMatch(/^\s*(begin|commit);/m);
+  });
+
   it("gives every account without a signup row one, dated when the account was made, saying how", () => {
     const start = statements.indexOf("insert into public.funnel_events (event, user_id, props, source, created_at)");
     expect(start).toBeGreaterThan(statements.indexOf("create unique index"));
