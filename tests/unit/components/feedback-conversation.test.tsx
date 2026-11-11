@@ -181,6 +181,34 @@ describe("the first reply", () => {
     expect(screen.getByText("The account that sent this feedback was deleted.")).toBeTruthy();
   });
 
+  it("⌘/Ctrl+Enter pressed twice before the answer sends ONE reply", async () => {
+    let answer: (value: { ok: true; threadId: string }) => void = () => {};
+    actions.reply.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    render(<ReplyForm feedbackId={FEEDBACK} side="admin" />);
+    type("Thanks!");
+    const box = screen.getByLabelText("Reply");
+    fireEvent.keyDown(box, { key: "Enter", metaKey: true });
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    expect(actions.reply).toHaveBeenCalledTimes(1);
+    answer({ ok: true, threadId: THREAD });
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledTimes(1));
+    // On its way to the thread: a late press still sends nothing.
+    fireEvent.keyDown(box, { key: "Enter", metaKey: true });
+    expect(actions.reply).toHaveBeenCalledTimes(1);
+  });
+
+  it("a refused reply can be sent again", async () => {
+    actions.reply.mockResolvedValueOnce({ ok: false, error: "Couldn't send the message." });
+    render(<ReplyForm feedbackId={FEEDBACK} side="admin" />);
+    type("Thanks!");
+    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith(`/admin/messages/${THREAD}`));
+    expect(actions.reply).toHaveBeenCalledTimes(2);
+  });
+
   it("an empty reply sends nothing", () => {
     render(<ReplyForm feedbackId={FEEDBACK} side="admin" />);
     expect((screen.getByRole("button", { name: /send/i }) as HTMLButtonElement).disabled).toBe(true);
@@ -197,6 +225,23 @@ describe("a reply in a thread that exists is unchanged", () => {
     expect(actions.send).toHaveBeenCalledWith({ threadId: THREAD, body: "More detail" });
     expect(actions.reply).not.toHaveBeenCalled();
     expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it("sends once for a double ⌘/Ctrl+Enter, and again for the next message", async () => {
+    let answer: (value: { ok: true }) => void = () => {};
+    actions.send.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    render(<ReplyForm threadId={THREAD} side="admin" />);
+    const box = screen.getByLabelText("Reply");
+    fireEvent.change(box, { target: { value: "One" } });
+    fireEvent.keyDown(box, { key: "Enter", metaKey: true });
+    fireEvent.keyDown(box, { key: "Enter", metaKey: true });
+    expect(actions.send).toHaveBeenCalledTimes(1);
+    answer({ ok: true });
+    await waitFor(() => expect(nav.refresh).toHaveBeenCalledTimes(1));
+    fireEvent.change(box, { target: { value: "Two" } });
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(actions.send).toHaveBeenCalledTimes(2));
+    expect(actions.send).toHaveBeenLastCalledWith({ threadId: THREAD, body: "Two" });
   });
 
   it("a user's goes through the user's action", async () => {

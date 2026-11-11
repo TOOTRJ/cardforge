@@ -14,20 +14,34 @@ import { formatUtcDate } from "@/lib/format/dates";
 // grantOwedSides), in the order it makes them — when that step gains or
 // loses a condition, this changes with it:
 //
-//   not claimed yet   the friend's cards (the settings' number, inside the
-//                     window), a plan with a card on file, billing on, the
-//                     program on, both emails confirmed, the hash key —
-//                     else "the hourly check gives the reward"
-//                     (/api/cron/referral-rewards, every hour);
+//   not claimed yet   billing off (nothing is rewarded and the hourly
+//                     sweep does not run, so it is said first); the friend's
+//                     cards (the settings' number, inside the window), a
+//                     plan with a card on file, the program on, both emails
+//                     confirmed, the hash key — else "the hourly check gives
+//                     the reward" (/api/cron/referral-rewards, every hour),
+//                     and a row still unclaimed hours after it qualified
+//                     says the step is FAILING, never "all fine";
 //   claimed           a side still NULL is a grant that failed and is
 //                     retried; a side recorded 'none' says why (its detail's
 //                     reason, else the row's status and block reason).
+//
+// "The hourly check records it" is said only of what the sweep really picks
+// up (sweepReferralRewards): a signed-up friend who has the cards
+// (referrals_stranded_signups), a friend with the cards whose plan is not
+// stamped (referrals_awaiting_plan), a row with both stamps. A plan held by
+// a friend WITHOUT the cards is stamped by their next card save, not by the
+// sweep; a friend whose account is gone is never rewarded.
 //
 // An admin page: a fraud reason is named here. The referrer's own dashboard
 // never names one (REFERRAL_STATUS_LABELS: "Not eligible").
 // ---------------------------------------------------------------------------
 
 const DAY_MS = 86_400_000;
+/** A row with both bars met is claimed when the second one lands, else by
+ *  the next hourly sweep. Still unclaimed this long after, the step ran and
+ *  did not finish (an email check or the claim itself is erroring). */
+const STUCK_AFTER_MS = 2 * 3_600_000;
 
 export type RewardContext = {
   /** The settings' `activation.cardsRequired`. */
@@ -86,12 +100,14 @@ function givenWords(side: RewardSideFacts, isReferrer: boolean): string {
 }
 
 /** Why a row that ended gave this side nothing, from the row alone. */
-function endedWhy(row: ReferredFriend, ctx: RewardContext): string {
+function endedWhy(row: ReferredFriend): string {
   switch (row.status) {
     case "expired":
+      // No numbers for the cards: the settings may have changed since this
+      // row expired, and today's would be stated as the rule it broke.
       return row.cardsSavedAt
         ? `an email was not confirmed within ${REFERRAL_CONFIRM_WINDOW_DAYS} days of the friend qualifying`
-        : `the friend did not save ${cardsWords(ctx.cardsRequired)} within ${ctx.windowDays} days of joining`;
+        : "the friend did not save the required cards in time";
     case "capped":
       return "the referrer was over the monthly limit of rewarded friends";
     case "blocked":
@@ -102,11 +118,11 @@ function endedWhy(row: ReferredFriend, ctx: RewardContext): string {
 }
 
 /** Why a side was recorded 'none'. */
-function noneWhy(row: ReferredFriend, side: RewardSideFacts, isReferrer: boolean, ctx: RewardContext): string {
+function noneWhy(row: ReferredFriend, side: RewardSideFacts, isReferrer: boolean): string {
   const why = (() => {
     switch (side.reason) {
       case null:
-        return endedWhy(row, ctx);
+        return endedWhy(row);
       case "admin":
         return "admin accounts get no referral reward";
       case "settings":
@@ -118,9 +134,9 @@ function noneWhy(row: ReferredFriend, side: RewardSideFacts, isReferrer: boolean
       case "account_deleted":
         return isReferrer ? "the account was deleted" : "the friend's account was deleted";
       case "expired":
-        return endedWhy({ ...row, status: "expired" }, ctx);
+        return endedWhy({ ...row, status: "expired" });
       case "capped_friends":
-        return endedWhy({ ...row, status: "capped" }, ctx);
+        return endedWhy({ ...row, status: "capped" });
       default:
         return REFERRAL_BLOCK_WHY[side.reason] ?? spaced(side.reason);
     }
@@ -129,9 +145,12 @@ function noneWhy(row: ReferredFriend, side: RewardSideFacts, isReferrer: boolean
 }
 
 /** Why a row the reward step has not claimed yet rewards nobody so far —
- *  the step's own conditions, in its order. */
+ *  the step's own conditions, in its order. The friend's account exists
+ *  (the caller answers for one that is gone). */
 function unclaimedWhy(row: ReferredFriend, ctx: RewardContext): string {
-  if (!row.refereeId) return "the friend's account was deleted";
+  // Nothing is rewarded and the hourly sweep does not run while billing is
+  // off: every "the hourly check…" below would be untrue.
+  if (!ctx.billingEnabled) return "billing is switched off, so no referral is rewarded until it is on";
   const facts = row.rewards;
   const waits: string[] = [];
   if (!row.cardsSavedAt) {
@@ -149,15 +168,18 @@ function unclaimedWhy(row: ReferredFriend, ctx: RewardContext): string {
   }
   if (!row.cardOnFileAt) {
     waits.push(
-      facts?.friendHasPlan
-        ? "the friend's plan is not recorded on the referral yet; the hourly check records it"
-        : "the friend has not started a plan with a card on file",
+      !facts?.friendHasPlan
+        ? "the friend has not started a plan with a card on file"
+        : row.cardsSavedAt
+          ? "the friend's plan is not recorded on the referral yet; the hourly check records it"
+          : // The sweep looks for a missing plan stamp only on a row that
+            // has the cards; this one is stamped by the friend's next save.
+            "the friend's plan is not recorded on the referral yet; their next saved card records it",
     );
   }
   if (waits.length > 0) return waits.join(", and ");
 
   // Both bars stand: what the reward step still checks before the claim.
-  if (!ctx.billingEnabled) return "billing is switched off";
   if (!ctx.programEnabled) return "the referral program is paused";
   const friendUnconfirmed = facts?.friendEmailConfirmed === false;
   const referrerUnconfirmed = facts?.referrerEmailConfirmed === false;
@@ -172,11 +194,19 @@ function unclaimedWhy(row: ReferredFriend, ctx: RewardContext): string {
     return Number.isFinite(deadline) ? `${who} (the referral expires on ${dayOf(deadline)} without it)` : who;
   }
   if (!ctx.hashKeySet) return "the server's REFERRAL_EMAIL_HASH_KEY is not set, so the email check cannot run";
+  // The step ran when the second bar landed and runs again every hour. A
+  // row that has waited longer than that did not go through: its email
+  // check or its claim is erroring — never report that as "all fine".
+  const qualified = Math.max(Date.parse(row.cardsSavedAt ?? ""), Date.parse(row.cardOnFileAt ?? ""));
+  if (Number.isFinite(qualified) && ctx.now.getTime() - qualified > STUCK_AFTER_MS) {
+    return `everything is in place since ${dayOf(qualified)}, but the reward step has not gone through; it is failing — the server log's [referrals] lines say why`;
+  }
   return "everything is in place; the hourly check gives the reward";
 }
 
 /** A claimed row's side that is still NULL: its grant has not gone through. */
-function owedWhy(row: ReferredFriend): string {
+function owedWhy(row: ReferredFriend, ctx: RewardContext): string {
+  if (!ctx.billingEnabled) return "billing is switched off, so the grant waits until it is on";
   const attempts = row.rewards?.grantAttempts ?? 0;
   return attempts > 0
     ? `the grant failed ${plural(attempts, "time", "times")}; the hourly check retries it (up to ${REFERRAL_GRANT_MAX_ATTEMPTS})`
@@ -191,11 +221,15 @@ function sideReward(row: ReferredFriend, isReferrer: boolean, ctx: RewardContext
   if (side.kind === "banked_days" || side.kind === "free_days" || side.kind === "credits") {
     return { state: "given", detail: givenWords(side, isReferrer) };
   }
-  if (side.kind === "none") return { state: "none", detail: noneWhy(row, side, isReferrer, ctx) };
+  if (side.kind === "none") return { state: "none", detail: noneWhy(row, side, isReferrer) };
   if (side.kind != null) return { state: "given", detail: spaced(side.kind) };
 
   // Nothing recorded for this side yet.
   if (UNCLAIMED.has(row.status)) {
+    // A friend whose account is gone is never rewarded, and neither is
+    // their referrer: that is an end, not a wait (a row short of its
+    // stamps is never looked at again, so "not yet" would stand for ever).
+    if (!row.refereeId) return { state: "none", detail: "the friend's account was deleted" };
     const why = unclaimedWhy(row, ctx);
     // The friend's days can be banked AHEAD of the checkout that qualifies
     // them (preBankFriendDays): say so — they are not waiting for those.
@@ -206,9 +240,9 @@ function sideReward(row: ReferredFriend, isReferrer: boolean, ctx: RewardContext
   // A claimed row: the friend is owed on any of them, the referrer only on
   // a rewarded one (a capped or blocked row gives the referrer nothing).
   if (row.status === "rewarded" || (!isReferrer && (row.status === "blocked" || row.status === "capped"))) {
-    return { state: "waiting", detail: owedWhy(row) };
+    return { state: "waiting", detail: owedWhy(row, ctx) };
   }
-  return { state: "none", detail: endedWhy(row, ctx) };
+  return { state: "none", detail: endedWhy(row) };
 }
 
 /** Each side's reward, or why it has none (yet). Null when the row carries

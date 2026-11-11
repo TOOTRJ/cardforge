@@ -80,8 +80,12 @@ describe("admin_referred_friends (0202, widened by 0206)", () => {
     expect(code).toMatch(/left join auth\.users referrer_login on referrer_login\.id = \w+\.referrer_id/);
     expect(code).toContain("case when friend_login.id is null then null else friend_login.email_confirmed_at is not null end");
     expect(code).toContain("case when referrer_login.id is null then null else referrer_login.email_confirmed_at is not null end");
-    // Nothing else of auth.users is read: no address, phone or metadata.
-    expect(code).not.toMatch(/_login\.(email|phone|raw_\w+|encrypted_password)\b(?!_confirmed_at)/);
+    // Nothing else of auth.users is read — no address, phone, token or
+    // metadata: every column named is the id (the join) or the stamp.
+    const columns = [...code.matchAll(/\b(?:friend|referrer)_login\.(\w+)/g)].map((m) => m[1]);
+    expect(columns.length).toBeGreaterThanOrEqual(6);
+    expect([...new Set(columns)].sort()).toEqual(["email_confirmed_at", "id"]);
+    expect(code.match(/\bauth\.\w+/g)).toEqual(["auth.users", "auth.users"]);
   });
 
   it("judges a card on file as the reward step does (lib/referrals/server.ts CARD_ON_FILE_STATUSES)", () => {

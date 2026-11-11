@@ -1859,12 +1859,15 @@ Rules and gotchas:
   "Rewards" column (owner 2026-11-11; `admin_referred_friends`, 0202 widened
   by 0206) says what each side was given or WHY a side has nothing yet:
   `referralRewardWords` (`lib/admin/analytics/referral-rewards.ts`, pure) is
-  the reward step's own conditions in its order (the cards inside the
-  window, a card on file, billing, the program's switch, both emails, the
-  hash key; then a failed grant, a side recorded `none`) — a condition
-  added to or taken from `rewardReferral` / `advanceReferral` changes there
-  in the same PR. An admin page names a fraud reason; the referrer's
-  dashboard never does.
+  the reward step's own conditions in its order (billing off first —
+  nothing moves and no sweep runs — then the cards inside the window, a
+  card on file, the program's switch, both emails, the hash key; then a
+  failed grant, a side recorded `none`) — a condition added to or taken
+  from `rewardReferral` / `advanceReferral` changes there in the same PR.
+  It says "the hourly check does it" only of what `sweepReferralRewards`
+  really picks up, a friend whose account is gone is an end (`none`), and a
+  row with both bars met for over two hours reads as FAILING, never fine.
+  An admin page names a fraud reason; the referrer's dashboard never does.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`

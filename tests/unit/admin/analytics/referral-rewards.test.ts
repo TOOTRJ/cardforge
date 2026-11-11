@@ -14,10 +14,13 @@ import { REFERRAL_CONFIRM_WINDOW_DAYS, REFERRAL_GRANT_MAX_ATTEMPTS } from "@/lib
 // ---------------------------------------------------------------------------
 // WHY a referral's reward has not been given (owner 2026-11-11) — the
 // Referred friends table's Rewards column. Each reason is one of the reward
-// step's own conditions (lib/referrals/server.ts), in its order: the
-// friend's cards inside the window, a plan with a card on file, billing,
-// the program's switch, both emails, the hash key — then a claimed row's
-// failed grant, and what a side that ended with nothing was refused for.
+// step's own conditions (lib/referrals/server.ts), in its order: billing
+// (off, nothing moves), the friend's cards inside the window, a plan with a
+// card on file, the program's switch, both emails, the hash key — then a
+// claimed row's failed grant, and what a side that ended with nothing was
+// refused for. "The hourly check does it" is said only of what the sweep
+// really picks up, and a row that should have been claimed hours ago says
+// the step is failing.
 // ---------------------------------------------------------------------------
 
 const ctx: RewardContext = {
@@ -65,7 +68,9 @@ const row = (over: Partial<ReferredFriend> = {}): ReferredFriend => ({
 });
 
 const words = (r: ReferredFriend, c: RewardContext = ctx) => referralRewardWords(r, c)!;
-/** A row with both bars met and nothing claimed yet. */
+/** Half an hour after the qualified row's second bar landed. */
+const justQualified: RewardContext = { ...ctx, now: new Date("2026-11-05T00:30:00Z") };
+/** A row with both bars met (the second on Nov 5, 00:00) and nothing claimed yet. */
 const qualified = (over: Partial<ReferredFriend> = {}) =>
   row({ status: "cards_saved", cards: 6, cardsSavedAt: "2026-11-03T00:00:00Z", cardOnFileAt: "2026-11-05T00:00:00Z", rewards: facts({ friendHasPlan: true }), ...over });
 
@@ -100,9 +105,17 @@ describe("a referral the reward step has not claimed yet", () => {
     expect(words(row({ cards: 7 })).friend.detail).toContain("the friend has 7 cards saved; the hourly check records it");
   });
 
-  it("the friend holds a plan the referral has not recorded: the hourly check records it", () => {
+  it("the friend holds a plan the referral has not recorded: the hourly check records it once the cards are saved", () => {
     const r = row({ status: "cards_saved", cards: 5, cardsSavedAt: "2026-11-03T00:00:00Z", rewards: facts({ friendHasPlan: true }) });
     expect(words(r).friend.detail).toBe("the friend's plan is not recorded on the referral yet; the hourly check records it");
+  });
+
+  it("…and before the cards are saved it is their next card that records it — the sweep never looks at that row", () => {
+    const r = row({ cards: 2, rewards: facts({ friendHasPlan: true }) });
+    expect(words(r).friend.detail).toBe(
+      "the friend has saved 2 of 5 cards (until Dec 1, 2026 UTC), and the friend's plan is not recorded on the referral yet; their next saved card records it",
+    );
+    expect(words(r).friend.detail).not.toContain("hourly check");
   });
 
   it("past the window without the cards: it is about to expire, whatever the friend has now", () => {
@@ -117,13 +130,28 @@ describe("a referral the reward step has not claimed yet", () => {
     expect(words(edge).friend.detail).toContain("the friend has saved 1 of 5 cards (until Nov 10, 2026 UTC)");
   });
 
-  it("a friend whose account is gone", () => {
-    const gone = row({ refereeId: null, refereeUsername: null, tier: null });
-    expect(words(gone).referrer).toEqual({ state: "waiting", detail: "the friend's account was deleted" });
+  it("a friend whose account is gone is an END for both sides, never 'not yet' — whatever the row was short of", () => {
+    const none = { state: "none", detail: "the friend's account was deleted" };
+    for (const gone of [
+      row({ refereeId: null, refereeUsername: null, tier: null }),
+      row({ refereeId: null, status: "cards_saved", cardsSavedAt: "2026-11-03T00:00:00Z" }),
+      qualified({ refereeId: null }),
+    ]) {
+      expect(words(gone)).toEqual({ friend: none, referrer: none });
+      // …and with billing off as well: the account is gone either way.
+      expect(words(gone, { ...ctx, billingEnabled: false })).toEqual({ friend: none, referrer: none });
+    }
   });
 
-  it("both bars met: billing off, then the paused program, come before anything else", () => {
-    expect(words(qualified(), { ...ctx, billingEnabled: false, programEnabled: false }).friend.detail).toBe("billing is switched off");
+  it("billing off comes first on every row: nothing is rewarded and no hourly check runs", () => {
+    const off = { ...ctx, billingEnabled: false, programEnabled: false };
+    const said = "billing is switched off, so no referral is rewarded until it is on";
+    expect(words(qualified(), off).friend.detail).toBe(said);
+    expect(words(row({ cards: 7 }), off).referrer.detail).toBe(said);
+    expect(words(row({ cards: 2 }), off).friend.detail).not.toContain("hourly check");
+  });
+
+  it("both bars met: the paused program comes before the emails and the key", () => {
     expect(words(qualified(), { ...ctx, programEnabled: false, hashKeySet: false }).friend.detail).toBe("the referral program is paused");
   });
 
@@ -143,7 +171,7 @@ describe("a referral the reward step has not claimed yet", () => {
 
   it("an email whose state is unknown is not called unconfirmed", () => {
     const unknown = qualified({ rewards: facts({ friendHasPlan: true, friendEmailConfirmed: null, referrerEmailConfirmed: null }) });
-    expect(words(unknown).friend.detail).toBe("everything is in place; the hourly check gives the reward");
+    expect(words(unknown, justQualified).friend.detail).toBe("everything is in place; the hourly check gives the reward");
   });
 
   it("both bars met, emails confirmed, no hash key: the server's key is named", () => {
@@ -152,14 +180,31 @@ describe("a referral the reward step has not claimed yet", () => {
     );
   });
 
-  it("nothing in the way: the hourly check gives it", () => {
-    const { friend, referrer } = words(qualified());
+  it("nothing in the way, just qualified: the hourly check gives it", () => {
+    const { friend, referrer } = words(qualified(), justQualified);
     expect(friend).toEqual({ state: "waiting", detail: "everything is in place; the hourly check gives the reward" });
     expect(referrer).toEqual(friend);
+    // Two hours is still inside two runs of the hourly check.
+    expect(words(qualified(), { ...ctx, now: new Date("2026-11-05T02:00:00Z") }).friend).toEqual(friend);
+  });
+
+  it("nothing in the way for hours: the reward step is failing, and it is not called fine", () => {
+    const stuck = words(qualified(), { ...ctx, now: new Date("2026-11-05T02:00:01Z") }).friend;
+    expect(stuck).toEqual({
+      state: "waiting",
+      detail: "everything is in place since Nov 5, 2026 UTC, but the reward step has not gone through; it is failing — the server log's [referrals] lines say why",
+    });
+    expect(words(qualified()).referrer).toEqual(stuck); // five days on
+    // Counted from the LATER of the two bars, whichever it was.
+    const cardsLast = qualified({ cardsSavedAt: "2026-11-10T11:30:00Z", cardOnFileAt: "2026-11-01T00:00:00Z" });
+    expect(words(cardsLast).friend.detail).toBe("everything is in place; the hourly check gives the reward");
   });
 
   it("0177's first_card state reads as cards_saved does", () => {
-    expect(words(qualified({ status: "first_card" })).friend.state).toBe("waiting");
+    expect(words(qualified({ status: "first_card" }), justQualified).friend).toEqual({
+      state: "waiting",
+      detail: "everything is in place; the hourly check gives the reward",
+    });
   });
 
   it("the friend's days banked ahead of their checkout are named on the friend's side only", () => {
@@ -205,6 +250,11 @@ describe("a claimed referral", () => {
     const failing = words(rewarded({ friend: side({ kind: "banked_days", days: 7 }), grantAttempts: 2 }));
     expect(failing.referrer.detail).toBe(`the grant failed 2 times; the hourly check retries it (up to ${REFERRAL_GRANT_MAX_ATTEMPTS})`);
     expect(words(rewarded({ grantAttempts: 1 })).friend.detail).toContain("the grant failed 1 time;");
+    // No hourly check runs with billing off.
+    expect(words(rewarded({ grantAttempts: 2 }), { ...ctx, billingEnabled: false }).referrer).toEqual({
+      state: "waiting",
+      detail: "billing is switched off, so the grant waits until it is on",
+    });
   });
 
   it("a side recorded 'none' says why: an admin, the settings, a grant given up, a missing account", () => {
@@ -267,8 +317,10 @@ describe("a claimed referral", () => {
     const none = facts({ friend: side({ kind: "none" }), referrer: side({ kind: "none" }) });
     expect(words(row({ status: "expired", rewards: none })).friend).toEqual({
       state: "none",
-      detail: "the friend did not save 5 cards within 30 days of joining",
+      detail: "the friend did not save the required cards in time",
     });
+    // Today's settings are not stated as the rule an old row broke.
+    expect(words(row({ status: "expired", rewards: none }), { ...ctx, cardsRequired: 9, windowDays: 3 }).friend.detail).not.toMatch(/\d/);
     const emails = qualified({ status: "expired", rewards: facts({ friend: side({ kind: "none", reason: "expired" }), referrer: side({ kind: "none" }) }) });
     expect(words(emails).friend.detail).toBe("an email was not confirmed within 30 days of the friend qualifying");
     expect(words(emails).referrer.detail).toBe(words(emails).friend.detail);

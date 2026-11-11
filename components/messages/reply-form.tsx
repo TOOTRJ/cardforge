@@ -44,14 +44,19 @@ export function ReplyForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLTextAreaElement | null>(null);
+  // One send at a time: ⌘/Ctrl+Enter reaches `submit` without the button,
+  // so a second press before the first answer would post the reply twice.
+  const sending = useRef(false);
 
   const submit = () => {
+    if (sending.current) return;
     const parsed = messageBodySchema.safeParse(body);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Check your message.");
       return;
     }
     setError(null);
+    sending.current = true;
     startTransition(async () => {
       if (feedbackId !== undefined) {
         // The first reply: it opens the thread, and the conversation is
@@ -59,10 +64,12 @@ export function ReplyForm({
         // inbox, not to a page that no longer has anything to send).
         const opened = await adminReplyToFeedbackAction({ feedbackId, body: parsed.data });
         if (!opened.ok) {
+          sending.current = false;
           setError(opened.error);
           toast.error(opened.error);
           return;
         }
+        // Stays "sending" from here: the page is on its way to the thread.
         toast.success("Reply sent — the user has been notified.");
         setBody("");
         router.replace(`/admin/messages/${opened.threadId}`);
@@ -70,6 +77,7 @@ export function ReplyForm({
       }
       const action = side === "admin" ? adminSendMessageAction : sendMessageAction;
       const result = await action({ threadId, body: parsed.data });
+      sending.current = false;
       if (!result.ok) {
         setError(result.error);
         toast.error(result.error);
