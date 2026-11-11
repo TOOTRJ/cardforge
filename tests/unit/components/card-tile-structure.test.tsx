@@ -301,10 +301,12 @@ describe("every wrapper goes through CardTile (source scan)", () => {
   it("a back thumb reaches a tile only through CardTile's `thumbnail` — never as a JSX prop of a hand-nested BakedCardThumbnail", () => {
     const handNested = files.filter((path) => /renderedBackThumbUrl=\{/.test(read(path)));
     expect(handNested).toEqual([]);
-    // The seven tile wrappers, by name: a new one joins this list AND uses CardTile.
+    // The tile wrappers, by name: a new one joins this list AND uses CardTile.
     const passing = files.filter((path) => /renderedBackThumbUrl:/.test(read(path)));
     expect(passing.sort()).toEqual([
       "app/(marketing)/profile/[username]/page.tsx",
+      // The profile's admin-only "Unlisted cards" section (2026-11-11).
+      "components/admin/profile-unlisted-cards.tsx",
       "components/cards/gallery-card-tile.tsx",
       "components/creator/dashboard-card-tile.tsx",
       "components/creator/liked-card-tile.tsx",

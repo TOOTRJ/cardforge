@@ -1700,6 +1700,20 @@ Rules and gotchas:
   a trial is measured over its own length. A list of people on an admin
   page links each to `/admin/users?u=<id>`; a public title only for public
   content.
+- A creator's UNLISTED cards are LISTED by one page of the app, for ADMINS
+  ONLY and for debugging (owner 2026-11-11: a frame report on a card nobody
+  could find): a section under the public cards on `/profile/<user>`
+  (`components/admin/profile-unlisted-cards.tsx`). ONE reader,
+  `listUnlistedCardsForAdmin` (`lib/admin/unlisted-cards.ts`), whose gate is
+  its OWN (the database's `viewer_is_admin()` first — one call, for the
+  non-admins — then `requireAdminClient`; null for anyone else, and a null
+  answer is no section at all, not an empty one); the page mounts it only
+  for a signed-in viewer, in its own Suspense, so a signed-out visitor costs
+  no read. It READS as a signed-out visitor (`createPublicClient`), never
+  the service role: RLS hands an unlisted card to anyone and keeps every
+  PRIVATE one out — never list a private card there (the maker's "nobody
+  but me"). A page past the last card is PostgREST's PGRST103, read as an
+  empty page, never as a failure.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
