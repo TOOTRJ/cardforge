@@ -20,9 +20,12 @@ const sql = raw
   .split("\n")
   .filter((line) => !line.trimStart().startsWith("--"))
   .join("\n");
-/** One entry per statement. A statement ends at a `;` that ends its line —
- *  the table comment's own text holds semicolons mid-line. */
-const statements = sql
+/** The closing self-check (one DO block), and everything before it. */
+const proofAt = sql.indexOf("do $$");
+const proof = proofAt >= 0 ? sql.slice(proofAt) : "";
+/** One entry per statement before the proof. A statement ends at a `;` that
+ *  ends its line — the table comment's own text holds semicolons mid-line. */
+const statements = (proofAt >= 0 ? sql.slice(0, proofAt) : sql)
   .split(/;[ \t]*(?:\n|$)/)
   .map((statement) => statement.replace(/\s+/g, " ").trim())
   .filter(Boolean);
@@ -70,6 +73,24 @@ describe("0205 custom symbol words are the server's", () => {
     expect(sql).not.toMatch(/to anon\b(?!, authenticated)/);
   });
 
+  it("ends by PROVING it on the database it ran on: it raises if an API role can still write a code or a name", () => {
+    expect(proof.trim().endsWith("$$;")).toBe(true);
+    for (const check of [
+      "has_any_column_privilege('authenticated', 'public.custom_symbols', 'INSERT')",
+      "has_any_column_privilege('anon', 'public.custom_symbols', 'INSERT')",
+      "has_column_privilege('authenticated', 'public.custom_symbols', 'name', 'UPDATE')",
+      "has_column_privilege('authenticated', 'public.custom_symbols', 'code', 'UPDATE')",
+      "has_any_column_privilege('anon', 'public.custom_symbols', 'UPDATE')",
+    ]) {
+      expect(proof, check).toContain(check);
+    }
+    expect(proof).toContain("raise exception '0205: an API role can still write a custom symbol''s code or name'");
+    // One DO block and nothing after it: the runner sends it as one statement.
+    expect(sql.match(/\bdo \$\$/g)).toHaveLength(1);
+    // It only asks; no line of it changes anything.
+    expect(proof).not.toMatch(/^\s*(grant|revoke|drop|alter|create|insert|update|delete)\b/im);
+  });
+
   it("teaches the database no word list and adds no function, trigger or definer", () => {
     expect(sql).not.toMatch(/create (or replace )?function|create trigger|security definer/i);
     expect(raw).toContain("a second detector to keep in step with the");
@@ -79,7 +100,9 @@ describe("0205 custom symbol words are the server's", () => {
     for (const statement of statements) {
       expect(statement, statement).toMatch(/^(revoke|grant|drop policy if exists|comment on table) /);
     }
-    expect(sql).not.toMatch(/\b(begin|commit|lock table)\b/i);
+    // No transaction control and no lock among them (the proof's own
+    // `begin … end` is the DO block's body, one statement).
+    expect(statements.join("\n")).not.toMatch(/\b(begin|commit|rollback|lock table)\b/i);
   });
 
   it("says in the table's own comment who writes what now", () => {

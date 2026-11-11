@@ -52,3 +52,22 @@ grant select, insert, update, delete on public.custom_symbols to service_role;
 
 comment on table public.custom_symbols is
   'New mana symbols (0193): {*CODE} in a card''s text draws the CARD OWNER''s row with that code. A declared mana value and base colour (NULL = colourless); the picture is the owner''s custom-pips sym-<uuid>.png. deleted_at = removed but kept for the cards that still name it. Everyone reads. The SERVER alone inserts a row and writes its name (0205: the code and the name are public words, checked by the app before it writes them); the owner''s own role changes the meaning, the picture and deleted_at, and deletes, while has_tool_access(''custom-symbols'').';
+
+-- The proof, on every database this runs on (a preview branch, dev,
+-- production): the two writes are really gone. `revoke update (name)` is a
+-- silent no-op where a role holds UPDATE on the whole table — by 0193 it
+-- does not, but a grant made by hand would leave the door open under a green
+-- check. One statement (a DO block), so it runs as the branch runner sends it.
+do $$
+begin
+  if has_any_column_privilege('authenticated', 'public.custom_symbols', 'INSERT')
+     or has_any_column_privilege('anon', 'public.custom_symbols', 'INSERT')
+     or has_column_privilege('authenticated', 'public.custom_symbols', 'name', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.custom_symbols', 'code', 'UPDATE')
+     or has_any_column_privilege('anon', 'public.custom_symbols', 'UPDATE')
+  then
+    raise exception '0205: an API role can still write a custom symbol''s code or name'
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$$;

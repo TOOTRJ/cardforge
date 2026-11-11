@@ -12,8 +12,10 @@ import { userFolder } from "@/lib/media/user-storage";
 // the tool access, counted the upload (checkUploadRateLimit), sniffed,
 // stripped and scanned the bytes, and passes the owner it verified.
 //
-// The row (custom_symbols.image_url) is written by the caller with the
-// owner's session — 0193's RLS and 0127's media guard check it there.
+// The row (custom_symbols.image_url) is written by the caller: a NEW symbol's
+// by the server's role (0205 — nothing in the database checks that address,
+// so it is only ever the URL this module returns), a replaced picture's with
+// the owner's session, where 0193's RLS and 0127's media guard check it.
 // ---------------------------------------------------------------------------
 
 export const SYMBOL_PICTURE_PX = 256;

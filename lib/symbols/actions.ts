@@ -55,9 +55,12 @@ import {
 // after the checks that need no bytes, a byte sniff, prepareUploadBytes
 // (upright, no camera metadata), the image scan BEFORE anything is stored,
 // then a 256 px PNG into the maker's own custom-pips folder
-// (lib/symbols/write-symbol.ts). The row is written with the maker's session,
-// so 0193's RLS (the tool gate), its caps and 0127's media guard all hold in
-// the database too.
+// (lib/symbols/write-symbol.ts). The row's caps (custom_symbols_guard) hold
+// in the database for every role. Who WRITES the row is below: since 0205
+// the insert and the edit are the server's, so for those two the tool gate
+// and the picture's address are this module's to hold, not RLS's or 0127's
+// media guard (which only checks an API role) — the picture is always the
+// file `storeSymbolPicture` just wrote into the caller's own folder.
 //
 // "Remove" deletes a symbol no card of the maker's names; one a card names is
 // KEPT as removed (a tombstone: the cards keep drawing it, Restore brings it
@@ -132,6 +135,22 @@ function ready(): string | null {
  */
 function wordsClient() {
   return createAdminClient();
+}
+
+/**
+ * The DATABASE's answer to "is the tool open to this caller" — asked as the
+ * caller, before a write the server's role makes for them. 0193's policies
+ * asked `has_tool_access` of every insert and edit; the service role is
+ * asked nothing, and the app's own gate (`checkToolAccess`) can say yes
+ * where SQL says no (it reads the EFFECTIVE tier, which is Pro while billing
+ * is off; SQL reads the real one). So the two writes that left RLS keep its
+ * question: the server never does for a caller what their own role would
+ * have been refused. A failed read is "no".
+ */
+async function toolOpenInDatabase(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("has_tool_access", { p_slug: CUSTOM_SYMBOLS_SLUG });
+  return !error && data === true;
 }
 
 /** A database refusal in the maker's words. */
@@ -345,6 +364,12 @@ export async function createSymbolAction(formData: FormData): Promise<SymbolResu
 
   const refused = (reason: string, props: ToolEventProps = {}) =>
     recordRefusal(access, "create_failed", reason, { source: "upload", ...props });
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
 
   const details = detailsFrom(formData);
   if (!details.success) {
@@ -399,6 +424,12 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
   if (!access) return { ok: false, error: NO_ACCESS };
   const refused = (reason: string, props: ToolEventProps = {}) =>
     recordRefusal(access, "create_failed", reason, { source: "forge", ...props });
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
   if (!(await checkToolAccess(PIP_FORGE_SLUG))) {
     refused("no_forge_access");
     return { ok: false, error: "Pip Forge isn't open to your account right now." };
@@ -467,6 +498,12 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   const refused = (reason: string, props: ToolEventProps = {}) => recordRefusal(access, "edit_failed", reason, props);
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
   const parsed = symbolEditSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];

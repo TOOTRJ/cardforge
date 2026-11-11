@@ -54,6 +54,10 @@ const state = vi.hoisted(() => ({
   serverLog: [] as Array<{ table: string; calls: ChainCall[] }>,
   /** Whether the service role is configured at all. */
   serverConfigured: true,
+  /** What the DATABASE answers "is the tool open to this caller"
+   *  (has_tool_access, asked as the caller), and how often it was asked. */
+  dbAccess: true as boolean | "error",
+  dbAsked: [] as string[],
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -181,7 +185,13 @@ vi.mock("@/lib/supabase/server", () => {
   const db = chainClient(answerFor);
   state.log = db.log;
   return {
-    createClient: async () => ({ from: db.client.from }),
+    createClient: async () => ({
+      from: db.client.from,
+      rpc: async (name: string, args: { p_slug?: string }) => {
+        state.dbAsked.push(`${name}:${args?.p_slug ?? ""}`);
+        return state.dbAccess === "error" ? { data: null, error: { message: "boom" } } : { data: state.dbAccess, error: null };
+      },
+    }),
     getCurrentUser: async () => ({ id: USER }),
   };
 });
@@ -227,6 +237,8 @@ beforeEach(() => {
   state.log.length = 0;
   state.serverLog.length = 0;
   state.serverConfigured = true;
+  state.dbAccess = true;
+  state.dbAsked.length = 0;
   state.rebakes.length = 0;
 });
 
@@ -698,6 +710,50 @@ describe("which role makes each write (0205)", () => {
     });
     expect(writesOf(state.log)).toEqual([]);
     expect(writesOf(state.serverLog)).toEqual([]);
+  });
+
+  // RLS asked `has_tool_access` of every insert and edit (0193). The service
+  // role is asked nothing, and the app's gate can say yes where SQL says no
+  // (the effective tier is Pro while billing is off; SQL reads the real one).
+  it("the server writes for a caller only where the DATABASE says the tool is open to them", async () => {
+    await createSymbolAction(await form(NEW));
+    await createSymbolFromForgedPipAction({ forgedPipId: "44444444-4444-4444-8444-444444444444", code: "Q", name: "Cipher", manaValue: 1, baseColor: "" });
+    state.rows = [row()];
+    await updateSymbolAction({ id: SYMBOL_ID, name: "New", manaValue: 3, baseColor: "" });
+    // Asked once per write, as the caller, for this tool.
+    expect(state.dbAsked).toEqual(["has_tool_access:custom-symbols", "has_tool_access:custom-symbols", "has_tool_access:custom-symbols"]);
+    expect(writesOf(state.serverLog)).toEqual(["insert", "insert", "update"]);
+  });
+
+  for (const answer of [false, "error"] as const) {
+    it(`the database says ${answer === false ? "no" : "nothing (the read failed)"}: refused before any upload or write, by either role`, async () => {
+      state.dbAccess = answer;
+      state.rows = [row()];
+      const results = [
+        await createSymbolAction(await form(NEW)),
+        await createSymbolFromForgedPipAction({ forgedPipId: "44444444-4444-4444-8444-444444444444", code: "Q", name: "Cipher", manaValue: 1, baseColor: "" }),
+        await updateSymbolAction({ id: SYMBOL_ID, name: "New", manaValue: 3, baseColor: "" }),
+      ];
+      for (const result of results) expect(result).toMatchObject({ ok: false, error: expect.stringContaining("isn't open") });
+      expect(writesOf(state.log)).toEqual([]);
+      expect(writesOf(state.serverLog)).toEqual([]);
+      expect(state.uploads).toEqual([]);
+      expect(state.checks).toBe(0);
+      expect(refusals()).toEqual([
+        ["create_failed", { reason: "no_access", source: "upload" }],
+        ["create_failed", { reason: "no_access", source: "forge" }],
+        ["edit_failed", { reason: "no_access" }],
+      ]);
+    });
+  }
+
+  it("the caller's own writes are not asked twice — RLS still asks for them", async () => {
+    state.rows = [row()];
+    await replaceSymbolPictureAction(await form({ id: SYMBOL_ID }));
+    await removeSymbolAction({ id: SYMBOL_ID });
+    state.rows = [row({ deleted_at: "2026-11-01T00:00:00Z" })];
+    await restoreSymbolAction({ id: SYMBOL_ID });
+    expect(state.dbAsked).toEqual([]);
   });
 
   it("in the source: the one insert and the one write of `name` are the server's — the caller's client makes neither", async () => {
