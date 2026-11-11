@@ -23,7 +23,7 @@ const s = vi.hoisted(() => ({
   track: vi.fn(),
 }));
 
-// The funnel beacon posts to /api/events; in a test DOM that would try to
+// The funnel beacon posts to /api/steps; in a test DOM that would try to
 // reach a server that isn't there, so the tracker is a spy here (and its
 // calls are what the wiring tests assert).
 vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: s.track }));

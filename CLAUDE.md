@@ -2091,8 +2091,12 @@ Rules and gotchas:
   checkout action (never client-supplied). FUNNEL: every money step writes
   a `funnel_events` row (0112) via `recordFunnelEvent()` — server steps in
   the checkout action/webhook, browser steps through `trackFunnelEvent()` →
-  POST `/api/events` (allow-listed names in `lib/analytics/funnel-events.ts`,
-  allow-listed scalar props, anonymous rows carry NO identifier); a new CTA
+  POST `/api/steps` (`FUNNEL_STEPS_ENDPOINT`; allow-listed names in
+  `lib/analytics/funnel-events.ts`, allow-listed scalar props, anonymous
+  rows carry NO identifier; it was `/api/events` until 2026-11, a path
+  EasyPrivacy's `/api/events|$ping,~third-party` cancels for a site's own
+  beacons — the old path still answers for open tabs, and a browser endpoint
+  is never named events / collect / track / analytics / log or the like); a new CTA
   passes `surface`, a new gate opens the upgrade modal (that IS the
   `upgrade_modal_open` event); product activity goes through
   `recordActivity()` (card_saved / ai_generation / download + the

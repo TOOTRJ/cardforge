@@ -3,13 +3,22 @@
 //
 // Server events are written where the money moves (lib/stripe/actions.ts,
 // lib/stripe/webhook-handlers.ts). Client events are the steps only the
-// browser sees, posted to /api/events. Both land in funnel_events (0112) and
-// the admin Funnel panel reads them; client events are also mirrored to
-// Vercel Analytics and GA4 when those are configured.
+// browser sees, posted to FUNNEL_STEPS_ENDPOINT. Both land in funnel_events
+// (0112) and the admin Funnel tab reads them; client events are also mirrored
+// to Vercel Analytics and GA4 when those are configured.
 //
 // Props are allow-listed — short scalars only, never free text, never an
 // email or a name — so a row can't carry anything a viewer typed.
 // ---------------------------------------------------------------------------
+
+/**
+ * Where the browser posts a funnel step. NOT a path that ends in a word the
+ * blocker lists catch for a site's own beacons — it was /api/events until
+ * 2026-11, which EasyPrivacy's `/api/events|$ping,~third-party` cancels
+ * (app/api/steps/route.ts). A rename is checked against the lists first
+ * (tests/unit/api/funnel-step-route.test.ts names the endings known caught).
+ */
+export const FUNNEL_STEPS_ENDPOINT = "/api/steps";
 
 export const SERVER_FUNNEL_EVENTS = [
   // Signup + activation (owner decision 2026-09-24): the first save, first
@@ -62,7 +71,7 @@ export const CLIENT_FUNNEL_EVENTS = [
   "nav_click",
   // One per tab session, ANONYMOUS even when signed in (TODO WD9): the
   // viewport's width bucket alone (lib/analytics/screen-width.ts) —
-  // /api/events records it with no user id and no other prop.
+  // The steps route records it with no user id and no other prop.
   "screen_width",
   // A home-page "Make a card — free" button (TODO HM2): `surface` is where
   // it sat (lib/marketing/create-cta.ts). Its own event, never cta_click —

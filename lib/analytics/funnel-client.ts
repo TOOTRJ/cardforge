@@ -2,12 +2,12 @@
 
 import { track } from "@vercel/analytics";
 import { sendGAEvent } from "@next/third-parties/google";
-import { sanitizeFunnelProps, type ClientFunnelEvent, type FunnelProps } from "./funnel-events";
+import { FUNNEL_STEPS_ENDPOINT, sanitizeFunnelProps, type ClientFunnelEvent, type FunnelProps } from "./funnel-events";
 
 // The browser side of funnel instrumentation: one call posts the step to
-// /api/events (first-party, survives navigation via sendBeacon) and mirrors
-// it to Vercel Analytics and GA4 when they're mounted. Fire-and-forget —
-// nothing here can throw into the UI.
+// FUNNEL_STEPS_ENDPOINT (first-party, survives navigation via sendBeacon)
+// and mirrors it to Vercel Analytics and GA4 when they're mounted.
+// Fire-and-forget — nothing here can throw into the UI.
 export function trackFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = {}): void {
   const clean = sanitizeFunnelProps(props);
   postFunnelEvent(event, clean);
@@ -23,7 +23,7 @@ export function trackFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = 
   }
 }
 
-/** The first-party half alone: /api/events and nothing else — for a step
+/** The first-party half alone: our own steps route and nothing else — for a step
  *  that must not reach a third party (GA4 tags every event with its client
  *  id), like the anonymous screen_width bucket. */
 export function postFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = {}): void {
@@ -31,10 +31,10 @@ export function postFunnelEvent(event: ClientFunnelEvent, props: FunnelProps = {
     const body = JSON.stringify({ event, props: sanitizeFunnelProps(props) });
     let sent = false;
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      sent = navigator.sendBeacon("/api/events", new Blob([body], { type: "text/plain" }));
+      sent = navigator.sendBeacon(FUNNEL_STEPS_ENDPOINT, new Blob([body], { type: "text/plain" }));
     }
     if (!sent && typeof fetch === "function") {
-      void fetch("/api/events", {
+      void fetch(FUNNEL_STEPS_ENDPOINT, {
         method: "POST",
         headers: { "content-type": "text/plain" },
         body,
