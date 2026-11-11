@@ -61,7 +61,7 @@ describe("RevenuePanel", () => {
   });
 
   it("says when All time is capped, and how many earlier pack sales are unpriced", () => {
-    expect(html({ payments: [invoice("in_u", 1, 600)], packs: [], capped: true })).toContain("All time (newest 5,000 rows)");
+    expect(html({ payments: [invoice("in_u", 1, 600)], packs: [], capped: true })).toContain("All time (newest 50,000 rows)");
     expect(
       html({ payments: [], packs: [], packGrants: [{ idempotency_key: "pack:cs_old" }, { idempotency_key: "pack:cs_old2" }] }),
     ).toContain("2 earlier pack sales aren&#x27;t priced here");

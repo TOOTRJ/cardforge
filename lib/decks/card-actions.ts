@@ -11,6 +11,7 @@ import { bringsCard, canLinkIntoDeck } from "@/lib/decks/entry-status";
 import { FEATURED_PICKS_MAX } from "@/lib/decks/featured";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { afterResponse } from "@/lib/api/after-response";
 import { chunkIds, selectAllRows } from "@/lib/supabase/select-all-rows";
 import { revalidateDeckEntryChange } from "@/lib/decks/revalidate";
 import { commitImportLines } from "@/lib/decks/import-commit";
@@ -247,14 +248,15 @@ export async function linkDeckCardAction(
   // card linked from the deck page already existed (no new slot), and a
   // re-link is not counted.
   if (options.surface === "creator" && owned.entry.card_id === null && isAdminConfigured()) {
-    await recordFunnelEvent(createAdminClient(), {
-      event: "deck_card_customized",
-      userId: user.id,
-      props: {
-        surface: "creator",
-        kind: owned.entry.scryfall_id ? "import" : "placeholder",
-      },
-    });
+    const makerId = user.id;
+    const kind = owned.entry.scryfall_id ? "import" : "placeholder";
+    afterResponse(() =>
+      recordFunnelEvent(createAdminClient(), {
+        event: "deck_card_customized",
+        userId: makerId,
+        props: { surface: "creator", kind },
+      }),
+    );
   }
 
   await revalidateDeckCardPaths(supabase, user.id, owned.deckSlug);

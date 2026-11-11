@@ -113,7 +113,22 @@ const PROP_KEYS = new Set([
   "item", "bucket",
   // TODO HM3: the signup row and card_saved when a guest's card came along.
   "guestDraft",
+  // The signup row: how the account was made (`SIGNUP_METHODS`), and whether
+  // migration 0197 wrote the row for an account that had none.
+  "method", "backfilled",
 ]);
+
+/** How an account was made — the signup row's `method`. An account made
+ *  with Google or Discord posts no signup form: its row is written at
+ *  onboarding (lib/onboarding/actions.ts). */
+export const SIGNUP_METHODS = ["email", "google", "discord", "other"] as const;
+export type SignupMethod = (typeof SIGNUP_METHODS)[number];
+
+/** The auth provider on an account's app_metadata, as a signup method. */
+export function signupMethodOf(provider: unknown): SignupMethod {
+  const value = typeof provider === "string" ? provider.toLowerCase() : "email";
+  return (SIGNUP_METHODS as readonly string[]).includes(value) ? (value as SignupMethod) : "other";
+}
 const MAX_PROPS = 10;
 const MAX_STRING = 48;
 

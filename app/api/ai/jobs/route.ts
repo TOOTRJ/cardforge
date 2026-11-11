@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { afterResponse } from "@/lib/api/after-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import {
@@ -303,10 +304,12 @@ function withoutPlan<T extends Record<string, unknown>>(job: T): Omit<T, "plan">
   return rest;
 }
 
-/** Funnel: a generation job started (and, once per user, first_ai_generation). */
-async function recordGeneration(userId: string, kind: string): Promise<void> {
+/** Funnel: a generation job started (and, once per user,
+ *  first_ai_generation) — after the response: the job's answer never waits
+ *  for its own bookkeeping. */
+function recordGeneration(userId: string, kind: string): void {
   if (!isAdminConfigured()) return;
-  await recordActivity(createAdminClient(), { userId, kind: "ai_generation", props: { kind } });
+  afterResponse(() => recordActivity(createAdminClient(), { userId, kind: "ai_generation", props: { kind } }));
 }
 
 export async function POST(request: Request) {
@@ -550,7 +553,7 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    await recordGeneration(user.id, parsed.data.kind);
+    recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
       { ok: true, job: withoutPlan(result.job), cardLimit: limit, credits },
       { status: 200 },
@@ -615,7 +618,7 @@ export async function POST(request: Request) {
         { status: result.code === "STATION_TIER_UNFILLED" || result.code === "frame_unfit" ? 422 : 502 },
       );
     }
-    await recordGeneration(user.id, parsed.data.kind);
+    recordGeneration(user.id, parsed.data.kind);
     // A beta tool's fill counts in its analytics once it is planned.
     if (fillTool) {
       const tool = fillTool;
@@ -651,7 +654,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
-    await recordGeneration(user.id, parsed.data.kind);
+    recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(
       { ok: true, job: withoutPlan(result.job), deckSlug: result.deckSlug, cardLimit: limit, credits },
       { status: 200 },
@@ -670,7 +673,7 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
-  await recordGeneration(user.id, parsed.data.kind);
+  recordGeneration(user.id, parsed.data.kind);
   return NextResponse.json(
     { ok: true, job: withoutPlan(result.job), deckSlug: result.deckSlug, cardLimit: limit, credits },
     { status: 200 },

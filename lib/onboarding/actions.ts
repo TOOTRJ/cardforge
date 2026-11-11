@@ -10,6 +10,9 @@ import { recordReferralSignup } from "@/lib/referrals/server";
 import { ensureSignupBankEntry } from "@/lib/billing/day-bank";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { normalizeReferralCode } from "@/lib/referrals/rules";
+import { sanitizeAttribution } from "@/lib/analytics/attribution";
+import { signupMethodOf } from "@/lib/analytics/funnel-events";
+import { recordSignup } from "@/lib/analytics/funnel-server";
 import { welcomeEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
@@ -118,6 +121,12 @@ const completeSchema = z.object({
   /** The tab's first-touch referral code (a Google sign-up never posts the
    *  signup form's hidden fields — this is its one chance). */
   referralCode: z.string().max(16).optional(),
+  /** The tab's first-touch attribution, for the same reason: an account
+   *  made with Google or Discord has no `signup` funnel row until here.
+   *  Sanitized on the server like the signup form's hidden fields
+   *  (sanitizeAttribution keeps the known keys' short safe strings) — and
+   *  NEVER a reason to refuse: a blob in any other shape is dropped. */
+  attribution: z.record(z.string(), z.unknown()).optional().catch(undefined),
 });
 
 export type CompleteResult = { ok: true } | { ok: false; error: string };
@@ -127,6 +136,7 @@ export type CompleteResult = { ok: true } | { ok: false; error: string };
 export async function completeOnboardingAction(input: {
   preferences?: { account: boolean; activity: boolean; newsletter: boolean };
   referralCode?: string;
+  attribution?: Record<string, unknown>;
 }): Promise<CompleteResult> {
   const parsed = completeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid preferences." };
@@ -186,6 +196,33 @@ export async function completeOnboardingAction(input: {
   }
 
   const profile = finished?.[0];
+  if (profile && isAdminConfigured()) {
+    // Funnel: the tab's first touch on the account's `signup` row. An
+    // account made with Google or Discord was recorded at /auth/callback
+    // with its method alone (the server has no attribution there); this is
+    // where the tab hands it over — and a second chance to write the row
+    // if the callback's write was lost. `referred` from the code this
+    // account is claimed with, as the email form's row has it. Only by the
+    // call that finished onboarding, after the response, and never able to
+    // fail it. Identity as plain values (never re-auth in after()).
+    const userId = user.id;
+    // `referred` only from the code the account is really claimed with —
+    // never from a `ref` inside the posted blob.
+    const { ref: _blobRef, ...firstTouch } = sanitizeAttribution(parsed.data.attribution ?? null);
+    void _blobRef;
+    const props = {
+      ...firstTouch,
+      ...(referralCode ? { referred: true } : {}),
+      method: signupMethodOf((user.app_metadata as { provider?: unknown } | null)?.provider),
+    };
+    after(async () => {
+      try {
+        await recordSignup(createAdminClient(), { userId, props });
+      } catch {
+        // best-effort
+      }
+    });
+  }
   if (profile && isEmailConfigured() && isAdminConfigured()) {
     // After the response, identity passed in as plain values — never re-auth
     // inside after() (it can rotate the session cookie with nowhere to set it).

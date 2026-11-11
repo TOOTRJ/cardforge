@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { afterResponse } from "@/lib/api/after-response";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -454,24 +455,25 @@ export async function GET(
     );
   }
 
-  // Funnel: a download (and, once per user, first_download).
+  // Funnel: a download (and, once per user, first_download) — after the
+  // response: the file never waits for two or three database round trips.
   if (isAdminConfigured()) {
-    await recordActivity(createAdminClient(), {
-      userId: viewer.id,
-      kind: "download",
-      props: {
-        format,
-        // A print render names its resolution (and the bleed) in the
-        // allow-listed props (lib/analytics/funnel-events.ts).
-        preset: printMode ? `${print.ppi}ppi` : preset,
-        clean: !watermark,
-        corners,
-        ...(print.bleed ? { layout: print.bleed === "mpc" ? "mpc" : "bleed" } : {}),
-        // The back face names itself, and so do both faces in one image; a
-        // front download's props are as before.
-        ...(faces === "front" ? {} : { face: faces }),
-      },
-    });
+    const downloaderId = viewer.id;
+    const downloadProps = {
+      format,
+      // A print render names its resolution (and the bleed) in the
+      // allow-listed props (lib/analytics/funnel-events.ts).
+      preset: printMode ? `${print.ppi}ppi` : preset,
+      clean: !watermark,
+      corners,
+      ...(print.bleed ? { layout: print.bleed === "mpc" ? "mpc" : "bleed" } : {}),
+      // The back face names itself, and so do both faces in one image; a
+      // front download's props are as before.
+      ...(faces === "front" ? {} : { face: faces }),
+    };
+    afterResponse(() =>
+      recordActivity(createAdminClient(), { userId: downloaderId, kind: "download", props: downloadProps }),
+    );
   }
 
   // The file's slug: the card's, `<slug>-back` for the back face, or

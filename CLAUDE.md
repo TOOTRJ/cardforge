@@ -2033,7 +2033,21 @@ Rules and gotchas:
   once-per-user `first_*` milestones the prune never deletes); signup
   attribution is first-touch sessionStorage → hidden fields → a `signup`
   row for real new users only, never a cookie; the admin Funnel panel reads
-  `admin_funnel_counts()` + `admin_trial_engagement()`. The month's
+  `admin_funnel_counts()` + `admin_trial_engagement()`. Since 0197 (the
+  2026-11-10 analytics audit): `signup` and the three firsts are ONE row a
+  user (a partial unique index; the writers read the conflict as "already
+  recorded"); an account made with Google or Discord gets its `signup` row
+  at `/auth/callback` (`recordSignup`, prop `method`) and the tab's first
+  touch joins that row at onboarding — the email form is not the only way
+  in, and a row 0197 backfilled reads "not recorded" in the source lists,
+  never "direct"; the admin counts leave admins out unless
+  `p_include_admins`; and a tracking write on a user path runs AFTER the
+  response (`afterResponse`, `lib/api/after-response.ts`: card save,
+  downloads, AI job start, deck events) — never awaited there. An admin read
+  of ROWS that must be complete pages with `selectAllRows`: an un-ranged
+  read stops at 1,000 rows whatever `.limit()` says. `trial_converted` asks
+  the subscription itself whether its trial was a payer's free-days hold
+  (`wasHeldPayingPlan`), never an event's `previous_attributes`. The month's
   credit top-up is measured against EVERY refill row of the month
   (`refill:<user>:<period>%`), never the base row alone. The seeded e2e user
   is an ADMIN (unlocked) — billing specs sign in as the free `e2e_free` user

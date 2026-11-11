@@ -1,5 +1,6 @@
 import "server-only";
 
+import { selectAllRows } from "@/lib/supabase/select-all-rows";
 import { requireAdminClient } from "./users-queries";
 
 // ---------------------------------------------------------------------------
@@ -67,8 +68,12 @@ export type RevenueSummary = {
 };
 
 export const REVENUE_RECENT_LIMIT = 8;
-/** Rows read per log. "All time" is labelled as capped when a log reaches it. */
-export const REVENUE_ROW_CAP = 5000;
+/** Rows read per log, in pages (lib/supabase/select-all-rows.ts): an
+ *  un-ranged read stops at PostgREST's `max_rows` — 1,000 — and says nothing
+ *  about the rest, whatever `.limit()` asks for, so "All time" quietly
+ *  became "the newest 1,000 invoices". A log longer than this is a failed
+ *  read (the panel says it could not load), never a partial total. */
+export const REVENUE_ROW_CAP = 50_000;
 
 export type PaymentRow = {
   invoice_id: string;
@@ -233,38 +238,59 @@ export function summarizeRevenue(
 export async function getRevenueSummary(): Promise<RevenueSummary | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
+  // Every row, a page at a time, OLDEST first with the key last: the order
+  // is total, and a sale that lands between two pages is appended at the
+  // end — it cannot shift the rows before it and have one read twice (a
+  // newest-first offset read can). `revenueEntries` sorts for display.
+  const paged = { maxRows: REVENUE_ROW_CAP };
   const [paymentsRes, packsRes, grantsRes] = await Promise.all([
-    admin
-      .from("billing_payments")
-      .select(
-        "invoice_id, user_id, amount_cents, currency, billing_reason, tier, billing_interval, paid_at, invoice_number, hosted_invoice_url, refunded_cents, dispute_status",
-      )
-      .order("paid_at", { ascending: false })
-      .limit(REVENUE_ROW_CAP),
-    admin
-      .from("billing_pack_payments")
-      .select("checkout_session_id, user_id, amount_cents, currency, pack, credits, paid_at, refunded_cents, dispute_status")
-      .order("paid_at", { ascending: false })
-      .limit(REVENUE_ROW_CAP),
-    admin
-      .from("credit_ledger")
-      .select("idempotency_key")
-      .eq("reason", "pack_purchase")
-      .limit(REVENUE_ROW_CAP),
+    selectAllRows<PaymentRow>(
+      (from, to) =>
+        admin
+          .from("billing_payments")
+          .select(
+            "invoice_id, user_id, amount_cents, currency, billing_reason, tier, billing_interval, paid_at, invoice_number, hosted_invoice_url, refunded_cents, dispute_status",
+          )
+          .order("paid_at", { ascending: true })
+          .order("invoice_id", { ascending: true })
+          .range(from, to),
+      paged,
+    ),
+    selectAllRows<PackPaymentRow>(
+      (from, to) =>
+        admin
+          .from("billing_pack_payments")
+          .select("checkout_session_id, user_id, amount_cents, currency, pack, credits, paid_at, refunded_cents, dispute_status")
+          .order("paid_at", { ascending: true })
+          .order("checkout_session_id", { ascending: true })
+          .range(from, to),
+      paged,
+    ),
+    selectAllRows<PackGrantRow>(
+      (from, to) =>
+        admin
+          .from("credit_ledger")
+          .select("idempotency_key")
+          .eq("reason", "pack_purchase")
+          .order("id", { ascending: true })
+          .range(from, to),
+      paged,
+    ),
   ]);
-  if (paymentsRes.error || packsRes.error) {
-    console.warn(
-      "getRevenueSummary: query error",
-      paymentsRes.error?.message ?? packsRes.error?.message,
-    );
+  // A failed page — or a log longer than the cap (the safety stop: these
+  // totals belong in SQL long before that) — is a failed read: never part
+  // of a log summed as if it were all of it.
+  const failed = [paymentsRes, packsRes].find((res) => res.error);
+  if (failed) {
+    console.warn("getRevenueSummary: query error", failed.error?.message);
     return null;
   }
-  const payments = (paymentsRes.data ?? []) as PaymentRow[];
-  const packs = (packsRes.data ?? []) as PackPaymentRow[];
+  // One row a sale, whatever the pages returned.
+  const payments = [...new Map(paymentsRes.data.map((row) => [row.invoice_id, row])).values()];
+  const packs = [...new Map(packsRes.data.map((row) => [row.checkout_session_id, row])).values()];
   // The unpriced count is only shown when the whole ledger list was read.
-  const grantRows = (grantsRes.data ?? []) as PackGrantRow[];
-  const grants = grantsRes.error || grantRows.length >= REVENUE_ROW_CAP ? null : grantRows;
-  const capped = payments.length >= REVENUE_ROW_CAP || packs.length >= REVENUE_ROW_CAP;
+  const grants = grantsRes.error ? null : grantsRes.data;
+  const capped = false;
   const ids = [
     ...new Set(
       revenueEntries(payments, packs)

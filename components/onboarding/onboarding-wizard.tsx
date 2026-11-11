@@ -18,7 +18,7 @@ import {
   type UsernameCheck,
 } from "@/lib/onboarding/actions";
 import { isGeneratedUsername } from "@/lib/auth/usernames";
-import { storedReferralCode } from "@/lib/analytics/attribution-client";
+import { storedAttribution, storedReferralCode } from "@/lib/analytics/attribution-client";
 import { ReferralJoinNote } from "@/components/referrals/referral-join-note";
 import { cn } from "@/lib/utils";
 
@@ -114,9 +114,11 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
     startTransition(async () => {
       setError(null);
       const referralCode = storedReferralCode();
+      const attribution = storedAttribution();
       const result = await completeOnboardingAction({
         ...(withPreferences ? { preferences: email } : {}),
         ...(referralCode ? { referralCode } : {}),
+        ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
       });
       if (!result.ok) {
         setError(result.error);

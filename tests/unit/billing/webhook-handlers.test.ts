@@ -1773,6 +1773,43 @@ describe("handleStripeEvent — funnel rows for subscription lifecycle", () => {
     expect(funnel(quiet.inserts)).toEqual([]);
   });
 
+  // A paying subscriber applies banked free days: Stripe reports the plan
+  // `trialing` until they run out, then `trialing → active`. That is no
+  // trial converting. The event Stripe sends at the end of a hold changes
+  // the status and the trial dates, never the metadata — so
+  // `previous_attributes` carries no marker, and the guard that read it
+  // there counted every such payer as a converted trial.
+  it("updated: a PAYING plan coming off a free-days hold records no trial_converted — as Stripe really sends it", async () => {
+    const held = makeChainAdmin({ profiles: [{ ...profile, subscription_tier: "pro", subscription_status: "trialing", stripe_subscription_id: "sub_1" }], credit_ledger: [] });
+    await handleStripeEvent(
+      {
+        id: "e7",
+        type: "customer.subscription.updated",
+        data: {
+          // The subscription as it is now: active, the hold's marker still on it.
+          object: sub({ metadata: { pipglyph_hold_from: "active", pipglyph_trial_end_before_comp: "" } }),
+          // What the event changed: no `metadata` key at all.
+          previous_attributes: { status: "trialing", trial_end: 1793456000 },
+        },
+      } as never,
+      { admin: held.admin, stripe: noApiStripe },
+    );
+    expect(funnel(held.inserts).map((r) => r.event)).toEqual([]);
+  });
+
+  it("updated: a real trial that free days extended still converts (the hold was put on a trial, not on a payer)", async () => {
+    const extended = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent(
+      {
+        id: "e8",
+        type: "customer.subscription.updated",
+        data: { object: sub({ metadata: { pipglyph_hold_from: "trialing" } }), previous_attributes: { status: "trialing" } },
+      } as never,
+      { admin: extended.admin, stripe: noApiStripe },
+    );
+    expect(funnel(extended.inserts).map((r) => r.event)).toEqual(["trial_converted"]);
+  });
+
   it("checkout.session.completed records checkout_completed (and pack_purchased for a paid pack)", async () => {
     const { admin, inserts } = makeChainAdmin({ profiles: [profile] });
     await handleStripeEvent(

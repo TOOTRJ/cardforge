@@ -37,6 +37,20 @@ export function isHeldPayingPlan(sub: { status?: string | null; metadata?: Recor
   return sub?.status === "trialing" && sub.metadata?.[HOLD_FROM_KEY] === "active";
 }
 
+/**
+ * A subscription whose `trialing` time is, or WAS, a free-days hold on a
+ * PAYING plan — whatever its status now. The hold writes the marker and
+ * nothing clears it, so it is still on the subscription when the hold ends
+ * and Stripe reports `trialing → active`: that step is a payer's free days
+ * running out, never a trial converting. Ask the subscription AS IT IS, not
+ * an event's `previous_attributes` — those hold only the keys the event
+ * changed, and the end of a hold never changes the metadata (the funnel
+ * counted every such payer as a converted trial until 2026-11).
+ */
+export function wasHeldPayingPlan(sub: { metadata?: Record<string, string> | null } | null | undefined): boolean {
+  return sub?.metadata?.[HOLD_FROM_KEY] === "active";
+}
+
 /** Stripe refuses a trial end more than 730 days out. */
 export const MAX_TRIAL_SECONDS = 730 * 86_400;
 
