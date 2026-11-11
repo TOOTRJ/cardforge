@@ -4,6 +4,7 @@ import "server-only";
 
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
@@ -67,7 +68,14 @@ import {
 // A symbol's name and code are read by anyone (a card that uses one draws for
 // every viewer), so neither may hold strong language (owner decision 7,
 // 2026-11-09: lib/moderation/profanity.ts, the card detector): refused with a
-// field error — a symbol has no private mode to fall back to.
+// field error — a symbol has no private mode to fall back to. And only THIS
+// module writes them (owner 2026-11-11, migration 0205): no API role inserts
+// a symbol or updates its `name`, so the check can't be skipped through the
+// database API. The two writes that carry a symbol's words — the insert and
+// the edit — go through the service role (`wordsClient`), AFTER the tool's
+// gate and the words' check, always held to the caller's own id; every other
+// write (the picture, remove, restore, delete) stays the owner's own role,
+// under RLS.
 //
 // Nothing is revalidated: the manager follows each action's answer, and the
 // renderers read the owner's symbols on every render (lib/pips/queries.ts).
@@ -112,6 +120,18 @@ function recordRefusal(viewer: Viewer, event: RefusedEvent, reason: string, prop
 function ready(): string | null {
   if (!isSupabaseConfigured() || !isUserStorageConfigured()) return UNAVAILABLE;
   return null;
+}
+
+/**
+ * The client for the two writes that carry a symbol's public words: the
+ * insert (code + name) and the edit (name). The service role — since 0205
+ * no API role may make either. It bypasses RLS, so its callers do what RLS
+ * did for them: they have passed `checkToolAccess` (the policy's
+ * has_tool_access) and every statement names the caller's own id as
+ * `owner_id`. Never hand it a row id alone.
+ */
+function wordsClient() {
+  return createAdminClient();
 }
 
 /** A database refusal in the maker's words. */
@@ -289,8 +309,8 @@ async function insertSymbol(
     return { ok: false, error: stored.error, field: "file" };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  // The server's insert (0205): the words were checked by the caller.
+  const { data, error } = await wordsClient()
     .from("custom_symbols")
     .insert({
       owner_id: ownerId,
@@ -443,7 +463,7 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
 
 /** A symbol's name and meaning (its code never changes). */
 export async function updateSymbolAction(input: unknown): Promise<SymbolResult> {
-  if (!isSupabaseConfigured()) return { ok: false, error: UNAVAILABLE };
+  if (!isSupabaseConfigured() || !isAdminConfigured()) return { ok: false, error: UNAVAILABLE };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   const refused = (reason: string, props: ToolEventProps = {}) => recordRefusal(access, "edit_failed", reason, props);
@@ -468,8 +488,9 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
     return { ok: false, error: "Restore the symbol to change it." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  // The server's update (0205: no API role writes `name`), held to the
+  // caller's own row — the service role has no RLS to hold it for us.
+  const { data, error } = await wordsClient()
     .from("custom_symbols")
     .update({ name: parsed.data.name, mana_value: parsed.data.manaValue, base_color: parsed.data.baseColor })
     .eq("id", parsed.data.id)

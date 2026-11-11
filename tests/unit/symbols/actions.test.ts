@@ -11,6 +11,13 @@ import { cameraPhoto } from "@/tests/stubs/metadata-fixtures";
 // file cleaned up when the row is refused, and "Remove" as the database's
 // delete guard decides it — gone for good, or kept as removed.
 //
+// WHICH ROLE WRITES (owner 2026-11-11, migration 0205): a symbol's code and
+// name are public words, so no API role may write them — the insert and the
+// edit go through the SERVER's role, after the tool's gate and the words'
+// check, held to the caller's own id; the picture, remove and restore stay
+// the caller's own role. Every write here is logged by the client that made
+// it (`state.log` = the caller's, `state.serverLog` = the service role's).
+//
 // And what each action records (tool_events, after the response): a success
 // under its name, a refusal under `<name>_failed` with a `reason` code —
 // never the symbol's name, code or picture.
@@ -41,7 +48,12 @@ const state = vi.hoisted(() => ({
   updateError: null as null | { message: string; code?: string },
   /** An update that matches no row (the symbol changed under the action). */
   updateMisses: false,
+  /** Statements made as the CALLER (their own role, under RLS). */
   log: [] as Array<{ table: string; calls: ChainCall[] }>,
+  /** Statements made as the SERVER (the service role, no RLS). */
+  serverLog: [] as Array<{ table: string; calls: ChainCall[] }>,
+  /** Whether the service role is configured at all. */
+  serverConfigured: true,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -85,9 +97,13 @@ vi.mock("@/lib/moderation/image-scan", () => ({
   },
 }));
 vi.mock("@/lib/media/storage-origin", () => ({ ensureStorageOriginRegistered: async () => undefined }));
-vi.mock("@/lib/supabase/admin", () => ({
-  isAdminConfigured: () => true,
+vi.mock("@/lib/supabase/admin", () => {
+  const db = chainClient(answerFor);
+  state.serverLog = db.log;
+  return {
+  isAdminConfigured: () => state.serverConfigured,
   createAdminClient: () => ({
+    from: db.client.from,
     storage: {
       from: (bucket: string) => ({
         upload: async (key: string, bytes: Buffer, opts: { upsert?: unknown }) => {
@@ -102,7 +118,8 @@ vi.mock("@/lib/supabase/admin", () => ({
       }),
     },
   }),
-}));
+  };
+});
 vi.mock("@/lib/tools/pip-forge/server", async () => {
   const pngOf = (px: number) =>
     sharp({ create: { width: px, height: px, channels: 4, background: "#336699" } }).png().toBuffer();
@@ -135,8 +152,8 @@ function row(overrides: Record<string, unknown> = {}) {
   };
 }
 
-vi.mock("@/lib/supabase/server", () => {
-  const db = chainClient((table, calls) => {
+/** What the "database" answers a statement — the same for either client. */
+function answerFor(table: string, calls: ChainCall[]) {
     if (table !== "custom_symbols") return { data: null, error: null };
     if (called(calls, "insert")) {
       if (state.insertError) return { data: null, error: state.insertError };
@@ -158,7 +175,10 @@ vi.mock("@/lib/supabase/server", () => {
       return { data: state.rows.find((r) => r.id === SYMBOL_ID) ?? null, error: null };
     }
     return { data: state.rows, error: null };
-  });
+}
+
+vi.mock("@/lib/supabase/server", () => {
+  const db = chainClient(answerFor);
   state.log = db.log;
   return {
     createClient: async () => ({ from: db.client.from }),
@@ -205,6 +225,8 @@ beforeEach(() => {
   state.updateError = null;
   state.updateMisses = false;
   state.log.length = 0;
+  state.serverLog.length = 0;
+  state.serverConfigured = true;
   state.rebakes.length = 0;
 });
 
@@ -226,6 +248,7 @@ describe("making a symbol", () => {
     expect(state.checks).toBe(0);
     expect(state.uploads).toEqual([]);
     expect(state.log).toEqual([]);
+    expect(state.serverLog).toEqual([]);
     // Nobody the tool let in: nothing to record.
     expect(state.events).toEqual([]);
   });
@@ -243,7 +266,12 @@ describe("making a symbol", () => {
     const meta = await sharp(upload.bytes).metadata();
     expect([meta.format, meta.width, meta.height]).toEqual(["png", 256, 256]);
     expect(meta.exif).toBeUndefined();
-    const insert = state.log.find((e) => called(e.calls, "insert"));
+    // The row is the SERVER's write (0205) — the caller's own role never inserts.
+    expect(state.log.some((e) => called(e.calls, "insert"))).toBe(false);
+    const inserts = state.serverLog.filter((e) => called(e.calls, "insert"));
+    expect(inserts).toHaveLength(1);
+    const [insert] = inserts;
+    expect(insert.table).toBe("custom_symbols");
     expect(payloadOf(insert!.calls, "insert")).toMatchObject({
       owner_id: USER,
       code: "ABC",
@@ -429,8 +457,17 @@ describe("changing a symbol", () => {
     state.rows = [row()];
     const result = await updateSymbolAction({ id: SYMBOL_ID, code: "ZZZ", name: "New", manaValue: 3, baseColor: "C" });
     expect(result).toMatchObject({ ok: true, symbol: { code: "ABC", name: "New", manaValue: 3, baseColor: null } });
-    const update = state.log.find((e) => called(e.calls, "update"));
+    // The name is the SERVER's write (0205), held to the caller's own live row.
+    expect(state.log.some((e) => called(e.calls, "update"))).toBe(false);
+    const updates = state.serverLog.filter((e) => called(e.calls, "update"));
+    expect(updates).toHaveLength(1);
+    const [update] = updates;
+    expect(update.table).toBe("custom_symbols");
     expect(payloadOf(update!.calls, "update")).toEqual({ name: "New", mana_value: 3, base_color: null });
+    expect(update.calls.filter((c) => c.method === "eq").map((c) => c.args)).toEqual([
+      ["id", SYMBOL_ID],
+      ["owner_id", USER],
+    ]);
     expect(called(update!.calls, "is", "deleted_at")).toBe(true);
     // A name or a meaning draws nothing new.
     expect(state.rebakes).toEqual([]);
@@ -444,6 +481,7 @@ describe("changing a symbol", () => {
       field: "name",
     });
     expect(state.log.some((e) => called(e.calls, "update"))).toBe(false);
+    expect(state.serverLog).toEqual([]);
     expect(refusals()).toEqual([["edit_failed", { reason: "profanity", field: "name" }]]);
   });
 
@@ -580,5 +618,106 @@ describe("removing a symbol", () => {
       ["restore_failed", { reason: "cap" }],
       ["restore_failed", { reason: "gone" }],
     ]);
+  });
+});
+
+// Migration 0205 (owner 2026-11-11): a symbol's code and name are public
+// words, so no API role may write them — a tester could otherwise set either
+// straight through the database API and skip the words' check. The two
+// writes that carry them are the server's; everything else is still the
+// caller's own role, under RLS.
+describe("which role makes each write (0205)", () => {
+  const writesOf = (log: typeof state.log) =>
+    log
+      .filter((e) => ["insert", "update", "delete"].some((method) => called(e.calls, method)))
+      .map((e) => (called(e.calls, "insert") ? "insert" : called(e.calls, "delete") ? "delete" : "update"));
+
+  it("a symbol made from a forged pip is the server's insert too, under the caller's own id", async () => {
+    const result = await createSymbolFromForgedPipAction({
+      forgedPipId: "44444444-4444-4444-8444-444444444444",
+      code: "Q",
+      name: "Cipher",
+      manaValue: 1,
+      baseColor: "",
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(writesOf(state.log)).toEqual([]);
+    expect(writesOf(state.serverLog)).toEqual(["insert"]);
+    const insert = state.serverLog.find((e) => called(e.calls, "insert"))!;
+    expect(payloadOf(insert.calls, "insert")).toMatchObject({ owner_id: USER, code: "Q", name: "Cipher", source: "forge" });
+  });
+
+  it("the server never inserts for anyone but the viewer the tool let in", async () => {
+    await createSymbolAction(await form(NEW));
+    await createSymbolFromForgedPipAction({ forgedPipId: "44444444-4444-4444-8444-444444444444", code: "Q", name: "Cipher", manaValue: 1, baseColor: "" });
+    const owners = state.serverLog
+      .filter((e) => called(e.calls, "insert"))
+      .map((e) => (payloadOf(e.calls, "insert") as { owner_id: string }).owner_id);
+    expect(owners).toEqual([USER, USER]);
+  });
+
+  it("a refused word reaches neither role: strong language, in a code or a name, writes nothing", async () => {
+    await createSymbolAction(await form({ ...NEW, code: "FUCK" }));
+    await createSymbolAction(await form({ ...NEW, name: "Shit storm" }));
+    state.rows = [row()];
+    await updateSymbolAction({ id: SYMBOL_ID, name: "Cunt", manaValue: 1, baseColor: "" });
+    expect(writesOf(state.log)).toEqual([]);
+    expect(writesOf(state.serverLog)).toEqual([]);
+    expect(state.uploads).toEqual([]);
+  });
+
+  it("a new picture is the caller's own write — the server's role is not used for it", async () => {
+    state.rows = [row()];
+    expect(await replaceSymbolPictureAction(await form({ id: SYMBOL_ID }))).toMatchObject({ ok: true });
+    expect(writesOf(state.serverLog)).toEqual([]);
+    const update = state.log.find((e) => called(e.calls, "update"))!;
+    expect(Object.keys(payloadOf(update.calls, "update") as object)).toEqual(["image_url"]);
+  });
+
+  it("remove and restore are the caller's own writes", async () => {
+    state.rows = [row()];
+    expect(await removeSymbolAction({ id: SYMBOL_ID })).toMatchObject({ ok: true });
+    state.rows = [row({ deleted_at: "2026-11-01T00:00:00Z" })];
+    expect(await restoreSymbolAction({ id: SYMBOL_ID })).toMatchObject({ ok: true });
+    expect(writesOf(state.serverLog)).toEqual([]);
+    expect(writesOf(state.log).length).toBeGreaterThanOrEqual(2);
+    // …and none of them names a word.
+    for (const entry of state.log.filter((e) => called(e.calls, "update"))) {
+      const payload = payloadOf(entry.calls, "update") as Record<string, unknown>;
+      expect(Object.keys(payload)).not.toContain("name");
+      expect(Object.keys(payload)).not.toContain("code");
+    }
+  });
+
+  it("an edit without the server's role says it isn't available — it never falls back to the caller's own", async () => {
+    state.rows = [row()];
+    state.serverConfigured = false;
+    expect(await updateSymbolAction({ id: SYMBOL_ID, name: "New", manaValue: 3, baseColor: "" })).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("isn't available"),
+    });
+    expect(writesOf(state.log)).toEqual([]);
+    expect(writesOf(state.serverLog)).toEqual([]);
+  });
+
+  it("in the source: the one insert and the one write of `name` are the server's — the caller's client makes neither", async () => {
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync("lib/symbols/actions.ts", "utf8");
+    // One insert in the module, on the words' client.
+    expect(source.match(/\.insert\(/g)).toHaveLength(1);
+    expect(source).toMatch(/await wordsClient\(\)\s*\.from\("custom_symbols"\)\s*\.insert\(/);
+    // Every update that names `name` is on it as well.
+    const updates = [...source.matchAll(/(\w+(?:\(\))?)\s*\.from\("custom_symbols"\)\s*\.update\(\{([^}]*)\}/g)].map((m) => ({
+      client: m[1],
+      fields: m[2],
+    }));
+    expect(updates.length).toBeGreaterThanOrEqual(4);
+    for (const update of updates) {
+      const namesWords = /\b(name|code)\s*:/.test(update.fields);
+      expect(update.client === "wordsClient()", update.fields.trim()).toBe(namesWords);
+    }
+    // The words' client is the service role, and nothing else in the module is.
+    expect(source).toContain("function wordsClient() {\n  return createAdminClient();\n}");
+    expect(source.match(/createAdminClient\(\)/g)).toHaveLength(1);
   });
 });
