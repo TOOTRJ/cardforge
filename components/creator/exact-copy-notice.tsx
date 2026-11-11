@@ -40,17 +40,26 @@ import {
 export function ExactCopyNotice({ realCardName, scryfallId }: { realCardName: string; scryfallId: string }) {
   const [open, setOpen] = useState(false);
   return (
+    // The notice sits in the creator's form column, which is far narrower
+    // than the window, so its layout answers to ITS OWN width, never a
+    // viewport breakpoint: the sentence and the buttons share a row only
+    // where the sentence keeps a readable measure (`basis-48`, 12rem) beside
+    // them, and the buttons drop under it otherwise. The button group
+    // may shrink and wrap: with `shrink-0` on it, the tool's second button
+    // left the sentence a column one word wide (2026-11-11).
     <div
-      className="flex flex-col gap-2 rounded-lg border border-gold/30 bg-gold/5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gold/30 bg-gold/5 px-3 py-2.5"
       data-testid="exact-copy-notice"
     >
-      <p role="status" className="text-xs leading-5 text-gold">
+      <p role="status" className="min-w-0 grow basis-48 text-xs leading-5 text-gold">
         {EXACT_COPY_SAVE_REASON}
       </p>
-      <div className="flex shrink-0 flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => setOpen(true)}>
+      <div className="flex min-w-0 flex-wrap gap-2">
+        {/* A button is never wider than the notice: past that its words
+            are cut with one "…" instead of pushing the page sideways. */}
+        <Button type="button" size="sm" variant="outline" className="min-w-0 max-w-full" onClick={() => setOpen(true)}>
           <Layers className="h-4 w-4" aria-hidden />
-          Add the real card to a deck
+          <span className="min-w-0 truncate">Add the real card to a deck</span>
         </Button>
         <AddToCollectionButton realCardName={realCardName} scryfallId={scryfallId} />
       </div>
@@ -105,10 +114,13 @@ function AddToCollectionButton({ realCardName, scryfallId }: { realCardName: str
   }
 
   return (
-    <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void add()} disabled={adding}>
+    <Button type="button" size="sm" variant="outline" className="min-w-0 max-w-full" onClick={() => void add()} disabled={adding}>
       {adding ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <LibraryBig className="h-4 w-4" aria-hidden />}
-      Add to my collection
-      {state.owned > 0 ? <span className="text-muted">(you own {state.owned.toLocaleString("en-US")})</span> : null}
+      <span className="shrink-0">Add to my collection</span>
+      {/* The count gives way first: in a narrow column it is what is cut. */}
+      {state.owned > 0 ? (
+        <span className="min-w-0 truncate text-muted">(you own {state.owned.toLocaleString("en-US")})</span>
+      ) : null}
     </Button>
   );
 }
