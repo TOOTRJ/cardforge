@@ -46,20 +46,30 @@
 -- this lands still checks-then-inserts, and a duplicate committed in
 -- between would fail the index (and the migration). Readers go on; the
 -- writes are deferred, best-effort rows that wait the few milliseconds.
-lock table public.funnel_events in share row exclusive mode;
+--
+-- ONE statement (a DO block), so the lock, the clean-up and the index share
+-- one transaction whatever runs this file: the migration runner sends a
+-- file's statements one at a time, and a bare LOCK TABLE there is refused
+-- ("can only be used in transaction blocks", 25P01 — the first version of
+-- this file failed its preview branch on exactly that).
+do $$
+begin
+  lock table public.funnel_events in share row exclusive mode;
 
-delete from public.funnel_events f
-using public.funnel_events keep
-where f.user_id is not null
-  and f.event in ('signup', 'first_card_saved', 'first_ai_generation', 'first_download')
-  and keep.user_id = f.user_id
-  and keep.event = f.event
-  and (keep.created_at, keep.id) < (f.created_at, f.id);
+  delete from public.funnel_events f
+  using public.funnel_events keep
+  where f.user_id is not null
+    and f.event in ('signup', 'first_card_saved', 'first_ai_generation', 'first_download')
+    and keep.user_id = f.user_id
+    and keep.event = f.event
+    and (keep.created_at, keep.id) < (f.created_at, f.id);
 
-create unique index if not exists funnel_events_once_per_user_idx
-  on public.funnel_events (user_id, event)
-  where user_id is not null
-    and event in ('signup', 'first_card_saved', 'first_ai_generation', 'first_download');
+  create unique index if not exists funnel_events_once_per_user_idx
+    on public.funnel_events (user_id, event)
+    where user_id is not null
+      and event in ('signup', 'first_card_saved', 'first_ai_generation', 'first_download');
+end
+$$;
 
 comment on index public.funnel_events_once_per_user_idx is
   'A user has ONE signup row and ONE of each activation milestone (0197). The app inserts and treats the conflict as "already recorded" (lib/analytics/funnel-server.ts).';
