@@ -130,14 +130,19 @@ export const DEADLINE = "deadline";
  * runs at once each failed the gate on objects that were there.) `signal`
  * is the caller's whole budget (frames-check's deadline): once it fires the
  * request in flight and any backoff end at once with status "deadline" —
- * never `ok`, and never a miss to report (findMissing throws
- * FramesCheckDeadline instead).
+ * never `ok`, and never a miss to report (checkObjects counts the object
+ * as not looked at). `onAnswer({ status, cached })` hears every
+ * attempt: the HTTP status (0 for a timeout or a dropped connection) and
+ * whether the CDN answered from its cache (`cf-cache-status: HIT`) — an
+ * answer that is NOT cached reached Supabase's storage API and its small
+ * connection pool, which is what createLookupPacer paces.
  * @param {string} url
  * @param {number} expectedBytes
- * @param {{ tries?: number, baseDelayMs?: number, timeoutMs?: number, signal?: AbortSignal }} [options]
+ * @param {{ tries?: number, baseDelayMs?: number, timeoutMs?: number, signal?: AbortSignal,
+ *   onAnswer?: (answer: { status: number, cached: boolean }) => void }} [options]
  * @returns {Promise<{ ok: boolean, status: string }>}
  */
-export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs = 500, timeoutMs = 10_000, signal } = {}) {
+export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs = 500, timeoutMs = 10_000, signal, onAnswer } = {}) {
   let status = "network";
   for (let attempt = 1; attempt <= tries; attempt += 1) {
     if (signal?.aborted) return { ok: false, status: DEADLINE };
@@ -149,6 +154,7 @@ export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs 
       // Never download the body (a server that ignores Range sends it all).
       await res.body?.cancel().catch(() => {});
       status = String(res.status);
+      onAnswer?.({ status: res.status, cached: /^hit$/i.test(res.headers.get("cf-cache-status") ?? "") });
       if (res.status === 404) return { ok: false, status };
       if (res.ok) {
         // 206: "bytes 0-0/<total>"; 200 (Range ignored): content-length.
@@ -160,6 +166,7 @@ export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs 
     } catch (err) {
       if (signal?.aborted) return { ok: false, status: DEADLINE };
       status = err?.name === "TimeoutError" || err?.name === "AbortError" ? "timeout" : "network";
+      onAnswer?.({ status: 0, cached: false });
     }
     if (attempt < tries) await pause(baseDelayMs * 2 ** (attempt - 1), signal);
   }
@@ -221,80 +228,258 @@ export async function fetchVerified(url, expectedSha256, { tries = 4, baseDelayM
 /** True when a public object exists at the expected size — objectStatus().ok
  *  with a SHORT budget (3 tries, 0.3 s → 0.6 s): publish / promote /
  *  restore-dev check objects that are usually missing, and they re-verify
- *  their own uploads. The gate (frames-check) uses findMissing instead. */
+ *  their own uploads. The gate (frames-check) uses checkObjects instead. */
 export async function objectExists(url, expectedBytes, opts) {
   return (await objectStatus(url, expectedBytes, { tries: 3, baseDelayMs: 300, ...opts })).ok;
 }
 
 /**
- * Thrown by findMissing when its `signal` fires before every item has an
- * answer: the gate could not VERIFY the manifest, which is neither a pass
- * nor a list of misses. `checked` items answered, `suspects` of them not ok
- * so far, `statuses` counts their last answers.
+ * The PACE of lookups against production storage (2026-11-10). A lookup the
+ * CDN answers from its cache costs Supabase nothing. One it does NOT (a cold
+ * CDN: the cache is per location, and a runner lands on a different one from
+ * run to run) reaches the storage API, whose nodes each open their own
+ * pooled database connections and keep them a minute — so a few uncached
+ * lookups a second spread over the whole fleet and exhaust the project's
+ * connection pooler (`max_client_conn`). When that happened every storage
+ * request of the SITE was refused for as long as the check ran: thumbnails
+ * (the /render-cdn 502s), art uploads, card bakes. So:
+ *
+ *   - FAST while answers are cached: `limit` lookups in flight;
+ *   - SLOW from the first answer that is not (or that never came): ONE
+ *     lookup in flight, and `slowGapMs` after every uncached answer before
+ *     the next starts — about one a second at the default (the gap plus the
+ *     lookup itself), a quarter of what four in flight sent, which is what
+ *     keeps most of the storage fleet's pools closed. Not slower: a pull
+ *     request that adds a few hundred frames (every one uncached the first
+ *     time) must still finish its check. `recoverAfter` cached answers in a
+ *     row make it fast again;
+ *   - a 429 means storage is ALREADY saturated (by this check or by anyone):
+ *     nothing starts for `busyPauseMs` (the minute its connections live),
+ *     then it goes on slowly. After `maxBusyPauses` such pauses the next 429
+ *     STOPS the check (`stopped` = "busy"): it never keeps knocking.
+ *
+ * `acquire(signal)` waits for a turn — false when the check is stopped or
+ * `signal` fired; `release()` gives the turn back; `note(answer)` is
+ * objectStatus's `onAnswer`. `now` / `sleep` are for tests.
+ * @param {{ limit?: number, slowGapMs?: number, recoverAfter?: number, busyPauseMs?: number,
+ *   maxBusyPauses?: number, now?: () => number, sleep?: (ms: number, signal?: AbortSignal) => Promise<void> }} [options]
  */
-export class FramesCheckDeadline extends Error {
-  constructor({ checked, total, suspects, statuses }) {
-    super(`ran out of time with ${checked}/${total} checked`);
-    this.name = "FramesCheckDeadline";
-    Object.assign(this, { checked, total, suspects, statuses });
-  }
+export function createLookupPacer({ limit = 4, slowGapMs = 500, recoverAfter = 12, busyPauseMs = 60_000, maxBusyPauses = 3, now = Date.now, sleep = pause } = {}) {
+  let inFlight = 0;
+  let slow = false;
+  let cachedStreak = 0;
+  let uncached = 0;
+  let busyPauses = 0;
+  let busyUntil = 0;
+  let notBefore = 0;
+  /** @type {"busy" | null} */
+  let stopped = null;
+  /** @type {Array<() => void>} */
+  let waiting = [];
+  const wake = () => {
+    const woken = waiting;
+    waiting = [];
+    for (const resolve of woken) resolve();
+  };
+  return {
+    limit,
+    get stopped() {
+      return stopped;
+    },
+    stats: () => ({ uncached, busyPauses, slow, stopped }),
+    async acquire(signal) {
+      for (;;) {
+        if (stopped || signal?.aborted) return false;
+        if (inFlight >= (slow ? 1 : limit)) {
+          // Woken by the release of the lookup in flight (one always is).
+          await new Promise((resolve) => waiting.push(resolve));
+          continue;
+        }
+        const wait = notBefore - now();
+        if (wait <= 0) {
+          inFlight += 1;
+          return true;
+        }
+        // Hold the turn while waiting: nobody else may start meanwhile.
+        inFlight += 1;
+        await sleep(wait, signal);
+        inFlight -= 1;
+        wake();
+      }
+    },
+    release() {
+      inFlight -= 1;
+      wake();
+    },
+    note({ status, cached }) {
+      if (status === 429) {
+        slow = true;
+        cachedStreak = 0;
+        // Several lookups in flight may all come back 429: one pause.
+        if (now() < busyUntil) return;
+        if (busyPauses >= maxBusyPauses) {
+          stopped = "busy";
+          return;
+        }
+        busyPauses += 1;
+        busyUntil = now() + busyPauseMs;
+        notBefore = Math.max(notBefore, busyUntil);
+        return;
+      }
+      if (cached) {
+        cachedStreak += 1;
+        if (slow && cachedStreak >= recoverAfter) slow = false;
+        return;
+      }
+      uncached += 1;
+      cachedStreak = 0;
+      slow = true;
+      notBefore = Math.max(notBefore, now() + slowGapMs);
+    },
+  };
+}
+
+/** A last answer that says nothing about the object: storage was busy or
+ *  out of reach (429, 5xx, a timeout, a dropped connection). A 400 is NOT
+ *  one — it is what a missing public object answers. */
+export function isNoAnswer(status) {
+  return status === "429" || status === "timeout" || status === "network" || /^5\d\d$/.test(status);
 }
 
 /**
- * Which of `items` are missing. `check(item, thorough)` returns
- * { ok, status }. A quick first pass runs `limit` at a time; then — after
- * `confirmDelayMs` — every apparent miss is checked again THOROUGHLY, one at
- * a time, so a burst of transient storage errors can't fail a gate on its
- * own. More than `maxConfirm` misses is not a blip (a manifest nobody
- * promoted): those are reported without the slow confirm pass. Returns
- * [{ item, status }] for the misses.
+ * Look `items` up and say what was learned — the gate's two passes, with a
+ * pace and without a verdict (scripts/lib/frames-check-run.mjs decides):
  *
- * `signal` is the whole check's budget: once it fires no new lookup starts
- * (a `check` given the same signal ends its own at once) and findMissing
- * throws FramesCheckDeadline — never a pass, and never misses it did not
- * see. `onProgress({ done, total, suspects })` follows the first pass.
- * (2026-11-02: two "Frames published" runs went silent until the job's
- * 10-minute timeout — 4280 lookups through a slow CDN, each inside its own
- * timeout.)
+ *   { missing, unverified, unchecked, suspects, checked, total, stopped }
+ *
+ * `lookup(item, thorough, onAnswer)` returns { ok, status }. A first pass
+ * runs `limit` at a time (the `pacer`'s limit and pace when one is given);
+ * then — after `confirmDelayMs` — every apparent miss is looked up again,
+ * one at a time, up to `confirmTries` times (`thorough` true), so a burst of
+ * transient storage errors can't fail a gate on its own. More than
+ * `maxConfirm` answers that SAY missing (isNoAnswer is false) is not a blip
+ * (a manifest nobody promoted): those are `missing` without the slow pass.
+ *
+ *   missing     [{ item, status }] — still not there after the confirm pass
+ *               (or more than maxConfirm of them);
+ *   unverified  [{ item, status }] — an apparent miss the confirm pass could
+ *               not settle: its last try got no answer (isNoAnswer), or the
+ *               check stopped first. `status` is the latest answer that
+ *               SAID missing in either pass when there was one (so a caller
+ *               can tell "storage was only silent about it" from "it said
+ *               missing and was never found"), else the last silence.
+ *               Neither a miss nor a pass;
+ *   unchecked   items never looked at (the budget fired, or the pacer
+ *               stopped: storage was saturated);
+ *   suspects    the first pass's apparent misses, [{ item, status }];
+ *   stopped     null, "deadline" (a signal fired) or "busy" (the pacer).
+ *
+ * `signal` ends the FIRST pass (no new lookup starts); `confirmSignal`
+ * (default: the same) ends the confirm pass — a sweep gives the first pass
+ * less time so that what it found can still be confirmed.
+ * `onProgress({ done, total, suspects })` follows the first pass.
  * @template T
  * @param {T[]} items
- * @param {(item: T, thorough: boolean) => Promise<{ ok: boolean, status: string }>} check
- * @param {{ limit?: number, confirmDelayMs?: number, maxConfirm?: number, signal?: AbortSignal,
+ * @param {(item: T, thorough: boolean, onAnswer?: (answer: { status: number, cached: boolean }) => void) => Promise<{ ok: boolean, status: string }>} lookup
+ * @param {{ limit?: number, confirmDelayMs?: number, maxConfirm?: number, confirmTries?: number, signal?: AbortSignal,
+ *   confirmSignal?: AbortSignal, pacer?: ReturnType<typeof createLookupPacer> | null,
  *   onProgress?: (progress: { done: number, total: number, suspects: number }) => void }} [options]
- * @returns {Promise<Array<{ item: T, status: string }>>}
  */
-export async function findMissing(items, check, { limit = 4, confirmDelayMs = 3000, maxConfirm = 25, signal, onProgress } = {}) {
+export async function checkObjects(
+  items,
+  lookup,
+  { limit = 4, confirmDelayMs = 3000, maxConfirm = 25, confirmTries = 1, signal, confirmSignal = signal, pacer = null, onProgress } = {},
+) {
+  /** One paced lookup: its answer, or null when it never ran or was cut short. */
+  const one = async (item, thorough, budget) => {
+    if (budget?.aborted) return null;
+    if (pacer && !(await pacer.acquire(budget))) return null;
+    try {
+      const result = await lookup(item, thorough, pacer ? pacer.note : undefined);
+      return result.status === DEADLINE ? null : result;
+    } finally {
+      pacer?.release();
+    }
+  };
+  const stopReason = (budget) => (budget?.aborted ? "deadline" : (pacer?.stopped ?? "deadline"));
+
+  /** @type {Array<{ ok: boolean, status: string } | null>} */
+  const results = new Array(items.length).fill(null);
   let done = 0;
   let suspectCount = 0;
-  const first = await mapLimit(items, limit, async (item) => {
-    if (signal?.aborted) return { item, result: null };
-    const result = await check(item, false);
-    if (result.status !== DEADLINE) {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next;
+      next += 1;
+      const result = await one(items[i], false, signal);
+      if (!result) continue;
+      results[i] = result;
       done += 1;
       if (!result.ok) suspectCount += 1;
       onProgress?.({ done, total: items.length, suspects: suspectCount });
     }
-    return { item, result };
-  });
-  const answered = first.filter((r) => r.result && r.result.status !== DEADLINE);
-  const suspects = answered.filter((r) => !r.result.ok);
-  const deadline = (checked) => {
-    const statuses = {};
-    for (const { result } of suspects) statuses[result.status] = (statuses[result.status] ?? 0) + 1;
-    return new FramesCheckDeadline({ checked, total: items.length, suspects: suspects.length, statuses });
   };
-  if (answered.length < items.length) throw deadline(answered.length);
-  if (suspects.length === 0) return [];
-  if (suspects.length > maxConfirm) return suspects.map(({ item, result }) => ({ item, status: result.status }));
-  await pause(confirmDelayMs, signal);
-  const missing = [];
-  for (const { item } of suspects) {
-    if (signal?.aborted) throw deadline(items.length);
-    const result = await check(item, true);
-    if (result.status === DEADLINE) throw deadline(items.length);
-    if (!result.ok) missing.push({ item, status: result.status });
+  await Promise.all(Array.from({ length: Math.min(pacer?.limit ?? limit, items.length) }, worker));
+
+  const unchecked = items.filter((_, i) => results[i] === null);
+  const suspects = items.flatMap((item, i) => (results[i] && !results[i].ok ? [{ item, status: results[i].status }] : []));
+  const out = {
+    /** @type {Array<{ item: T, status: string }>} */
+    missing: [],
+    /** @type {Array<{ item: T, status: string }>} */
+    unverified: [],
+    unchecked,
+    suspects,
+    checked: items.length - unchecked.length,
+    total: items.length,
+    /** @type {"deadline" | "busy" | null} */
+    stopped: unchecked.length ? stopReason(signal) : null,
+  };
+  if (suspects.length === 0) return out;
+  if (suspects.filter((s) => !isNoAnswer(s.status)).length > maxConfirm) {
+    for (const s of suspects) (isNoAnswer(s.status) ? out.unverified : out.missing).push(s);
+    return out;
   }
-  return missing;
+  await pause(confirmDelayMs, confirmSignal);
+  // What SAID missing first: those answers come at once, while an object
+  // storage is silent about costs a timeout a try — a few of them must not
+  // use up the time a real miss needs to be settled in.
+  const inOrder = [...suspects.filter((s) => !isNoAnswer(s.status)), ...suspects.filter((s) => isNoAnswer(s.status))];
+  for (const suspect of inOrder) {
+    /** @type {string | null} */
+    let last = null;
+    /** The latest answer that SAID missing, in either pass. Only finding
+     *  the object takes it back: silence or a cut afterwards does not. */
+    let said = isNoAnswer(suspect.status) ? null : suspect.status;
+    let found = false;
+    for (let attempt = 1; attempt <= confirmTries; attempt += 1) {
+      const result = await one(suspect.item, true, confirmSignal);
+      if (!result) {
+        last = null;
+        break;
+      }
+      last = result.status;
+      if (result.ok) {
+        found = true;
+        break;
+      }
+      if (!isNoAnswer(result.status)) said = result.status;
+      if (result.status === "404") break;
+    }
+    if (found) continue;
+    if (last === null) {
+      // Cut short (the budget, or storage saturated): not settled.
+      out.unverified.push({ item: suspect.item, status: said ?? suspect.status });
+      out.stopped ??= stopReason(confirmSignal);
+    } else if (isNoAnswer(last)) {
+      // Storage went silent on it: not settled either.
+      out.unverified.push({ item: suspect.item, status: said ?? last });
+    } else {
+      out.missing.push({ item: suspect.item, status: last });
+    }
+  }
+  return out;
 }
 
 /** Map over `items` with at most `limit` calls in flight, results in order.

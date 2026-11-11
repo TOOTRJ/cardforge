@@ -11,6 +11,7 @@ import { serializeJsonLd } from "@/components/seo/json-ld";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { noFlashScript } from "@/lib/theme-shared";
 import { ThemeRestore } from "@/components/layout/theme-restore";
+import { RenderImageRetry } from "@/components/cards/render-image-retry";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
@@ -230,6 +231,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         <JsonLd />
+        {/* A card picture that failed to load (storage was busy) is asked
+            for again, once for the whole document. Renders nothing. */}
+        <RenderImageRetry />
         {/* Keyboard a11y: skip past the SiteHeader straight into the page
             content. Invisible until focused. */}
         <a

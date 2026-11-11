@@ -161,7 +161,7 @@ export type FeaturedHomeCard = {
 };
 
 /** The home page hero's cards for the UTC day `now` falls in (TODO HM4,
- *  migration 0169): home_hero_pool() hands the pool's cards the hero can
+ *  migration 0169; by key since 0196): home_hero_pool() hands the pool's cards the hero can
  *  draw (public, baked) and the fallback slots' that pass the original-card
  *  guard after them; dailyHeroPair re-sorts them by (source, ord) — never
  *  trusting the transport's order — and picks the day's two. Public-client

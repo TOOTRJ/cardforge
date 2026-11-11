@@ -2,8 +2,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { findMissing, frameObjectKey } from "@/scripts/lib/frame-objects.mjs";
-import { CANARY_SIZE, canarySample, planFramesCheck, readManifestAt, runGit } from "@/scripts/lib/frames-check-plan.mjs";
+import { checkObjects, frameObjectKey } from "@/scripts/lib/frame-objects.mjs";
+import { CANARY_SIZE, SWEEP_STRIDE, canarySample, planFramesCheck, readManifestAt, runGit, sweepOrder } from "@/scripts/lib/frames-check-plan.mjs";
 
 // The production build's frames check (scripts/frames-check.mjs
 // --if-production --incremental; owner 2026-11-02): only the objects new or
@@ -208,7 +208,7 @@ describe("a missing object still fails the check", () => {
     const p = plan(current, base);
     if (p.mode !== "incremental") throw new Error(p.reason);
     const asked: string[] = [];
-    const missing = await findMissing(
+    const { missing } = await checkObjects(
       p.entries,
       async ([key, entry]: [string, Entry]) => {
         asked.push(frameObjectKey(key, entry.hash));
@@ -228,7 +228,7 @@ describe("a missing object still fails the check", () => {
     const p = plan(base, base);
     if (p.mode !== "incremental") throw new Error(p.reason);
     const [lost] = p.canary[0];
-    const missing = await findMissing(p.entries, async ([key]: [string, Entry]) => (key === lost ? { ok: false, status: "400" } : { ok: true, status: "206" }), {
+    const { missing } = await checkObjects(p.entries, async ([key]: [string, Entry]) => (key === lost ? { ok: false, status: "400" } : { ok: true, status: "206" }), {
       confirmDelayMs: 0,
     });
     expect(missing.map(({ item: [key] }) => key)).toEqual([lost]);
@@ -321,5 +321,83 @@ describe("the production build is wired to it", () => {
     const { ignoreCommand } = JSON.parse(read("vercel.json"));
     expect(typeof ignoreCommand).toBe("string");
     expect(ignoreCommand.trim()).not.toBe("");
+  });
+});
+
+// 2026-11-10: CI plans like the production build — a pull request and a
+// merge look up only the objects they add. Walking the whole bucket on
+// every run is what exhausted production's storage connections.
+describe("CI's incremental check (FRAMES_CHECK_BASE_SHA)", () => {
+  const base = manifestOf(600);
+  const ciEnv = (extra: Record<string, string | undefined> = {}) => ({ FRAMES_CHECK_BASE_SHA: BASE, GITHUB_SHA: HEAD, ...extra });
+  const ciPlan = (current: Manifest, env = ciEnv(), baseManifest: Manifest | { error: string } = base) =>
+    planFramesCheck({
+      manifest: current,
+      incremental: true,
+      originIsProduction: true,
+      env,
+      readBase: (asked: string) => {
+        expect(asked).toBe(env.FRAMES_CHECK_BASE_SHA);
+        return "error" in baseManifest ? baseManifest : { manifest: baseManifest };
+      },
+    });
+
+  it("looks up exactly what the run adds or changes — no canary, and nothing at all when the manifest did not move", () => {
+    const untouched = ciPlan(structuredClone(base));
+    expect(untouched).toMatchObject({ mode: "incremental", entries: [], changed: [], canary: [], unchanged: 600, baseSha: BASE });
+
+    const current = structuredClone(base);
+    current.files["new/w.png"] = { hash: "aaaaaaaaaaaa", bytes: 5 };
+    current.files["t3/w.png"] = { ...current.files["t3/w.png"], hash: "cccccccccccc" };
+    delete current.files["t5/w.png"];
+    const p = ciPlan(current);
+    if (p.mode !== "incremental") throw new Error(p.reason);
+    expect(keysOf(p.entries).sort()).toEqual(["new/w.png", "t3/w.png"]);
+    expect(p.canary).toEqual([]);
+  });
+
+  it("needs no Vercel variable — and a production build's own plan is unchanged by it", () => {
+    expect(ciPlan(structuredClone(base), ciEnv({ VERCEL_ENV: undefined })).mode).toBe("incremental");
+    const build = plan(structuredClone(base), base);
+    if (build.mode !== "incremental") throw new Error(build.reason);
+    expect(build.canary).toHaveLength(CANARY_SIZE);
+  });
+
+  it("any doubt about the base is still the full check", () => {
+    const zeros = "0".repeat(40);
+    expect(ciPlan(structuredClone(base), ciEnv({ FRAMES_CHECK_BASE_SHA: "main" }))).toMatchObject({ mode: "full", reason: 'FRAMES_CHECK_BASE_SHA ("main") is not a full commit SHA' });
+    // A push that created the branch: GitHub's "before" is all zeros, which no clone holds.
+    expect(ciPlan(structuredClone(base), ciEnv({ FRAMES_CHECK_BASE_SHA: zeros }), { error: `git could not read the manifest at ${zeros.slice(0, 12)}` }).mode).toBe("full");
+    expect(ciPlan(structuredClone(base), ciEnv({ FRAMES_CHECK_FULL: "1" }))).toMatchObject({ mode: "full", reason: "FRAMES_CHECK_FULL=1" });
+    // An empty base (a schedule: no pull request, no push) is not CI's incremental plan at all.
+    expect(planFramesCheck({ manifest: base, incremental: true, originIsProduction: true, env: { FRAMES_CHECK_BASE_SHA: "" } }).mode).toBe("full");
+  });
+});
+
+describe("the nightly sweep's order (sweepOrder)", () => {
+  const entries = Array.from({ length: 1000 }, (_, i) => i);
+
+  it("is the manifest's order, started a stride further each night, and always every object once", () => {
+    expect(sweepOrder(entries, 0)).toEqual(entries);
+    const night = sweepOrder(entries, 1);
+    expect(night[0]).toBe(SWEEP_STRIDE);
+    expect(night).toHaveLength(1000);
+    expect([...night].sort((a, b) => a - b)).toEqual(entries);
+    expect(sweepOrder(entries, 2)[0]).toBe(2 * SWEEP_STRIDE);
+    expect(sweepOrder(entries, 3)[0]).toBe((3 * SWEEP_STRIDE) % 1000);
+  });
+
+  it("covers the whole manifest in ceil(n / stride) cold nights (each sure of its first `stride` objects)", () => {
+    const n = 4280;
+    const all = Array.from({ length: n }, (_, i) => i);
+    const seen = new Set<number>();
+    const nights = Math.ceil(n / SWEEP_STRIDE);
+    for (let day = 20_000; day < 20_000 + nights; day += 1) for (const i of sweepOrder(all, day).slice(0, SWEEP_STRIDE)) seen.add(i);
+    expect(seen.size).toBe(n);
+  });
+
+  it("an empty manifest and a missing day are left as they are", () => {
+    expect(sweepOrder([], 5)).toEqual([]);
+    expect(sweepOrder(entries, Number.NaN)).toEqual(entries);
   });
 });
