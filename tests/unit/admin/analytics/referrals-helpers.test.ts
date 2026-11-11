@@ -288,9 +288,74 @@ describe("parseReferredFriends", () => {
           publicCards: 15,
           lastCardAt: "2026-11-09T00:00:00Z",
           bankedDays: 7,
+          // 0202's columns alone: no reward facts to read.
+          rewards: null,
         },
       ],
     });
+  });
+
+  it("reads 0206's reward facts: each side's recorded reward and detail, the attempts, the emails, the plan", () => {
+    const [row] = parseReferredFriends([
+      {
+        ...raw,
+        referrer_reward: "credits",
+        referee_reward: "banked_days",
+        referrer_reward_detail: { kind: "credits", credits: "5", step: 2 },
+        referee_reward_detail: { kind: "banked_days", days: 7, entryId: "e1" },
+        grant_attempts: "1",
+        referee_email_confirmed: true,
+        referrer_email_confirmed: false,
+        referee_has_plan: true,
+      },
+    ]).rows;
+    expect(row.rewards).toEqual({
+      friend: { kind: "banked_days", days: 7, credits: null, step: null, reason: null, spent: false },
+      referrer: { kind: "credits", days: null, credits: 5, step: 2, reason: null, spent: false },
+      grantAttempts: 1,
+      friendEmailConfirmed: true,
+      referrerEmailConfirmed: false,
+      friendHasPlan: true,
+    });
+  });
+
+  it("a side still owed, a 'none' with its reason, and facts the database could not tell", () => {
+    const [row] = parseReferredFriends([
+      {
+        ...raw,
+        referrer_reward: null,
+        referee_reward: "none",
+        referrer_reward_detail: {},
+        referee_reward_detail: { kind: "none", reason: "email_reused", preBankedEntryId: "e9", spent: true },
+        grant_attempts: 0,
+        referee_email_confirmed: null,
+        referrer_email_confirmed: null,
+        referee_has_plan: null,
+      },
+    ]).rows;
+    expect(row.rewards).toEqual({
+      friend: { kind: "none", days: null, credits: null, step: null, reason: "email_reused", spent: true },
+      referrer: { kind: null, days: null, credits: null, step: null, reason: null, spent: false },
+      grantAttempts: 0,
+      friendEmailConfirmed: null,
+      referrerEmailConfirmed: null,
+      friendHasPlan: null,
+    });
+  });
+
+  it("reads 0177's reward in 30-day units as days", () => {
+    const [row] = parseReferredFriends([
+      { ...raw, referrer_reward: "free_days", referee_reward: "free_days", referrer_reward_detail: { kind: "free_days", tier: "plus", units: 1 }, referee_reward_detail: { kind: "free_days", units: 2 } },
+    ]).rows;
+    expect(row.rewards?.referrer.days).toBe(30);
+    expect(row.rewards?.friend.days).toBe(60);
+  });
+
+  it("a detail that is not an object reads as no detail, never a throw", () => {
+    for (const detail of [null, "x", 7, ["days", 7]]) {
+      const [row] = parseReferredFriends([{ ...raw, referrer_reward: "banked_days", referee_reward: "banked_days", referrer_reward_detail: detail, referee_reward_detail: detail }]).rows;
+      expect(row.rewards?.friend).toEqual({ kind: "banked_days", days: null, credits: null, step: null, reason: null, spent: false });
+    }
   });
 
   it("keeps a friend whose account is gone, with nothing of theirs", () => {

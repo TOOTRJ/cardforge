@@ -17,7 +17,10 @@ import { countByDay, type DayPoint } from "@/lib/admin/analytics/series";
 //     admin_referral_stats' per-day list covers 30 days only, so the rows
 //     are read directly, every one of them (selectAllRows);
 //   - WHO WAS REFERRED (owner 2026-11-10): 0202's admin_referred_friends, a
-//     page of referrals with each friend's plan, cards and banked days.
+//     page of referrals with each friend's plan, cards and banked days —
+//     and, since 0206 (owner 2026-11-11), what each side was given and the
+//     facts that say why a side is still waiting (the words are
+//     lib/admin/analytics/referral-rewards.ts).
 //
 // The page has already checked the viewer is an admin; both reads go through
 // the admin client. A read that fails is null (the tab says so) — never an
@@ -121,6 +124,36 @@ export type ReferredFriend = {
   lastCardAt: string | null;
   /** Free days this referral banked to the friend (revoked ones left out). */
   bankedDays: number;
+  /** What each side was given and why a side may still wait (0206). Null
+   *  on a database that has not got 0206 yet: the page then says nothing
+   *  about rewards rather than guess. */
+  rewards: ReferralRewardFacts | null;
+};
+
+/** One side's reward as the reward step recorded it. */
+export type RewardSideFacts = {
+  /** 'banked_days' | 'credits' | 'none', or null while the side is owed. */
+  kind: string | null;
+  days: number | null;
+  credits: number | null;
+  /** The referrer's ladder step. */
+  step: number | null;
+  /** Why the side got nothing (a 'none' side's detail). */
+  reason: string | null;
+  /** The friend's pre-banked days were already used by their checkout. */
+  spent: boolean;
+};
+
+export type ReferralRewardFacts = {
+  friend: RewardSideFacts;
+  referrer: RewardSideFacts;
+  /** How many times a side's grant has failed. */
+  grantAttempts: number;
+  /** Null = unknown (the account is gone). */
+  friendEmailConfirmed: boolean | null;
+  referrerEmailConfirmed: boolean | null;
+  /** The friend holds a subscription Stripe only gives with a card. */
+  friendHasPlan: boolean | null;
 };
 
 export type ReferredFriendsPage = {
@@ -134,9 +167,39 @@ export type ReferredFriendsPage = {
 const num = (v: unknown): number =>
   typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : 0;
 const text = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+const flag = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
+const positive = (v: unknown): number | null => (v == null || num(v) <= 0 ? null : num(v));
 
-/** 0202's rows, read defensively (a count may arrive as a string). A row
- *  with no id, referrer or signup date is dropped. */
+/** One side of 0206's reward columns: the recorded kind and its detail. */
+function sideFacts(kind: unknown, detail: unknown): RewardSideFacts {
+  const d = detail && typeof detail === "object" && !Array.isArray(detail) ? (detail as Record<string, unknown>) : {};
+  return {
+    kind: text(kind),
+    // 0177 recorded a reward in 30-day units; 0180 records the days.
+    days: positive(d.days) ?? (positive(d.units) != null ? (positive(d.units) as number) * 30 : null),
+    credits: positive(d.credits),
+    step: positive(d.step),
+    reason: text(d.reason),
+    spent: d.spent === true,
+  };
+}
+
+/** 0206's columns of one row — null when the row has none of them (the
+ *  function is still 0202's: the app deployed before the migration). */
+function rewardFacts(o: Record<string, unknown>): ReferralRewardFacts | null {
+  if (!("referee_reward" in o) || !("referrer_reward" in o)) return null;
+  return {
+    friend: sideFacts(o.referee_reward, o.referee_reward_detail),
+    referrer: sideFacts(o.referrer_reward, o.referrer_reward_detail),
+    grantAttempts: num(o.grant_attempts),
+    friendEmailConfirmed: flag(o.referee_email_confirmed),
+    referrerEmailConfirmed: flag(o.referrer_email_confirmed),
+    friendHasPlan: flag(o.referee_has_plan),
+  };
+}
+
+/** 0202's rows (widened by 0206), read defensively (a count may arrive as a
+ *  string). A row with no id, referrer or signup date is dropped. */
 export function parseReferredFriends(raw: unknown): { rows: ReferredFriend[]; total: number } {
   const list = Array.isArray(raw) ? raw : [];
   const rows: ReferredFriend[] = [];
@@ -168,6 +231,7 @@ export function parseReferredFriends(raw: unknown): { rows: ReferredFriend[]; to
       publicCards: num(o.referee_public_cards),
       lastCardAt: text(o.referee_last_card_at),
       bankedDays: num(o.referee_banked_days),
+      rewards: rewardFacts(o),
     });
   }
   return { rows, total };

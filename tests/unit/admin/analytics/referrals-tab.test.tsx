@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // /admin/analytics — the Referrals tab as the admin reads it: the period's
 // four numbers against the period before, friends per day with its table
-// twin, WHO WAS REFERRED with their data (the owner's ask), the program's
-// panel and settings under it — and an honest "couldn't load" per block.
+// twin, WHO WAS REFERRED with their data (the owner's ask) and what each
+// side was given or why it has nothing yet (the owner's second ask), the
+// program's panel and settings under it — and an honest "couldn't load" per
+// block.
 // ---------------------------------------------------------------------------
 
 vi.mock("next/link", () => ({
@@ -47,7 +49,8 @@ vi.mock("next/cache", () => ({ revalidatePath: (path: string) => void reads.reva
 import { ReferralsTab, ReferralsTabView } from "@/components/admin/analytics/tabs/referrals-tab";
 import { ReferredFriendsTable } from "@/components/admin/analytics/referred-friends-table";
 import { analyticsPeriod, type AnalyticsParams } from "@/lib/admin/analytics/params";
-import { buildReferralPeriodStats, type ReferredFriend, type ReferredFriendsPage } from "@/lib/admin/analytics/referrals";
+import { buildReferralPeriodStats, type ReferredFriend, type ReferredFriendsPage, type RewardSideFacts } from "@/lib/admin/analytics/referrals";
+import type { RewardContext } from "@/lib/admin/analytics/referral-rewards";
 import { parseReferralStats } from "@/lib/admin/referral-queries";
 import { adminSaveReferralSettingsAction } from "@/lib/admin/referral-settings-actions";
 import { DEFAULT_REFERRAL_SETTINGS } from "@/lib/referrals/settings";
@@ -55,6 +58,28 @@ import { DEFAULT_REFERRAL_SETTINGS } from "@/lib/referrals/settings";
 const html = (node: React.ReactElement) => renderToStaticMarkup(node);
 const params: AnalyticsParams = { tab: "referrals", days: 30, admins: false, tool: null, user: null, page: 1 };
 const period = analyticsPeriod(30, new Date("2026-11-10T15:00:00Z"));
+
+/** The program as it runs: 5 cards in 30 days, everything switched on. */
+const rewardContext: RewardContext = {
+  cardsRequired: 5,
+  windowDays: 30,
+  programEnabled: true,
+  billingEnabled: true,
+  hashKeySet: true,
+  now: new Date("2026-11-10T15:00:00Z"),
+};
+
+const side = (over: Partial<RewardSideFacts> = {}): RewardSideFacts => ({ kind: null, days: null, credits: null, step: null, reason: null, spent: false, ...over });
+/** A row's reward facts: both sides still owed, both emails confirmed. */
+const owed = (over: Partial<NonNullable<ReferredFriend["rewards"]>> = {}): NonNullable<ReferredFriend["rewards"]> => ({
+  friend: side(),
+  referrer: side(),
+  grantAttempts: 0,
+  friendEmailConfirmed: true,
+  referrerEmailConfirmed: true,
+  friendHasPlan: false,
+  ...over,
+});
 
 const friend = (over: Partial<ReferredFriend>): ReferredFriend => ({
   referralId: "r1",
@@ -75,6 +100,7 @@ const friend = (over: Partial<ReferredFriend>): ReferredFriend => ({
   publicCards: 15,
   lastCardAt: "2026-11-09T00:00:00Z",
   bankedDays: 7,
+  rewards: owed({ friend: side({ kind: "banked_days", days: 7 }), referrer: side({ kind: "banked_days", days: 7, step: 1 }), friendHasPlan: true }),
   ...over,
 });
 
@@ -103,15 +129,15 @@ beforeEach(() => {
 describe("ReferredFriendsTable", () => {
   const rows = [
     friend({}),
-    friend({ referralId: "r2", refereeId: null, refereeUsername: null, refereeJoinedAt: null, tier: null, cards: 0, publicCards: 0, lastCardAt: null, bankedDays: 0, status: "blocked", blockReason: "account_deleted", cardOnFileAt: null, rewardedAt: "2026-11-05T00:00:00Z", signedUpAt: "2026-10-20T00:00:00Z" }),
-    friend({ referralId: "r3", refereeId: "33333333-3333-4333-8333-333333333333", refereeUsername: "new_friend", status: "signed_up", cardsSavedAt: null, cardOnFileAt: null, rewardedAt: null, tier: "free", cards: 0, publicCards: 0, lastCardAt: null, bankedDays: 0, ladderStep: null }),
+    friend({ referralId: "r2", refereeId: null, refereeUsername: null, refereeJoinedAt: null, tier: null, cards: 0, publicCards: 0, lastCardAt: null, bankedDays: 0, status: "blocked", blockReason: "account_deleted", cardOnFileAt: null, rewardedAt: "2026-11-05T00:00:00Z", signedUpAt: "2026-10-20T00:00:00Z", rewards: owed({ friend: side({ kind: "none", reason: "account_deleted" }), referrer: side({ kind: "none" }), friendEmailConfirmed: null, friendHasPlan: null }) }),
+    friend({ referralId: "r3", refereeId: "33333333-3333-4333-8333-333333333333", refereeUsername: "new_friend", status: "signed_up", cardsSavedAt: null, cardOnFileAt: null, rewardedAt: null, tier: "free", cards: 0, publicCards: 0, lastCardAt: null, bankedDays: 0, ladderStep: null, rewards: owed() }),
   ];
-  const out = html(<ReferredFriendsTable page={pageOf(rows, { total: 3 })} params={params} cardsRequired={5} />);
+  const out = html(<ReferredFriendsTable page={pageOf(rows, { total: 3 })} params={params} rewardContext={rewardContext} />);
   /** The table row that holds `text` (its markup up to the row's end). */
   const rowOf = (text: string) => out.split("</tr>").find((row) => row.includes(text)) ?? "";
 
   it("names every column the owner asked for", () => {
-    for (const heading of ["Friend", "Referred by", "Joined", "Where they are", "Cards", "Last card", "Plan", "Card on file", "Rewarded", "Days banked"]) {
+    for (const heading of ["Friend", "Referred by", "Joined", "Where they are", "Rewards", "Cards", "Last card", "Plan", "Card on file", "Rewarded", "Days banked"]) {
       expect(out).toContain(`>${heading}</th>`);
     }
     expect(out).toMatch(/<caption[^>]*>Referred friends, newest referral first<\/caption>/);
@@ -154,6 +180,33 @@ describe("ReferredFriendsTable", () => {
     expect(row.match(/>—<\/td>/g)).toHaveLength(3); // last card, card on file, rewarded
   });
 
+  it("Rewards says what each side was given on a rewarded row", () => {
+    const row = rowOf("@ember_sphinx");
+    expect(row).toContain("Friend:</span> 7 free days");
+    expect(row).toContain("Referrer:</span> 7 free days (ladder step 1)");
+    expect(row).not.toContain("Both sides");
+  });
+
+  it("Rewards says why nobody has a reward yet — once, for both sides", () => {
+    const row = rowOf("@new_friend");
+    expect(row).toContain(
+      "Both sides:</span> not yet — the friend has saved 0 of 5 cards (until Dec 2, 2026 UTC), and the friend has not started a plan with a card on file",
+    );
+    expect(row).not.toContain("Friend:</span>");
+    expect(row).not.toContain("Referrer:</span>");
+  });
+
+  it("Rewards says why a blocked referral gave nothing", () => {
+    expect(rowOf("Account deleted")).toContain("Both sides:</span> none — the friend&#x27;s account was deleted");
+  });
+
+  it("Rewards is a dash on a database that has no reward facts yet (the app deployed before 0206)", () => {
+    const before = html(<ReferredFriendsTable page={pageOf([friend({ rewards: null })])} params={params} rewardContext={rewardContext} />);
+    expect(before).not.toContain("referral-rewards");
+    expect(before).not.toMatch(/not yet|Both sides|Friend:<\/span>/);
+    expect(before).toContain(">Rewards</th>");
+  });
+
   it("says which rows of how many, with no pager when one page holds them all", () => {
     expect(out).toContain("Showing 1–3 of 3");
     expect(out).not.toContain(">Previous<");
@@ -162,25 +215,25 @@ describe("ReferredFriendsTable", () => {
 
   it("pages with links that keep the tab and the period", () => {
     const fifty = Array.from({ length: 50 }, (_, i) => friend({ referralId: `r${i}` }));
-    const first = html(<ReferredFriendsTable page={pageOf(fifty, { total: 120 })} params={{ ...params, days: 90 }} />);
+    const first = html(<ReferredFriendsTable page={pageOf(fifty, { total: 120 })} params={{ ...params, days: 90 }} rewardContext={rewardContext} />);
     expect(first).toContain("Showing 1–50 of 120");
     expect(first).toContain('href="/admin/analytics?tab=referrals&amp;days=90&amp;page=2"');
     expect(first).not.toContain(">Previous<");
 
-    const middle = html(<ReferredFriendsTable page={pageOf(fifty, { total: 120, page: 2 })} params={{ ...params, page: 2 }} />);
+    const middle = html(<ReferredFriendsTable page={pageOf(fifty, { total: 120, page: 2 })} params={{ ...params, page: 2 }} rewardContext={rewardContext} />);
     expect(middle).toContain("Showing 51–100 of 120");
     expect(middle).toContain('href="/admin/analytics?tab=referrals"'); // Previous = page 1, the plain address
     expect(middle).toContain('href="/admin/analytics?tab=referrals&amp;page=3"');
 
-    const last = html(<ReferredFriendsTable page={pageOf(fifty.slice(0, 20), { total: 120, page: 3 })} params={{ ...params, page: 3 }} />);
+    const last = html(<ReferredFriendsTable page={pageOf(fifty.slice(0, 20), { total: 120, page: 3 })} params={{ ...params, page: 3 }} rewardContext={rewardContext} />);
     expect(last).toContain("Showing 101–120 of 120");
     expect(last).toContain(">Previous<");
     expect(last).not.toContain(">Next<");
   });
 
   it("says so when nobody was referred yet, and offers the way back from a page past the end", () => {
-    expect(html(<ReferredFriendsTable page={pageOf([], { total: 0 })} params={params} />)).toContain("Nobody has joined through a referral link yet.");
-    const past = html(<ReferredFriendsTable page={pageOf([], { total: 0, page: 9 })} params={{ ...params, page: 9 }} />);
+    expect(html(<ReferredFriendsTable page={pageOf([], { total: 0 })} params={params} rewardContext={rewardContext} />)).toContain("Nobody has joined through a referral link yet.");
+    const past = html(<ReferredFriendsTable page={pageOf([], { total: 0, page: 9 })} params={{ ...params, page: 9 }} rewardContext={rewardContext} />);
     expect(past).toContain("There are no referrals on this page.");
     expect(past).toContain('href="/admin/analytics?tab=referrals"');
   });
