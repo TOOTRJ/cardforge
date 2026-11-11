@@ -1706,6 +1706,24 @@ Rules and gotchas:
   a trial is measured over its own length. A list of people on an admin
   page links each to `/admin/users?u=<id>`; a public title only for public
   content.
+- The home page's "cards forged" is EVERY saved card, whatever its
+  visibility (owner 2026-11-11) — and so is its "+N this week": ONE read,
+  `getSavedCardCounts()` → `saved_card_counts()` (0207: two totals and
+  nothing else, callable by anon because the page is static and reads no
+  cookie; an admin's `frame_preview` rows left out). Never count `cards`
+  through the API for a site total: a signed-out read is RLS's public and
+  unlisted rows. Creators and decks on that page stay the PUBLIC ones (what
+  a visitor can go and see). The PGRST202 fallback to the public counts is
+  for a deploy that lands before the migration — remove it once 0207 is on
+  production and dev.
+- Feedback is answered IN THE CONVERSATION (owner 2026-11-11: no dialog):
+  the inbox's Reply is a link (`FeedbackReplyButton`) to
+  `/admin/messages/feedback/<id>` — the user's whole message with the reply
+  box under it — or to the thread a submission already has. Opening that
+  page makes NO thread (`getFeedbackConversationStart` only reads): the
+  first reply does (`ReplyForm`'s `feedbackId` →
+  `adminReplyToFeedbackAction`), so a user never finds an empty
+  conversation; the page then is the thread's (`/admin/messages/<id>`).
 - A creator's UNLISTED cards are LISTED by one page of the app, for ADMINS
   ONLY and for debugging (owner 2026-11-11: a frame report on a card nobody
   could find): a section under the public cards on `/profile/<user>`
@@ -1837,7 +1855,16 @@ Rules and gotchas:
   reason, no Stripe detail); writes are the service role's. The admin
   panel ("Referrals and the days bank", `admin_referral_stats` v2) shows
   the chain, per-day counts, the ladder's distribution and the bank's
-  ledger. Nothing runs with billing off.
+  ledger. Nothing runs with billing off. The Referred friends table's
+  "Rewards" column (owner 2026-11-11; `admin_referred_friends`, 0202 widened
+  by 0206) says what each side was given or WHY a side has nothing yet:
+  `referralRewardWords` (`lib/admin/analytics/referral-rewards.ts`, pure) is
+  the reward step's own conditions in its order (the cards inside the
+  window, a card on file, billing, the program's switch, both emails, the
+  hash key; then a failed grant, a side recorded `none`) — a condition
+  added to or taken from `rewardReferral` / `advanceReferral` changes there
+  in the same PR. An admin page names a fraud reason; the referrer's
+  dashboard never does.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked
   per owner) and mirrored in the app: `CARD_CAPACITY` in `lib/billing/plans.ts`
