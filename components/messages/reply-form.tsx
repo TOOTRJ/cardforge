@@ -99,7 +99,7 @@ export function ReplyForm({
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className={over ? "text-xs text-danger" : "text-xs text-subtle"}>
-          {error ?? `${body.length.toLocaleString()} / ${MESSAGE_BODY_MAX.toLocaleString()} · ⌘/Ctrl+Enter to send`}
+          {error ?? `${body.length.toLocaleString("en-US")} / ${MESSAGE_BODY_MAX.toLocaleString("en-US")} · ⌘/Ctrl+Enter to send`}
         </span>
         <Button type="submit" size="sm" disabled={pending || !body.trim() || over}>
           {pending ? (

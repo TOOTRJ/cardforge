@@ -23,6 +23,7 @@ import { keywordFrequency, type KeywordFrequency } from "@/lib/decks/keyword-fre
 import { publicDeckItems } from "@/lib/decks/private-card-name";
 import { COLOR_IDENTITY_LABELS, COLOR_LETTER_IDENTITY, type ColorLetter } from "@/types/card";
 import type { DeckCardEntry } from "@/types/deck";
+import { SORT_LOCALE } from "@/lib/format/sort-locale";
 
 // ---------------------------------------------------------------------------
 // The deck breakdown's charts (TODO DK7.1 / DK7.3) — pure, over the deck's
@@ -356,7 +357,7 @@ export function drawPickOptions(library: readonly LibraryCard[], privateName: st
     option.isLand = option.isLand && card.isLand;
     byName.set(key, option);
   }
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }));
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, SORT_LOCALE, { sensitivity: "base", numeric: true }));
 }
 
 export type DrawPickOption = { key: string; name: string; copies: number; isLand: boolean };

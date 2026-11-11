@@ -16,7 +16,7 @@ import {
   FramePreviewCardBadge,
   isFramePreviewCard,
 } from "@/components/creator/frame-preview-card-badge";
-import { formatRelativeTime } from "@/components/messages/format";
+import { RelativeTime } from "@/components/ui/local-date";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
@@ -76,18 +76,11 @@ function typeLineOf(card: DashboardCard | CardWithStats): string {
   });
 }
 
-/** Relative on purpose ("3h ago") — the server and the browser can land on
- *  either side of a minute boundary, hence suppressHydrationWarning. */
+/** Relative on purpose ("3h ago"), through the one component that may print
+ *  it in a component that hydrates (the clock and the zone both differ
+ *  between the server and the browser). */
 function EditedAt({ value, className }: { value: string; className?: string }) {
-  return (
-    <time
-      dateTime={value}
-      suppressHydrationWarning
-      className={cn("shrink-0 text-xs text-subtle", className)}
-    >
-      {formatRelativeTime(value)}
-    </time>
-  );
+  return <RelativeTime iso={value} className={cn("shrink-0 text-xs text-subtle", className)} />;
 }
 
 type MyCardListRowProps = {

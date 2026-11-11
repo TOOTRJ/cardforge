@@ -4,6 +4,7 @@ import { Fragment, useSyncExternalStore } from "react";
 import {
   dateTextToString,
   formatDateIn,
+  formatRelativeTime,
   type DateFormat,
   type DateText,
 } from "@/lib/format/dates";
@@ -58,6 +59,40 @@ export function LocalDate({
   return (
     <time dateTime={iso} className={className} suppressHydrationWarning>
       {formatDateIn(iso, format, timeZone)}
+    </time>
+  );
+}
+
+/**
+ * "3h ago", then "Aug 1" — a relative time in a component that HYDRATES.
+ *
+ * `formatRelativeTime` reads two things the server and the browser disagree
+ * on: the clock, and (for the date it prints from a week on) the time zone.
+ * Printed as bare text in a client component, a notification from 02:00 UTC
+ * was "Oct 30" in the server's HTML and "Oct 29" in a Mountain-time browser
+ * — React's hydration error #418, and the page rendered a second time
+ * (2026-11-11). On a cached page (a card's comments) the clock alone did it:
+ * "2h ago" in HTML that was a day old.
+ *
+ * So, like `<LocalDate>`: the server and the hydrating render print the UTC
+ * reading, and the element is allowed to differ by the clock
+ * (`suppressHydrationWarning` — a minute may pass, a cached page may be
+ * hours old). Once hydrated it is a NEW element (the `key`): React never
+ * rewrites a text it was told to leave alone, and its own two renders are
+ * the same string whenever only the clock differs — so without the key,
+ * day-old HTML kept saying "2h ago" for good.
+ */
+export function RelativeTime({ iso, className, title }: { iso: string; className?: string; title?: string }) {
+  const timeZone = useViewerTimeZone();
+  return (
+    <time
+      key={timeZone === undefined ? "viewer" : "hydrating"}
+      dateTime={iso}
+      className={className}
+      title={title}
+      suppressHydrationWarning
+    >
+      {formatRelativeTime(iso, undefined, timeZone)}
     </time>
   );
 }

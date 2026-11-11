@@ -1,4 +1,4 @@
-import { formatShortDate } from "@/lib/format/dates";
+import { formatDateIn } from "@/lib/format/dates";
 import { formatMoney } from "@/lib/format/money";
 import { isUuid } from "@/lib/ids";
 
@@ -45,11 +45,21 @@ function str(value: unknown): string | null {
 
 const TIER_LABEL: Record<string, string> = { plus: "Plus", pro: "Pro" };
 
+/** Who reads the sentence. `timeZone` is the zone its DATES are printed in
+ *  (`undefined` = the runtime's own: the browser's for a toast, the server's
+ *  for an email). A component that HYDRATES names it — "UTC" on the server
+ *  and while hydrating, the viewer's own after (`useViewerTimeZone`) — or the
+ *  same instant is one day in the server's HTML and another in the browser:
+ *  React's hydration error #418 (2026-11-11). */
+export type DescribeOptions = { isAdmin: boolean; timeZone?: string };
+
 export function describeNotification(
   item: DescribableNotification,
-  opts: { isAdmin: boolean },
+  opts: DescribeOptions,
 ): NotificationDescription {
   const { isAdmin } = opts;
+  /** "Sep 14, 2026", in the reader's zone. */
+  const day = (value: string) => formatDateIn(value, "short", opts.timeZone);
   const actorName =
     item.actor?.displayName ||
     (item.actor?.username ? `@${item.actor.username}` : "Someone");
@@ -108,19 +118,19 @@ export function describeNotification(
       // the next charge moves; a trial runs longer. Never "your trial".
       const held = holdEndsAt
         ? was === "trialing"
-          ? ` Your free trial now runs until ${formatShortDate(holdEndsAt)}; nothing is charged before then.`
-          : ` They're added to the time you've paid for: your next charge moves to ${formatShortDate(holdEndsAt)}.`
+          ? ` Your free trial now runs until ${day(holdEndsAt)}; nothing is charged before then.`
+          : ` They're added to the time you've paid for: your next charge moves to ${day(holdEndsAt)}.`
         : "";
       let body: string;
       if (!tier) body = "ended your complimentary plan access.";
-      else if (revoked) body = `shortened your complimentary ${name} access — it now ends ${expiresAt ? formatShortDate(expiresAt) : "soon"}.`;
+      else if (revoked) body = `shortened your complimentary ${name} access — it now ends ${expiresAt ? day(expiresAt) : "soon"}.`;
       else if (days != null && days > 0) {
-        body = `gave you ${days} free days of ${name}${expiresAt ? ` — until ${formatShortDate(expiresAt)}` : ""} — enjoy.${held}`;
+        body = `gave you ${days} free days of ${name}${expiresAt ? ` — until ${day(expiresAt)}` : ""} — enjoy.${held}`;
       } else {
         // The legacy shape (a comp set before 0176), and an open-ended grant.
         const trialEnd = str(payload.trialEnd);
-        body = `gave you ${name} plan access${expiresAt ? ` until ${formatShortDate(expiresAt)}` : ""} — enjoy.${
-          trialEnd ? ` Your free trial now runs until ${formatShortDate(trialEnd)}; nothing is charged before then.` : ""
+        body = `gave you ${name} plan access${expiresAt ? ` until ${day(expiresAt)}` : ""} — enjoy.${
+          trialEnd ? ` Your free trial now runs until ${day(trialEnd)}; nothing is charged before then.` : ""
         }`;
       }
       return {
@@ -260,7 +270,7 @@ export function describeNotification(
       const what =
         reward === "credits" && credits != null
           ? `${credits} AI credit${credits === 1 ? "" : "s"}`
-          : `${days ?? 30} free days of ${tierName}${until ? ` (until ${formatShortDate(until)})` : ""}${
+          : `${days ?? 30} free days of ${tierName}${until ? ` (until ${day(until)})` : ""}${
               holdEndsAt ? " — added to the time you've paid for" : ""
             }`;
       return side === "referee"
@@ -369,7 +379,7 @@ export function describeNotification(
         const comp = TIER_LABEL[str(payload.compTier) ?? ""] ?? paid;
         return {
           subject: `Your complimentary ${comp}`,
-          body: `ends ${trialEnd ? `on ${formatShortDate(trialEnd)}` : "soon"} — ${
+          body: `ends ${trialEnd ? `on ${day(trialEnd)}` : "soon"} — ${
             hasPaymentMethod
               ? `${comp !== paid ? `you go back to ${paid} and ` : ""}your card is charged ${price ?? "the plan price"} then; change or cancel any time before.`
               : "add a card to keep the plan, or it simply ends and your cards stay."
@@ -379,7 +389,7 @@ export function describeNotification(
       }
       return {
         subject: `Your ${TIER_LABEL[tier ?? ""] ?? "plan"} trial`,
-        body: `ends ${trialEnd ? `on ${formatShortDate(trialEnd)}` : "soon"} — ${
+        body: `ends ${trialEnd ? `on ${day(trialEnd)}` : "soon"} — ${
           hasPaymentMethod
             ? "your card is charged then; change or cancel any time."
             : "add a card to keep the plan, or it simply ends and your cards stay."
@@ -420,7 +430,7 @@ export function describeNotification(
       const next = str(payload.nextAttemptAt);
       return {
         subject: `Your ${plan} payment`,
-        body: `of ${money} didn't go through — ${next ? `we'll try your card again on ${formatShortDate(next)}` : "we'll retry your card automatically"}; your ${plan} perks ${grace ? `stay on until ${formatShortDate(grace)}` : "are paused until it's paid"}. Update your card${grace ? " to be safe" : " to restore them"}.`,
+        body: `of ${money} didn't go through — ${next ? `we'll try your card again on ${day(next)}` : "we'll retry your card automatically"}; your ${plan} perks ${grace ? `stay on until ${day(grace)}` : "are paused until it's paid"}. Update your card${grace ? " to be safe" : " to restore them"}.`,
         href: "/dashboard/billing",
       };
     }
@@ -470,7 +480,7 @@ export function describeNotification(
       const cancelled = str(payload.reason) === "cancelled";
       return {
         subject: cancelled ? `Your ${plan} plan` : `Your ${plan} trial`,
-        body: `ended — come back${expires ? ` by ${formatShortDate(expires)}` : " within 30 days"} for ${pct}% off your first month${cancelled ? " back" : ""} on a monthly plan; the discount is applied automatically at checkout.`,
+        body: `ended — come back${expires ? ` by ${day(expires)}` : " within 30 days"} for ${pct}% off your first month${cancelled ? " back" : ""} on a monthly plan; the discount is applied automatically at checkout.`,
         href: "/dashboard/billing#plans",
       };
     }
@@ -537,7 +547,7 @@ export function describeNotification(
       const paidTier = TIER_LABEL[str(payload.subscribedTier) ?? ""] ?? null;
       const goesBack = paidTier != null && paidTier !== tier;
       const expiresAt = str(payload.expiresAt);
-      const ends = expiresAt ? `on ${formatShortDate(expiresAt)}` : "soon";
+      const ends = expiresAt ? `on ${day(expiresAt)}` : "soon";
       const price = str(payload.priceLabel);
       const back = goesBack ? ` you go back to ${paidTier}${price ? ` (${price})` : ""};` : "";
       const kind = str(payload.kind);
@@ -561,7 +571,7 @@ export function describeNotification(
       if (kind === "paying") {
         const next = str(payload.nextChargeAt);
         const charge = next
-          ? `your next invoice, on ${formatShortDate(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}.`
+          ? `your next invoice, on ${day(next)}, is charged as usual${price && !goesBack ? ` (${price})` : ""}.`
           : `invoices after that are charged as usual${price && !goesBack ? ` (${price})` : ""}.`;
         return {
           subject: `Your complimentary ${tier}`,
@@ -574,7 +584,7 @@ export function describeNotification(
         return {
           subject: `Your complimentary ${tier}`,
           body: `ends ${ends}. ${goesBack ? `You go back to ${paidTier} until your plan ends` : "Your plan is cancelled and ends"}${
-            planEnds ? ` on ${formatShortDate(planEnds)}` : " on its own date"
+            planEnds ? ` on ${day(planEnds)}` : " on its own date"
           }; nothing more is charged.`,
           href: "/dashboard/billing",
         };
@@ -628,7 +638,7 @@ export function describeNotification(
 /** Single-line form for toasts and accessible labels. */
 export function notificationSentence(
   item: DescribableNotification,
-  opts: { isAdmin: boolean },
+  opts: DescribeOptions,
 ): string {
   const d = describeNotification(item, opts);
   return `${d.subject} ${d.body}`;

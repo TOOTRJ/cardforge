@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { describeNotification } from "@/lib/notifications/describe";
 import type { NotificationItem } from "@/lib/notifications/queries";
-import { formatRelativeTime } from "@/lib/format/dates";
+import { RelativeTime, useViewerTimeZone } from "@/components/ui/local-date";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -75,7 +75,10 @@ export function NotificationRow({
   onNavigate?: () => void;
 }) {
   const Icon = NOTIFICATION_ICON[item.type] ?? Bell;
-  const d = describeNotification(item, { isAdmin });
+  // The sentence's dates: UTC on the server and while hydrating (the row is
+  // server-rendered on /notifications), the viewer's own zone after.
+  const timeZone = useViewerTimeZone();
+  const d = describeNotification(item, { isAdmin, timeZone });
   const popover = density === "popover";
   return (
     <Link
@@ -94,7 +97,7 @@ export function NotificationRow({
         <p className={cn("text-sm text-foreground", popover ? "leading-5" : "leading-6")}>
           <span className="font-medium">{d.subject}</span> {d.body}
         </p>
-        <span className="text-xs text-subtle">{formatRelativeTime(item.createdAt)}</span>
+        <RelativeTime iso={item.createdAt} className="text-xs text-subtle" />
       </div>
       {item.readAt ? null : (
         <span

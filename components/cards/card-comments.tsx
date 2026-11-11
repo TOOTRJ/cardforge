@@ -37,7 +37,7 @@ import {
 import type { CardCommentWithAuthor } from "@/types/card";
 import { ReportDialog } from "@/components/moderation/report-dialog";
 import { reportCommentAction } from "@/lib/moderation/actions";
-import { formatRelativeTime } from "@/lib/format/dates";
+import { RelativeTime } from "@/components/ui/local-date";
 
 const MAX_BODY = COMMENT_MAX_LENGTH;
 
@@ -306,7 +306,8 @@ function CommentRow({
             )}
           </span>
           <span className="text-[10px] text-subtle" title={comment.created_at}>
-            {formatRelativeTime(comment.created_at)}
+            {/* The page is cached: "2h ago" in its HTML is as old as the copy. */}
+            <RelativeTime iso={comment.created_at} />
             {comment.updated_at !== comment.created_at ? " · edited" : null}
           </span>
         </div>

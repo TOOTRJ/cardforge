@@ -6,6 +6,7 @@ import { Check, CheckCheck, CheckCircle2 } from "lucide-react";
 import { TEAM_DISPLAY_NAME } from "@/lib/messages/schemas";
 import type { AdminThreadSummary, ThreadSummary } from "@/lib/messages/queries";
 import { formatBadgeCount, formatRelativeTime } from "@/components/messages/format";
+import { RelativeTime, useViewerTimeZone } from "@/components/ui/local-date";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -25,6 +26,9 @@ function isAdminThread(t: ThreadSummary | AdminThreadSummary): t is AdminThreadS
 }
 
 export function ThreadList({ threads, basePath, className }: ThreadListProps) {
+  // "UTC" on the server and while hydrating, the browser's own zone after —
+  // so the "Seen …" tooltip is one reading on both sides.
+  const timeZone = useViewerTimeZone();
   const pathname = usePathname();
   return (
     <ul className={cn("flex flex-col", className)} aria-label="Conversations">
@@ -94,16 +98,14 @@ export function ThreadList({ threads, basePath, className }: ThreadListProps) {
                   ) : (
                     <span
                       className="inline-flex shrink-0 items-center gap-1 text-success"
-                      title={t.userLastReadAt ? `Seen ${formatRelativeTime(t.userLastReadAt)}` : "Seen"}
+                      title={t.userLastReadAt ? `Seen ${formatRelativeTime(t.userLastReadAt, undefined, timeZone)}` : "Seen"}
                     >
                       <CheckCheck className="h-3 w-3" aria-hidden />
                       Seen
                     </span>
                   )
                 ) : null}
-                <time dateTime={t.lastMessageAt} className="shrink-0">
-                  {formatRelativeTime(t.lastMessageAt)}
-                </time>
+                <RelativeTime iso={t.lastMessageAt} className="shrink-0" />
               </span>
             </Link>
           </li>

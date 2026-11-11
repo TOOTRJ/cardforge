@@ -23,6 +23,7 @@ import {
   type DeckEntrySource,
   type DeckEntryStatus,
 } from "@/types/deck";
+import { SORT_LOCALE } from "@/lib/format/sort-locale";
 
 // ---------------------------------------------------------------------------
 // The deck page's card area (TODO DK5.3 / DK5.6) — how the cards are drawn
@@ -287,7 +288,7 @@ export function statusFilterOptions(
 // Sorting
 // ---------------------------------------------------------------------------
 
-const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+const byName = (a: string, b: string) => a.localeCompare(b, SORT_LOCALE, { sensitivity: "base", numeric: true });
 
 /** The name a row sorts by: the real card's for a private one. */
 const sortName = (row: Pick<DeckRow, "name" | "privateName">) => row.privateName ?? row.name;
