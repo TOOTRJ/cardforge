@@ -57,6 +57,7 @@ const HAND_FRAMES_ALLOWED: Record<string, string> = {};
 /** Pages that draw no frame of their own, and why. */
 const FRAMELESS_PAGES: Record<string, string> = {
   "app/(app)/admin/messages/[threadId]/page.tsx": "framed by admin/messages/layout.tsx (DashboardShell)",
+  "app/(app)/admin/messages/feedback/[feedbackId]/page.tsx": "framed by admin/messages/layout.tsx (DashboardShell)",
   "app/(app)/admin/messages/page.tsx": "framed by admin/messages/layout.tsx (DashboardShell)",
   "app/(app)/messages/[threadId]/page.tsx": "framed by messages/layout.tsx (DashboardShell)",
   "app/(app)/messages/page.tsx": "framed by messages/layout.tsx (DashboardShell)",

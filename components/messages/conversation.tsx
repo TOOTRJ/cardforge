@@ -82,6 +82,9 @@ export function Conversation({
         </blockquote>
       ) : null}
 
+      {/* No list at all before the first message (a feedback row about to
+          become a conversation): an empty, named list says "0 items". */}
+      {messages.length === 0 ? null : (
       <ol className="flex flex-col gap-3" aria-label="Messages">
         {messages.map((m) => {
           const mine =
@@ -127,6 +130,7 @@ export function Conversation({
           );
         })}
       </ol>
+      )}
     </div>
   );
 }
