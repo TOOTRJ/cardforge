@@ -18,7 +18,7 @@ import { GUIDE_LINKS } from "@/components/marketing/guide-cross-links";
 import { StatBadge } from "@/components/ui/stat-badge";
 import { PLANS, capacityHoldsLine, savedCardsLine } from "@/lib/billing/plans";
 import { isBillingEnabled } from "@/lib/billing/flags";
-import { countPublicCards, getCommunityPulse, listTrendingCardsByRange } from "@/lib/cards/queries";
+import { getSavedCardCounts, listTrendingCardsByRange } from "@/lib/cards/queries";
 import { TRENDING_RANGE_WORDS, type TrendingRange } from "@/lib/cards/trending";
 import { ROW_MAX } from "@/components/gallery/card-row";
 import { countPublicDecks } from "@/lib/decks/queries";
@@ -320,24 +320,25 @@ async function LatestGuides() {
 }
 
 /** Every home-page number, read once per render (the stat strip and the
- *  pulse line share it). Public rows only, cookie-free — the page stays ISR. */
+ *  pulse line share it). Cookie-free — the page stays ISR. The cards are
+ *  EVERY saved card (owner 2026-11-11: 0207's two totals); creators and
+ *  decks are the public ones a visitor can go and see. */
 const readHomeCounts = cache(async (): Promise<HomeCounts> => {
-  const [cards, creators, decks, verifiedFrameKeys, pulse] = await Promise.all([
-    countPublicCards(),
+  const [saved, creators, decks, verifiedFrameKeys] = await Promise.all([
+    getSavedCardCounts(),
     countPublicCreators(),
     countPublicDecks(),
     getVerifiedFrameKeysPublic(),
-    getCommunityPulse(),
   ]);
   return {
-    cards,
+    cards: saved.cards,
     creators,
     decks,
     // Frames the creator actually offers today — the verified set, counted
     // by template. (The catalogue on disk is bigger; only published frames
     // are an honest number.)
     frameStyles: new Set(verifiedFrameKeys.map((key) => key.split("/")[0])).size,
-    cardsThisWeek: pulse.cardsThisWeek,
+    cardsThisWeek: saved.cardsThisWeek,
   };
 });
 
@@ -407,8 +408,9 @@ function TrendingPulseFooter({ counts }: { counts: HomeCounts }) {
             </span>
             {counts.creators > 0 ? (
               <span className="inline-flex items-center gap-1.5">
-                {/* No "by": the cards count every public card (admins'
-                    too), the creators count never an admin. */}
+                {/* No "by": the cards count every saved card (private
+                    ones and admins' too), the creators only the real
+                    creators with a public card. */}
                 <Users className="h-3.5 w-3.5 text-gold" aria-hidden />
                 <span className="font-semibold tabular-nums text-foreground">{formatStatNumber(counts.creators)}</span>
                 {counts.creators === 1 ? "creator" : "creators"}
