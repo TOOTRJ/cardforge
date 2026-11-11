@@ -142,6 +142,15 @@ describe("startReartAction", () => {
     expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, STYLE);
   });
 
+  it("the job makes its cards private unless the run names a visibility (owner 2026-11-10)", async () => {
+    await startReartAction({ deckId: DECK, style: STYLE });
+    expect(m.insert.mock.calls[0][0].plan.visibility).toBe("private");
+    await startReartAction({ deckId: DECK, style: STYLE, visibility: "public" });
+    expect(m.insert.mock.calls[1][0].plan.visibility).toBe("public");
+    await startReartAction({ deckId: DECK, style: STYLE, visibility: "unlisted" });
+    expect(m.insert.mock.calls[2][0].plan.visibility).toBe("unlisted");
+  });
+
   it("only the real cards it makes count against the card limit", async () => {
     m.capacity.mockResolvedValue({ used: 49, cap: 50, tier: "free" });
     expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(true);

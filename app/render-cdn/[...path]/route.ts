@@ -42,17 +42,111 @@ import { createPublicClient } from "@/lib/supabase/public";
 //     be served either.
 // One primary-key read per miss, before the storage fetch; a CDN hit never
 // reaches this function. A failed read is a 503 nobody caches.
+//
+// Storage that is BUSY is not storage that lacks the object (2026-11-10).
+// Supabase's storage API answers 429 when it cannot get a database
+// connection (its pooler full — that day, CI walking the whole frames
+// bucket through a cold CDN); this handler turned every such answer into a
+// 502 with the 60 s header a missing object gets, and a gallery kept its
+// broken tiles until a reload. Now:
+//   * "not found" — a 404, or Supabase's 400 whose body says "Object not
+//     found" — keeps the short-cached 404;
+//   * a 429 is a 503 `no-store` with `Retry-After` at once: storage has
+//     said it is saturated, and a second knock from here would add to it;
+//   * a 5xx, a timeout, a dropped connection or a 400 that does NOT say
+//     "not found" is tried ONCE more after a short wait — after asking the
+//     database again, because the wait and a second answer take seconds and
+//     a card made private meanwhile must not be served from storage's CDN
+//     copy — and is a 503 `no-store` if storage still has no answer;
+//   * any other refusal is a 502 `no-store`.
+// Nothing but an image and a real "not found" is ever cached, by a browser
+// or a CDN, so the next request asks again (the page's own retry is
+// components/cards/render-image-retry.tsx), and one log line names the
+// status — which is how the next such day is read from Vercel's logs
+// instead of Supabase's.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The slowest answer this handler gives: two waits for storage's headers,
+// two capped error bodies, the pause between them and two database reads.
+export const maxDuration = 30;
 
 const SEGMENT = /^[A-Za-z0-9_\-.]+$/;
 const IMMUTABLE = "public, max-age=31536000, s-maxage=31536000, immutable";
 const NOT_FOUND_CACHE = "public, max-age=60";
 
+/** Storage may take this long to START answering (its headers). Storage
+ *  gives up on its own database queue after about two seconds; past this a
+ *  hung socket would hold the function for its whole budget. The BODY has
+ *  no clock: it streams at the reader's pace, and a slow phone taking a
+ *  3 MB PNG must not have it cut off. */
+const UPSTREAM_TIMEOUT_MS = 5_000;
+/** An error answer's body (a line of JSON) may take this long to read. */
+const ERROR_BODY_TIMEOUT_MS = 1_000;
+
 const notFound = () =>
   new NextResponse("Not found", { status: 404, headers: { "Cache-Control": NOT_FOUND_CACHE } });
+
+/** Storage (or the database) had no answer: nobody caches it, ask again. */
+const unavailable = () =>
+  new NextResponse("Unavailable", { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "5" } });
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+type StorageAnswer =
+  /** The bake. */
+  | { kind: "ok"; response: Response }
+  /** Storage says the object is not there. */
+  | { kind: "missing" }
+  /** Storage had no answer about the object; `retry` = worth one more try. */
+  | { kind: "busy"; status: string; retry: boolean }
+  /** Any other final refusal (a 401, a 403…). */
+  | { kind: "refused"; status: string };
+
+/** An error answer's body, read OUT rather than cancelled (cancelling a
+ *  storage answer's body hung the request under Next's fetch) — and never
+ *  waited on for long: "" when it does not come. */
+async function errorBody(response: Response): Promise<string> {
+  let clock: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      response.text().catch(() => ""),
+      new Promise<string>((resolve) => {
+        clock = setTimeout(() => resolve(""), ERROR_BODY_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(clock);
+  }
+}
+
+/** One request to storage for the bake, and what its answer means. */
+async function askStorage(target: string): Promise<StorageAnswer> {
+  // Not AbortSignal.timeout(): that would also end a body still streaming.
+  const waiting = new AbortController();
+  const clock = setTimeout(() => waiting.abort(new DOMException("storage did not answer in time", "TimeoutError")), UPSTREAM_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(target, { cache: "no-store", signal: waiting.signal });
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "";
+    return { kind: "busy", status: name === "TimeoutError" || name === "AbortError" ? "timeout" : "network", retry: true };
+  } finally {
+    clearTimeout(clock);
+  }
+  if (response.ok) return { kind: "ok", response };
+  const body = await errorBody(response);
+  if (response.status === 404) return { kind: "missing" };
+  // Supabase answers a missing object 400 with "Object not found" in its
+  // body. A 400 that says anything else — a full connection pool has
+  // answered that way, and "Bucket not found" or a tenant that is not found
+  // are storage's trouble, not the object's — says nothing about it.
+  if (response.status === 400) return /object not found/i.test(body) ? { kind: "missing" } : { kind: "busy", status: "400", retry: true };
+  if (response.status === 429) return { kind: "busy", status: "429", retry: false };
+  if (response.status >= 500) return { kind: "busy", status: String(response.status), retry: true };
+  return { kind: "refused", status: String(response.status) };
+}
 
 /** Is this card still shown to anyone (public or unlisted) and owned by
  *  `ownerId`? null when the database couldn't say. */
@@ -92,17 +186,28 @@ export async function GET(request: NextRequest, context: { params: Promise<unkno
   // hung the request under Next's fetch (local smoke test, 2026-09-29).
   const shown = await cardIsShown(cardId, path[0].toLowerCase());
   if (shown === false) return notFound();
-  if (shown === null) {
-    return new NextResponse("Unavailable", { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (shown === null) return unavailable();
+  let answer = await askStorage(target);
+  if (answer.kind === "busy" && answer.retry) {
+    await wait(250 + Math.random() * 350);
+    // The database again, right before storage is asked again (the header).
+    const still = await cardIsShown(cardId, path[0].toLowerCase());
+    if (still === false) return notFound();
+    if (still === null) return unavailable();
+    answer = await askStorage(target);
   }
-  const upstream = await fetch(target, { cache: "no-store" });
-  if (!upstream.ok || !upstream.body) {
-    // Supabase answers a missing object with 400 ("Object not found").
-    return new NextResponse("Not found", {
-      status: upstream.status === 404 || upstream.status === 400 ? 404 : 502,
-      headers: { "Cache-Control": NOT_FOUND_CACHE },
-    });
+  if (answer.kind === "missing") return notFound();
+  if (answer.kind === "busy") {
+    console.warn(`[render-cdn] storage had no answer for ${path.join("/")}: ${answer.status}`);
+    return unavailable();
   }
+  if (answer.kind === "refused") {
+    // Not ours to explain — and never one to cache.
+    console.warn(`[render-cdn] storage refused ${path.join("/")}: ${answer.status}`);
+    return new NextResponse("Bad gateway", { status: 502, headers: { "Cache-Control": "no-store" } });
+  }
+  const upstream = answer.response;
+  if (!upstream.body) return unavailable();
   const type = upstream.headers.get("content-type") ?? "application/octet-stream";
   if (!type.startsWith("image/")) {
     return new NextResponse("Not found", { status: 404 });

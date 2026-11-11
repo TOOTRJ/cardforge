@@ -101,6 +101,18 @@ Rules and gotchas:
   token) is the `verified` tier on `main`: only the cache warm-up (the frame
   and npm caches PRs restore from `main`) and Frames published; any doubt
   is the full run. A renamed full-tier job is renamed in `FULL_RUN_JOBS` too.
+  **Frames published** never walks the whole frames bucket on a PR or a
+  merge (2026-11-10): those runs look up only the manifest objects they add
+  (`frames-check.mjs --incremental`, `FRAMES_CHECK_BASE_SHA` = `main`'s
+  tip on a PR, whatever branch it targets), all of which must be verified;
+  the whole bucket is the nightly `--sweep`'s (green with a count when a
+  cold CDN keeps it from finishing; a MISSING object is red), and every
+  lookup goes at `createLookupPacer`'s pace (`scripts/lib/frame-objects.mjs`:
+  one at a time once the CDN stops answering from its cache, a minute's
+  pause on a 429; the exit codes are `scripts/lib/frames-check-run.mjs`). ~30 full walks a day exhausted production's storage
+  connections and the site's thumbnails, uploads and bakes were refused
+  meanwhile — never read many production storage objects in parallel
+  without that pacer.
 
 ## Conventions
 
@@ -267,6 +279,10 @@ Rules and gotchas:
   bake's names, and on a CDN miss only while the card is public or
   unlisted under that owner (one read before storage: Supabase's CDN keeps
   a removed object up to 60 s, which could refill ours after the purge).
+  Storage that is BUSY is not storage that lacks the bake: a 429, a 5xx or
+  a timeout is tried once more, then answered 503 `no-store` with one log
+  line — never the short-cached 404 — and `RenderImageRetry` (root layout,
+  ONE document listener) asks for a failed `/render-cdn` picture twice more.
   A card's render names are FOUR (5.0a, migration 0134): the front's
   `{id}.png` + `.thumb.webp` and the back face's `{id}.back.png` +
   `.back.thumb.webp` — `renderObjectNames` (`lib/cards/bake-core.ts`) is the

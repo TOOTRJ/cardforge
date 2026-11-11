@@ -746,12 +746,34 @@ describe("the workflow", () => {
 
   // Owner 2026-11-02: the production build checks only the frames new since
   // its last deployment and a canary (scripts/lib/frames-check-plan.mjs), so
-  // the FULL check runs every night — idle nights too — and a red one says so.
-  it("runs the full frames check every night, and its alert writes issues only and judges nothing", () => {
+  // the WHOLE bucket is walked every night — idle nights too — and a red
+  // walk says so. 2026-11-10: a pull request and a merge look up only what
+  // they add; the whole bucket at full speed on every run (~30 a day)
+  // exhausted production's storage connections and the site's thumbnails,
+  // uploads and bakes were refused meanwhile.
+  it("sweeps the whole bucket every night, looks up only new frames on a pull request or a merge, and its alert judges nothing", () => {
     expect(TIERS.nightly.frames).toBe(true);
     expect(TIERS.idle.frames).toBe(true);
-    expect(jobOf("frames")).toMatch(/^ {6}- run: node scripts\/frames-check\.mjs$/m);
-    expect(jobOf("frames")).not.toContain("--incremental");
+    const frames = jobOf("frames");
+    expect(frames).toContain(
+      [
+        "        if: ${{ github.event_name != 'schedule' }}",
+        "        env:",
+        "          FRAMES_CHECK_BASE_SHA: ${{ steps.base.outputs.sha }}",
+        "        run: node scripts/frames-check.mjs --incremental",
+      ].join("\n"),
+    );
+    // A pull request is compared with the DEFAULT BRANCH's tip, never with
+    // its own base: a stacked pull request's base is another branch whose
+    // new frames nobody promoted — it would add "nothing" and merge green.
+    expect(frames).not.toContain("pull_request.base");
+    expect(frames).toContain('sha=$(git ls-remote origin "refs/heads/$DEFAULT_BRANCH" | cut -f1)');
+    expect(frames).toContain("          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}");
+    expect(frames).toContain("          BEFORE: ${{ github.event.before }}");
+    expect(frames).toContain(["        id: sweep", "        if: ${{ github.event_name == 'schedule' }}", "        run: node scripts/frames-check.mjs --sweep"].join("\n"));
+    // Never the plain full walk, and exactly these two ways to run it.
+    expect(frames.match(/frames-check\.mjs.*$/gm)).toEqual(["frames-check.mjs --incremental", "frames-check.mjs --sweep"]);
+    expect(frames).toContain("      complete: ${{ steps.sweep.outputs.complete }}");
     const alert = jobOf("frames-alert");
     expect(alert).toMatch(/^ {4}needs: \[changes, frames\]$/m);
     expect(alert.match(/^ {4}if: .*$/gm)).toEqual([
@@ -759,6 +781,11 @@ describe("the workflow", () => {
     ]);
     expect(alert).toContain("\n    permissions:\n      issues: write\n    steps:\n");
     expect(alert).toContain("RESULT: ${{ needs.frames.result }}");
+    // A green merge looked at what it added, a sweep cut short at a part of
+    // the bucket: only a sweep that looked at every object closes the issue.
+    expect(alert).toContain("COMPLETE: ${{ needs.frames.outputs.complete }}");
+    expect(alert).toContain('elif [ -n "$open" ] && [ "$COMPLETE" = "true" ]; then');
+    expect(alert.match(/gh issue close/g)).toHaveLength(1);
     expect(alert).not.toMatch(/uses:|secrets\.|continue-on-error/);
     expect(alert).toContain(`title="CI: frames are missing from production's bucket"`);
     expect(alert).toMatch(/gh issue create --title "\$title"/);

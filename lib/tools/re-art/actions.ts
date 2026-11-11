@@ -20,6 +20,7 @@ import { checkToolAccess } from "@/lib/tools/queries";
 import { recordToolEvent } from "@/lib/tools/events";
 import { toolHref } from "@/lib/tools/catalog";
 import {
+  REART_DEFAULT_VISIBILITY,
   REART_TOOL_SLUG,
   reartRunSchema,
   reartStepKey,
@@ -238,7 +239,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   const jobPlan: ReartJobPlan = {
     deck_id: plan.deck.id,
     style: { preset: saved.preset, theme: saved.theme, version: saved.version },
-    visibility: parsed.data.visibility ?? "public",
+    visibility: parsed.data.visibility ?? REART_DEFAULT_VISIBILITY,
     entries: plan.entries.map((entry) => ({
       entry_id: entry.entryId,
       name: entry.name,
