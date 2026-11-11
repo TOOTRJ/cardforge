@@ -4,6 +4,7 @@ import "server-only";
 
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import { prepareUploadBytes } from "@/lib/media/upload-bytes";
@@ -54,9 +55,12 @@ import {
 // after the checks that need no bytes, a byte sniff, prepareUploadBytes
 // (upright, no camera metadata), the image scan BEFORE anything is stored,
 // then a 256 px PNG into the maker's own custom-pips folder
-// (lib/symbols/write-symbol.ts). The row is written with the maker's session,
-// so 0193's RLS (the tool gate), its caps and 0127's media guard all hold in
-// the database too.
+// (lib/symbols/write-symbol.ts). The row's caps (custom_symbols_guard) hold
+// in the database for every role. Who WRITES the row is below: since 0205
+// the insert and the edit are the server's, so for those two the tool gate
+// and the picture's address are this module's to hold, not RLS's or 0127's
+// media guard (which only checks an API role) — the picture is always the
+// file `storeSymbolPicture` just wrote into the caller's own folder.
 //
 // "Remove" deletes a symbol no card of the maker's names; one a card names is
 // KEPT as removed (a tombstone: the cards keep drawing it, Restore brings it
@@ -67,7 +71,14 @@ import {
 // A symbol's name and code are read by anyone (a card that uses one draws for
 // every viewer), so neither may hold strong language (owner decision 7,
 // 2026-11-09: lib/moderation/profanity.ts, the card detector): refused with a
-// field error — a symbol has no private mode to fall back to.
+// field error — a symbol has no private mode to fall back to. And only THIS
+// module writes them (owner 2026-11-11, migration 0205): no API role inserts
+// a symbol or updates its `name`, so the check can't be skipped through the
+// database API. The two writes that carry a symbol's words — the insert and
+// the edit — go through the service role (`wordsClient`), AFTER the tool's
+// gate and the words' check, always held to the caller's own id; every other
+// write (the picture, remove, restore, delete) stays the owner's own role,
+// under RLS.
 //
 // Nothing is revalidated: the manager follows each action's answer, and the
 // renderers read the owner's symbols on every render (lib/pips/queries.ts).
@@ -112,6 +123,34 @@ function recordRefusal(viewer: Viewer, event: RefusedEvent, reason: string, prop
 function ready(): string | null {
   if (!isSupabaseConfigured() || !isUserStorageConfigured()) return UNAVAILABLE;
   return null;
+}
+
+/**
+ * The client for the two writes that carry a symbol's public words: the
+ * insert (code + name) and the edit (name). The service role — since 0205
+ * no API role may make either. It bypasses RLS, so its callers do what RLS
+ * did for them: they have passed `checkToolAccess` (the policy's
+ * has_tool_access) and every statement names the caller's own id as
+ * `owner_id`. Never hand it a row id alone.
+ */
+function wordsClient() {
+  return createAdminClient();
+}
+
+/**
+ * The DATABASE's answer to "is the tool open to this caller" — asked as the
+ * caller, before a write the server's role makes for them. 0193's policies
+ * asked `has_tool_access` of every insert and edit; the service role is
+ * asked nothing, and the app's own gate (`checkToolAccess`) can say yes
+ * where SQL says no (it reads the EFFECTIVE tier, which is Pro while billing
+ * is off; SQL reads the real one). So the two writes that left RLS keep its
+ * question: the server never does for a caller what their own role would
+ * have been refused. A failed read is "no".
+ */
+async function toolOpenInDatabase(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("has_tool_access", { p_slug: CUSTOM_SYMBOLS_SLUG });
+  return !error && data === true;
 }
 
 /** A database refusal in the maker's words. */
@@ -289,8 +328,8 @@ async function insertSymbol(
     return { ok: false, error: stored.error, field: "file" };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  // The server's insert (0205): the words were checked by the caller.
+  const { data, error } = await wordsClient()
     .from("custom_symbols")
     .insert({
       owner_id: ownerId,
@@ -325,6 +364,12 @@ export async function createSymbolAction(formData: FormData): Promise<SymbolResu
 
   const refused = (reason: string, props: ToolEventProps = {}) =>
     recordRefusal(access, "create_failed", reason, { source: "upload", ...props });
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
 
   const details = detailsFrom(formData);
   if (!details.success) {
@@ -379,6 +424,12 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
   if (!access) return { ok: false, error: NO_ACCESS };
   const refused = (reason: string, props: ToolEventProps = {}) =>
     recordRefusal(access, "create_failed", reason, { source: "forge", ...props });
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
   if (!(await checkToolAccess(PIP_FORGE_SLUG))) {
     refused("no_forge_access");
     return { ok: false, error: "Pip Forge isn't open to your account right now." };
@@ -443,10 +494,16 @@ export async function createSymbolFromForgedPipAction(input: unknown): Promise<S
 
 /** A symbol's name and meaning (its code never changes). */
 export async function updateSymbolAction(input: unknown): Promise<SymbolResult> {
-  if (!isSupabaseConfigured()) return { ok: false, error: UNAVAILABLE };
+  if (!isSupabaseConfigured() || !isAdminConfigured()) return { ok: false, error: UNAVAILABLE };
   const access = await checkToolAccess(CUSTOM_SYMBOLS_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   const refused = (reason: string, props: ToolEventProps = {}) => recordRefusal(access, "edit_failed", reason, props);
+  // The server's role makes this write: the database is asked what RLS
+  // used to ask, as the caller (toolOpenInDatabase).
+  if (!(await toolOpenInDatabase())) {
+    refused("no_access");
+    return { ok: false, error: NO_ACCESS };
+  }
   const parsed = symbolEditSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -468,8 +525,9 @@ export async function updateSymbolAction(input: unknown): Promise<SymbolResult> 
     return { ok: false, error: "Restore the symbol to change it." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  // The server's update (0205: no API role writes `name`), held to the
+  // caller's own row — the service role has no RLS to hold it for us.
+  const { data, error } = await wordsClient()
     .from("custom_symbols")
     .update({ name: parsed.data.name, mana_value: parsed.data.manaValue, base_color: parsed.data.baseColor })
     .eq("id", parsed.data.id)

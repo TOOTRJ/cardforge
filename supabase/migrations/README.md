@@ -409,6 +409,13 @@ instead. Each bullet: what the header says, and what is true now.
   redefines the function with `(bits + 0.5) / 4294967296.0`, in (0, 1),
   and nothing else changed (`tests/unit/db/discover-shuffle-migration.test.ts`
   holds every live shuffle to that range).
+- **0193 (header: "the owner inserts, edits, removes and restores only while
+  the tool is open to them")** — since 0205 the owner's own role no longer
+  INSERTs a symbol or UPDATEs its `name`: both are public words the app must
+  check first, so the server writes them (the service role, after the tool's
+  gate and the words' check). The owner's role still changes the meaning,
+  the picture and `deleted_at`, and deletes, under 0193's RLS. The policy
+  "Custom symbols: owner adds" is dropped.
 - **0193 (`custom_symbol_in_use`: "names {*CODE} (cost, rules text, rows,
   back face / second part)")** — since 0195 it also reads the card's
   `title` and `nickname`: a `~` in rules text draws the name (layout v76),

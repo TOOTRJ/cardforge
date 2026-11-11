@@ -1387,7 +1387,13 @@ Rules and gotchas:
   fetches only the codes a card names (`pipOverridesNamedIn`); a symbol made
   or re-pictured re-bakes the cards that name it (`lib/symbols/rebake.ts`).
   A symbol's name and code are public: no strong language (refused on the
-  field, `lib/symbols/actions.ts`). What it MEANS (PR 3) is its maker's
+  field, `lib/symbols/actions.ts`) — and only the SERVER writes them (0205,
+  owner 2026-11-11: no API role inserts a symbol or updates its `name`, so
+  the check can't be skipped through the database API; the insert and the
+  edit go through `wordsClient()` — the service role, after the tool's gate
+  and the words' check, every statement held to the caller's own
+  `owner_id` — while the picture, remove and restore stay the owner's own
+  role under RLS; never teach the database the word list for this). What it MEANS (PR 3) is its maker's
   declaration, read through the owner's `SymbolMeanings` (`getSymbolMeanings`,
   the same read as the pictures; removed ones included): `manaValueOfCost` /
   `deriveColorIdentity` / the AI's `parseManaCost` take the map — without it
