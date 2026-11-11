@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { DEFAULT_POST_AUTH_PATH, safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { oauthCallbackErrorOf } from "@/lib/auth/oauth-callback-error";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { afterResponse } from "@/lib/api/after-response";
+import { recordSignup } from "@/lib/analytics/funnel-server";
+import { signupMethodOf } from "@/lib/analytics/funnel-events";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -35,8 +39,21 @@ export async function GET(request: NextRequest) {
   if (code && !linkError && isSupabaseConfigured()) {
     try {
       const supabase = await createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
+        // Funnel: an account made with Google or Discord has posted no
+        // signup form, so THIS is where it first exists for us — its
+        // `signup` row is written here, once (one indexed read for an
+        // account that has it: every later sign-in, every email link),
+        // after the redirect is on its way. With how it was made alone:
+        // the first touch lives in the tab and joins the row at onboarding
+        // (lib/analytics/funnel-server.ts recordSignup).
+        const account = data?.user ?? data?.session?.user ?? null;
+        if (account?.id && isAdminConfigured()) {
+          const userId = account.id;
+          const method = signupMethodOf((account.app_metadata as { provider?: unknown } | null)?.provider);
+          afterResponse(() => recordSignup(createAdminClient(), { userId, props: { method } }));
+        }
         return NextResponse.redirect(`${origin}${redirectTo}`);
       }
     } catch {

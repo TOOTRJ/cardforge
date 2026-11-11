@@ -1,6 +1,6 @@
 import "server-only";
 
-import { TRIAL_END_BEFORE_COMP_KEY, isHeldPayingPlan } from "@/lib/billing/comp-stripe";
+import { TRIAL_END_BEFORE_COMP_KEY, isHeldPayingPlan, wasHeldPayingPlan } from "@/lib/billing/comp-stripe";
 import { isCompHeldTrial, type CompEndingSub } from "@/lib/billing/comp-ending";
 import type Stripe from "stripe";
 import type { createAdminClient } from "@/lib/supabase/admin";
@@ -190,8 +190,10 @@ async function handleSubscriptionEvent(
     }
   } else if (opts.previous) {
     // What an updated event changed: a trial converting, or a plan switch.
-    // A paying plan coming off a free-days hold converts no trial.
-    if (opts.previous.status === "trialing" && sub.status === "active" && !isHeldPayingPlan(opts.previous)) {
+    // A paying plan coming off a free-days hold converts no trial — asked of
+    // the subscription itself: `previous` holds only what this event
+    // changed, and the end of a hold does not change the marker.
+    if (opts.previous.status === "trialing" && sub.status === "active" && !wasHeldPayingPlan(sub)) {
       await recordFunnelEvent(admin, {
         event: "trial_converted",
         userId,

@@ -749,34 +749,35 @@ export async function createCardAction(
     await revalidateParentCardPaths(data.parent_card_id);
   }
   // Funnel: a saved card (and, once per user, first_card_saved — the
-  // activation milestone). Best effort; never touches the save. An admin's
-  // frame preview is tooling, not product activity.
+  // activation milestone). An admin's frame preview is tooling, not product
+  // activity. AFTER the response, with the referral check below: the rows
+  // are two or three database round trips a save must not wait for, and
+  // neither can fail it.
   if (isAdminConfigured() && !framePreview) {
-    await recordActivity(createAdminClient(), {
-      userId: user.id,
-      kind: "card_saved",
-      props: {
-        visibility: insert.visibility,
-        kind: data.parent_card_id ? "remix" : "new",
-        ...(options.guestDraft === true ? { guestDraft: true } : {}),
-      },
+    const refereeId = user.id;
+    const activity = {
+      visibility: insert.visibility,
+      kind: data.parent_card_id ? "remix" : "new",
+      ...(options.guestDraft === true ? { guestDraft: true } : {}),
+    };
+    after(async () => {
+      try {
+        await recordActivity(createAdminClient(), { userId: refereeId, kind: "card_saved", props: activity });
+      } catch (error) {
+        console.warn(`[funnel] card_saved not recorded for ${refereeId}:`, error);
+      }
+      // EVERY save may be the one that qualifies a referral (0180: the
+      // friend's N-th card, the settings' bar — lib/referrals/server.ts; one
+      // indexed read when there is no open referral). Stripe calls never
+      // hold up a save.
+      try {
+        await qualifyReferral(createAdminClient(), refereeId, {
+          stripe: isStripeConfigured() ? getStripe() : null,
+        });
+      } catch (error) {
+        console.error(`[referrals] qualify failed for ${refereeId}:`, error);
+      }
     });
-    // EVERY save may be the one that qualifies a referral (0180: the friend's
-    // N-th card, the settings' bar — lib/referrals/server.ts; one indexed
-    // read when there is no open referral). After the response — Stripe
-    // calls never hold up a save — and never able to fail it.
-    {
-      const refereeId = user.id;
-      after(async () => {
-        try {
-          await qualifyReferral(createAdminClient(), refereeId, {
-            stripe: isStripeConfigured() ? getStripe() : null,
-          });
-        } catch (error) {
-          console.error(`[referrals] qualify failed for ${refereeId}:`, error);
-        }
-      });
-    }
   }
 
   // Bake the public PNG AFTER the response is sent (next/server `after`) so

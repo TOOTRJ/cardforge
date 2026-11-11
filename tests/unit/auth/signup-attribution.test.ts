@@ -49,13 +49,15 @@ describe("signupAction's funnel row", () => {
     expect(s.record).toHaveBeenCalledWith(expect.anything(), {
       event: "signup",
       userId: "u-new",
-      props: { referrer: "reddit.com", surface: "home_hero" },
+      // `method`: how the account was made — the email form's rows say so
+      // (an account made with Google or Discord gets its row at onboarding).
+      props: { referrer: "reddit.com", surface: "home_hero", method: "email" },
     });
   });
 
   it("drops an unsafe button value, and records nothing for an address already registered", async () => {
     await signupAction({ status: "idle" } as never, form({ attr_surface: "<img onerror>" }));
-    expect(s.record.mock.calls[0][1].props).toEqual({});
+    expect(s.record.mock.calls[0][1].props).toEqual({ method: "email" });
     s.record.mockReset();
     s.identities = [];
     await signupAction({ status: "idle" } as never, form({ attr_surface: "home_hero" }));

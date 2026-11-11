@@ -123,6 +123,8 @@ beforeEach(() => {
   state.existing = null;
   state.deckAdds = 0;
   state.activity = 0;
+  // Each test runs only the tasks its own save deferred.
+  vi.mocked(after).mockClear();
 });
 
 describe("createCardAction — frame previews", () => {
@@ -134,6 +136,9 @@ describe("createCardAction — frame previews", () => {
     expect(insert.visibility).toBe("private");
     expect(insert.frame_preview).toBe(true);
     expect(state.deckAdds).toBe(0);
+    expect(state.activity).toBe(0);
+    // Not recorded later either: nothing deferred writes a funnel row.
+    for (const [task] of vi.mocked(after).mock.calls) await (task as () => Promise<void>)();
     expect(state.activity).toBe(0);
   });
 
@@ -182,6 +187,10 @@ describe("createCardAction — frame previews", () => {
     const insert = insertOf(stub);
     expect("frame_preview" in insert).toBe(false);
     expect(insert.visibility).toBe("public");
+    // The funnel row is written AFTER the response (two or three database
+    // round trips a save must not wait for): nothing yet, then once.
+    expect(state.activity).toBe(0);
+    for (const [task] of vi.mocked(after).mock.calls) await (task as () => Promise<void>)();
     expect(state.activity).toBe(1);
   });
 });

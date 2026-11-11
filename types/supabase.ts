@@ -3239,8 +3239,9 @@ export type Database = {
         Args: { p_user_id: string; p_tier: string; p_target: number };
         Returns: number;
       };
+      // Migration 0197: admins are left out unless p_include_admins.
       admin_credit_grant_stats: {
-        Args: { p_since?: string | null };
+        Args: { p_since?: string | null; p_include_admins?: boolean };
         Returns: { reason: string; credits: number; grants: number }[];
       };
       grant_credits: {
@@ -3683,13 +3684,14 @@ export type Database = {
         }[];
       };
       // Migration 0112 — funnel instrumentation.
+      // Migration 0197: admins are left out unless p_include_admins.
       admin_funnel_counts: {
-        Args: { p_since: string };
+        Args: { p_since: string; p_include_admins?: boolean };
         Returns: { event: string; n: number; users: number }[];
       };
       // Migration 0113 — trial engagement.
       admin_trial_engagement: {
-        Args: { p_since: string };
+        Args: { p_since: string; p_include_admins?: boolean };
         Returns: {
           user_id: string;
           username: string | null;

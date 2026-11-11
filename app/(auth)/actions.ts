@@ -256,6 +256,7 @@ export async function signupAction(
       userId: newUser.id,
       props: {
         ...attributionProps(attribution),
+        method: "email",
         // A card built in the guest creator waits in the browser (TODO HM3).
         ...(formData.get(GUEST_DRAFT_FIELD) === "1" ? { guestDraft: true } : {}),
       },

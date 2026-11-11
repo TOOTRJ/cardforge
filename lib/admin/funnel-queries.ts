@@ -5,6 +5,7 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { FunnelEvent } from "@/lib/analytics/funnel-events";
 import { attributionSource, attributionSurface, sanitizeAttribution } from "@/lib/analytics/attribution";
 import { SCREEN_WIDTH_BUCKETS, type ScreenWidthBucket } from "@/lib/analytics/screen-width";
+import { selectAllRows } from "@/lib/supabase/select-all-rows";
 
 // ---------------------------------------------------------------------------
 // The admin Funnel panel's data: counts per funnel event for two trailing
@@ -140,11 +141,23 @@ function groupSignupsBy(rows: Array<{ props: unknown }>, labelOf: (props: Record
     .slice(0, limit);
 }
 
+/** The label of a signup whose first touch was never recorded: a row
+ *  migration 0197 wrote for an account that had none (made with Google or
+ *  Discord before those were recorded, or older than the funnel). Its own
+ *  line — never "direct" or "none", which say the visitor came with no
+ *  referrer and pressed no button. */
+export const SIGNUP_NOT_RECORDED = "not recorded";
+
+const wasBackfilled = (props: unknown) =>
+  Boolean(props && typeof props === "object" && (props as Record<string, unknown>).backfilled === true);
+
 /** Pure: group signup rows by first-touch source, biggest first. */
 export function groupSignupSources(rows: Array<{ props: unknown }>, limit = 8): SignupSource[] {
-  return groupSignupsBy(rows, (props) => attributionSource(sanitizeAttribution(props)), limit).map(
-    ([source, n]) => ({ source, n }),
-  );
+  return groupSignupsBy(
+    rows,
+    (props) => (wasBackfilled(props) ? SIGNUP_NOT_RECORDED : attributionSource(sanitizeAttribution(props))),
+    limit,
+  ).map(([source, n]) => ({ source, n }));
 }
 
 /** The portal's feedback options (`cancellation_details.feedback`) and
@@ -194,9 +207,11 @@ export function countGuestDraftSignups(rows: Array<{ props: unknown }>): number 
 
 /** Pure: group signup rows by the create button pressed last, biggest first. */
 export function groupSignupSurfaces(rows: Array<{ props: unknown }>, limit = 8): SignupSurface[] {
-  return groupSignupsBy(rows, (props) => attributionSurface(sanitizeAttribution(props)), limit).map(
-    ([surface, n]) => ({ surface, n }),
-  );
+  return groupSignupsBy(
+    rows,
+    (props) => (wasBackfilled(props) ? SIGNUP_NOT_RECORDED : attributionSurface(sanitizeAttribution(props))),
+    limit,
+  ).map(([surface, n]) => ({ surface, n }));
 }
 
 /** Pure: every bucket in width order (empty ones too, so the table's shape
@@ -237,6 +252,16 @@ async function readScreenWidths(
   return buildScreenWidths(counts);
 }
 
+/**
+ * The PostgREST `or` filter that keeps every row but the admins': null when
+ * there is no admin to leave out. `user_id.is.null` first: a row whose
+ * account is gone has no user id, and `not.in` alone would drop it.
+ */
+export function adminIdFilter(adminIds: string[]): string | null {
+  const ids = adminIds.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  return ids.length ? `user_id.is.null,user_id.not.in.(${ids.join(",")})` : null;
+}
+
 export async function getFunnelSummary(): Promise<FunnelSummary | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
@@ -255,17 +280,39 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     windows.push(buildFunnel(counts, days));
   }
   const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // The team's own accounts are not the funnel: the two counting functions
+  // leave admins out themselves (migration 0197), and the row reads below
+  // filter on the same ids. A row whose account was deleted (user_id NULL)
+  // stays — `not.in` alone would drop it.
+  const { data: adminRows, error: adminError } = await admin.from("profiles").select("id").eq("is_admin", true);
+  if (adminError) console.warn("getFunnelSummary: admin ids", adminError.message);
+  const notAdmin = adminIdFilter((adminRows ?? []).map((row) => row.id));
+  /** A page that failed leaves part of a list: that is not the list. And
+   *  without the admins' ids the rows would count the team while the two
+   *  counting functions do not — so neither is shown (empty, as a failed
+   *  read always was here), never part of one as if it were all of it. */
+  const whole = <T,>(res: { data: T[]; error: { message: string } | null }): T[] => (res.error || adminError ? [] : res.data);
+  /** Every `props` of one event in the window — in pages: an un-ranged
+   *  read stops at 1,000 rows whatever `.limit()` says. */
+  const propsOf = (event: FunnelEvent) =>
+    selectAllRows<{ props: unknown }>((from, to) => {
+      let query = admin.from("funnel_events").select("props").eq("event", event).gte("created_at", since30);
+      if (notAdmin) query = query.or(notAdmin);
+      return query.order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to);
+    });
+  let guestFirstSavesQuery = admin
+    .from("funnel_events")
+    .select("id", { count: "exact", head: true })
+    .eq("event", "first_card_saved")
+    .contains("props", { guestDraft: true })
+    .gte("created_at", since30);
+  if (notAdmin) guestFirstSavesQuery = guestFirstSavesQuery.or(notAdmin);
   const [signups, trials, screenWidths, guestFirstSaves, cancellations] = await Promise.all([
-    admin.from("funnel_events").select("props").eq("event", "signup").gte("created_at", since30).limit(5000),
+    propsOf("signup"),
     admin.rpc("admin_trial_engagement", { p_since: since30 }),
     readScreenWidths(admin, since30),
-    admin
-      .from("funnel_events")
-      .select("id", { count: "exact", head: true })
-      .eq("event", "first_card_saved")
-      .contains("props", { guestDraft: true })
-      .gte("created_at", since30),
-    admin.from("funnel_events").select("props").eq("event", "subscription_cancelled").gte("created_at", since30).limit(5000),
+    guestFirstSavesQuery,
+    propsOf("subscription_cancelled"),
   ]);
   if (cancellations.error) console.warn("getFunnelSummary: cancellations", cancellations.error.message);
   if (guestFirstSaves.error) console.warn("getFunnelSummary: guest first saves", guestFirstSaves.error.message);
@@ -273,11 +320,11 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
   if (trials.error) console.warn("getFunnelSummary: trials", trials.error.message);
   return {
     windows,
-    signupSources: groupSignupSources((signups.data ?? []) as Array<{ props: unknown }>),
-    signupSurfaces: groupSignupSurfaces((signups.data ?? []) as Array<{ props: unknown }>),
-    cancelReasons: groupCancelReasons((cancellations.data ?? []) as Array<{ props: unknown }>),
+    signupSources: groupSignupSources(whole(signups)),
+    signupSurfaces: groupSignupSurfaces(whole(signups)),
+    cancelReasons: groupCancelReasons(whole(cancellations)),
     guestCard: {
-      signups: countGuestDraftSignups((signups.data ?? []) as Array<{ props: unknown }>),
+      signups: countGuestDraftSignups(whole(signups)),
       firstCardsSaved: guestFirstSaves.error ? null : (guestFirstSaves.count ?? 0),
     },
     trials: (trials.data ?? []).map((row) => ({

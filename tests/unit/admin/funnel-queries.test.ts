@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/users-queries", () => ({ requireAdminClient: async () => null }));
 
-import { buildFunnel, groupCancelReasons, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
+import { SIGNUP_NOT_RECORDED, buildFunnel, groupCancelReasons, groupSignupSources, groupSignupSurfaces } from "@/lib/admin/funnel-queries";
 
 describe("groupCancelReasons", () => {
   it("groups ended plans by the portal's feedback, else Stripe's reason, biggest first — in the customer's words", () => {
@@ -144,5 +144,37 @@ describe("the Storefront chain is billing moments alone (TODO HM2)", () => {
       .filter(Boolean)
       .filter((f) => !f.startsWith("lib/analytics/") && !f.startsWith("lib/admin/") && f !== "app/api/events/route.ts");
     for (const file of files) expect(file).toMatch(/^components\/billing\//);
+  });
+});
+
+
+// Migration 0197 gives every account without a signup row one (259 of
+// production's 312 on 2026-11-10: accounts made with Google or Discord were
+// never recorded). Nobody knows where those arrived from: they are their own
+// line, never "direct" (no referrer) or "none" (no button).
+describe("signups whose first touch was never recorded", () => {
+  const rows = [
+    { props: { method: "google", backfilled: true } },
+    { props: { method: "google", backfilled: true } },
+    { props: { method: "email", backfilled: true } },
+    { props: { method: "email" } },
+    { props: { method: "google", referrer: "reddit.com", surface: "home_hero" } },
+  ];
+
+  it("are 'not recorded' in the source list — 'direct' stays the visitors who really came with no referrer", () => {
+    expect(SIGNUP_NOT_RECORDED).toBe("not recorded");
+    expect(groupSignupSources(rows)).toEqual([
+      { source: "not recorded", n: 3 },
+      { source: "direct", n: 1 },
+      { source: "reddit.com", n: 1 },
+    ]);
+  });
+
+  it("and in the create-button list", () => {
+    expect(groupSignupSurfaces(rows)).toEqual([
+      { surface: "not recorded", n: 3 },
+      { surface: "home_hero", n: 1 },
+      { surface: "none", n: 1 },
+    ]);
   });
 });

@@ -15,6 +15,7 @@ import { isUuid } from "@/lib/ids";
 import { mediaUrlViolationField, refusedDeckCoverMessage } from "@/lib/media/media-url-errors";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
+import { afterResponse } from "@/lib/api/after-response";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
 import { FIRST_CARD_NOT_COMMANDER, firstCardBoard } from "@/lib/decks/first-card";
 import type { DeckFormat } from "@/types/deck";
@@ -93,14 +94,15 @@ function notAuthed(): DeckActionFailure {
   };
 }
 
-/** Funnel rows (TODO DK3.8). Best effort; never touches the write. */
-async function recordDeckEvent(
+/** Funnel rows (TODO DK3.8). Best effort, after the response; never
+ *  touches the write. */
+function recordDeckEvent(
   event: "deck_created",
   userId: string,
   props: Record<string, string | undefined>,
-): Promise<void> {
+): void {
   if (!isAdminConfigured()) return;
-  await recordFunnelEvent(createAdminClient(), { event, userId, props });
+  afterResponse(() => recordFunnelEvent(createAdminClient(), { event, userId, props }));
 }
 
 /** Every suffixed slug was taken (live decks, or old ones a renamed deck
@@ -202,7 +204,7 @@ export async function createDeckAction(
   if (!reused) {
     const ownerUsername = await getCurrentUsername();
     revalidateDeckPaths(row.slug, ownerUsername);
-    await recordDeckEvent("deck_created", user.id, {
+    recordDeckEvent("deck_created", user.id, {
       visibility: insert.visibility,
       format: insert.format,
       surface: options.surface,

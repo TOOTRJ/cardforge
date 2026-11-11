@@ -9,11 +9,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // — and the redirect, so a retry goes where the visitor was going.
 // ---------------------------------------------------------------------------
 
-const s = vi.hoisted(() => ({ exchange: vi.fn() }));
+const s = vi.hoisted(() => ({
+  exchange: vi.fn(),
+  admin: true,
+  /** What the route deferred until after the redirect. */
+  deferred: [] as Array<() => unknown>,
+  signup: vi.fn<(admin: unknown, input: { userId: string; props: Record<string, unknown> }) => Promise<string>>(async () => "written"),
+}));
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ auth: { exchangeCodeForSession: s.exchange } }),
 }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ marker: "admin" }), isAdminConfigured: () => s.admin }));
+vi.mock("@/lib/api/after-response", () => ({ afterResponse: (task: () => unknown) => void s.deferred.push(task) }));
+vi.mock("@/lib/analytics/funnel-server", () => ({ recordSignup: s.signup }));
 
 import { GET } from "@/app/(auth)/auth/callback/route";
 import { isOAuthCallbackError, oauthCallbackErrorOf } from "@/lib/auth/oauth-callback-error";
@@ -28,6 +37,9 @@ async function land(query: string): Promise<URL> {
 
 afterEach(() => {
   s.exchange.mockReset();
+  s.signup.mockClear();
+  s.deferred = [];
+  s.admin = true;
   vi.restoreAllMocks();
 });
 
@@ -70,6 +82,46 @@ describe("/auth/callback", () => {
     const url = await land("code=abc&redirectTo=%2Fcreate");
     expect(s.exchange).toHaveBeenCalledWith("abc");
     expect(url.href).toBe(`${ORIGIN}/create`);
+  });
+
+  // 2026-11-10: an account made with Google or Discord posts no signup form,
+  // so it had no `signup` funnel row — 240 of production's 312 accounts. The
+  // callback is where such an account first exists for us.
+  it("a new Google account's signup row is written here — after the redirect, with how it was made and nothing else", async () => {
+    s.exchange.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: { provider: "google", providers: ["google"] } }, session: {} }, error: null });
+    const url = await land("code=abc&redirectTo=%2Fcreate");
+    expect(url.href).toBe(`${ORIGIN}/create`);
+    // Nothing during the request: the redirect never waits for a funnel row.
+    expect(s.signup).not.toHaveBeenCalled();
+    expect(s.deferred).toHaveLength(1);
+    await s.deferred[0]();
+    expect(s.signup).toHaveBeenCalledTimes(1);
+    expect(s.signup.mock.calls[0][1]).toEqual({ userId: "user-1", props: { method: "google" } });
+  });
+
+  it.each([
+    ["discord", "discord"],
+    ["email", "email"],
+    ["azure", "other"],
+  ])("names the method from the provider that signed in (%s → %s); an account that has its row costs recordSignup one read", async (provider, method) => {
+    s.exchange.mockResolvedValue({ data: { session: { user: { id: "user-2", app_metadata: { provider } } } }, error: null });
+    await land("code=abc");
+    await s.deferred[0]();
+    expect(s.signup.mock.calls[0][1]).toEqual({ userId: "user-2", props: { method } });
+  });
+
+  it("records nothing when the exchange failed, named no user, or the service role is not configured", async () => {
+    s.exchange.mockResolvedValue({ data: { user: null, session: null }, error: new Error("bad code") });
+    await land("code=abc");
+    s.exchange.mockResolvedValue({ data: { user: null, session: null }, error: null });
+    await land("code=abc");
+    s.exchange.mockResolvedValue({ error: null });
+    await land("code=abc");
+    s.admin = false;
+    s.exchange.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: { provider: "google" } } }, error: null });
+    await land("code=abc");
+    expect(s.deferred).toEqual([]);
+    expect(s.signup).not.toHaveBeenCalled();
   });
 
   it("a failed exchange is the old 'auth-callback-failed', with no redirect", async () => {

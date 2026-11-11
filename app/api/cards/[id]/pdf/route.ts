@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { recordActivity } from "@/lib/analytics/funnel-server";
+import { afterResponse } from "@/lib/api/after-response";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { renderCardPrint } from "@/lib/render/card-print";
 import { parseBleedParam } from "@/lib/cards/print-export";
@@ -247,19 +248,20 @@ export async function GET(
   // PDFs are entitlement-scoped downloads — never shared-cache them.
   const cacheControl = "private, no-store";
 
-  // Funnel: a download (and, once per user, first_download).
+  // Funnel: a download (and, once per user, first_download) — after the
+  // response: the file never waits for two or three database round trips.
   if (isAdminConfigured()) {
-    await recordActivity(createAdminClient(), {
-      userId: viewer.id,
-      kind: "download",
-      props: {
-        format: "pdf",
-        layout: bleed ? `${layout}-bleed` : layout,
-        // A back alone or a two-faced PDF names its faces; a front PDF's
-        // props are as before.
-        ...(faces === "back" ? { face: "back" } : backBytes ? { face: "both" } : {}),
-      },
-    });
+    const downloaderId = viewer.id;
+    const downloadProps = {
+      format: "pdf",
+      layout: bleed ? `${layout}-bleed` : layout,
+      // A back alone or a two-faced PDF names its faces; a front PDF's
+      // props are as before.
+      ...(faces === "back" ? { face: "back" } : backBytes ? { face: "both" } : {}),
+    };
+    afterResponse(() =>
+      recordActivity(createAdminClient(), { userId: downloaderId, kind: "download", props: downloadProps }),
+    );
   }
 
   return new NextResponse(Buffer.from(pdfBytes), {
