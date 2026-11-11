@@ -33,10 +33,14 @@ export function BrandAssetCard({
             : "border-b border-border bg-background",
         )}
       >
+        {/* Lazy: a server-rendered image that isn't lazy rides every prefetch
+            of this page as a preload hint (components/ui/eager-image.tsx). */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={previewSrc}
           alt={`${title} preview`}
+          loading="lazy"
+          decoding="async"
           style={{ height: previewSize, width: "auto" }}
         />
       </div>

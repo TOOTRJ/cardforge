@@ -5,6 +5,7 @@ import { cardCornersClass } from "@/lib/cards/card-orientation";
 import type { FeaturableCard, FeaturedCard } from "@/lib/decks/featured";
 import type { PreviewCardColumns } from "@/lib/cards/preview-data";
 import { cn } from "@/lib/utils";
+import { EagerImage } from "@/components/ui/eager-image";
 
 // ---------------------------------------------------------------------------
 // DeckCardFan — the deck hero's 1–5 featured cards (lib/decks/featured.ts),
@@ -102,14 +103,26 @@ export function DeckCardFan({
                   cardCornersClass(false),
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- Scryfall's own image host (deck-card-list draws it the same way) */}
-                <img
-                  src={featured.imageUrl}
-                  alt={featured.title}
-                  loading={!tile && index === 0 ? "eager" : "lazy"}
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                {!tile && index === 0 ? (
+                  // The hero's front card: eager, from the client leaf (its
+                  // preload hint stays on the deck's own page).
+                  <EagerImage
+                    src={featured.imageUrl}
+                    alt={featured.title}
+                    loading="eager"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- Scryfall's own image host (deck-card-list draws it the same way)
+                  <img
+                    src={featured.imageUrl}
+                    alt={featured.title}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
               </div>
             )}
           </li>
