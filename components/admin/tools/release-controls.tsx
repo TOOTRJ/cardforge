@@ -62,7 +62,13 @@ export function ReleaseControls({
         setChoice(current);
         return;
       }
-      toast.success(choice === "beta" ? `${toolName} is back in beta.` : `${toolName} is open to ${target.title}.`);
+      // The people who pressed "Notify me" and whom this release lets in were told.
+      const told = result.data.notified;
+      toast.success(
+        choice === "beta"
+          ? `${toolName} is back in beta.`
+          : `${toolName} is open to ${target.title}.${told > 0 ? ` ${told} ${told === 1 ? "person" : "people"} on the waiting list ${told === 1 ? "was" : "were"} told.` : ""}`,
+      );
       router.refresh();
     });
   }
@@ -74,7 +80,12 @@ export function ReleaseControls({
         adminErrorToast("tool pause", result.error);
         return;
       }
-      toast.success(paused ? `${toolName} is running again.` : `${toolName} is paused: admins only.`);
+      const told = result.data.notified;
+      toast.success(
+        paused
+          ? `${toolName} is running again.${told > 0 ? ` ${told} ${told === 1 ? "person" : "people"} on its waiting list ${told === 1 ? "was" : "were"} told.` : ""}`
+          : `${toolName} is paused: admins only.`,
+      );
       router.refresh();
     });
   }

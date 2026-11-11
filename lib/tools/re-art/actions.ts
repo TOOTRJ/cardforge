@@ -17,11 +17,13 @@ import { isUuid } from "@/lib/ids";
 import type { CardBackFace } from "@/types/card";
 import type { Json } from "@/types/supabase";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
-import { toolHref } from "@/lib/tools/catalog";
+import type { ToolAccessPath } from "@/lib/tools/access";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
+import { toolHref, toolReasonOfCode } from "@/lib/tools/catalog";
 import {
   REART_DEFAULT_VISIBILITY,
   REART_TOOL_SLUG,
+  reartRunMode,
   reartRunSchema,
   reartStepKey,
   reartStyleProblem,
@@ -54,9 +56,35 @@ import type { ReartJobPlan } from "@/lib/tools/re-art/step";
 //     time, then the style and the job row (kind 'deck_reart').
 //   * PUT THE OLD ART BACK edits one of the maker's own cards back to the
 //     picture it had before Re-art painted it.
+//
+// Each records what it did after the response (recordToolEventLater —
+// counts, choices and codes only, never a deck's or a card's name or the
+// style's words): the action's name when it worked, `<name>_failed` with a
+// `reason` code when it didn't. A run's own outcome (painted, failed,
+// credits spent, why it stopped) is the studio's `run_finished`.
 // ---------------------------------------------------------------------------
 
 const NO_ACCESS = "Re-art deck isn't open to you.";
+
+/** One line in the tool's log (lib/tools/events.ts): never awaited, never
+ *  able to fail the action. */
+function track(access: { userId: string; via: ToolAccessPath | null }, event: string, props?: ToolEventProps): void {
+  recordToolEventLater({ slug: REART_TOOL_SLUG, userId: access.userId, event, access: access.via, props });
+}
+
+/** A refusal's code for the log: the action's own `code` (one vocabulary
+ *  across the tools: lib/tools/catalog.ts toolReasonOfCode), else the
+ *  branch's. */
+function reasonOf(failure: { code?: string }, fallback: string): string {
+  return failure.code ? toolReasonOfCode(failure.code) : fallback;
+}
+
+/** What a run is, for the log — the studio's own reading
+ *  (lib/tools/re-art/model.ts reartRunMode): a sample, named cards, or the
+ *  deck. An empty list of cards names none. */
+function runMode(run: { sample?: boolean; entryIds?: string[] }): "sample" | "cards" | "deck" {
+  return reartRunMode({ sample: run.sample === true, reroll: Boolean(run.entryIds?.length) && !run.sample });
+}
 
 export type ReartFailure = {
   ok: false;
@@ -78,14 +106,11 @@ export async function saveReartStyleAction(
   const deck = await getOwnedDeck(access.userId, deckId);
   if (!deck) return { ok: false, error: "That deck isn't one of yours." };
   const saved = await saveDeckStyle(access.userId, deck.id, style.data);
-  if (!saved) return { ok: false, error: "Couldn't save the style — try again." };
-  await recordToolEvent({
-    slug: REART_TOOL_SLUG,
-    userId: access.userId,
-    event: "save_style",
-    access: access.via,
-    props: { preset: saved.preset, theme_chars: saved.theme.length, version: saved.version },
-  });
+  if (!saved) {
+    track(access, "save_style_failed", { reason: "not_saved" });
+    return { ok: false, error: "Couldn't save the style — try again." };
+  }
+  track(access, "save_style", { preset: saved.preset, theme_chars: saved.theme.length, version: saved.version });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true, style: { preset: saved.preset, theme: saved.theme }, version: saved.version };
 }
@@ -120,16 +145,33 @@ export async function planReartAction(input: unknown): Promise<ReartPlanned | Re
   const parsed = reartRunSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "That run couldn't be read — reload the page." };
   const plan = await planReartRun(access.userId, parsed.data, "deck_import");
-  if (!plan.ok) return plan;
+  if (!plan.ok) {
+    track(access, "plan_failed", { reason: reasonOf(plan, "plan_refused"), mode: runMode(parsed.data) });
+    return plan;
+  }
   const [capacity, balance] = await Promise.all([getCardCapacity(), getFreshCreditBalance()]);
   const lines = planLines(plan);
+  const cost = costOf(lines, capacity);
+  // The confirm as the maker sees it: what the run would paint and cost, and
+  // whether a plan limit stands in its way.
+  track(access, "plan", {
+    mode: runMode(parsed.data),
+    cards: cost.cards,
+    makes: cost.makes,
+    credits: cost.credits,
+    skipped: plan.skipped.length,
+    in_style: plan.inStyle,
+    style_changed: plan.styleChanged,
+    over_capacity: cost.slotsLeftAfter !== null && cost.slotsLeftAfter < 0,
+    short_of_credits: balance !== null && cost.credits > balance,
+  });
   return {
     ok: true,
     lines,
     skipped: plan.skipped,
     inStyle: plan.inStyle,
     styleChanged: plan.styleChanged,
-    cost: costOf(lines, capacity),
+    cost,
     capacity,
     balance,
     aiAvailable: isGatewayConfigured(),
@@ -152,11 +194,20 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = reartRunSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "That run couldn't be read — reload the page." };
-  if (!isGatewayConfigured()) return { ok: false, error: "AI art isn't available right now — try again later." };
+  const failed = (reason: string, props: ToolEventProps = {}) =>
+    track(access, "start_failed", { reason, mode: runMode(parsed.data), ...props });
+  if (!isGatewayConfigured()) {
+    failed("ai_unavailable");
+    return { ok: false, error: "AI art isn't available right now — try again later." };
+  }
 
   const plan = await planReartRun(access.userId, parsed.data, "deck_import_commit");
-  if (!plan.ok) return plan;
+  if (!plan.ok) {
+    failed(reasonOf(plan, "plan_refused"));
+    return plan;
+  }
   if (plan.entries.length === 0) {
+    failed(plan.inStyle > 0 ? "all_in_style" : "nothing_to_paint");
     return {
       ok: false,
       error:
@@ -173,6 +224,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     const capacity = await getCardCapacity();
     const room = capacity ? remainingCapacity(capacity) : null;
     if (room !== null && makes > room) {
+      failed("capacity", { cards: plan.entries.length, makes });
       return {
         ok: false,
         code: "CARD_CAPACITY",
@@ -186,10 +238,14 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   const credits = plan.entries.reduce((sum, entry) => sum + entry.credits, 0);
   if (!isBillingEnabled()) {
     const daily = await checkDailyActionLimit(access.userId, "deck_reart_art", DECK_CARDS_DAILY_LIMIT, "AI pictures");
-    if (!daily.ok) return { ok: false, error: daily.message, code: "RATE_LIMITED", retryAfterSeconds: daily.retryAfterSeconds };
+    if (!daily.ok) {
+      failed("daily_limit", { cards: plan.entries.length, makes });
+      return { ok: false, error: daily.message, code: "RATE_LIMITED", retryAfterSeconds: daily.retryAfterSeconds };
+    }
   } else {
     const balance = await getFreshCreditBalance();
     if (balance !== null && balance < credits) {
+      failed("insufficient_credits", { cards: plan.entries.length, makes, credits });
       return {
         ok: false,
         code: "INSUFFICIENT_CREDITS",
@@ -219,6 +275,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     ),
   );
   if (live) {
+    failed("busy");
     return { ok: false, code: "BUSY", error: "Another run of this deck is still painting a card — wait for it, then try again." };
   }
   if ((open ?? []).length > 0 && isAdminConfigured()) {
@@ -234,7 +291,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
 
   // The style the run paints in becomes the deck's.
   const saved = await saveDeckStyle(access.userId, plan.deck.id, plan.style);
-  if (!saved) return { ok: false, error: "Couldn't save the deck's style — try again." };
+  if (!saved) {
+    failed("style_not_saved");
+    return { ok: false, error: "Couldn't save the deck's style — try again." };
+  }
 
   const jobPlan: ReartJobPlan = {
     deck_id: plan.deck.id,
@@ -279,29 +339,29 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     .single();
   if (error?.code === "23505") {
     // 0191's one-live-run-per-deck index: another start won the race.
+    failed("busy");
     return { ok: false, code: "BUSY", error: "Another run of this deck has just started — wait for it, then try again." };
   }
   if (error || !jobRow) {
     console.error("[re-art] job insert failed:", error?.message);
+    failed("job_not_saved");
     return { ok: false, error: "Couldn't start the run — try again." };
   }
 
-  await recordToolEvent({
-    slug: REART_TOOL_SLUG,
-    userId: access.userId,
-    event: parsed.data.sample ? "start_sample" : reroll ? "reroll" : "start",
-    access: access.via,
-    props: {
-      cards: plan.entries.length,
-      makes,
-      credits,
-      skipped: plan.skipped.length,
-      in_style: plan.inStyle,
-      scope: parsed.data.scope ?? "all",
-      preset: saved.preset,
-      style_changed: plan.styleChanged,
-      visibility: jobPlan.visibility,
-    },
+  // Named cards that aren't a sample: a FIRST paint of them is `paint_one`,
+  // a card Re-art has painted on this deck before is a `reroll` (the job's
+  // own `request.reroll` says only "named cards", and is left as it is).
+  const firstPaint = reroll && plan.entries.every((entry) => !entry.paintedBefore);
+  track(access, parsed.data.sample ? "start_sample" : reroll ? (firstPaint ? "paint_one" : "reroll") : "start", {
+    cards: plan.entries.length,
+    makes,
+    credits,
+    skipped: plan.skipped.length,
+    in_style: plan.inStyle,
+    scope: parsed.data.scope ?? "all",
+    preset: saved.preset,
+    style_changed: plan.styleChanged,
+    visibility: jobPlan.visibility,
   });
   return { ok: true, job: jobRow as unknown as GenerationJobView, skipped: plan.skipped, credits, version: saved.version };
 }
@@ -323,6 +383,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   if (!deck) return { ok: false, error: "That deck isn't one of yours." };
   const painted = (await readPaintedCards(deck.id)).get(cardId);
   if (!painted || painted.made || !painted.previousArtUrl || !painted.artUrl) {
+    track(access, "restore_failed", { reason: "no_earlier_art" });
     return { ok: false, error: "There's no earlier art to put back on this card." };
   }
   const supabase = await createClient();
@@ -333,6 +394,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     .maybeSingle();
   if (!card || card.owner_id !== access.userId) return { ok: false, error: "That card isn't one of yours." };
   if (card.art_url !== painted.artUrl) {
+    track(access, "restore_failed", { reason: "art_changed" });
     return { ok: false, error: "This card has other art now — change it in the card's editor." };
   }
   const back = (card.back_face ?? null) as CardBackFace | null;
@@ -353,6 +415,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
       : {}),
   });
   if (!result.ok) {
+    track(access, "restore_failed", { reason: "save_failed" });
     return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't put the old art back." };
   }
   // The painted pictures no card holds any more go; the row says "kept its
@@ -373,7 +436,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     previousArtistCredit: null,
     previousBackArtistCredit: null,
   });
-  await recordToolEvent({ slug: REART_TOOL_SLUG, userId: access.userId, event: "restore", access: access.via });
+  track(access, "restore", { faces: restoreBack ? 2 : 1 });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true };
 }

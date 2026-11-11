@@ -2,12 +2,12 @@ import "server-only";
 
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { after } from "next/server";
 import { createClient, getCurrentProfile } from "@/lib/supabase/server";
+import { afterResponse } from "@/lib/api/after-response";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import type { PlanTier } from "@/lib/billing/plans";
 import { TOOL_CATALOG, toolBySlug, type ToolDefinition } from "./catalog";
-import { recordToolEvent } from "./events";
+import { recordToolOpen } from "./events";
 import {
   resolveToolAccess,
   toolStageOf,
@@ -154,12 +154,12 @@ export async function checkToolAccess(slug: string): Promise<(ViewerTool & { use
 
 /**
  * A tool PAGE's first line: `requireToolAccess` plus the `open` event the
- * admin analytics count (written after the response, never in its way).
+ * admin analytics count — ONE a visit (`recordToolOpen`: the page renders
+ * again after every action and refresh), written after the response, never
+ * in its way.
  */
 export async function openTool(slug: string): Promise<ViewerTool & { userId: string }> {
   const entry = await requireToolAccess(slug);
-  after(() =>
-    recordToolEvent({ slug, userId: entry.userId, event: "open", access: entry.via }),
-  );
+  afterResponse(() => recordToolOpen({ slug, userId: entry.userId, access: entry.via }));
   return entry;
 }

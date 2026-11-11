@@ -20,9 +20,11 @@
 // its walker's art), the maybeboard (not the deck).
 // ---------------------------------------------------------------------------
 
+import { toolReasonOfCode } from "@/lib/tools/catalog";
 import { z } from "zod";
 import { STYLE_PRESETS, SURPRISE_PRESET_ID, stylePresetById } from "@/lib/ai/presets";
 import { BULK_AI_ART_CREDITS_PER_FACE, BULK_VISIBILITY_VALUES, type BulkVisibility } from "@/lib/tools/bulk-customize/model";
+import type { JobStep } from "@/lib/ai/generation-jobs";
 import type { DeckBoard } from "@/types/deck";
 import type { CardBackFace } from "@/types/card";
 import type { Json } from "@/types/supabase";
@@ -415,6 +417,89 @@ export function reartStateLabel(entry: Pick<ReartStudioEntry, "kind" | "state" |
   if (entry.state === "kept") return "Kept its own art";
   if (entry.state === "earlier") return "Painted in an earlier style";
   return entry.kind === "printing" ? "Real card — becomes yours" : "Your card — not painted yet";
+}
+
+// ---------------------------------------------------------------------------
+// A run's outcome, for the tool's log (the studio's `run_finished` event)
+// ---------------------------------------------------------------------------
+
+/** Why the runner stopped: every card settled, the maker's Stop, a plan
+ *  limit (the card limit, an empty balance), or a door it couldn't pass. */
+export type ReartRunStop = "done" | "cancelled" | "capacity" | "credits" | "error";
+
+/** A run as the log names it: a sample, named cards (paint one, a re-roll)
+ *  or the deck — from the job's own request. */
+export function reartRunMode(request: { sample?: unknown; reroll?: unknown } | null | undefined): "sample" | "cards" | "deck" {
+  return request?.sample === true ? "sample" : request?.reroll === true ? "cards" : "deck";
+}
+
+type OutcomeStep = Pick<JobStep, "key" | "status" | "credits" | "spend_ref" | "failure" | "error_code">;
+
+const stepsDone = (steps: ReadonlyArray<OutcomeStep>) => steps.filter((step) => step.status === "done").length;
+/** The credits really taken: a done step carries its charge's ref only when
+ *  the ledger was debited (lib/ai/credited-step.ts) — never an admin's, a
+ *  billing-off run's or a card found in the style already. */
+const stepsCharged = (steps: ReadonlyArray<OutcomeStep>) =>
+  steps.reduce((sum, step) => sum + (step.status === "done" && step.spend_ref ? (step.credits ?? 1) : 0), 0);
+
+/**
+ * What ONE pass of the runner did — from the job's steps as the pass began
+ * and as it ended — as the props of `run_finished`: numbers and codes only,
+ * never a card's name. `painted`, `credits` and `failed` are this pass's
+ * own (a run that is continued reports each pass, and the passes add up);
+ * `waiting` is the cards still to paint when it ended.
+ */
+export function reartRunOutcome(input: {
+  before: ReadonlyArray<OutcomeStep>;
+  after: ReadonlyArray<OutcomeStep>;
+  /** The pass ran the failed cards again (Continue / Try the failed ones
+   *  again): every card failed now failed in it. A first pass runs only the
+   *  cards still waiting, so a card that had failed before it is not its. */
+  retried: boolean;
+  stoppedBy: "CARD_CAPACITY" | "INSUFFICIENT_CREDITS" | null;
+  /** The runner ended on a door error. */
+  error: boolean;
+}): {
+  cards: number;
+  painted: number;
+  failed: number;
+  waiting: number;
+  credits: number;
+  stopped: ReartRunStop;
+  top_failure?: string;
+} {
+  const { before, after } = input;
+  const failedBefore = new Set(before.filter((step) => step.status === "failed").map((step) => step.key));
+  const failedInPass = after.filter((step) => step.status === "failed" && (input.retried || !failedBefore.has(step.key)));
+  const waiting = after.filter((step) => step.status === "pending" || step.status === "running").length;
+  const stopped: ReartRunStop =
+    input.stoppedBy === "CARD_CAPACITY"
+      ? "capacity"
+      : input.stoppedBy === "INSUFFICIENT_CREDITS"
+        ? "credits"
+        : input.error
+          ? "error"
+          : waiting > 0
+            ? "cancelled"
+            : "done";
+  // Why the failed cards failed, as the commonest code: the failure kind
+  // (lib/ai/failure.ts), a plan limit's code, or "refused" (stopped before
+  // any charge: the style changed, the card left the deck).
+  const reasons = new Map<string, number>();
+  for (const step of failedInPass) {
+    const reason = step.failure ?? (step.error_code ? toolReasonOfCode(step.error_code) : "refused");
+    reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+  }
+  const top = [...reasons.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  return {
+    cards: after.length,
+    painted: Math.max(0, stepsDone(after) - stepsDone(before)),
+    failed: failedInPass.length,
+    waiting,
+    credits: Math.max(0, stepsCharged(after) - stepsCharged(before)),
+    stopped,
+    ...(top ? { top_failure: top } : {}),
+  };
 }
 
 /**

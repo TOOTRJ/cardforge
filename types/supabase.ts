@@ -920,6 +920,15 @@ export type Database = {
         Update: { tool_slug?: string; user_id?: string; created_at?: string };
         Relationships: [];
       };
+      // Migration 0198 — the latest paid Collection AI call per user and
+      // kind (running / done with its answer / failed), so a page whose
+      // response never arrived can ask what became of its request.
+      collection_ai_results: {
+        Row: { user_id: string; kind: string; request_id: string; status: string; result: Json | null; created_at: string };
+        Insert: { user_id: string; kind: string; request_id: string; status: string; result?: Json | null; created_at?: string };
+        Update: { user_id?: string; kind?: string; request_id?: string; status?: string; result?: Json | null; created_at?: string };
+        Relationships: [];
+      };
       // Migration 0185 — the Collection Deck Builder's collection.
       collection_cards: {
         Row: {
@@ -3794,7 +3803,8 @@ export type Database = {
         }[];
       };
       admin_tool_summary: {
-        Args: Record<string, never>;
+        // `p_uses` since 0199: {"<tool slug>": ["<event>", …]} — what counts as a use.
+        Args: { p_uses?: Json };
         Returns: {
           tool_slug: string;
           testers: number;
@@ -3807,7 +3817,7 @@ export type Database = {
         }[];
       };
       admin_tool_detail: {
-        Args: { p_slug: string; p_days?: number };
+        Args: { p_slug: string; p_days?: number; p_uses?: Json };
         Returns: Json;
       };
       my_referral_code: {

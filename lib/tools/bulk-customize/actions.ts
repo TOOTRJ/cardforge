@@ -14,7 +14,7 @@ import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import type { Json } from "@/types/supabase";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater } from "@/lib/tools/events";
 import {
   BULK_CUSTOMIZE_TOOL_SLUG,
   BULK_EXACT_COPY_CODE,
@@ -43,10 +43,27 @@ import { bulkStepKey, type BulkCustomizeJobPlan } from "@/lib/tools/bulk-customi
 // START does it all again on the server (the `deck_import_commit` quota, as
 // a decklist's commit after its resolve) and is the one that decides: the
 // exact-copy refusal, the saved-card limit, the credits, then the job row.
-// Both start with the tool's gate.
+// Both start with the tool's gate, and both record how they ended after the
+// response (`recordToolEventLater`, never awaited): `prepare` / `start` with
+// their counts, or `prepare_failed` / `start_failed` with a `reason` code —
+// never a card's name.
 // ---------------------------------------------------------------------------
 
 const NO_ACCESS = "Bulk Customize isn't open to you.";
+
+type Access = NonNullable<Awaited<ReturnType<typeof checkToolAccess>>>;
+
+/** One tool event of the viewer the gate let in, after the response. */
+function record(access: Access, event: string, props: Record<string, string | number | boolean | null>): void {
+  recordToolEventLater({ slug: BULK_CUSTOMIZE_TOOL_SLUG, userId: access.userId, event, access: access.via, props });
+}
+
+/** How many of a selection come from each door (a deck's entries, the
+ *  collection, the tool page's search). */
+function sourceCounts(sources: readonly BulkSource[]) {
+  const count = (kind: BulkSource["kind"]) => sources.filter((source) => source.kind === kind).length;
+  return { from_deck: count("deck_entry"), from_collection: count("collection"), from_search: count("scryfall") };
+}
 
 export type BulkPreparedCard = {
   key: string;
@@ -85,16 +102,26 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
   const access = await checkToolAccess(BULK_CUSTOMIZE_TOOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = bulkSourcesSchema.safeParse(sourcesInput);
-  if (!parsed.success) return { ok: false, error: "Pick between 1 and 100 real cards." };
+  if (!parsed.success) {
+    record(access, "prepare_failed", { reason: "invalid" });
+    return { ok: false, error: "Pick between 1 and 100 real cards." };
+  }
+  const from = sourceCounts(parsed.data);
 
   const { resolved, skipped } = await resolveBulkSources(access.userId, parsed.data);
   let cards: BulkPreparedCard[] = [];
   if (resolved.length > 0) {
     const limit = await checkScryfallRateLimit(access.userId, "deck_import");
-    if (!limit.ok) return { ok: false, error: limit.message, code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds };
+    if (!limit.ok) {
+      record(access, "prepare_failed", { reason: "rate_limited", cards: resolved.length, ...from });
+      return { ok: false, error: limit.message, code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds };
+    }
     await logScryfallCall(access.userId, "deck_import");
     const printings = await fetchBulkPrintings(resolved.map((source) => source.scryfallId));
-    if (!printings) return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
+    if (!printings) {
+      record(access, "prepare_failed", { reason: "scryfall_unavailable", cards: resolved.length, ...from });
+      return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
+    }
     const verifiedKeys = new Set(await getVerifiedFrameKeys());
     for (const source of resolved) {
       const card = printings.get(source.scryfallId.toLowerCase());
@@ -122,13 +149,7 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
     getCardCapacity(),
     getFreshCreditBalance(),
   ]);
-  await recordToolEvent({
-    slug: BULK_CUSTOMIZE_TOOL_SLUG,
-    userId: access.userId,
-    event: "prepare",
-    access: access.via,
-    props: { cards: cards.length, skipped: skipped.length, source: parsed.data[0]?.kind ?? null },
-  });
+  record(access, "prepare", { cards: cards.length, skipped: skipped.length, ...from });
   return {
     ok: true,
     cards,
@@ -155,26 +176,49 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
   const body = (input ?? {}) as { sources?: unknown; choices?: unknown };
   const sources = bulkSourcesSchema.safeParse(body.sources);
   const choices = bulkChoicesSchema.safeParse(body.choices);
-  if (!sources.success || !choices.success) return { ok: false, error: "That batch couldn't be read — open the dialog again." };
+  if (!sources.success || !choices.success) {
+    record(access, "start_failed", { reason: "invalid" });
+    return { ok: false, error: "That batch couldn't be read — open the dialog again." };
+  }
+  /** A batch that didn't start, with why and what it asked for. */
+  const refused = (reason: string, props: Record<string, number> = {}) =>
+    record(access, "start_failed", {
+      reason,
+      selected: sources.data.length,
+      look: choices.data.look,
+      art: choices.data.art,
+      ...props,
+    });
 
   // A batch that changes nothing is a set of exact copies: refused at the
   // door (the card action's EXACT_COPY, lib/cards/exact-copy.ts).
   if (!choicesChangeSomething(choices.data)) {
+    refused("exact_copy");
     return { ok: false, code: BULK_EXACT_COPY_CODE, error: BULK_EXACT_COPY_REASON };
   }
   if (choices.data.art === "ai" && !isGatewayConfigured()) {
+    refused("ai_unavailable");
     return { ok: false, error: "AI art isn't available right now — pick another art choice." };
   }
 
   const { resolved, skipped: skippedSources } = await resolveBulkSources(access.userId, sources.data);
   const skipped: Array<{ name: string; reason: string }> = skippedSources.map(({ name, reason }) => ({ name, reason }));
-  if (resolved.length === 0) return { ok: false, error: skipped[0]?.reason ?? "None of these cards can be customized." };
+  if (resolved.length === 0) {
+    refused("no_cards", { skipped: skipped.length });
+    return { ok: false, error: skipped[0]?.reason ?? "None of these cards can be customized." };
+  }
 
   const limit = await checkScryfallRateLimit(access.userId, "deck_import_commit");
-  if (!limit.ok) return { ok: false, error: limit.message, code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds };
+  if (!limit.ok) {
+    refused("rate_limited", { cards: resolved.length });
+    return { ok: false, error: limit.message, code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds };
+  }
   await logScryfallCall(access.userId, "deck_import_commit");
   const printings = await fetchBulkPrintings(resolved.map((source) => source.scryfallId));
-  if (!printings) return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
+  if (!printings) {
+    refused("scryfall_unavailable", { cards: resolved.length });
+    return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
+  }
 
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
   const entitlements = await getEntitlements();
@@ -200,6 +244,8 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
     entries.push({ source: source.source, name: planned.title, credits: planned.credits });
   }
   if (entries.length === 0) {
+    // Every card came out unchanged (or unknown to Scryfall).
+    refused("nothing_changes", { skipped: skipped.length });
     return {
       ok: false,
       code: BULK_EXACT_COPY_CODE,
@@ -212,6 +258,7 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
   const capacity = await getCardCapacity();
   const room = capacity ? remainingCapacity(capacity) : null;
   if (room !== null && entries.length > room) {
+    refused("capacity", { cards: entries.length, slots_left: room });
     return {
       ok: false,
       code: "CARD_CAPACITY",
@@ -227,10 +274,14 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
   if (credits > 0) {
     if (!isBillingEnabled()) {
       const daily = await checkDailyActionLimit(access.userId, "bulk_customize_art", DECK_CARDS_DAILY_LIMIT, "AI pictures");
-      if (!daily.ok) return { ok: false, error: daily.message, code: "RATE_LIMITED", retryAfterSeconds: daily.retryAfterSeconds };
+      if (!daily.ok) {
+        refused("daily_limit", { cards: entries.length, credits });
+        return { ok: false, error: daily.message, code: "RATE_LIMITED", retryAfterSeconds: daily.retryAfterSeconds };
+      }
     } else {
       const balance = await getFreshCreditBalance();
       if (balance !== null && balance < credits) {
+        refused("insufficient_credits", { cards: entries.length, credits, balance });
         return {
           ok: false,
           code: "INSUFFICIENT_CREDITS",
@@ -269,26 +320,23 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
     .single();
   if (error || !jobRow) {
     console.error("[bulk-customize] job insert failed:", error?.message);
+    refused("job_not_created", { cards: entries.length, credits });
     return { ok: false, error: "Couldn't start the batch — try again." };
   }
 
-  await recordToolEvent({
-    slug: BULK_CUSTOMIZE_TOOL_SLUG,
-    userId: access.userId,
-    event: "start",
-    access: access.via,
-    props: {
-      cards: entries.length,
-      skipped: skipped.length,
-      credits,
-      look: choices.data.look,
-      border: choices.data.border,
-      set_symbol: choices.data.setSymbol,
-      watermark: choices.data.watermark,
-      art: choices.data.art,
-      style: choices.data.art === "ai" ? choices.data.artStyle : null,
-      visibility: choices.data.visibility,
-    },
+  // `credits` here is the batch's PRICE (nothing is charged yet — each step
+  // reserves its own); what a run really spent is `run_finished`'s.
+  record(access, "start", {
+    cards: entries.length,
+    skipped: skipped.length,
+    credits,
+    look: choices.data.look,
+    border: choices.data.border,
+    set_symbol: choices.data.setSymbol,
+    watermark: choices.data.watermark,
+    art: choices.data.art,
+    style: choices.data.art === "ai" ? choices.data.artStyle : null,
+    visibility: choices.data.visibility,
   });
   return { ok: true, job: jobRow as unknown as GenerationJobView, skipped, credits };
 }

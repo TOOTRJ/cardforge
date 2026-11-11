@@ -134,6 +134,13 @@ export function makersLine(makers: readonly string[], shown = 2): string {
 /** The most item states one saved kit keeps. */
 export const MAX_SAVED_ITEMS = 300;
 
+/** One user's token renders (POST /api/tools/token-kit/render): a minute's
+ *  worth no three-at-a-time export reaches, and ten whole kits an hour. The
+ *  export does not retry a refused render, so these sit above anything an
+ *  honest export of MAX_SAVED_ITEMS tokens can do. */
+export const KIT_RENDERS_PER_MINUTE = 600;
+export const KIT_RENDERS_PER_HOUR = 10 * MAX_SAVED_ITEMS;
+
 /** A stored kit's item states, read defensively: what no longer parses is
  *  left out (the defaults stand in for it). */
 export function storedKitItems(raw: unknown): Record<string, KitItemState> {
@@ -169,4 +176,74 @@ export function mergeKitItems(
     room -= 1;
   }
   return merged;
+}
+
+// ---------------------------------------------------------------------------
+// How a kit's print / download ENDED, for the tool's analytics. The browser
+// builds the file (DeckExportProvider → runKitExport), so no server action
+// sees it finish: the page reads the provider's state and records the end
+// once (components/tools/token-kit/token-kit-workspace.tsx). Counts, the
+// file's kind and a reason code — never a token's or a kit's name.
+// ---------------------------------------------------------------------------
+
+/** What the outcome reads of the export provider's state (structural, so
+ *  this module imports no component). */
+export type KitExportSnapshot = {
+  id: number;
+  subject: string;
+  kind: string;
+  status: string;
+  /** Tokens asked for / rendered so far. */
+  total: number;
+  done: number;
+  /** The tokens that didn't render (their count is all that is read). */
+  failed: readonly string[];
+  startedAt: number;
+  finishedAt: number | null;
+  file: { bytes: number; cards: number } | null;
+};
+
+export type KitExportOutcome = {
+  event: "kit_export_done" | "kit_export_failed";
+  props: Record<string, string | number>;
+};
+
+/**
+ * The event a FINISHED kit export records, or null — another subject's
+ * export (a deck, a card selection), or one still running. `kit_export_done`
+ * = the file was built (`rendered` tokens in it, `failed` left out);
+ * `kit_export_failed` = no file, with why: the maker cancelled it, or it
+ * broke (a refused print file is the render route's `render_refused`).
+ */
+export function kitExportOutcome(state: KitExportSnapshot | null | undefined): KitExportOutcome | null {
+  if (!state || state.subject !== "kit") return null;
+  const kind = state.kind === "pdf" ? "pdf" : "zip";
+  const ms = state.finishedAt === null ? 0 : Math.max(0, state.finishedAt - state.startedAt);
+  if (state.status === "done") {
+    return {
+      event: "kit_export_done",
+      props: {
+        kind,
+        tokens: state.total,
+        rendered: state.file?.cards ?? 0,
+        failed: state.failed.length,
+        kb: Math.round((state.file?.bytes ?? 0) / 1024),
+        ms,
+      },
+    };
+  }
+  if (state.status === "failed" || state.status === "cancelled") {
+    return {
+      event: "kit_export_failed",
+      props: {
+        reason: state.status === "cancelled" ? "cancelled" : "error",
+        kind,
+        tokens: state.total,
+        rendered: Math.max(0, state.done - state.failed.length),
+        failed: state.failed.length,
+        ms,
+      },
+    };
+  }
+  return null;
 }

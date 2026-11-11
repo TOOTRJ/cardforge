@@ -20,11 +20,18 @@ const m = vi.hoisted(() => ({
   refund: vi.fn(),
   suggest: vi.fn(),
   event: vi.fn(),
+  keep: vi.fn(),
+  start: vi.fn(),
+  end: vi.fn(),
+  calls: [] as Array<Record<string, unknown>>,
+  order: [] as string[],
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
-vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event }));
+// The actions record after the response (recordToolEventLater); the same spy
+// stands in for both writers.
+vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event, recordToolEventLater: m.event }));
 vi.mock("@/lib/ai/provider", () => ({ isDesignAiConfigured: () => true, designModel: vi.fn() }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => false }));
 vi.mock("@/lib/ai/rate-limit", () => ({
@@ -41,6 +48,18 @@ vi.mock("@/lib/tools/collection/queries", () => ({
   listCollectionCardsById: m.rows,
 }));
 vi.mock("@/lib/tools/collection/ai-suggest", () => ({ suggestCommanders: m.suggest }));
+vi.mock("@/lib/tools/collection/ai-results", () => ({
+  keepCollectionAiResult: m.keep,
+  startCollectionAiResult: m.start,
+  endCollectionAiResult: m.end,
+  // The real wrapper's contract (held in collection-ai-recovery.test.ts);
+  // here it hands each call's bookkeeping to the test.
+  withCollectionAiRecord: async (_kind: string, handle: (call: Record<string, unknown>) => Promise<Response>) => {
+    const call = { userId: null, requestId: null, charged: false, ended: false };
+    m.calls.push(call);
+    return handle(call);
+  },
+}));
 
 import { POST } from "@/app/api/tools/collection-builder/suggest/route";
 
@@ -70,10 +89,29 @@ function commander(name: string, colorIdentity: string[] = ["R"], commanderLegal
 }
 
 const post = (body: unknown) => POST(new Request("http://x/api", { method: "POST", body: JSON.stringify(body) }));
+
+/** The tool event the route recorded: its name and its props, under the
+ *  viewer and the access path the gate handed it. */
+const recorded = (event: string, props: Record<string, unknown> = {}) =>
+  expect.objectContaining({
+    slug: "collection-builder",
+    userId: "u1",
+    access: "grant",
+    event,
+    props: expect.objectContaining(props),
+  });
 const THREE = [commander("A"), commander("B", ["U"]), commander("C", ["G"])];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.keep.mockReset();
+  m.start.mockReset();
+  m.end.mockReset();
+  m.settle.mockReset();
+  m.keep.mockResolvedValue("kept");
+  m.start.mockResolvedValue("started");
+  m.order.length = 0;
+  m.calls.length = 0;
   m.access.mockResolvedValue({ userId: "u1", via: "grant" });
   m.commanders.mockResolvedValue(THREE);
   m.cards.mockResolvedValue([]);
@@ -88,6 +126,8 @@ describe("refusals before the charge", () => {
     expect((await post({})).status).toBe(404);
     expect(m.commanders).not.toHaveBeenCalled();
     expect(m.spend).not.toHaveBeenCalled();
+    // Nobody the tool let in: nothing to record.
+    expect(m.event).not.toHaveBeenCalled();
   });
 
   it("fewer than three legal commanders", async () => {
@@ -96,6 +136,8 @@ describe("refusals before the charge", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).code).toBe("TOO_FEW_COMMANDERS");
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest_failed", { reason: "too_few_commanders", commanders: 2 }));
   });
 
   it("fewer than three in the wanted colours", async () => {
@@ -103,18 +145,26 @@ describe("refusals before the charge", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).error).toMatch(/in those colours/);
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(
+      recorded("ai_suggest_failed", { reason: "too_few_in_colours", commanders: 3, shortlist: 1, colour_filter: 1 }),
+    );
   });
 
   it("preferences that don't parse", async () => {
     expect((await post({ deckType: "storm" })).status).toBe(400);
     expect((await post({ bracket: 9 })).status).toBe(400);
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event.mock.calls.map(([input]) => [input.event, input.props])).toEqual([
+      ["ai_suggest_failed", { reason: "invalid" }],
+      ["ai_suggest_failed", { reason: "invalid" }],
+    ]);
   });
 
   it("a collection that can't be read", async () => {
     m.cards.mockRejectedValue(new Error("scoring read failed"));
     expect((await post({})).status).toBe(503);
     expect(m.spend).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest_failed", { reason: "collection_unreadable" }));
   });
 });
 
@@ -139,9 +189,86 @@ describe("the charge", () => {
     expect(options.ref).toMatch(/^spend:collection-suggest:/);
     expect(m.settle).toHaveBeenCalledWith(options.ref);
     expect(m.refund).not.toHaveBeenCalled();
-    expect(m.event).toHaveBeenCalledWith(expect.objectContaining({ event: "ai_suggest" }));
+    // The success, once: its counts, what was asked for and the credit charged.
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(
+      recorded("ai_suggest", { commanders: 3, shortlist: 3, suggested: 3, deck_type: "tokens", bracket: 2, credits: 1, ms: expect.any(Number) }),
+    );
     // The shortlist and the preferences reach the call.
     expect(m.suggest.mock.calls[0][0].preferences).toEqual({ deckType: "tokens", bracket: 2 });
+  });
+
+  it("the request is on record BEFORE the charge, and its answer is KEPT before the credit is settled — a lost response can't lose it", async () => {
+    const REQUEST = "5b0c6c0e-7d0b-4a52-9f3e-0c1d2e3f4a5b";
+    m.suggest.mockImplementation(async () => {
+      m.order.push("ai");
+      return { overview: "Goblins.", suggestions: THREE.map((c, i) => ({ commanderId: c.id, name: `S${i}`, keyCards: [] })) };
+    });
+    m.spend.mockImplementation(async () => {
+      m.order.push("spend");
+      return { ok: true, charged: true };
+    });
+    m.start.mockImplementation(async () => {
+      m.order.push("start");
+      return "started";
+    });
+    m.keep.mockImplementation(async () => {
+      m.order.push("keep");
+      return "kept";
+    });
+    m.settle.mockImplementation(async () => void m.order.push("settle"));
+    const response = await post({ deckType: "tokens", requestId: REQUEST });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(m.order).toEqual(["start", "spend", "ai", "keep", "settle"]);
+    expect(m.start).toHaveBeenCalledWith("u1", "suggest", REQUEST);
+    // What is kept is what the page is sent.
+    expect(m.keep).toHaveBeenCalledWith("u1", "suggest", REQUEST, body.result);
+    // The route wrote the row's ending itself.
+    expect(m.calls.at(-1)).toEqual({ userId: "u1", requestId: REQUEST, charged: true, ended: true });
+    // The id is the page's bookkeeping: it never reaches the AI call.
+    expect(m.suggest.mock.calls[0][0].preferences).toEqual({ deckType: "tokens" });
+  });
+
+  it("a request that can't be put on record is REFUSED before any charge — one that may be charged always has a row", async () => {
+    m.start.mockResolvedValue("failed");
+    const response = await post({ requestId: "5b0c6c0e-7d0b-4a52-9f3e-0c1d2e3f4a5b" });
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toMatch(/nothing was charged/);
+    expect(m.spend).not.toHaveBeenCalled();
+    expect(m.suggest).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest_failed", { reason: "not_recorded" }));
+  });
+
+  it("an answer that could NOT be kept is still delivered, but its credit is left unsettled (the sweep returns it) and its row is not called done", async () => {
+    m.suggest.mockResolvedValue({ overview: "x", suggestions: THREE.map((c) => ({ commanderId: c.id, name: "S", keyCards: [] })) });
+    m.keep.mockResolvedValue("failed");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await post({ requestId: "5b0c6c0e-7d0b-4a52-9f3e-0c1d2e3f4a5b" });
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.suggestions).toHaveLength(3);
+    expect(m.settle).not.toHaveBeenCalled();
+    expect(m.calls.at(-1)).toMatchObject({ charged: true, ended: false });
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest", { credits: 0, unsettled: true }));
+  });
+
+  it("a page with no request id (or one that is no uuid) is served and settled as before — it just can't be asked about again", async () => {
+    m.suggest.mockResolvedValue({ overview: "x", suggestions: THREE.map((c) => ({ commanderId: c.id, name: "S", keyCards: [] })) });
+    m.start.mockResolvedValue("skipped");
+    m.keep.mockResolvedValue("skipped");
+    expect((await post({})).status).toBe(200);
+    expect(m.start.mock.calls[0][2]).toBeUndefined();
+    expect((await post({ requestId: "not-a-uuid" })).status).toBe(200);
+    expect(m.start.mock.calls[1][2]).toBeNull();
+    expect(m.settle).toHaveBeenCalledTimes(2);
+    expect(m.calls.at(-1)).toMatchObject({ requestId: null });
+  });
+
+  it("a refusal before the charge leaves its row to be ended `refused` (charged: false, no ending written)", async () => {
+    m.spend.mockResolvedValue({ ok: false, reason: "insufficient_credits", message: "Out of credits.", balance: 0 });
+    expect((await post({ requestId: "5b0c6c0e-7d0b-4a52-9f3e-0c1d2e3f4a5b" })).status).toBe(402);
+    expect(m.calls.at(-1)).toEqual({ userId: "u1", requestId: "5b0c6c0e-7d0b-4a52-9f3e-0c1d2e3f4a5b", charged: false, ended: false });
+    expect(m.keep).not.toHaveBeenCalled();
   });
 
   it("a failed call is refunded, never settled", async () => {
@@ -152,14 +279,50 @@ describe("the charge", () => {
     expect(response.status).toBe(502);
     expect((await response.json()).code).toBe("design_unreadable");
     expect(m.settle).not.toHaveBeenCalled();
+    expect(m.keep).not.toHaveBeenCalled();
+    // …and the request's row says it failed, so a page that lost this answer is told so.
+    expect(m.end).toHaveBeenCalledWith("u1", "suggest", undefined, "failed");
+    expect(m.calls.at(-1)).toMatchObject({ charged: true, ended: true });
     const ref = m.spend.mock.calls[0][2].ref;
     expect(m.refund).toHaveBeenCalledWith("u1", 1, "suggest_collection_commander", `refund:${ref}`);
+    // The failure, with the AI's own failure kind and the credit back.
+    expect(m.event).toHaveBeenCalledTimes(1);
+    expect(m.event).toHaveBeenCalledWith(
+      recorded("ai_suggest_failed", { reason: "design_unreadable", refunded: true, refund_pending: false, commanders: 3, shortlist: 3 }),
+    );
+    expect(m.event.mock.calls[0][0].props).not.toHaveProperty("credits");
+  });
+
+  it("a refund that didn't land is recorded as pending, never as returned", async () => {
+    m.suggest.mockRejectedValue(new Error("provider timeout"));
+    m.refund.mockResolvedValue(false);
+    expect((await post({})).status).toBe(502);
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest_failed", { refunded: false, refund_pending: true }));
+  });
+
+  it("nothing charged (an admin, billing off) is recorded as zero credits", async () => {
+    m.spend.mockResolvedValue({ ok: true, charged: false });
+    m.suggest.mockResolvedValue({ overview: "", suggestions: [] });
+    expect((await post({})).status).toBe(200);
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest", { credits: 0 }));
   });
 
   it("out of credits answers 402 and never calls the AI", async () => {
     m.spend.mockResolvedValue({ ok: false, reason: "insufficient_credits", message: "You're out of AI credits.", balance: 0 });
     const response = await post({});
     expect(response.status).toBe(402);
+    expect(m.suggest).not.toHaveBeenCalled();
+    expect(m.event).toHaveBeenCalledWith(recorded("ai_suggest_failed", { reason: "insufficient_credits" }));
+  });
+
+  it("a credit check that failed, and the AI rate limit, are their own reasons", async () => {
+    m.spend.mockResolvedValue({ ok: false, reason: "error", message: "Try again.", balance: Number.NaN });
+    expect((await post({})).status).toBe(503);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("ai_suggest_failed", { reason: "credit_check_failed" }));
+    const { checkAiRateLimit } = await import("@/lib/ai/rate-limit");
+    vi.mocked(checkAiRateLimit).mockResolvedValueOnce({ ok: false, retryAfterSeconds: 30, message: "Slow down." } as never);
+    expect((await post({})).status).toBe(429);
+    expect(m.event).toHaveBeenLastCalledWith(recorded("ai_suggest_failed", { reason: "rate_limited" }));
     expect(m.suggest).not.toHaveBeenCalled();
   });
 });

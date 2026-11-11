@@ -207,3 +207,96 @@ export function adminToolHref(slug: string): string {
 
 /** An event name a tool may record (tool_events.event's CHECK). */
 export const TOOL_EVENT_RE = /^[a-z][a-z0-9_]{1,39}$/;
+
+/**
+ * The events a tool's BROWSER may record (lib/tools/track-client.ts
+ * trackToolEvent → POST /api/tools/usage → lib/tools/client-events.ts): the
+ * moments no server code of the tool sees — a link copied, a file the
+ * browser built and saved, a run its own runner finished, an answer that
+ * never arrived. Everything else is recorded by the server where it
+ * happens. A name that is not listed is dropped: the route is callable by
+ * any signed-in tester, and an open door let one write whatever "uses" it
+ * liked into the tool's numbers. Never `open` (the page records its own
+ * visit) and never a server action's event name. What a browser reports is
+ * still only what it says: its `credits` is stored as `credits_seen`
+ * (lib/tools/client-events.ts) — a tool's cost is the credit ledger's.
+ */
+export const TOOL_CLIENT_EVENTS: Readonly<Record<ToolSlug, readonly string[]>> = {
+  "collection-builder": ["import_stopped", "import_resumed", "restore_draft"],
+  "token-kit": [
+    "kit_exported",
+    "kit_export_done",
+    "kit_export_failed",
+    "art_uploaded",
+    "art_upload_failed",
+    "ai_art_done",
+    "ai_art_failed",
+  ],
+  "bulk-customize": ["run_finished"],
+  "re-art-deck": ["run_finished", "stop", "continue", "retry"],
+  "pip-forge": [],
+  "custom-symbols": [],
+  "set-symbol-studio": ["open_png"],
+  "play-exports": ["dialog_opened", "export_saved", "export_build_failed", "export_cancelled"],
+  "rule0-sheet": ["copy_link", "print", "ai_draft_lost"],
+};
+
+/** Whether `event` is one `slug`'s browser may record. */
+export function isToolClientEvent(slug: string, event: string): boolean {
+  return isToolSlug(slug) && TOOL_CLIENT_EVENTS[slug].includes(event);
+}
+
+/**
+ * The events that are a USE of a tool: it did one of its jobs for someone
+ * (a kit built, a deck drafted, a symbol made, a file exported). What the
+ * admin pages count as "uses" and "using users" — handed to the readers as
+ * their `p_uses` (migration 0199), never restated in SQL, and read at query
+ * time, so a corrected list re-reads every stored row.
+ *
+ * NOT a use, by rule: the page's `open`; a refusal or failure
+ * (`toolEventIsFailure`); a step on the way (`plan`, `prepare`,
+ * `dialog_opened`, `import_started`); how something ended when its start is
+ * already the use (`run_finished`, `kit_export_done`, `export_saved`);
+ * housekeeping (`rename`, `delete`, `remove`, `clear`); and a visitor's
+ * `shared_view` (an audience number, not the owner's use). A new success
+ * event is added here in the same change, or it counts as nothing.
+ */
+export const TOOL_USE_EVENTS: Readonly<Record<ToolSlug, readonly string[]>> = {
+  "collection-builder": ["import", "add_card", "draft", "ai_build", "ai_suggest", "save_deck", "buildable_decks"],
+  "token-kit": ["kit_built", "token_saved", "kit_exported", "ai_art", "art_uploaded"],
+  "bulk-customize": ["start", "customize_one"],
+  "re-art-deck": ["start", "start_sample", "reroll", "paint_one"],
+  "pip-forge": ["forge", "recolour", "use_as_pip"],
+  "custom-symbols": ["create", "edit", "replace_picture"],
+  "set-symbol-studio": ["generate", "upload", "recut", "open_png"],
+  "play-exports": ["export"],
+  "rule0-sheet": ["save", "share_on", "ai_draft", "copy_link", "print"],
+};
+
+/**
+ * An action's or a step's error CODE as an event's `reason`: lower case, and
+ * the card limit `capacity` in every tool. One vocabulary across the tools,
+ * so a reader can add a reason up: `invalid` (a body or input that can't be
+ * read), `ai_unavailable`, `rate_limited`, `daily_limit`, `capacity`,
+ * `insufficient_credits`, an AI failure kind (lib/ai/failure.ts) — never a
+ * tool's own word for the same thing.
+ */
+export function toolReasonOfCode(code: string): string {
+  const reason = code.toLowerCase();
+  return reason === "card_capacity" ? "capacity" : reason;
+}
+
+/** A refusal or a failure: `<name>_failed`, `_refused` or `_lost`. */
+export function toolEventIsFailure(event: string): boolean {
+  return /_(failed|refused|lost)$/.test(event);
+}
+
+export type ToolEventKind = "open" | "use" | "failure" | "other";
+
+/** What an event is, for a reader: the visit, a use, a failure, or
+ *  anything else (a step, an ending, housekeeping). */
+export function toolEventKind(slug: string, event: string): ToolEventKind {
+  if (event === "open") return "open";
+  if (toolEventIsFailure(event)) return "failure";
+  return isToolSlug(slug) && TOOL_USE_EVENTS[slug].includes(event) ? "use" : "other";
+}

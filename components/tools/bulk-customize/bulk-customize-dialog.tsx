@@ -35,8 +35,10 @@ import {
   BULK_SET_SYMBOL_VALUES,
   BULK_VISIBILITY_VALUES,
   BULK_WATERMARK_VALUES,
+  BULK_CUSTOMIZE_TOOL_SLUG,
   DEFAULT_BULK_CHOICES,
   bulkCostLine,
+  bulkRunSummary,
   bulkWatermarkLabel,
   choicesChangeSomething,
   type BulkArt,
@@ -49,6 +51,7 @@ import {
   type BulkWatermark,
 } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard, type BulkPlannedCard } from "@/lib/tools/bulk-customize/planner";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   prepareBulkCustomizeAction,
   startBulkCustomizeAction,
@@ -250,6 +253,23 @@ export function BulkCustomizeDialog({ open, onOpenChange, sources, surface, onFi
   // the opener's own "finished" waits for the dialog to close.
   useEffect(() => {
     if (runner.runsEnded > 0) onFinished?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner.runsEnded]);
+
+  // How each run ended, for the tool's analytics (`run_finished`): the
+  // browser runs the steps, so only here is a run known to be over. Once a
+  // run — the cards it made, the credits it really spent, why it stopped;
+  // counts and codes, never a card's name. Best effort.
+  const runTotals = useRef<{ jobId: string | null; made: number; credits: number }>({ jobId: null, made: 0, credits: 0 });
+  useEffect(() => {
+    if (runner.runsEnded === 0 || !job) return;
+    const { props, totals } = bulkRunSummary(
+      { steps: runner.steps, stoppedBy: runner.stoppedBy, error: runner.error, paused: runner.paused, run: runner.runsEnded },
+      runTotals.current.jobId === job.id ? runTotals.current : undefined,
+    );
+    runTotals.current = { jobId: job.id, ...totals };
+    trackToolEvent(BULK_CUSTOMIZE_TOOL_SLUG, "run_finished", { ...props, art: choices.art, surface });
+    // Only a run's end records it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runner.runsEnded]);
 

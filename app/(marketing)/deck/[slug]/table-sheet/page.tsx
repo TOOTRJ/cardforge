@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
-import { after } from "next/server";
 import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { deckTilePips } from "@/components/decks/deck-tile";
@@ -19,7 +19,9 @@ import { qrPath } from "@/lib/qr/qr-path";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { recordToolEvent } from "@/lib/tools/events";
+import { afterResponse } from "@/lib/api/after-response";
+import { isCountableView } from "@/lib/decks/views";
+import { recordToolEventLater, recordToolOpen } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
 import { EMPTY_TABLE_SHEET, RULE0_TOOL_SLUG, tableSheetPath } from "@/lib/tools/rule0/model";
 import { getTableSheet } from "@/lib/tools/rule0/queries";
@@ -104,16 +106,19 @@ export default async function TableSheetPage({ params }: { params: Promise<Param
   // Never a code that sends a stranger to a deck they can't open.
   const qr = deck.visibility === "private" ? null : { url: deckUrl, path: qrPath(deckUrl) };
 
-  const userId = user?.id ?? null;
-  after(() =>
-    recordToolEvent({
-      slug: RULE0_TOOL_SLUG,
-      userId,
-      event: isOwner ? "open" : "shared_view",
-      access: isOwner ? (access?.via ?? null) : null,
-      props: { custom: facts.customCount, game_changers: facts.gameChangers.length },
-    }),
-  );
+  // What the admin analytics count. The OWNER's view is a visit of the
+  // tool — one `open` a visit, like the tool's own page. Anyone else's is a
+  // `shared_view`: only a PERSON's (no crawler, no link unfurler, no
+  // prefetch — every one of those wrote a row), and with no user id: the
+  // tool's users are the makers, and a visitor who is signed in is not one.
+  const sheetProps = { custom: facts.customCount, game_changers: facts.gameChangers.length };
+  if (isOwner && user) {
+    const ownerId = user.id;
+    const via = access?.via ?? null;
+    afterResponse(() => recordToolOpen({ slug: RULE0_TOOL_SLUG, userId: ownerId, access: via, props: sheetProps }));
+  } else if (isCountableView(await headers())) {
+    recordToolEventLater({ slug: RULE0_TOOL_SLUG, userId: null, event: "shared_view", access: null, props: sheetProps });
+  }
 
   return (
     <PageContainer className="py-6 sm:py-8">

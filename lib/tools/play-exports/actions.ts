@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { isUuid } from "@/lib/ids";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
 import { collectCardsExport, collectDeckExport, MAX_SELECTION_CARDS } from "./collect";
 import { PLAY_TARGETS, type PlayExport } from "./model";
@@ -15,6 +15,11 @@ import { PLAY_TARGETS, type PlayExport } from "./model";
 // — Cockatrice's ZIP fetches each stored bake there, a few at a time, so no
 // function ever holds a deck's pictures. Free on every plan: the gate is the
 // beta (checkToolAccess), never a tier, and nothing here costs a credit.
+//
+// Recorded (tool_events, after the response): `export` when the model is
+// handed to the browser, `export_failed` with a `reason` when it is refused.
+// Whether a FILE was then saved is the browser's to say (`export_saved`,
+// components/tools/play-exports/play-export-dialog.tsx).
 // ---------------------------------------------------------------------------
 
 const SLUG = "play-exports";
@@ -41,8 +46,19 @@ export type PlayExportResult =
 export async function buildPlayExportAction(input: PlayExportInput): Promise<PlayExportResult> {
   const access = await checkToolAccess(SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const refused = (reason: string, props: ToolEventProps = {}) =>
+    recordToolEventLater({
+      slug: SLUG,
+      userId: access.userId,
+      event: "export_failed",
+      access: access.via,
+      props: { reason, ...props },
+    });
   const parsed = inputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "That export request wasn't valid." };
+  if (!parsed.success) {
+    refused("invalid");
+    return { ok: false, error: "That export request wasn't valid." };
+  }
   const { target, source } = parsed.data;
 
   let result: { export: PlayExport; skipped: number } | null;
@@ -53,14 +69,19 @@ export async function buildPlayExportAction(input: PlayExportInput): Promise<Pla
         : await collectCardsExport(source.cardIds, access.userId);
   } catch (error) {
     console.error("[play-exports] export read failed:", error instanceof Error ? error.message : error);
+    refused("read_failed", { target, source: source.kind });
     return { ok: false, error: "We couldn't read those cards just now. Try again in a moment." };
   }
-  if (!result) return { ok: false, error: "That deck isn't available to you." };
+  if (!result) {
+    refused("deck_unavailable", { target, source: source.kind });
+    return { ok: false, error: "That deck isn't available to you." };
+  }
   if (result.export.cards.length === 0 && result.export.lines.length === 0) {
+    refused("empty", { target, source: source.kind, hidden: result.export.leftOut.hidden, skipped: result.skipped });
     return { ok: false, error: source.kind === "deck" ? "This deck has no cards to export yet." : "None of those cards can be exported." };
   }
 
-  await recordToolEvent({
+  recordToolEventLater({
     slug: SLUG,
     userId: access.userId,
     event: "export",

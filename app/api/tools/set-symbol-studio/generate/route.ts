@@ -22,7 +22,7 @@ import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { generateSymbolSchema, SYMBOL_LIBRARY_MAX, type CutoutSettings } from "@/lib/tools/set-symbol/model";
 import {
   buildSymbolPrompt,
@@ -59,6 +59,11 @@ import { symbolSourceName } from "@/lib/tools/set-symbol/naming";
 //
 // A route, not a server action: the picture alone can take two minutes. No
 // text call runs beside it (the design is the maker's own words).
+//
+// The tool's log (lib/tools/events.ts, after the response): `generate` with
+// the credit charged, or `generate_failed` with a `reason` code — a refusal
+// before the charge, or a failure after it with whether the credit went
+// back. Codes and numbers only, never the description.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -82,6 +87,7 @@ function nameFromSubject(subject: string): string {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase isn't configured." }, { status: 503 });
   }
@@ -89,6 +95,8 @@ export async function POST(request: Request) {
   if (!access) {
     return NextResponse.json({ ok: false, error: "Set Symbol Studio isn't open to you." }, { status: 404 });
   }
+  const track = (event: "generate" | "generate_failed", props: ToolEventProps) =>
+    recordToolEventLater({ slug: SET_SYMBOL_SLUG, userId: access.userId, event, access: access.via, props });
   if (!isGatewayConfigured()) {
     return NextResponse.json({ ok: false, error: "AI images aren't configured on this deployment." }, { status: 503 });
   }
@@ -104,6 +112,7 @@ export async function POST(request: Request) {
   }
   const parsed = generateSymbolSchema.safeParse(body);
   if (!parsed.success) {
+    track("generate_failed", { reason: "invalid" });
     return NextResponse.json({ ok: false, error: "Describe the symbol you want." }, { status: 400 });
   }
   const { subject, style } = parsed.data;
@@ -111,21 +120,30 @@ export async function POST(request: Request) {
   // Everything that can refuse without the AI refuses BEFORE the charge.
   const problem = symbolPromptProblem(subject);
   if (problem) {
+    track("generate_failed", { reason: "prompt_refused", problem });
     return NextResponse.json({ ok: false, code: "PROMPT", error: PROMPT_PROBLEM_MESSAGES[problem] }, { status: 400 });
   }
   const kept = await countSymbols(access.userId);
   if (kept === null) {
+    track("generate_failed", { reason: "library_unreadable" });
     return NextResponse.json({ ok: false, error: "Your symbols couldn't be read. Try again." }, { status: 503 });
   }
   if (kept >= SYMBOL_LIBRARY_MAX) {
+    track("generate_failed", { reason: "library_full" });
     return NextResponse.json({ ok: false, code: "LIBRARY_FULL", error: LIBRARY_FULL_MESSAGE }, { status: 409 });
   }
 
   const rate = await checkAiRateLimit(access.userId);
-  if (!rate.ok) return rateLimitedResponse(rate);
+  if (!rate.ok) {
+    track("generate_failed", { reason: "rate_limited" });
+    return rateLimitedResponse(rate);
+  }
   if (!isBillingEnabled()) {
     const daily = await checkDailyActionLimit(access.userId, LABEL, BILLING_OFF_DAILY_LIMIT, "set symbol");
-    if (!daily.ok) return rateLimitedResponse(daily);
+    if (!daily.ok) {
+      track("generate_failed", { reason: "daily_limit" });
+      return rateLimitedResponse(daily);
+    }
   }
 
   if (isBillingEnabled()) {
@@ -135,6 +153,9 @@ export async function POST(request: Request) {
   const ref = `spend:set-symbol:${randomUUID()}`;
   const spend = await spendCredits(1, LABEL, { failClosed: true, ref });
   if (!spend.ok) {
+    track("generate_failed", {
+      reason: spend.reason === "insufficient_credits" ? "insufficient_credits" : "credit_check_failed",
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -147,8 +168,16 @@ export async function POST(request: Request) {
   }
   await logAiCall(access.userId, LABEL);
 
-  const refund = async (code: AiFailureKind, message?: string, status = 502) => {
+  // `reason` is the log's code where the failure kind alone doesn't say it
+  // (our own scan's block, a picture with nothing to cut out).
+  const refund = async (code: AiFailureKind, message?: string, status = 502, reason: string = code) => {
     const landed = spend.charged ? await refundCredits(access.userId, 1, LABEL, `refund:${ref}`) : true;
+    track("generate_failed", {
+      reason,
+      refunded: spend.charged && landed,
+      ...(spend.charged && !landed ? { refund_pending: true } : {}),
+      ms: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -179,7 +208,7 @@ export async function POST(request: Request) {
       categories: AI_ART_BLOCKED_CATEGORIES,
       timeoutMs: SCAN_TIMEOUT_MS,
     });
-    if (scan.flagged) return await refund("art_blocked", ART_NUDITY_BLOCKED_COPY, 422);
+    if (scan.flagged) return await refund("art_blocked", ART_NUDITY_BLOCKED_COPY, 422, "scan_blocked");
 
     const meta = await sharp(picture.bytes).metadata().catch(() => null);
     const sourceExt = sourceExtensionOf(meta?.format);
@@ -206,12 +235,12 @@ export async function POST(request: Request) {
     // The symbol is what the maker paid for: settled, so the reconcile
     // sweep leaves the charge alone.
     if (spend.charged) await settleSpend(ref);
-    await recordToolEvent({
-      slug: SET_SYMBOL_SLUG,
-      userId: access.userId,
-      event: "generate",
-      access: access.via,
-      props: { style, rung: picture.promptIndex, legibility: painted.legibility },
+    track("generate", {
+      style,
+      rung: picture.promptIndex,
+      legibility: painted.legibility,
+      credits: spend.charged ? 1 : 0,
+      ms: Date.now() - startedAt,
     });
     return NextResponse.json({ ok: true, symbol, credits: await getFreshCreditBalance() });
   } catch (error) {
@@ -219,7 +248,12 @@ export async function POST(request: Request) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error(`[set-symbol] generate failed: ${detail.replace(/\s+/g, " ").slice(0, 300)}`);
     if (error instanceof SymbolCutError) {
-      return await refund("art_failed", "The picture came back without a clear symbol to cut out. Try another description.");
+      return await refund(
+        "art_failed",
+        "The picture came back without a clear symbol to cut out. Try another description.",
+        502,
+        "no_symbol",
+      );
     }
     // The picture was painted; storing it (or its row) is what failed.
     return await refund(version ? "art_store" : "art_failed");

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AlertTriangle, ArrowLeftRight, Check, CloudOff, Copy, Info, Loader2, Printer, SlidersHorizontal } from "lucide-react";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { CardGrid } from "@/components/cards/card-grid";
+import { useDeckExport } from "@/components/decks/deck-export-provider";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { KitPrintDialog } from "@/components/tools/token-kit/kit-print-dialog";
@@ -13,6 +14,7 @@ import { KitSettingsPanel } from "@/components/tools/token-kit/kit-settings-pane
 import { KitSourcePicker, type KitDeckOption } from "@/components/tools/token-kit/kit-source-picker";
 import { KitTokenTile } from "@/components/tools/token-kit/kit-token-tile";
 import { useKitArt } from "@/components/tools/token-kit/use-kit-art";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   buildTokenKitAction,
   saveKitTokenToCardsAction,
@@ -22,7 +24,7 @@ import {
 } from "@/lib/tools/token-kit/actions";
 import type { RecentTokenKit } from "@/lib/tools/token-kit/queries";
 import { DEFAULT_KIT_SETTINGS, type KitItemKind, type KitItemState, type KitSettings } from "@/lib/tools/token-kit/model";
-import { initialItemStates, kitCountsLine, kitFrames, kitSummary } from "@/lib/tools/token-kit/workspace";
+import { initialItemStates, kitCountsLine, kitExportOutcome, kitFrames, kitSummary } from "@/lib/tools/token-kit/workspace";
 
 // ---------------------------------------------------------------------------
 // The Token Kit's page (beta tool `token-kit`): pick a source, then the kit —
@@ -47,6 +49,11 @@ const GROUPS: Array<{ kind: KitItemKind; title: string; blurb: string }> = [
 ];
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+/** Kit exports whose END is already recorded. An export outlives this page
+ *  (its provider sits at the root layout), so a finished one is seen again
+ *  on every return here — and is recorded once. */
+const recordedExports = new Set<number>();
 
 export function TokenKitWorkspace({
   decks,
@@ -74,6 +81,17 @@ export function TokenKitWorkspace({
   /** Bumped by every change the maker makes (never by opening a kit), so
    *  the autosave runs only for a real change. */
   const [revision, setRevision] = useState(0);
+
+  // How the kit's print / download ended (the browser builds the file, so
+  // no server action sees it): recorded once, when this page first sees it
+  // done, failed or cancelled — counts and a file kind, never a name.
+  const activeExport = useDeckExport().active;
+  useEffect(() => {
+    const outcome = kitExportOutcome(activeExport);
+    if (!outcome || !activeExport || recordedExports.has(activeExport.id)) return;
+    recordedExports.add(activeExport.id);
+    trackToolEvent("token-kit", outcome.event, outcome.props);
+  }, [activeExport]);
 
   const build = useCallback((source: KitSource, label: string) => {
     setError(null);

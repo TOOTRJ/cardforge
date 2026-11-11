@@ -10,6 +10,7 @@ import { buildPlayExportAction, type PlayExportInput } from "@/lib/tools/play-ex
 import { browserToJpeg, buildPlayDownload, saveBlob, type PlayDownload, type PlaySummary } from "@/lib/tools/play-exports/files";
 import { guideSteps, PLAY_GUIDES } from "@/lib/tools/play-exports/guides";
 import { PLAY_TARGET_LABELS, PLAY_TARGETS, isPlayTarget, type PlayTarget } from "@/lib/tools/play-exports/model";
+import { trackToolEvent } from "@/lib/tools/track-client";
 import { toolHref } from "@/lib/tools/catalog";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,12 @@ import { toolHref } from "@/lib/tools/catalog";
 // viewer may read); the file is written here (lib/tools/play-exports/files.ts)
 // — Cockatrice's ZIP fetches each card's stored picture with live progress,
 // and Cancel stops it. The last target picked is remembered in this browser.
+//
+// What only the browser sees is recorded from here (tool_events, through
+// trackToolEvent — counts and choices, never a name): the file SAVED
+// (`export_saved`), a file that couldn't be built (`export_build_failed`)
+// and a build the user stopped (`export_cancelled`). A request the server
+// refused is the action's own `export_failed`.
 // ---------------------------------------------------------------------------
 
 export type PlayExportDialogProps = {
@@ -30,6 +37,15 @@ export type PlayExportDialogProps = {
 };
 
 const TARGET_KEY = "pipglyph.play-export.target";
+
+/** A browser-side tool event: best effort, never in the export's way. */
+function track(event: string, props: Record<string, string | number | boolean>): void {
+  try {
+    trackToolEvent("play-exports", event, props);
+  } catch {
+    // Tracking never fails an export.
+  }
+}
 
 /** The app chips; held (aria-disabled, the reason in each name) while a
  *  file is being built, so the steps shown never belong to another app. */
@@ -123,6 +139,8 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
   const [target, setTarget] = useState<PlayTarget>(rememberedTarget);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const abort = useRef<AbortController | null>(null);
+  /** Tracking only: when the build in flight started, and how far it got. */
+  const run = useRef({ startedAt: 0, done: 0, total: 0 });
   const resultHeading = useRef<HTMLHeadingElement>(null);
   const downloadButton = useRef<HTMLButtonElement>(null);
 
@@ -149,6 +167,9 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
     if (working) return;
     const controller = new AbortController();
     abort.current = controller;
+    run.current = { startedAt: performance.now(), done: 0, total: 0 };
+    const elapsed = () => Math.round(performance.now() - run.current.startedAt);
+    let stage: "request" | "build" = "request";
     setPhase({ kind: "working", done: 0, total: 0 });
     try {
       const result = await buildPlayExportAction({ target, source });
@@ -157,28 +178,63 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
         setPhase({ kind: "error", message: result.error });
         return;
       }
+      stage = "build";
       const download = await buildPlayDownload(result.export, target, {
         fetchImpl: (url, init) => fetch(url, init),
         toJpeg: browserToJpeg,
         today: new Date().toISOString().slice(0, 10),
         signal: controller.signal,
         onProgress: (done, total) => {
-          if (!controller.signal.aborted) setPhase({ kind: "working", done, total });
+          if (controller.signal.aborted) return;
+          run.current.done = done;
+          run.current.total = total;
+          setPhase({ kind: "working", done, total });
         },
       });
       if (controller.signal.aborted) return;
       saveBlob(download.blob, download.filename);
       setPhase({ kind: "done", download, skipped: result.skipped });
+      track("export_saved", {
+        target,
+        source: source.kind,
+        cards: download.summary.customCards,
+        real_cards: download.summary.realCards,
+        unpictured: download.summary.unpictured.length,
+        pictures_failed: download.summary.picturesFailed,
+        left_out: download.summary.leftOutCards,
+        hidden: download.summary.hiddenEntries,
+        skipped: result.skipped,
+        ms: elapsed(),
+      });
     } catch (error) {
       if (controller.signal.aborted) return;
       console.error("[play-exports] build failed:", error);
       setPhase({ kind: "error", message: "The file couldn't be built. Try again in a moment." });
+      track("export_build_failed", {
+        target,
+        source: source.kind,
+        // "request": the server's answer never arrived; "build": the file
+        // (or its save) failed here.
+        reason: stage === "request" ? "request_failed" : "build_failed",
+        ms: elapsed(),
+      });
     } finally {
       if (abort.current === controller) abort.current = null;
     }
   };
 
-  const stop = () => {
+  const stop = (by: "button" | "close") => {
+    // A build in flight (its controller is still here) is one the user stopped.
+    if (abort.current) {
+      track("export_cancelled", {
+        target,
+        source: source.kind,
+        by,
+        pictures_done: run.current.done,
+        pictures_total: run.current.total,
+        ms: Math.round(performance.now() - run.current.startedAt),
+      });
+    }
     abort.current?.abort();
     abort.current = null;
     setPhase({ kind: "idle" });
@@ -186,12 +242,12 @@ export function PlayExportDialog({ open, onOpenChange, source, label }: PlayExpo
 
   // Cancel removes itself: the focus goes to Download, never <body>.
   const cancel = () => {
-    stop();
+    stop("button");
     downloadButton.current?.focus();
   };
 
   const onDialogChange = (next: boolean) => {
-    if (!next) stop();
+    if (!next) stop("close");
     onOpenChange(next);
   };
 

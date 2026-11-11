@@ -2,7 +2,8 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PlanTier } from "@/lib/billing/plans";
-import { TOOL_CATALOG, toolBySlug, type ToolDefinition } from "./catalog";
+import type { Json } from "@/types/supabase";
+import { TOOL_CATALOG, TOOL_USE_EVENTS, toolBySlug, type ToolDefinition } from "./catalog";
 import { grantIsLive, toolStageOf, type ToolRelease, type ToolStage } from "./access";
 
 // ---------------------------------------------------------------------------
@@ -38,9 +39,28 @@ function releaseOf(row: ReleaseRow | undefined): ToolRelease | null {
   return row ? { releaseTier: row.release_tier, paused: row.paused, releasedAt: row.released_at } : null;
 }
 
+/** What counts as a USE, per tool — the readers' `p_uses` (migration 0199):
+ *  the app's list, never one restated in SQL. */
+const USES = TOOL_USE_EVENTS as unknown as Json;
+
+/** A database 0199 has not reached yet (the app can deploy first) has the
+ *  readers without `p_uses`: asked the old way there — its "uses" are
+ *  everything but `open` until the migration lands. */
+const lacksUsesParam = (error: { code?: string } | null) => error?.code === "PGRST202";
+
+async function readToolSummary(admin: AdminClient) {
+  const read = await admin.rpc("admin_tool_summary", { p_uses: USES });
+  return lacksUsesParam(read.error) ? admin.rpc("admin_tool_summary") : read;
+}
+
+async function readToolDetail(admin: AdminClient, slug: string, days: number) {
+  const read = await admin.rpc("admin_tool_detail", { p_slug: slug, p_days: days, p_uses: USES });
+  return lacksUsesParam(read.error) ? admin.rpc("admin_tool_detail", { p_slug: slug, p_days: days }) : read;
+}
+
 export async function getAdminToolsOverview(admin: AdminClient): Promise<AdminToolRow[] | null> {
   const [summary, releases] = await Promise.all([
-    admin.rpc("admin_tool_summary"),
+    readToolSummary(admin),
     admin.from("tool_releases").select("slug, release_tier, paused, released_at"),
   ]);
   if (summary.error || releases.error) {
@@ -142,7 +162,7 @@ export async function getAdminToolDetail(
   const tool = toolBySlug(slug);
   if (!tool) return null;
   const [detail, release, grants, interest] = await Promise.all([
-    admin.rpc("admin_tool_detail", { p_slug: slug, p_days: days }),
+    readToolDetail(admin, slug, days),
     admin
       .from("tool_releases")
       .select("slug, release_tier, paused, released_at, updated_at")

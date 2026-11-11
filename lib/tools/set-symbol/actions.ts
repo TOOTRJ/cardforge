@@ -9,8 +9,9 @@ import { prepareUploadBytes } from "@/lib/media/upload-bytes";
 import { checkUploadRateLimit, uploadRateLimitFailure, type UploadLimitFields } from "@/lib/media/upload-rate-limit";
 import { scanImageBytes } from "@/lib/moderation/image-scan";
 import { BLOCKED_CATEGORIES } from "@/lib/moderation/image-scan-core";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { checkToolAccess } from "@/lib/tools/queries";
+import type { ToolAccessPath } from "@/lib/tools/access";
 import {
   cutoutSettingsSchema,
   deleteSymbolSchema,
@@ -42,7 +43,9 @@ import {
 // ---------------------------------------------------------------------------
 // Set Symbol Studio's server actions (beta tool `set-symbol-studio`). Each
 // checks the viewer's access first (checkToolAccess) and records what it
-// did (recordToolEvent — counts and choices only, never a prompt). Bringing
+// did after the response (recordToolEventLater — counts, choices and codes
+// only, never a prompt or a name): the action's name when it worked,
+// `<name>_failed` with a `reason` code when it didn't. Bringing
 // your own picture and re-cutting are FREE: no model runs (owner
 // 2026-11-06: the background is keyed away by our own code). An upload
 // follows every upload path's rules: the upload rate limit, a byte sniff,
@@ -60,6 +63,12 @@ export type SymbolResult =
   | ({ ok: false; error: string } & UploadLimitFields);
 
 export type SimpleResult = { ok: true } | { ok: false; error: string };
+
+/** One line in the tool's log (lib/tools/events.ts): never awaited, never
+ *  able to fail the action. */
+function track(access: { userId: string; via: ToolAccessPath | null }, event: string, props?: ToolEventProps): void {
+  recordToolEventLater({ slug: SET_SYMBOL_SLUG, userId: access.userId, event, access: access.via, props });
+}
 
 function ready(): string | null {
   if (!isSupabaseConfigured()) return "Supabase is not configured.";
@@ -82,37 +91,53 @@ export async function uploadSymbolAction(formData: FormData): Promise<SymbolResu
   if (notReady) return { ok: false, error: notReady };
   const access = await checkToolAccess(SET_SYMBOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
+  const failed = (reason: string) => track(access, "upload_failed", { reason });
   const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
+  if (!limit.ok) {
+    failed("rate_limited");
+    return uploadRateLimitFailure(limit);
+  }
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Choose a picture first." };
   if (file.size === 0) return { ok: false, error: "That file is empty." };
-  if (file.size > SYMBOL_UPLOAD_MAX_BYTES) return { ok: false, error: "Pictures can be up to 4 MB." };
+  if (file.size > SYMBOL_UPLOAD_MAX_BYTES) {
+    failed("too_large");
+    return { ok: false, error: "Pictures can be up to 4 MB." };
+  }
   const name = symbolNameSchema.safeParse(formData.get("name") ?? "");
   if (!name.success) return { ok: false, error: name.error.issues[0]?.message ?? "Give the symbol a name." };
   const settings = parseSettings(formData.get("settings"));
   if (!settings.success) return { ok: false, error: "Those cut-out settings aren't valid." };
 
   const kept = await countSymbols(access.userId);
-  if (kept === null) return { ok: false, error: "Your symbols couldn't be read. Try again." };
-  if (kept >= SYMBOL_LIBRARY_MAX) return { ok: false, error: LIBRARY_FULL_MESSAGE };
+  if (kept === null) {
+    failed("library_unreadable");
+    return { ok: false, error: "Your symbols couldn't be read. Try again." };
+  }
+  if (kept >= SYMBOL_LIBRARY_MAX) {
+    failed("library_full");
+    return { ok: false, error: LIBRARY_FULL_MESSAGE };
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   let metadata: sharp.Metadata;
   try {
     metadata = await sharp(buffer).metadata();
   } catch {
+    failed("invalid_image");
     return { ok: false, error: "That doesn't look like a valid image." };
   }
   const ext = sourceExtensionOf(metadata.format);
   if (!ext || !metadata.format || !ALLOWED_FORMATS.has(metadata.format)) {
+    failed("unsupported_format");
     return { ok: false, error: "Use a PNG, JPEG or WebP picture." };
   }
   let stored: Buffer;
   try {
     stored = await prepareUploadBytes(buffer, metadata, { maxBytes: SYMBOL_UPLOAD_MAX_BYTES });
   } catch {
+    failed("invalid_image");
     return { ok: false, error: "That doesn't look like a valid image." };
   }
 
@@ -122,7 +147,10 @@ export async function uploadSymbolAction(formData: FormData): Promise<SymbolResu
     categories: BLOCKED_CATEGORIES,
     timeoutMs: UPLOAD_SCAN_TIMEOUT_MS,
   });
-  if (scan.flagged) return { ok: false, error: "That image was flagged by our content filter and can't be used." };
+  if (scan.flagged) {
+    failed("scan_blocked");
+    return { ok: false, error: "That image was flagged by our content filter and can't be used." };
+  }
 
   let version: string | null = null;
   try {
@@ -141,18 +169,16 @@ export async function uploadSymbolAction(formData: FormData): Promise<SymbolResu
       legibility: painted.legibility,
     });
     if (!symbol) throw new Error("The symbol row was not written.");
-    await recordToolEvent({
-      slug: SET_SYMBOL_SLUG,
-      userId: access.userId,
-      event: "upload",
-      access: access.via,
-      props: { mode: painted.mode, ink: settings.data.ink, legibility: painted.legibility },
-    });
+    track(access, "upload", { mode: painted.mode, ink: settings.data.ink, legibility: painted.legibility });
     return { ok: true, symbol };
   } catch (error) {
     if (version) await removeSymbolVersion(access.userId, version, symbolSourceName(version, ext)).catch(() => undefined);
-    if (error instanceof SymbolCutError) return { ok: false, error: error.message };
+    if (error instanceof SymbolCutError) {
+      failed("no_symbol");
+      return { ok: false, error: error.message };
+    }
     console.error("[set-symbol] upload failed:", error instanceof Error ? error.message : error);
+    failed("store_failed");
     return { ok: false, error: "The symbol couldn't be saved. Try again in a moment." };
   }
 }
@@ -166,13 +192,23 @@ export async function recutSymbolAction(input: unknown): Promise<SymbolResult> {
   if (!access) return { ok: false, error: NO_ACCESS };
   const parsed = recutSymbolSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Those cut-out settings aren't valid." };
+  const failed = (reason: string) => track(access, "recut_failed", { reason });
   const limit = await checkUploadRateLimit(access.userId);
-  if (!limit.ok) return uploadRateLimitFailure(limit);
+  if (!limit.ok) {
+    failed("rate_limited");
+    return uploadRateLimitFailure(limit);
+  }
 
   const current = await readOwnSymbol(access.userId, parsed.data.id);
-  if (!current) return { ok: false, error: "That symbol is gone." };
+  if (!current) {
+    failed("gone");
+    return { ok: false, error: "That symbol is gone." };
+  }
   const bytes = await fetchOwnSource(access.userId, current.files.source);
-  if (!bytes) return { ok: false, error: "The symbol's original picture couldn't be read. Try again in a moment." };
+  if (!bytes) {
+    failed("source_unreadable");
+    return { ok: false, error: "The symbol's original picture couldn't be read. Try again in a moment." };
+  }
 
   let version: string | null = null;
   try {
@@ -188,18 +224,16 @@ export async function recutSymbolAction(input: unknown): Promise<SymbolResult> {
       legibility: painted.legibility,
     });
     if (!symbol) throw new Error("The symbol row was not updated.");
-    await recordToolEvent({
-      slug: SET_SYMBOL_SLUG,
-      userId: access.userId,
-      event: "recut",
-      access: access.via,
-      props: { mode: painted.mode, ink: parsed.data.settings.ink, legibility: painted.legibility },
-    });
+    track(access, "recut", { mode: painted.mode, ink: parsed.data.settings.ink, legibility: painted.legibility });
     return { ok: true, symbol };
   } catch (error) {
     if (version) await removeSymbolVersion(access.userId, version).catch(() => undefined);
-    if (error instanceof SymbolCutError) return { ok: false, error: error.message };
+    if (error instanceof SymbolCutError) {
+      failed("no_symbol");
+      return { ok: false, error: error.message };
+    }
     console.error("[set-symbol] recut failed:", error instanceof Error ? error.message : error);
+    failed("store_failed");
     return { ok: false, error: "The symbol couldn't be cut again. Try again in a moment." };
   }
 }
@@ -217,6 +251,7 @@ export async function renameSymbolAction(input: unknown): Promise<SimpleResult> 
     .eq("owner_id", access.userId)
     .select("id");
   if (error || !data?.length) return { ok: false, error: "The name couldn't be saved. Try again in a moment." };
+  track(access, "rename");
   return { ok: true };
 }
 
@@ -229,8 +264,15 @@ export async function deleteSymbolAction(input: unknown): Promise<SimpleResult> 
   const parsed = deleteSymbolSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "That symbol is already gone." };
   const supabase = await createClient();
-  const { error } = await supabase.from("set_symbols").delete().eq("id", parsed.data.id).eq("owner_id", access.userId);
+  // The removed row's id is asked back for the log alone: `delete` is
+  // recorded only when a symbol really went (a second press removes none).
+  const { data, error } = await supabase
+    .from("set_symbols")
+    .delete()
+    .eq("id", parsed.data.id)
+    .eq("owner_id", access.userId)
+    .select("id");
   if (error) return { ok: false, error: "That symbol couldn't be removed. Try again in a moment." };
-  await recordToolEvent({ slug: SET_SYMBOL_SLUG, userId: access.userId, event: "delete", access: access.via });
+  if (data?.length) track(access, "delete");
   return { ok: true };
 }

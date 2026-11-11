@@ -25,9 +25,12 @@ const m = vi.hoisted(() => ({
   credited: vi.fn(),
   plan: vi.fn(),
   remove: vi.fn(),
+  event: vi.fn(),
 }));
 
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
+// A failed card is recorded for the tool's analytics, after the response.
+vi.mock("@/lib/tools/events", () => ({ recordToolEventLater: m.event }));
 vi.mock("@/lib/tools/bulk-customize/server", () => ({
   resolveBulkSources: m.resolve,
   importPatchOf: m.importPatch,
@@ -49,7 +52,7 @@ vi.mock("@/lib/ai/rate-limit", () => ({ logAiCall: vi.fn() }));
 vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: vi.fn() }));
 vi.mock("@/lib/ai/random-art", () => ({ persistGeneratedArt: vi.fn(), discardGeneratedArt: vi.fn() }));
 
-import { runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
+import { bulkStepFailureReason, runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000001";
@@ -266,6 +269,66 @@ describe("what a result carries", () => {
     const result = await run(planOf({ art: "keep" }));
     expect(result.status).toBe("failed");
     expect(m.remove).toHaveBeenCalledWith(["a.jpg"]);
+  });
+});
+
+describe("what a failed card records (`card_failed`)", () => {
+  const eventsOf = () => m.event.mock.calls.map(([input]) => [input.event, input.props]);
+
+  it("a card that was made records nothing here — the run's end counts it", async () => {
+    expect((await run(planOf({ art: "keep" }))).status).toBe("done");
+    expect(m.event).not.toHaveBeenCalled();
+  });
+
+  it("a step put back in line (a spent minute) is not a failure", async () => {
+    m.scryfallRate.mockResolvedValue({ ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 37 });
+    expect((await run(planOf({ art: "keep" }))).status).toBe("pending");
+    expect(m.event).not.toHaveBeenCalled();
+  });
+
+  it("the card limit, a refused save and a source that is gone are each a reason", async () => {
+    m.capacity.mockResolvedValueOnce({ used: 50, cap: 50, tier: "free" });
+    await run(planOf({ art: "keep" }));
+    m.create.mockResolvedValueOnce({ ok: false, formError: "Nope." });
+    await run(planOf({ art: "later" }));
+    m.resolve.mockResolvedValueOnce({ resolved: [], skipped: [] });
+    await run(planOf({ art: "later" }));
+    expect(eventsOf()).toEqual([
+      ["card_failed", { reason: "capacity", art: "keep", source: "deck_entry", refunded: false, refund_pending: false }],
+      ["card_failed", { reason: "save_failed", art: "later", source: "deck_entry", refunded: false, refund_pending: false }],
+      ["card_failed", { reason: "other", art: "later", source: "deck_entry", refunded: false, refund_pending: false }],
+    ]);
+    // Under the viewer and the access path the step's own gate handed it.
+    expect(m.event).toHaveBeenCalledWith(expect.objectContaining({ slug: "bulk-customize", userId: "u1", access: "grant" }));
+    expect(JSON.stringify(m.event.mock.calls)).not.toMatch(/Llanowar/);
+  });
+
+  it("a failed AI picture says its kind and that the credit came back", async () => {
+    m.plan.mockReturnValue({ ...PLANNED, changes: ["ai_art"], credits: 1 });
+    m.credited.mockResolvedValueOnce({ ...STEP, status: "failed", error: "Blocked.", failure: "art_blocked", refunded: 1, refund_pending: false });
+    await run(planOf({ art: "ai" }, 1));
+    m.credited.mockResolvedValueOnce({ ...STEP, status: "failed", error: "Out of credits.", error_code: "INSUFFICIENT_CREDITS" });
+    await run(planOf({ art: "ai" }, 1));
+    m.credited.mockResolvedValueOnce({ ...STEP, status: "failed", error: "Timed out.", failure: "art_timeout", refunded: 0, refund_pending: true });
+    await run(planOf({ art: "ai" }, 1));
+    expect(eventsOf()).toEqual([
+      ["card_failed", { reason: "art_blocked", art: "ai", source: "deck_entry", refunded: true, refund_pending: false }],
+      ["card_failed", { reason: "insufficient_credits", art: "ai", source: "deck_entry", refunded: false, refund_pending: false }],
+      ["card_failed", { reason: "art_timeout", art: "ai", source: "deck_entry", refunded: false, refund_pending: true }],
+    ]);
+  });
+
+  it("a closed tool records nothing (nobody was let in)", async () => {
+    m.access.mockResolvedValue(null);
+    expect((await run(planOf())).status).toBe("failed");
+    expect(m.event).not.toHaveBeenCalled();
+  });
+
+  it("the reason is the plan limit, else the failure kind, else \"other\"", () => {
+    expect(bulkStepFailureReason({ error_code: "CARD_CAPACITY", failure: "save_failed" })).toBe("capacity");
+    expect(bulkStepFailureReason({ error_code: "INSUFFICIENT_CREDITS" })).toBe("insufficient_credits");
+    expect(bulkStepFailureReason({ error_code: null, failure: "art_store" })).toBe("art_store");
+    expect(bulkStepFailureReason({})).toBe("other");
   });
 });
 

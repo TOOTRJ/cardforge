@@ -29,7 +29,7 @@ import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { checkToolAccess } from "@/lib/tools/queries";
-import { recordToolEvent } from "@/lib/tools/events";
+import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { decodeWorking } from "@/lib/tools/set-symbol/server";
 import { cleanGlyph, type CleanGlyph } from "@/lib/tools/pip-forge/glyph";
 import { ColourCardError, designColourCard } from "@/lib/tools/pip-forge/colour-card";
@@ -76,6 +76,11 @@ import {
 // must clear the 16 and 24 px legibility bars (lib/tools/pip-forge/glyph.ts)
 // BEFORE it is saved: short of them, ONE simpler drawing is asked for inside
 // the same credit; still short, nothing is saved and the credit comes back.
+//
+// The tool's log (lib/tools/events.ts, after the response): `forge` with the
+// credit charged, or `forge_failed` with a `reason` code — a refusal before
+// the charge, or a failure after it with whether the credit went back.
+// Codes and numbers only, never the description or the idea.
 // ---------------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -100,7 +105,8 @@ const ILLEGIBLE_MESSAGE =
 
 type Drawing =
   | { ok: true; clean: CleanGlyph; rung: number; attempt: number }
-  | { ok: false; failure: AiFailureKind; message?: string; status?: number };
+  // `reason`: the log's code where the failure kind alone doesn't say it.
+  | { ok: false; failure: AiFailureKind; message?: string; status?: number; reason?: string };
 
 async function drawGlyph(subject: string, deadline: number): Promise<Drawing> {
   const ladders = [[buildGlyphPrompt(subject), fallbackGlyphPrompt()], [simplerGlyphPrompt(subject)]];
@@ -123,7 +129,9 @@ async function drawGlyph(subject: string, deadline: number): Promise<Drawing> {
       categories: AI_ART_BLOCKED_CATEGORIES,
       timeoutMs: SCAN_TIMEOUT_MS,
     });
-    if (scan.flagged) return { ok: false, failure: "art_blocked", message: ART_NUDITY_BLOCKED_COPY, status: 422 };
+    if (scan.flagged) {
+      return { ok: false, failure: "art_blocked", message: ART_NUDITY_BLOCKED_COPY, status: 422, reason: "scan_blocked" };
+    }
     let clean: CleanGlyph | null = null;
     try {
       clean = cleanGlyph(await decodeWorking(picture.bytes));
@@ -132,7 +140,7 @@ async function drawGlyph(subject: string, deadline: number): Promise<Drawing> {
     }
     if (clean?.passed) return { ok: true, clean, rung: picture.promptIndex, attempt };
   }
-  return { ok: false, failure: "art_failed", message: ILLEGIBLE_MESSAGE };
+  return { ok: false, failure: "art_failed", message: ILLEGIBLE_MESSAGE, reason: "illegible" };
 }
 
 type Writing = { ok: true; card: ColourCard; disc: string | null } | { ok: false; failure: AiFailureKind; message?: string };
@@ -159,6 +167,8 @@ export async function POST(request: Request) {
   if (!access) {
     return NextResponse.json({ ok: false, error: "Pip Forge isn't open to you." }, { status: 404 });
   }
+  const track = (event: "forge" | "forge_failed", props: ToolEventProps) =>
+    recordToolEventLater({ slug: PIP_FORGE_SLUG, userId: access.userId, event, access: access.via, props });
   if (!isGatewayConfigured()) {
     return NextResponse.json({ ok: false, error: "AI images aren't configured on this deployment." }, { status: 503 });
   }
@@ -174,37 +184,49 @@ export async function POST(request: Request) {
   }
   const parsed = forgePipSchema.safeParse(body);
   if (!parsed.success) {
+    track("forge_failed", { reason: "invalid" });
     return NextResponse.json({ ok: false, error: "Describe the pip's symbol." }, { status: 400 });
   }
   const subject = parsed.data.subject.trim();
   const idea = parsed.data.idea.trim();
   const chosenDisc = parsed.data.disc == null ? null : normaliseHex(parsed.data.disc);
   if (parsed.data.disc != null && !chosenDisc) {
+    track("forge_failed", { reason: "invalid" });
     return NextResponse.json({ ok: false, error: "That disc colour isn't a colour." }, { status: 400 });
   }
 
   // Everything that can refuse without the AI refuses BEFORE the charge.
   const problem = pipPromptProblem(subject);
   if (problem) {
+    track("forge_failed", { reason: "prompt_refused", problem });
     return NextResponse.json({ ok: false, code: "PROMPT", error: PIP_PROMPT_PROBLEM_MESSAGES[problem] }, { status: 400 });
   }
   const ideaIssue = ideaProblem(idea);
   if (ideaIssue) {
+    track("forge_failed", { reason: "idea_refused", problem: ideaIssue });
     return NextResponse.json({ ok: false, code: "IDEA", error: IDEA_PROBLEM_MESSAGES[ideaIssue] }, { status: 400 });
   }
   const kept = await countPips(access.userId);
   if (kept === null) {
+    track("forge_failed", { reason: "library_unreadable" });
     return NextResponse.json({ ok: false, error: "Your pips couldn't be read. Try again." }, { status: 503 });
   }
   if (kept >= PIP_LIBRARY_MAX) {
+    track("forge_failed", { reason: "library_full" });
     return NextResponse.json({ ok: false, code: "LIBRARY_FULL", error: LIBRARY_FULL_MESSAGE }, { status: 409 });
   }
 
   const rate = await checkAiRateLimit(access.userId);
-  if (!rate.ok) return rateLimitedResponse(rate);
+  if (!rate.ok) {
+    track("forge_failed", { reason: "rate_limited" });
+    return rateLimitedResponse(rate);
+  }
   if (!isBillingEnabled()) {
     const daily = await checkDailyActionLimit(access.userId, LABEL, BILLING_OFF_DAILY_LIMIT, "pip");
-    if (!daily.ok) return rateLimitedResponse(daily);
+    if (!daily.ok) {
+      track("forge_failed", { reason: "daily_limit" });
+      return rateLimitedResponse(daily);
+    }
   }
 
   if (isBillingEnabled()) {
@@ -214,6 +236,9 @@ export async function POST(request: Request) {
   const ref = `spend:pip-forge:${randomUUID()}`;
   const spend = await spendCredits(1, LABEL, { failClosed: true, ref });
   if (!spend.ok) {
+    track("forge_failed", {
+      reason: spend.reason === "insufficient_credits" ? "insufficient_credits" : "credit_check_failed",
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -226,8 +251,16 @@ export async function POST(request: Request) {
   }
   await logAiCall(access.userId, LABEL);
 
-  const refund = async (code: AiFailureKind, message?: string, status = 502) => {
+  // `reason` is the log's code (the failure kind unless the caller knows
+  // more: an illegible drawing, our own scan's block).
+  const refund = async (code: AiFailureKind, message?: string, status = 502, reason: string = code) => {
     const landed = spend.charged ? await refundCredits(access.userId, 1, LABEL, `refund:${ref}`) : true;
+    track("forge_failed", {
+      reason,
+      refunded: spend.charged && landed,
+      ...(spend.charged && !landed ? { refund_pending: true } : {}),
+      ms: Date.now() - startedAt,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -258,7 +291,7 @@ export async function POST(request: Request) {
         writeCard(subject, idea, chosenDisc, cardSignal),
       ]),
     );
-    if (!drawing.ok) return await refund(drawing.failure, drawing.message, drawing.status);
+    if (!drawing.ok) return await refund(drawing.failure, drawing.message, drawing.status, drawing.reason);
     if (!writing.ok) return await refund(writing.failure, writing.message);
 
     const disc = chosenDisc ?? writing.disc ?? DISC_SWATCHES[0].hex;
@@ -280,20 +313,16 @@ export async function POST(request: Request) {
     // The pip is what the maker paid for: settled, so the reconcile sweep
     // leaves the charge alone.
     if (spend.charged) await settleSpend(ref);
-    await recordToolEvent({
-      slug: PIP_FORGE_SLUG,
-      userId: access.userId,
-      event: "forge",
-      access: access.via,
-      props: {
-        rung: drawing.rung,
-        redrawn: drawing.attempt > 0,
-        thickened: drawing.clean.thickened,
-        at16: drawing.clean.legibility.at16,
-        at24: drawing.clean.legibility.at24,
-        aiDisc: chosenDisc === null,
-        idea: idea.length > 0,
-      },
+    track("forge", {
+      rung: drawing.rung,
+      redrawn: drawing.attempt > 0,
+      thickened: drawing.clean.thickened,
+      at16: drawing.clean.legibility.at16,
+      at24: drawing.clean.legibility.at24,
+      ai_disc: chosenDisc === null,
+      idea: idea.length > 0,
+      credits: spend.charged ? 1 : 0,
+      ms: Date.now() - startedAt,
     });
     return NextResponse.json({ ok: true, pip, credits: await getFreshCreditBalance() });
   } catch (error) {

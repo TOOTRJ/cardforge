@@ -7,6 +7,8 @@ import { CollectionAdd } from "@/components/tools/collection/collection-add";
 import { CollectionBuild } from "@/components/tools/collection/collection-build";
 import { BuildableDecks } from "@/components/tools/collection/buildable-decks";
 import { getViewerTool, openTool } from "@/lib/tools/queries";
+import { recordToolEventOncePerVisit } from "@/lib/tools/events";
+import { afterResponse } from "@/lib/api/after-response";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
 import {
@@ -68,7 +70,23 @@ export default async function CollectionBuilderPage({ searchParams }: { searchPa
       />
     );
   } else if (view === "decks") {
-    body = <BuildableDecks decks={stats.cards > 0 ? await listBuildableDecks() : []} collectionSize={stats.cards} />;
+    const decks = stats.cards > 0 ? await listBuildableDecks() : [];
+    // "Decks you can build", computed for this collection: how many came
+    // back and how close the best ones are — counts only, after the
+    // response, once a visit (the page renders again on every refresh).
+    if (stats.cards > 0) {
+      const props = {
+        collection: stats.cards,
+        decks: decks.length,
+        complete: decks.filter((deck) => deck.missing === 0).length,
+        over_90: decks.filter((deck) => deck.percent >= 90).length,
+        best_percent: decks.reduce((best, deck) => Math.max(best, deck.percent), 0),
+      };
+      afterResponse(() =>
+        recordToolEventOncePerVisit({ slug: "collection-builder", userId: entry.userId, event: "buildable_decks", access: entry.via, props }),
+      );
+    }
+    body = <BuildableDecks decks={decks} collectionSize={stats.cards} />;
   } else {
     const colours = (one(params.colours) ?? "")
       .split(",")

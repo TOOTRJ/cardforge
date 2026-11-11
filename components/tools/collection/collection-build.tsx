@@ -47,6 +47,8 @@ import {
   type StoredAiDraft,
 } from "@/lib/tools/collection/last-ai-draft";
 import { COMMANDER_DECK_SIZE } from "@/lib/tools/collection/limits";
+import { trackToolEvent } from "@/lib/tools/track-client";
+import { AI_ANSWER_CHECKING, aiRecoveryMessage, newAiRequestId, recoverAiAnswer } from "@/lib/tools/collection/ai-recover";
 import { collectionViewHref } from "@/lib/tools/collection/views";
 import { PrintingPicture } from "./printing-tile";
 import { CommanderSuggestions } from "./commander-suggestions";
@@ -170,6 +172,18 @@ export function CollectionBuild({
   /** "Suggest a commander"'s answer (fresh, or kept in this browser). */
   const [suggestions, setSuggestions] = useState<StoredSuggestions | null>(null);
   const [suggesting, setSuggesting] = useState(false);
+  /** A paid call whose response was lost and whose answer is being asked
+   *  for again (lib/tools/collection/ai-recover.ts). */
+  const [recovering, setRecovering] = useState<{ what: "ai" | "suggest"; offline: boolean } | null>(null);
+  /** Aborted when the page goes away: a lost answer is no longer asked for,
+   *  and nothing lands on a page that is gone. */
+  const goneRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    // A fresh one per mount (StrictMode mounts twice in dev).
+    const gone = new AbortController();
+    goneRef.current = gone;
+    return () => gone.abort();
+  }, []);
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const ids = {
     heading: useId(),
@@ -359,40 +373,60 @@ export function CollectionBuild({
     if (!commanderId || working || suggesting) return;
     setWorking("ai");
     setError(null);
-    try {
-      const response = await fetch("/api/tools/collection-builder/ai-build", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ commanderId, ...choice }),
-      });
-      const body = (await response.json()) as {
-        ok: boolean;
-        draft?: CommanderDraft;
-        truncated?: boolean;
-        error?: string;
-        credits?: number | null;
-      };
-      if (typeof body.credits === "number") setBalance(body.credits);
-      if (!body.ok || !body.draft) {
-        setError(body.error ?? "The AI build didn't finish. Try again.");
-        return;
-      }
-      const wasTruncated = Boolean(body.truncated);
+    // The page's own id for this request: if the response is lost (a call of
+    // up to two minutes), the answer can be asked for again.
+    const requestId = newAiRequestId();
+    const startedAt = Date.now();
+    type Answer = { ok: boolean; draft?: CommanderDraft; truncated?: boolean; error?: string; credits?: number | null };
+    const land = (built: CommanderDraft, wasTruncated: boolean) => {
       setDraftChoice(choice);
-      showDraft(body.draft, "ai", wasTruncated);
+      showDraft(built, "ai", wasTruncated);
       // Paid for: kept in this browser for a week, so a reload can't lose it.
       writeLastAiDraft(viewerId, {
         savedAt: new Date().toISOString(),
         commanderId,
         collectionSize,
         truncated: wasTruncated,
-        draft: body.draft,
+        draft: built,
         choice,
       });
       setKept(null);
-    } catch {
-      setError("The AI build didn't answer. If a credit was taken it comes back by itself.");
+    };
+    try {
+      let body: Answer | null;
+      try {
+        const response = await fetch("/api/tools/collection-builder/ai-build", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ commanderId, ...choice, ...(requestId ? { requestId } : {}) }),
+        });
+        body = (await response.json()) as Answer;
+      } catch {
+        body = null;
+      }
+      if (body === null) {
+        // The RESPONSE was lost — not necessarily the build: the server
+        // keeps what became of a paid request, so ask (ai-recover.ts) and
+        // say exactly that.
+        setRecovering({ what: "ai", offline: false });
+        const recovered = await recoverAiAnswer<{ draft?: CommanderDraft; truncated?: boolean }>("build", requestId, startedAt, {
+          signal: goneRef.current?.signal,
+          onReach: (reached) => setRecovering({ what: "ai", offline: !reached }),
+        });
+        if (recovered.state === "aborted") return;
+        if (recovered.credits !== null) setBalance(recovered.credits);
+        if (recovered.state === "done" && recovered.result.draft) land(recovered.result.draft, Boolean(recovered.result.truncated));
+        else setError(aiRecoveryMessage("build", recovered.state === "done" ? "unknown" : recovered.state));
+        return;
+      }
+      if (typeof body.credits === "number") setBalance(body.credits);
+      if (!body.ok || !body.draft) {
+        setError(body.error ?? "The AI build didn't finish. Try again.");
+        return;
+      }
+      land(body.draft, Boolean(body.truncated));
     } finally {
+      setRecovering(null);
       setWorking(null);
     }
   };
@@ -401,26 +435,49 @@ export function CollectionBuild({
     if (suggesting || working) return;
     setSuggesting(true);
     setSuggestError(null);
+    const requestId = newAiRequestId();
+    const startedAt = Date.now();
+    type Answer = { ok: boolean; result?: SuggestResult; error?: string; credits?: number | null };
+    const land = (result: SuggestResult) => {
+      const stored: StoredSuggestions = { savedAt: new Date().toISOString(), collectionSize, result };
+      // Paid for: kept in this browser for a week.
+      writeLastSuggestions(viewerId, stored);
+      setSuggestions(stored);
+      requestFocus("suggestions");
+    };
     try {
-      const response = await fetch("/api/tools/collection-builder/suggest", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deckType: choice.deckType, bracket: choice.bracket, colours }),
-      });
-      const body = (await response.json()) as { ok: boolean; result?: SuggestResult; error?: string; credits?: number | null };
+      let body: Answer | null;
+      try {
+        const response = await fetch("/api/tools/collection-builder/suggest", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ deckType: choice.deckType, bracket: choice.bracket, colours, ...(requestId ? { requestId } : {}) }),
+        });
+        body = (await response.json()) as Answer;
+      } catch {
+        body = null;
+      }
+      if (body === null) {
+        // The response was lost, not necessarily the answer (see draftWithAi).
+        setRecovering({ what: "suggest", offline: false });
+        const recovered = await recoverAiAnswer<SuggestResult>("suggest", requestId, startedAt, {
+          signal: goneRef.current?.signal,
+          onReach: (reached) => setRecovering({ what: "suggest", offline: !reached }),
+        });
+        if (recovered.state === "aborted") return;
+        if (recovered.credits !== null) setBalance(recovered.credits);
+        if (recovered.state === "done" && Array.isArray(recovered.result?.suggestions)) land(recovered.result);
+        else setSuggestError(aiRecoveryMessage("suggest", recovered.state === "done" ? "unknown" : recovered.state));
+        return;
+      }
       if (typeof body.credits === "number") setBalance(body.credits);
       if (!body.ok || !body.result) {
         setSuggestError(body.error ?? "The suggestions didn't finish. Try again.");
         return;
       }
-      const stored: StoredSuggestions = { savedAt: new Date().toISOString(), collectionSize, result: body.result };
-      // Paid for: kept in this browser for a week.
-      writeLastSuggestions(viewerId, stored);
-      setSuggestions(stored);
-      requestFocus("suggestions");
-    } catch {
-      setSuggestError("The suggestions didn't answer. If a credit was taken it comes back by itself.");
+      land(body.result);
     } finally {
+      setRecovering(null);
       setSuggesting(false);
     }
   };
@@ -472,6 +529,14 @@ export function CollectionBuild({
     setDraftChoice({ deckType: keptType, tribe: keptTribe, bracket: keptBracket });
     showDraft(kept.draft, "ai", kept.truncated);
     setKept(null);
+    // A kept AI draft taken back: seen only here (the draft lives in this
+    // browser). Its size and age — never a card's name; best effort.
+    trackToolEvent("collection-builder", "restore_draft", {
+      cards: kept.draft.total,
+      age_days: Math.max(0, Math.floor((Date.now() - Date.parse(kept.savedAt)) / 86_400_000)),
+      ...(keptType ? { deck_type: keptType } : {}),
+      ...(keptBracket ? { bracket: keptBracket } : {}),
+    });
   };
 
   const dismissKept = () => {
@@ -696,7 +761,13 @@ export function CollectionBuild({
           {draftBlocked || aiOff || themeTooThin ? <span id={ids.reason}> {draftBlocked ?? aiOff ?? themeTooThin}</span> : null}
         </p>
         <p role="status" className="text-sm text-muted empty:hidden">
-          {working === "ai" ? "The AI is choosing from your cards. This takes up to a minute." : working === "rules" ? "Drafting…" : ""}
+          {recovering?.what === "ai"
+            ? AI_ANSWER_CHECKING("build", recovering.offline)
+            : working === "ai"
+              ? "The AI is choosing from your cards. This takes up to a minute."
+              : working === "rules"
+                ? "Drafting…"
+                : ""}
         </p>
         {error ? (
           <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground">
@@ -833,7 +904,11 @@ export function CollectionBuild({
                 }.`}
             </p>
             <p role="status" className="text-sm text-muted empty:hidden">
-              {suggesting ? "The AI is reading your commanders and cards. This takes up to a minute." : ""}
+              {recovering?.what === "suggest"
+                ? AI_ANSWER_CHECKING("suggest", recovering.offline)
+                : suggesting
+                  ? "The AI is reading your commanders and cards. This takes up to a minute."
+                  : ""}
             </p>
             {suggestError ? (
               <p role="alert" className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-foreground">

@@ -64,13 +64,22 @@ from (values
   ('d0000000-0000-4000-a000-000000000002'::uuid, 'grant')
 ) as u (user_id, access)
 cross join generate_series(0, 20, 2) as d (day)
-cross join (values ('open', 5), ('import_csv', 9), ('match_decks', 14)) as e (event, minute)
+cross join (values ('open', 5), ('import', 9), ('buildable_decks', 14)) as e (event, minute)
 where exists (select 1 from public.profiles p where p.id = u.user_id)
   and (u.access = 'grant' or d.day % 4 = 0)
   and not exists (
     select 1 from public.tool_events t
     where t.tool_slug = 'collection-builder' and t.props ? 'seed'
   );
+
+-- The synthetic rows of a database seeded before the tool named its real
+-- events (the dev branch): the same rows under the names the tool records,
+-- so its seeded "uses" count as uses (lib/tools/catalog.ts TOOL_USE_EVENTS).
+update public.tool_events
+   set event = case event when 'import_csv' then 'import' else 'buildable_decks' end
+ where tool_slug = 'collection-builder'
+   and props ? 'seed'
+   and event in ('import_csv', 'match_decks');
 
 insert into public.notifications (recipient_id, actor_id, type, payload, created_at)
 select
