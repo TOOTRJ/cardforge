@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // TODO WD9's beacon: once per tab session, the viewport's width BUCKET goes
-// to /api/events — the body is the event name and the bucket, nothing else;
+// to /api/steps — the body is the event name and the bucket, nothing else;
 // never GA4 or Vercel Analytics; never under automation; a prerendered page
 // waits until it is shown.
 // ---------------------------------------------------------------------------
@@ -42,10 +42,10 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("ScreenWidthBeacon", () => {
-  it("posts the bucket alone to /api/events — no width, no identifier, no third party", async () => {
+  it("posts the bucket alone to /api/steps — no width, no identifier, no third party", async () => {
     render(<ScreenWidthBeacon />);
     expect(beacon).toHaveBeenCalledTimes(1);
-    expect(beacon.mock.calls[0][0]).toBe("/api/events");
+    expect(beacon.mock.calls[0][0]).toBe("/api/steps");
     expect(await sentBodies()).toEqual([{ event: "screen_width", props: { bucket: "1366-1535" } }]);
     expect(JSON.stringify(await sentBodies())).not.toContain("1440");
     expect(thirdParty.track).not.toHaveBeenCalled();

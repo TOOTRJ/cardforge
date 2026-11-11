@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
-// POST /api/events — the browser's funnel steps. Allow-listed names, sanitized
+// POST /api/steps — the browser's funnel steps. Allow-listed names, sanitized
 // props, same-site only, anonymous rows without an identifier, always 204.
+// (The path was /api/events until 2026-11: the last block holds the rename.)
 // ---------------------------------------------------------------------------
 
 const s = vi.hoisted(() => ({
@@ -31,16 +32,34 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
-import { POST } from "@/app/api/events/route";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { POST } from "@/app/api/steps/route";
+import { POST as POST_OLD_PATH } from "@/app/api/events/route";
+import { FUNNEL_STEPS_ENDPOINT } from "@/lib/analytics/funnel-events";
 
-const post = (body: unknown, headers: Record<string, string> = {}) =>
-  POST(
-    new Request("http://localhost/api/events", {
-      method: "POST",
-      headers: { "content-type": "text/plain", "sec-fetch-site": "same-origin", ...headers },
-      body: typeof body === "string" ? body : JSON.stringify(body),
-    }),
-  );
+const requestTo = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+  new Request(`http://localhost${path}`, {
+    method: "POST",
+    headers: { "content-type": "text/plain", "sec-fetch-site": "same-origin", ...headers },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+
+const post = (body: unknown, headers: Record<string, string> = {}) => POST(requestTo(FUNNEL_STEPS_ENDPOINT, body, headers));
+
+/** Every .ts / .tsx file under the given folders. */
+function sourceFiles(roots: string[]): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (/\.tsx?$/.test(entry.name)) out.push(path);
+    }
+  };
+  roots.forEach(walk);
+  return out;
+}
 
 beforeEach(() => {
   s.inserts = [];
@@ -49,7 +68,7 @@ beforeEach(() => {
   getCurrentUser.mockClear();
 });
 
-describe("POST /api/events", () => {
+describe("POST /api/steps", () => {
   it("records an allow-listed client event for an anonymous visitor with no identifier", async () => {
     const res = await post({ event: "pricing_view", props: { surface: "pricing", email: "x@y.z" } });
     expect(res.status).toBe(204);
@@ -85,7 +104,7 @@ describe("POST /api/events", () => {
   });
 });
 
-describe("POST /api/events — screen_width (TODO WD9)", () => {
+describe("POST /api/steps — screen_width (TODO WD9)", () => {
   it("records the bucket alone, with no identifier and no signedIn", async () => {
     const res = await post({ event: "screen_width", props: { bucket: "1366-1535" } });
     expect(res.status).toBe(204);
@@ -129,5 +148,59 @@ describe("POST /api/events — screen_width (TODO WD9)", () => {
       "user-agent": "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
     });
     expect(s.inserts).toEqual([]);
+  });
+});
+
+// The 2026-11 rename (owner decision 2026-11-11). EasyPrivacy's generic rule
+// `/api/events|$ping,~third-party` cancels a site's OWN sendBeacon to any
+// address ending in /api/events, so a visitor with a blocker was in none of
+// the browser steps while the server's steps counted them.
+describe("the steps route's address", () => {
+  it("is /api/steps, and a route file answers there", () => {
+    expect(FUNNEL_STEPS_ENDPOINT).toBe("/api/steps");
+    expect(existsSync(`app${FUNNEL_STEPS_ENDPOINT}/route.ts`)).toBe(true);
+  });
+
+  // Endings the public lists catch for a first-party ping or fetch (read
+  // 2026-11-11: EasyPrivacy, EasyList, uBlock's privacy list). Not the lists
+  // themselves — a rename is still checked against them — but the words a
+  // tracking endpoint is usually given, so the next rename can't walk back
+  // into one.
+  it("does not end in a word the blocker lists catch for a site's own beacons", () => {
+    const caught = ["events", "event", "collect", "track", "tracking", "analytics", "telemetry", "beacon", "metrics", "pixel", "log", "logs", "stats", "ping"];
+    const last = FUNNEL_STEPS_ENDPOINT.split("/").at(-1)!;
+    expect(caught).not.toContain(last);
+    expect(caught).toContain("events"); // the ending that was caught
+  });
+
+  it("the browser posts there and nowhere else — nothing in the app still names the old path as an address", () => {
+    const client = readFileSync("lib/analytics/funnel-client.ts", "utf8");
+    expect(client).toContain("navigator.sendBeacon(FUNNEL_STEPS_ENDPOINT");
+    expect(client).toContain("fetch(FUNNEL_STEPS_ENDPOINT");
+    // The path as a string someone could post to: quoted, then the end of the string or a query.
+    const asAddress = /["'`]\/api\/events["'`/?]/;
+    const stillNamed = sourceFiles(["app", "components", "lib"]).filter((file) => asAddress.test(readFileSync(file, "utf8")));
+    expect(stillNamed).toEqual([]);
+  });
+
+  it("the old path still answers with the same handler, for a tab that loaded its script before the rename", async () => {
+    const res = await POST_OLD_PATH(requestTo("/api/events", { event: "pricing_view", props: { surface: "pricing", email: "x@y.z" } }));
+    expect(res.status).toBe(204);
+    expect(s.inserts).toEqual([
+      { event: "pricing_view", user_id: null, props: { surface: "pricing", signedIn: false }, source: "client" },
+    ]);
+    // …and by the same rules: a crawler, a cross-site caller and a server-only name record nothing.
+    await POST_OLD_PATH(requestTo("/api/events", { event: "pricing_view" }, { "sec-fetch-site": "cross-site" }));
+    await POST_OLD_PATH(requestTo("/api/events", { event: "checkout_completed" }));
+    expect(s.inserts).toHaveLength(1);
+  });
+
+  it("both route files are the one handler and nothing more", () => {
+    for (const file of ["app/api/steps/route.ts", "app/api/events/route.ts"]) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).toContain('import { handleFunnelStep } from "@/lib/analytics/funnel-step-route";');
+      expect(source, file).toContain("return handleFunnelStep(request);");
+      expect(source, file).toContain('export const dynamic = "force-dynamic";');
+    }
   });
 });

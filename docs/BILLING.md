@@ -539,8 +539,9 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   `subscription_changed` (price changed, from/to tier) on updated,
   `trial_lapsed` or `subscription_cancelled` (with Stripe's
   `cancellation_details` reason + feedback) on deleted.
-- **Client steps** (`lib/analytics/funnel-client.ts` → POST `/api/events`,
-  same-site only, 2 KB cap, allow-listed names, always 204; mirrored to
+- **Client steps** (`lib/analytics/funnel-client.ts` → POST `/api/steps`,
+  `FUNNEL_STEPS_ENDPOINT`; same-site only, 2 KB cap, allow-listed names,
+  always 204; mirrored to
   Vercel Analytics `track()` and GA4 when mounted): `pricing_view` (once per
   grid mount, `surface` pricing/billing), `cta_click` (every CheckoutButton
   and the signup links, with `surface` pricing/billing/modal and what was
@@ -576,15 +577,27 @@ First-party, no vendor dependency, no cookie (owner decision 2026-09-24):
   distinct active days and saves / generations / downloads — each trial
   measured over ITS OWN length (start to the event that ended it, or to now,
   never more than 60 days), not a fixed 7 days.
-- **Bots**: `/api/events` drops requests whose User-Agent `isbot` recognises,
+- **Bots**: `/api/steps` drops requests whose User-Agent `isbot` recognises,
   matching Vercel Analytics' policy.
+- **Ad blockers** (2026-11-11): the steps route was `/api/events` until
+  then. EasyPrivacy's generic rule `/api/events|$ping,~third-party` cancels a
+  site's own `sendBeacon` to any address ending in `/api/events`, so every
+  visitor with a blocker was missing from the browser steps (pricing views,
+  button clicks, the upgrade modal) while the server steps counted them —
+  the top of the funnel read low against its bottom. The route is
+  `/api/steps` now (checked against EasyPrivacy, EasyList and uBlock's
+  privacy list that day: no rule); `/api/events` still answers with the
+  same handler for tabs opened before the deploy. Browser steps recorded
+  BEFORE the rename undercount blocker users: compare periods across
+  2026-11-11 with that in mind. The mirrors to Vercel Analytics and GA4 are
+  third-party requests and stay blocked for those visitors, as before.
 - **Screen widths** (TODO WD9, no migration): `ScreenWidthBeacon` (root
   layout) posts ONE `screen_width` event per tab session (a `sessionStorage`
   flag) carrying the `window.innerWidth` bucket alone
   (`lib/analytics/screen-width.ts`: `<640` … `2560+`, stored as safe keys) —
   first-party only (`postFunnelEvent`, never GA4 / Vercel Analytics), never
   under `navigator.webdriver`, a prerendered page only once shown.
-  `/api/events` records it ANONYMOUS even for a signed-in visitor (the
+  `/api/steps` records it ANONYMOUS even for a signed-in visitor (the
   session is never read; props = the bucket, nothing else). The panel's
   "Screen widths (last 30 days)" table reads one exact head count per bucket.
 

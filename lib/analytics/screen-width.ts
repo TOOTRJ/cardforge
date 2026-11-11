@@ -3,7 +3,7 @@
 // screen-share figures the width plan relied on. One anonymous
 // `screen_width` funnel event per tab session, carrying a BUCKET and nothing
 // else: never the exact width, the user agent, the screen resolution, a user
-// id or any other identifier (/api/events records it with user_id NULL even
+// id or any other identifier (/api/steps records it with user_id NULL even
 // for a signed-in visitor). Client-safe and pure; the beacon is
 // components/analytics/screen-width-beacon.tsx, the readout the admin Funnel
 // panel's "Screen widths" table.

@@ -168,7 +168,7 @@ describe("the Storefront list is billing moments alone (TODO HM2)", () => {
     const files = execSync(`grep -rl '"cta_click"' app components lib || true`, { encoding: "utf8" })
       .split("\n")
       .filter(Boolean)
-      .filter((f) => !f.startsWith("lib/analytics/") && !f.startsWith("lib/admin/") && f !== "app/api/events/route.ts");
+      .filter((f) => !f.startsWith("lib/analytics/") && !f.startsWith("lib/admin/"));
     for (const file of files) expect(file).toMatch(/^components\/billing\//);
   });
 });

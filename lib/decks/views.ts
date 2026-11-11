@@ -10,8 +10,9 @@ import { createPublicClient } from "@/lib/supabase/public";
 // ---------------------------------------------------------------------------
 // A deck page view, counted once per viewer, deck and UTC day (TODO DK0.11,
 // migration 0151). The page calls recordDeckView from after(): never for the
-// deck's owner, a crawler (isbot — the funnel's rule, app/api/events), a
-// request with no user agent, or a prefetch (Next's router, a browser's
+// deck's owner, a crawler (isbot — the funnel's rule,
+// lib/analytics/funnel-step-route.ts), a request with no user agent, or a
+// prefetch (Next's router, a browser's
 // speculative load). The database logs ONE row per (deck, viewer, day) in
 // deck_views and bumps decks.view_count only for a new row
 // (record_deck_view, the service role's alone — no API caller can feed it
