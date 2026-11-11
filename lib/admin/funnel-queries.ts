@@ -6,27 +6,71 @@ import type { FunnelEvent } from "@/lib/analytics/funnel-events";
 import { attributionSource, attributionSurface, sanitizeAttribution } from "@/lib/analytics/attribution";
 import { SCREEN_WIDTH_BUCKETS, type ScreenWidthBucket } from "@/lib/analytics/screen-width";
 import { selectAllRows } from "@/lib/supabase/select-all-rows";
+import type { AnalyticsPeriod } from "@/lib/admin/analytics/params";
+import { fillDays, type DayPoint } from "@/lib/admin/analytics/series";
 
 // ---------------------------------------------------------------------------
-// The admin Funnel panel's data: counts per funnel event for two trailing
-// windows, shaped into the steps and ratios that matter. Pure math in
-// buildFunnel() so it's unit-tested; the read is one RPC per window.
+// The Funnel tab's data (/admin/analytics, the 2026-11 analytics audit).
+//
+// Everything is read for ONE PERIOD — [since, until), `since` the start of a
+// UTC day — and, where a number is compared, for the same stretch N days
+// earlier, [previousSince, previousUntil) (lib/admin/analytics/params.ts).
+// What changed with the page:
+//   - the windows were hard-coded (7 and 30 days back from "now"); they are
+//     the page's period and the previous one, read in parallel;
+//   - "Rate 30d" is gone: it divided one step's EVENT count by the step
+//     before's — unrelated counts (109 first cards over 42 signups). The
+//     honest question — of the people who signed up, how many got how far —
+//     is the COHORT (admin_funnel_cohort, migration 0200);
+//   - each trial is measured over its own length, not a fixed 7 days.
+//
+// The pure shaping is exported and unit-tested; the reads are the SQL
+// functions of 0200 plus paged row reads. A read that fails is NULL (the tab
+// says it could not load), never zeros and never part of a list.
 // ---------------------------------------------------------------------------
+
+type AdminClient = ReturnType<typeof createAdminClient>;
 
 export type FunnelCounts = Partial<Record<FunnelEvent, { n: number; users: number }>>;
 
-export type FunnelStep = { key: FunnelEvent; label: string; n: number; users: number; rate: number | null };
+/** One step of a section's table: this period beside the one before. `users`
+ *  are the distinct signed-in people behind the count (0 for a step visitors
+ *  take before they have an account). */
+export type FunnelStep = {
+  key: FunnelEvent;
+  label: string;
+  n: number;
+  users: number;
+  previousN: number;
+  previousUsers: number;
+};
 export type FunnelSection = { title: string; steps: FunnelStep[] };
-export type FunnelWindow = { days: number; sections: FunnelSection[] };
 export type SignupSource = { source: string; n: number };
 export type SignupSurface = { surface: string; n: number };
 /** One row of "Cancellations by reason": the portal's feedback choice when
  *  the customer gave one, else Stripe's cancellation reason. */
 export type CancelReasonRow = { reason: string; label: string; n: number };
+/** One step of the cohort: how many of the period's new accounts have
+ *  reached it, at any time since. */
+export type CohortStep = { key: CohortStepKey; label: string; users: number };
+/** How the period's accounts were made. */
+export type SignupMethodRow = { method: string; label: string; n: number };
+export type SignupsDaily = {
+  /** One point per UTC day of the period, oldest first, zero-filled. */
+  points: DayPoint[];
+  /** Biggest first; only the ways somebody used. */
+  methods: SignupMethodRow[];
+  total: number;
+};
 export type TrialEngagementRow = {
   userId: string;
   username: string | null;
   startedAt: string;
+  /** When the trial converted or lapsed; null while no end is recorded. */
+  endedAt: string | null;
+  /** The length it was measured over, in whole days (its own, 60 at most). */
+  windowDays: number;
+  /** `trial_converted` / `trial_lapsed` / `ongoing` / `unknown`. */
   outcome: string;
   activeDays: number;
   saves: number;
@@ -34,29 +78,37 @@ export type TrialEngagementRow = {
   downloads: number;
 };
 /** One row of the "Screen widths" table: tab sessions per bucket and their
- *  share of every bucketed session in the window (null when there are none). */
+ *  share of every bucketed session in the period (null when there are none). */
 export type ScreenWidthRow = { bucket: ScreenWidthBucket; label: string; sessions: number; share: number | null };
+
 export type FunnelSummary = {
-  windows: FunnelWindow[];
-  /** Signups by first-touch source, last 30 days. */
+  /** Counts per event, this period and the one before — the headline tiles
+   *  and the step tables. Null when either read failed. */
+  counts: { current: FunnelCounts; previous: FunnelCounts } | null;
+  /** The people who signed up in the period and how far they have come. */
+  cohort: CohortStep[] | null;
+  /** Signups per day and by how the account was made. */
+  signups: SignupsDaily | null;
+  /** Signups of the period by first-touch source. */
   signupSources: SignupSource[];
   /** Signups by the create button pressed last ("none" = no tracked button). */
   signupSurfaces: SignupSurface[];
-  /** Plans that ended in the last 30 days, by the reason the customer gave
-   *  in the portal (or Stripe's own reason), biggest first. */
+  /** Plans that ended in the period, by the reason the customer gave in the
+   *  portal (or Stripe's own reason), biggest first. */
   cancelReasons: CancelReasonRow[];
-  /** A guest's card through sign-up (TODO HM3), last 30 days: signups made
-   *  while one waited in the browser, and first cards saved from one. Null
-   *  counts where the read failed. */
+  /** A guest's card through sign-up (TODO HM3): signups made while one
+   *  waited in the browser, and first cards saved from one. A null count
+   *  where the read failed. */
   guestCard: { signups: number; firstCardsSaved: number | null };
-  /** Trials started in the last 30 days and what they did in their 7 days. */
-  trials: TrialEngagementRow[];
-  /** Anonymous viewport-width buckets, last 30 days (TODO WD9); null when
+  /** The row lists above are EMPTY, never partial, when their rows could
+   *  not be read whole — these say which, so the tab can say so too. */
+  failed: { signups: boolean; cancellations: boolean };
+  /** Trials started in the period, each measured over its own length. */
+  trials: TrialEngagementRow[] | null;
+  /** Anonymous viewport-width buckets of the period (TODO WD9); null when
    *  the read failed — never zeros standing in for an error. */
   screenWidths: ScreenWidthRow[] | null;
 };
-
-export const FUNNEL_WINDOWS_DAYS = [7, 30] as const;
 
 const LABEL: Record<FunnelEvent, string> = {
   signup: "Signups",
@@ -92,8 +144,8 @@ const LABEL: Record<FunnelEvent, string> = {
   guest_save_gate: "Guest creator: asked to sign up",
 };
 
-/** Each section is a chain: a step's rate is its count over the previous
- *  step's count (null when the previous step is empty or it's the first). */
+/** The step tables. Counts only: a step is never divided by the step above
+ *  it (different people, different visits) — the cohort answers that. */
 const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Activation", chain: ["signup", "first_card_saved", "first_ai_generation", "first_download"] },
   { title: "Storefront", chain: ["pricing_view", "cta_click", "checkout_started", "checkout_completed"] },
@@ -101,31 +153,104 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Out of credits", chain: ["upgrade_modal_open", "pack_purchased"] },
   { title: "Money", chain: ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled", "subscription_resumed"] },
   { title: "Leaks", chain: ["checkout_expired", "trial_lapsed", "payment_failed"] },
-  // Counts only: the deck plan's upgrade moments (TODO DK3.8).
+  // The deck plan's upgrade moments (TODO DK3.8).
   { title: "Decks", chain: ["deck_created", "deck_card_customized", "deck_export_clicked"] },
-  // Counts only: the home page's create buttons (TODO HM2) — never in the
-  // Storefront chain, whose steps are billing moments alone.
+  // The home page's create buttons (TODO HM2) — never in the Storefront
+  // list, whose steps are billing moments alone.
   { title: "Home create buttons", chain: ["create_cta_click"] },
-  // Counts only: a guest's Save or AI press that asked for a sign-up (TODO HM3).
+  // A guest's Save or AI press that asked for a sign-up (TODO HM3).
   { title: "Guest creator", chain: ["guest_save_gate"] },
 ];
 
-/** Rates are chained inside the four sections named here; the rest are
- *  counts only. */
-const RATE_SECTIONS = new Set(["Activation", "Storefront", "Trials", "Out of credits"]);
+/** Pure: every section's steps, this period beside the previous one. */
+export function buildFunnel(current: FunnelCounts, previous: FunnelCounts = {}): FunnelSection[] {
+  return SECTIONS.map(({ title, chain }) => ({
+    title,
+    steps: chain.map((key) => {
+      const now = current[key] ?? { n: 0, users: 0 };
+      const before = previous[key] ?? { n: 0, users: 0 };
+      return { key, label: LABEL[key], n: now.n, users: now.users, previousN: before.n, previousUsers: before.users };
+    }),
+  }));
+}
 
-export function buildFunnel(counts: FunnelCounts, days: number): FunnelWindow {
-  const sections = SECTIONS.map(({ title, chain }) => {
-    let prev: number | null = null;
-    const steps = chain.map((key) => {
-      const c = counts[key] ?? { n: 0, users: 0 };
-      const rate = RATE_SECTIONS.has(title) && prev != null && prev > 0 ? Math.round((c.n / prev) * 1000) / 10 : null;
-      prev = c.n;
-      return { key, label: LABEL[key], n: c.n, users: c.users, rate };
-    });
-    return { title, steps };
-  });
-  return { days, sections };
+/** The cohort's steps, in funnel order (migration 0200 answers the same six). */
+export const COHORT_STEPS = [
+  "signup",
+  "first_card_saved",
+  "first_ai_generation",
+  "first_download",
+  "trial_started",
+  "trial_converted",
+] as const;
+export type CohortStepKey = (typeof COHORT_STEPS)[number];
+
+const COHORT_LABEL: Record<CohortStepKey, string> = {
+  signup: "Signed up",
+  first_card_saved: "Saved a first card",
+  first_ai_generation: "Made a first AI generation",
+  first_download: "Downloaded a card",
+  trial_started: "Started a trial",
+  trial_converted: "Trial became a paid plan",
+};
+
+/** Pure: the cohort in funnel order whatever order the rows came in; a step
+ *  the read did not name is 0. */
+export function buildCohort(rows: ReadonlyArray<{ step: string; users: number | string }>): CohortStep[] {
+  const byStep = new Map(rows.map((row) => [row.step, Number(row.users) || 0]));
+  return COHORT_STEPS.map((key) => ({ key, label: COHORT_LABEL[key], users: byStep.get(key) ?? 0 }));
+}
+
+/** The label of a signup whose first touch was never recorded: a row
+ *  migration 0197 wrote for an account that had none (made with Google or
+ *  Discord before those were recorded, or older than the funnel). Its own
+ *  line — never "direct" or "none", which say the visitor came with no
+ *  referrer and pressed no button. */
+export const SIGNUP_NOT_RECORDED = "not recorded";
+
+/** How an account was made, in the order the list breaks ties. Migration
+ *  0200 counts a row with no method as `email` (until 0197 the email form
+ *  was the only writer of a signup row), so `not recorded` no longer comes
+ *  back from it; its label stays for an older database. An unknown value
+ *  prints as it came. */
+const SIGNUP_METHOD_LABEL: Record<string, string> = {
+  email: "Email",
+  google: "Google",
+  discord: "Discord",
+  other: "Other",
+  [SIGNUP_NOT_RECORDED]: "Not recorded",
+};
+const SIGNUP_METHOD_ORDER = Object.keys(SIGNUP_METHOD_LABEL);
+
+/** Pure: admin_signups_daily's rows as one zero-filled point per day of the
+ *  period and one row per method, biggest first. Both add up to `total`
+ *  (a row of a day outside the period is in neither). */
+export function buildSignupsDaily(
+  dayKeys: readonly string[],
+  rows: ReadonlyArray<{ day: string; method: string; n: number | string }>,
+): SignupsDaily {
+  const days = new Set(dayKeys);
+  const inPeriod = rows
+    .map((row) => ({ day: String(row.day).slice(0, 10), method: row.method, n: Number(row.n) || 0 }))
+    .filter((row) => days.has(row.day));
+  const byMethod = new Map<string, number>();
+  for (const row of inPeriod) byMethod.set(row.method, (byMethod.get(row.method) ?? 0) + row.n);
+  const rank = (method: string) => {
+    const index = SIGNUP_METHOD_ORDER.indexOf(method);
+    return index === -1 ? SIGNUP_METHOD_ORDER.length : index;
+  };
+  const methods = [...byMethod.entries()]
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1] || rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+    .map(([method, n]) => ({ method, label: SIGNUP_METHOD_LABEL[method] ?? method, n }));
+  return {
+    points: fillDays(
+      dayKeys,
+      inPeriod.map((row) => ({ day: row.day, value: row.n })),
+    ),
+    methods,
+    total: inPeriod.reduce((sum, row) => sum + row.n, 0),
+  };
 }
 
 /** Pure: count signup rows by one attribution label, biggest first. */
@@ -136,17 +261,22 @@ function groupSignupsBy(rows: Array<{ props: unknown }>, labelOf: (props: Record
     const label = labelOf(props);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, limit);
+  return withRest(
+    [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    limit,
+  );
 }
 
-/** The label of a signup whose first touch was never recorded: a row
- *  migration 0197 wrote for an account that had none (made with Google or
- *  Discord before those were recorded, or older than the funnel). Its own
- *  line — never "direct" or "none", which say the visitor came with no
- *  referrer and pressed no button. */
-export const SIGNUP_NOT_RECORDED = "not recorded";
+/** The row a long list ends on: what is past the `limit` biggest, added up
+ *  — so a list always adds up to the number it breaks down (a "top 8" alone
+ *  came to less than the Signups tile beside it, with nothing saying why). */
+export const FUNNEL_LIST_REST = "everything else";
+
+function withRest(sorted: Array<[string, number]>, limit: number): Array<[string, number]> {
+  if (sorted.length <= limit) return sorted;
+  const rest = sorted.slice(limit).reduce((sum, [, n]) => sum + n, 0);
+  return [...sorted.slice(0, limit), [FUNNEL_LIST_REST, rest]];
+}
 
 const wasBackfilled = (props: unknown) =>
   Boolean(props && typeof props === "object" && (props as Record<string, unknown>).backfilled === true);
@@ -191,10 +321,14 @@ export function groupCancelReasons(rows: Array<{ props: unknown }>, limit = 10):
     const key = feedback ?? reason ?? "none";
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, limit)
-    .map(([reason, n]) => ({ reason, label: CANCEL_REASON_LABEL[reason] ?? reason, n }));
+  return withRest(
+    [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    limit,
+  ).map(([reason, n]) => ({
+    reason,
+    label: reason === FUNNEL_LIST_REST ? "Everything else" : (CANCEL_REASON_LABEL[reason] ?? reason),
+    n,
+  }));
 }
 
 /** Pure: how many signup rows say a guest's card waited (TODO HM3). */
@@ -224,12 +358,112 @@ export function buildScreenWidths(counts: Partial<Record<ScreenWidthBucket, numb
   });
 }
 
+/**
+ * The PostgREST `or` filter that keeps every row but the admins': null when
+ * there is no admin to leave out. `user_id.is.null` first: a row whose
+ * account is gone has no user id, and `not.in` alone would drop it.
+ */
+export function adminIdFilter(adminIds: string[]): string | null {
+  const ids = adminIds.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  return ids.length ? `user_id.is.null,user_id.not.in.(${ids.join(",")})` : null;
+}
+
+// ---------------------------------------------------------------------------
+// Reads. Each takes the client, so the Overview tab can ask for just the two
+// it shows (lib/admin/analytics/overview.ts) without the rest of this tab.
+// ---------------------------------------------------------------------------
+
+/** A stretch of time: [since, until). */
+export type TimeRange = { since: Date; until: Date };
+
+/** Counts per event in a range (admin_funnel_counts, 0200). Null when the
+ *  read failed. */
+export async function readFunnelCounts(admin: AdminClient, range: TimeRange, includeAdmins: boolean): Promise<FunnelCounts | null> {
+  const { data, error } = await admin.rpc("admin_funnel_counts", {
+    p_since: range.since.toISOString(),
+    p_until: range.until.toISOString(),
+    p_include_admins: includeAdmins,
+  });
+  if (error) {
+    console.error("[admin/analytics] admin_funnel_counts failed:", error.message);
+    return null;
+  }
+  const counts: FunnelCounts = {};
+  for (const row of data ?? []) {
+    counts[row.event as FunnelEvent] = { n: Number(row.n), users: Number(row.users) };
+  }
+  return counts;
+}
+
+/** The period's counts beside the previous period's, read in parallel. Null
+ *  when either failed: a comparison with half its numbers is not one. */
+export async function readFunnelCountsWithPrevious(
+  admin: AdminClient,
+  period: AnalyticsPeriod,
+  includeAdmins: boolean,
+): Promise<{ current: FunnelCounts; previous: FunnelCounts } | null> {
+  const [current, previous] = await Promise.all([
+    readFunnelCounts(admin, { since: period.since, until: period.until }, includeAdmins),
+    readFunnelCounts(admin, { since: period.previousSince, until: period.previousUntil }, includeAdmins),
+  ]);
+  return current && previous ? { current, previous } : null;
+}
+
+/** Signups per day and by method (admin_signups_daily, 0200). */
+export async function readSignupsDaily(admin: AdminClient, period: AnalyticsPeriod, includeAdmins: boolean): Promise<SignupsDaily | null> {
+  const { data, error } = await admin.rpc("admin_signups_daily", {
+    p_since: period.since.toISOString(),
+    p_until: period.until.toISOString(),
+    p_include_admins: includeAdmins,
+  });
+  if (error) {
+    console.error("[admin/analytics] admin_signups_daily failed:", error.message);
+    return null;
+  }
+  return buildSignupsDaily(period.dayKeys, data ?? []);
+}
+
+async function readCohort(admin: AdminClient, period: AnalyticsPeriod, includeAdmins: boolean): Promise<CohortStep[] | null> {
+  const { data, error } = await admin.rpc("admin_funnel_cohort", {
+    p_since: period.since.toISOString(),
+    p_until: period.until.toISOString(),
+    p_include_admins: includeAdmins,
+  });
+  if (error) {
+    console.error("[admin/analytics] admin_funnel_cohort failed:", error.message);
+    return null;
+  }
+  return buildCohort(data ?? []);
+}
+
+async function readTrials(admin: AdminClient, period: AnalyticsPeriod, includeAdmins: boolean): Promise<TrialEngagementRow[] | null> {
+  const { data, error } = await admin.rpc("admin_trial_engagement", {
+    p_since: period.since.toISOString(),
+    p_until: period.until.toISOString(),
+    p_include_admins: includeAdmins,
+  });
+  if (error) {
+    console.error("[admin/analytics] admin_trial_engagement failed:", error.message);
+    return null;
+  }
+  return (data ?? []).map((row) => ({
+    userId: row.user_id,
+    username: row.username,
+    startedAt: row.started_at,
+    endedAt: row.ended_at ?? null,
+    windowDays: Number(row.window_days),
+    outcome: row.outcome,
+    activeDays: Number(row.active_days),
+    saves: Number(row.saves),
+    generations: Number(row.generations),
+    downloads: Number(row.downloads),
+  }));
+}
+
 /** One exact head count per bucket (seven small index reads): a row read
- *  would stop at PostgREST's row cap, and the counts need no SQL function. */
-async function readScreenWidths(
-  admin: ReturnType<typeof createAdminClient>,
-  since: string,
-): Promise<ScreenWidthRow[] | null> {
+ *  would stop at PostgREST's row cap, and the counts need no SQL function.
+ *  The rows are anonymous (no user id), so there is no admin to leave out. */
+async function readScreenWidths(admin: AdminClient, range: { since: string; until: string }): Promise<ScreenWidthRow[] | null> {
   const results = await Promise.all(
     SCREEN_WIDTH_BUCKETS.map(({ key }) =>
       admin
@@ -237,7 +471,8 @@ async function readScreenWidths(
         .select("id", { count: "exact", head: true })
         .eq("event", "screen_width")
         .eq("props->>bucket", key)
-        .gte("created_at", since),
+        .gte("created_at", range.since)
+        .lt("created_at", range.until),
     ),
   );
   const failed = results.find((r) => r.error);
@@ -253,50 +488,37 @@ async function readScreenWidths(
 }
 
 /**
- * The PostgREST `or` filter that keeps every row but the admins': null when
- * there is no admin to leave out. `user_id.is.null` first: a row whose
- * account is gone has no user id, and `not.in` alone would drop it.
+ * The row reads of the period — every signup's and every ended plan's
+ * `props`, and the guest-card first saves — with the team's own accounts
+ * left out unless `includeAdmins`.
+ *
+ * The counting functions leave admins out themselves; these rows are
+ * filtered on the same ids. A row whose account was deleted (user_id NULL)
+ * stays — `not.in` alone would drop it. Without the admins' ids the rows
+ * would count the team while the functions do not, so they are then not
+ * shown at all.
  */
-export function adminIdFilter(adminIds: string[]): string | null {
-  const ids = adminIds.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
-  return ids.length ? `user_id.is.null,user_id.not.in.(${ids.join(",")})` : null;
-}
-
-export async function getFunnelSummary(): Promise<FunnelSummary | null> {
-  const admin = await requireAdminClient();
-  if (!admin) return null;
-  const windows: FunnelWindow[] = [];
-  for (const days of FUNNEL_WINDOWS_DAYS) {
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-    const { data, error } = await admin.rpc("admin_funnel_counts", { p_since: since });
+async function readPeriodRows(admin: AdminClient, range: { since: string; until: string }, includeAdmins: boolean) {
+  let notAdmin: string | null = null;
+  let adminIdsFailed = false;
+  if (!includeAdmins) {
+    const { data, error } = await admin.from("profiles").select("id").eq("is_admin", true);
     if (error) {
-      console.warn("getFunnelSummary: rpc error", error.message);
-      return null;
+      console.error("getFunnelSummary: admin ids read failed", error.message);
+      adminIdsFailed = true;
     }
-    const counts: FunnelCounts = {};
-    for (const row of data ?? []) {
-      counts[row.event as FunnelEvent] = { n: Number(row.n), users: Number(row.users) };
-    }
-    windows.push(buildFunnel(counts, days));
+    notAdmin = adminIdFilter((data ?? []).map((row) => row.id));
   }
-  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  // The team's own accounts are not the funnel: the two counting functions
-  // leave admins out themselves (migration 0197), and the row reads below
-  // filter on the same ids. A row whose account was deleted (user_id NULL)
-  // stays — `not.in` alone would drop it.
-  const { data: adminRows, error: adminError } = await admin.from("profiles").select("id").eq("is_admin", true);
-  if (adminError) console.warn("getFunnelSummary: admin ids", adminError.message);
-  const notAdmin = adminIdFilter((adminRows ?? []).map((row) => row.id));
-  /** A page that failed leaves part of a list: that is not the list. And
-   *  without the admins' ids the rows would count the team while the two
-   *  counting functions do not — so neither is shown (empty, as a failed
-   *  read always was here), never part of one as if it were all of it. */
-  const whole = <T,>(res: { data: T[]; error: { message: string } | null }): T[] => (res.error || adminError ? [] : res.data);
-  /** Every `props` of one event in the window — in pages: an un-ranged
+  /** Every `props` of one event in the period — in pages: an un-ranged
    *  read stops at 1,000 rows whatever `.limit()` says. */
   const propsOf = (event: FunnelEvent) =>
     selectAllRows<{ props: unknown }>((from, to) => {
-      let query = admin.from("funnel_events").select("props").eq("event", event).gte("created_at", since30);
+      let query = admin
+        .from("funnel_events")
+        .select("props")
+        .eq("event", event)
+        .gte("created_at", range.since)
+        .lt("created_at", range.until);
       if (notAdmin) query = query.or(notAdmin);
       return query.order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to);
     });
@@ -305,38 +527,62 @@ export async function getFunnelSummary(): Promise<FunnelSummary | null> {
     .select("id", { count: "exact", head: true })
     .eq("event", "first_card_saved")
     .contains("props", { guestDraft: true })
-    .gte("created_at", since30);
+    .gte("created_at", range.since)
+    .lt("created_at", range.until);
   if (notAdmin) guestFirstSavesQuery = guestFirstSavesQuery.or(notAdmin);
-  const [signups, trials, screenWidths, guestFirstSaves, cancellations] = await Promise.all([
+  const [signups, cancellations, guestFirstSaves] = await Promise.all([
     propsOf("signup"),
-    admin.rpc("admin_trial_engagement", { p_since: since30 }),
-    readScreenWidths(admin, since30),
-    guestFirstSavesQuery,
     propsOf("subscription_cancelled"),
+    guestFirstSavesQuery,
   ]);
-  if (cancellations.error) console.warn("getFunnelSummary: cancellations", cancellations.error.message);
-  if (guestFirstSaves.error) console.warn("getFunnelSummary: guest first saves", guestFirstSaves.error.message);
-  if (signups.error) console.warn("getFunnelSummary: signups", signups.error.message);
-  if (trials.error) console.warn("getFunnelSummary: trials", trials.error.message);
+  if (signups.error) console.error("getFunnelSummary: signups read failed", signups.error.message);
+  if (cancellations.error) console.error("getFunnelSummary: cancellations read failed", cancellations.error.message);
+  if (guestFirstSaves.error) console.error("getFunnelSummary: guest first saves read failed", guestFirstSaves.error.message);
+  /** A page that failed leaves part of a list: that is not the list. */
+  const whole = <T,>(res: { data: T[]; error: { message: string } | null }): T[] => (res.error || adminIdsFailed ? [] : res.data);
   return {
-    windows,
-    signupSources: groupSignupSources(whole(signups)),
-    signupSurfaces: groupSignupSurfaces(whole(signups)),
-    cancelReasons: groupCancelReasons(whole(cancellations)),
-    guestCard: {
-      signups: countGuestDraftSignups(whole(signups)),
-      firstCardsSaved: guestFirstSaves.error ? null : (guestFirstSaves.count ?? 0),
+    signups: whole(signups),
+    cancellations: whole(cancellations),
+    guestFirstSaves: guestFirstSaves.error || adminIdsFailed ? null : (guestFirstSaves.count ?? 0),
+    failed: {
+      signups: Boolean(signups.error) || adminIdsFailed,
+      cancellations: Boolean(cancellations.error) || adminIdsFailed,
     },
-    trials: (trials.data ?? []).map((row) => ({
-      userId: row.user_id,
-      username: row.username,
-      startedAt: row.started_at,
-      outcome: row.outcome,
-      activeDays: Number(row.active_days),
-      saves: Number(row.saves),
-      generations: Number(row.generations),
-      downloads: Number(row.downloads),
-    })),
+  };
+}
+
+/**
+ * Everything the Funnel tab shows, for `period` (lib/admin/analytics/params
+ * analyticsPeriod) — every read at once. `includeAdmins` (the page's
+ * "Include admins" switch) goes to every counting function and decides the
+ * row reads' filter. Null when the viewer is not an admin; a single read
+ * that failed is that block's own null.
+ */
+export async function getFunnelSummary(period: AnalyticsPeriod, includeAdmins = false): Promise<FunnelSummary | null> {
+  const admin = await requireAdminClient();
+  if (!admin) return null;
+  const range = { since: period.since.toISOString(), until: period.until.toISOString() };
+  const [counts, cohort, signups, trials, screenWidths, rows] = await Promise.all([
+    readFunnelCountsWithPrevious(admin, period, includeAdmins),
+    readCohort(admin, period, includeAdmins),
+    readSignupsDaily(admin, period, includeAdmins),
+    readTrials(admin, period, includeAdmins),
+    readScreenWidths(admin, range),
+    readPeriodRows(admin, range, includeAdmins),
+  ]);
+  return {
+    counts,
+    cohort,
+    signups,
+    signupSources: groupSignupSources(rows.signups),
+    signupSurfaces: groupSignupSurfaces(rows.signups),
+    cancelReasons: groupCancelReasons(rows.cancellations),
+    guestCard: {
+      signups: countGuestDraftSignups(rows.signups),
+      firstCardsSaved: rows.guestFirstSaves,
+    },
+    failed: rows.failed,
+    trials,
     screenWidths,
   };
 }

@@ -23,15 +23,25 @@ import { checkToolAccess } from "./queries";
  * What the BROWSER says it saw is never the tool's cost. A run's own page
  * reports the credits it watched go (`run_finished`, `ai_art_done`) — useful
  * beside the run, forgeable by anyone who can post here, and absent when the
- * tab closes mid-run. So a browser's `credits` is stored as `credits_seen`:
- * a reader that sums `credits` reads the server's rows only, and the money
- * itself is the credit ledger's (credit_ledger, by the flow's label).
+ * tab closes mid-run. So a browser's `credits` is stored as `credits_seen`,
+ * never under the server's word — and no admin reader sums either: what a
+ * tool cost is the credit ledger's (credit_ledger, by the flow's reason).
  */
 export function browserEventProps(props: unknown): unknown {
   if (!props || typeof props !== "object" || Array.isArray(props)) return props;
-  const { credits, ...rest } = props as Record<string, unknown>;
-  return credits === undefined ? rest : { ...rest, credits_seen: credits };
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(props as Record<string, unknown>)) {
+    // A string from the browser is a CODE ("pdf", "rate_limited") or it is
+    // dropped: any tester can post here, and what is kept is printed on the
+    // admin's pages ("Why things failed") — never a place for free text.
+    if (typeof value === "string" && !BROWSER_CODE_RE.test(value)) continue;
+    out[key === "credits" ? "credits_seen" : key] = value;
+  }
+  return out;
 }
+
+/** A browser's string value: a short code — letters, digits, `_ . : -`. */
+export const BROWSER_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,39}$/;
 
 /** Browser events one user may record per tool per minute. */
 export const CLIENT_TOOL_EVENTS_PER_MINUTE = 60;

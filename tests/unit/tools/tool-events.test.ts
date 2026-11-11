@@ -326,6 +326,23 @@ describe("what a tool's browser may record", () => {
     expect(db.inserts.at(-1)?.props).toEqual({ painted: 5000, credits_seen: 100000 });
   });
 
+  it("a string from the browser is a CODE or it is dropped — what is kept is printed on the admin's pages", async () => {
+    expect(
+      browserEventProps({
+        kind: "pdf",
+        reason: "rate_limited",
+        layout: "letter-3x3",
+        note: "call me at 555 0100 <b>now</b>",
+        long: "x".repeat(41),
+        empty: "",
+        failed: 2,
+        ok: true,
+      }),
+    ).toEqual({ kind: "pdf", reason: "rate_limited", layout: "letter-3x3", failed: 2, ok: true });
+    await recordClientToolEvent("token-kit", "kit_export_failed", { kind: "zip", reason: "Totally made up reason text" });
+    expect(db.inserts.at(-1)?.props).toEqual({ kind: "zip" });
+  });
+
   it("answers whether a row was really written — false past the minute's ceiling or when the write fails", async () => {
     expect(await recordClientToolEvent("rule0-sheet", "print")).toBe(true);
     db.insertError = { message: "down" };

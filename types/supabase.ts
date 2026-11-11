@@ -3695,16 +3695,21 @@ export type Database = {
       // Migration 0112 — funnel instrumentation.
       // Migration 0197: admins are left out unless p_include_admins.
       admin_funnel_counts: {
-        Args: { p_since: string; p_include_admins?: boolean };
+        // `p_until` since 0200: the period's end (null = now).
+        Args: { p_since: string; p_include_admins?: boolean; p_until?: string | null };
         Returns: { event: string; n: number; users: number }[];
       };
       // Migration 0113 — trial engagement.
       admin_trial_engagement: {
-        Args: { p_since: string; p_include_admins?: boolean };
+        // 0200: `p_until`, and each trial measured over ITS OWN length
+        // (`ended_at`, `window_days`) instead of a fixed 7 days.
+        Args: { p_since: string; p_include_admins?: boolean; p_until?: string | null };
         Returns: {
           user_id: string;
           username: string | null;
           started_at: string;
+          ended_at: string | null;
+          window_days: number;
           outcome: string;
           active_days: number;
           saves: number;
@@ -3801,6 +3806,95 @@ export type Database = {
           missing_cards: Json;
           updated_at: string;
         }[];
+      };
+      // --- /admin/analytics (migrations 0200–0204) -------------------------
+      admin_funnel_cohort: {
+        Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
+        Returns: { step: string; users: number }[];
+      };
+      admin_signups_daily: {
+        Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
+        Returns: { day: string; method: string; n: number }[];
+      };
+      admin_credit_flow: {
+        Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
+        Returns: Json;
+      };
+      admin_referred_friends: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: {
+          referral_id: string;
+          referee_id: string | null;
+          referee_username: string | null;
+          referee_joined_at: string | null;
+          referrer_id: string;
+          referrer_username: string | null;
+          signed_up_at: string;
+          status: string;
+          block_reason: string | null;
+          cards_saved_at: string | null;
+          card_on_file_at: string | null;
+          rewarded_at: string | null;
+          ladder_step: number | null;
+          referee_tier: string | null;
+          referee_cards: number;
+          referee_public_cards: number;
+          referee_last_card_at: string | null;
+          referee_banked_days: number;
+          total_count: number;
+        }[];
+      };
+      admin_content_stats: {
+        Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
+        Returns: Json;
+      };
+      admin_tools_overview: {
+        Args: { p_since: string; p_until?: string; p_uses?: Json; p_include_admins?: boolean };
+        Returns: {
+          tool_slug: string;
+          users: number;
+          using_users: number;
+          opens: number;
+          uses: number;
+          failures: number;
+          last_event_at: string | null;
+        }[];
+      };
+      admin_tool_breakdown: {
+        Args: { p_slug: string; p_since: string; p_until?: string; p_uses?: Json; p_include_admins?: boolean };
+        Returns: Json;
+      };
+      admin_tool_users: {
+        Args: {
+          p_slug: string;
+          p_since: string;
+          p_until?: string;
+          p_uses?: Json;
+          p_include_admins?: boolean;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          user_id: string;
+          username: string | null;
+          is_admin: boolean;
+          access: string | null;
+          opens: number;
+          uses: number;
+          failures: number;
+          active_days: number;
+          first_at: string;
+          last_at: string;
+          total_count: number;
+        }[];
+      };
+      admin_tool_user_events: {
+        Args: { p_slug: string; p_user_id: string; p_limit?: number };
+        Returns: { created_at: string; event: string; access: string | null; props: Json }[];
+      };
+      admin_user_tool_usage: {
+        Args: { p_user_id: string; p_uses?: Json };
+        Returns: { tool_slug: string; opens: number; uses: number; failures: number; last_at: string | null }[];
       };
       admin_tool_summary: {
         // `p_uses` since 0199: {"<tool slug>": ["<event>", …]} — what counts as a use.

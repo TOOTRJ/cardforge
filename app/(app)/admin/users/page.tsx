@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
@@ -25,16 +26,10 @@ import {
   PlanGrantsList,
   ResyncSubscriptionButton,
 } from "@/components/admin/user-billing-controls";
-import { RevenuePanel } from "@/components/admin/revenue-panel";
 import { AdminLoadError } from "@/components/admin/admin-load-error";
-import { getRevenueSummary } from "@/lib/admin/revenue-queries";
-import { FunnelPanel } from "@/components/admin/funnel-panel";
-import { getFunnelSummary } from "@/lib/admin/funnel-queries";
-import { CreditGrantsPanel } from "@/components/admin/credit-grants-panel";
-import { getCreditGrantStats } from "@/lib/admin/credit-grant-stats";
-import { ReferralPanel } from "@/components/admin/referral-panel";
-import { getReferralStats } from "@/lib/admin/referral-queries";
-import { readReferralSettings } from "@/lib/referrals/settings-server";
+import { UserToolsUsed } from "@/components/admin/analytics/tools-user-usage";
+import { getUserToolUsage } from "@/lib/admin/analytics/tools";
+import { ANALYTICS_PATH } from "@/lib/admin/analytics/params";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
@@ -79,7 +74,12 @@ export const dynamic = "force-dynamic";
 // &flag=&sort=&page=) so every view is linkable and refresh-safe; the list
 // comes from ONE service-role RPC (admin_list_users, migration 0071) that
 // aggregates counts + email server-side. `?u=<id>` opens the detail view
-// with stats, billing tools, and the messaging thread list.
+// with stats, billing tools, the tools the account used, and the messaging
+// thread list.
+//
+// The NUMBERS about the product (the funnel, revenue, credits, referrals)
+// are not here: they are /admin/analytics, by tab and by period (2026-11).
+// The billing health check stays: it is an on-demand check about accounts.
 // ---------------------------------------------------------------------------
 
 export default async function AdminUsersPage({
@@ -105,14 +105,7 @@ export default async function AdminUsersPage({
     );
   }
 
-  const [page, revenue, funnel, referrals, referralSettings, creditGrants] = await Promise.all([
-    listAdminUsers(params),
-    getRevenueSummary(),
-    getFunnelSummary(),
-    getReferralStats(),
-    readReferralSettings(createAdminClient()),
-    getCreditGrantStats(),
-  ]);
+  const page = await listAdminUsers(params);
   if (!page) notFound();
   const pages = totalPages(page.total, page.pageSize);
 
@@ -123,33 +116,24 @@ export default async function AdminUsersPage({
         title="Users"
         description="Every account, with plan, credits, activity and support context. Open a user to grant credits, comp a plan, resync billing, or message them."
         actions={
-          page.loadError ? null : <Badge variant="primary">{page.total.toLocaleString()} total</Badge>
+          <>
+            {page.loadError ? null : <Badge variant="primary">{page.total.toLocaleString()} total</Badge>}
+            <Button asChild variant="outline" size="sm">
+              <Link href={ANALYTICS_PATH}>
+                <BarChart3 className="h-4 w-4" aria-hidden /> Analytics
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      {funnel ? (
-        <div className="mt-6">
-          <FunnelPanel summary={funnel} />
-        </div>
-      ) : null}
-
-      {referrals ? (
-        <div className="mt-6">
-          <ReferralPanel summary={referrals} settings={referralSettings} />
-        </div>
-      ) : null}
-
-      {creditGrants ? (
-        <div className="mt-6">
-          <CreditGrantsPanel stats={creditGrants} />
-        </div>
-      ) : null}
-
-      {revenue ? (
-        <div className="mt-6">
-          <RevenuePanel summary={revenue} />
-        </div>
-      ) : null}
+      <p className="mt-4 text-sm text-muted">
+        The funnel, revenue, credit and referral numbers have moved to{" "}
+        <Link href={ANALYTICS_PATH} className="font-medium text-primary-bright hover:underline">
+          Analytics
+        </Link>
+        .
+      </p>
 
       <div className="mt-6">
         <BillingHealthPanel />
@@ -424,7 +408,7 @@ function PlanBadges({ user }: { user: AdminUserRow }) {
 
 async function UserDetail({ userId, backHref }: { userId: string; backHref: string }) {
   const admin = createAdminClient();
-  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList, grants, bank] =
+  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList, grants, bank, toolUsage] =
     await Promise.all([
       admin
         .from("profiles")
@@ -445,6 +429,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
       listThreadsForUser(userId),
       listPlanGrants(admin, userId),
       listBankEntriesForAdmin(admin, userId),
+      getUserToolUsage(admin, userId),
     ]);
 
   if (ledgerError) console.error("[admin/users] credit ledger read failed:", ledgerError.message);
@@ -531,8 +516,10 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="flex flex-col gap-4">
+      {/* grid-cols-1 + minmax(0, …): an implicit column sizes to its widest
+          child, and the page scrolled sideways on a phone. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-4">
           <SurfaceCard className="p-5">
             <SectionTitle title="Account" hint="Identity + subscription state as the profile row stores it." />
             <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -658,6 +645,14 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
                 </table>
               </div>
             )}
+          </SurfaceCard>
+
+          <SurfaceCard className="p-5">
+            <SectionTitle
+              title="Tools used"
+              hint="Every beta tool this account has opened, all time. An open is a visit to the tool's page; a use is the tool doing one of its jobs. A tool's name opens this account's event log in it."
+            />
+            <UserToolsUsed userId={user.id} usage={toolUsage} className="mt-3" />
           </SurfaceCard>
         </div>
 

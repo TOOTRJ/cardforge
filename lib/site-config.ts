@@ -272,6 +272,7 @@ export const siteConfig = {
   // profiles). Mirrors the avatar-dropdown admin entries.
   adminNav: [
     { label: "Users", href: "/admin/users" },
+    { label: "Analytics", href: "/admin/analytics" },
     { label: "Messages", href: "/admin/messages" },
     { label: "Moderation", href: "/admin/moderation" },
     { label: "Feedback", href: "/admin/feedback" },

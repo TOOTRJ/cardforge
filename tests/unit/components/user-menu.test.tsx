@@ -35,8 +35,12 @@ function openMenu() {
 afterEach(cleanup);
 
 describe("UserMenu admin shortcuts", () => {
-  it("lists all fourteen admin pages for an admin, in the rail's order, Frame requests after Frame compare (D5)", () => {
-    expect(ADMIN_SHORTCUTS).toHaveLength(14);
+  it("lists all fifteen admin pages for an admin, in the rail's order — Analytics right after Users, Frame requests after Frame compare (D5)", () => {
+    expect(ADMIN_SHORTCUTS).toHaveLength(15);
+    expect(ADMIN_SHORTCUTS.slice(0, 2)).toEqual([
+      ["Users", "/admin/users"],
+      ["Analytics", "/admin/analytics"],
+    ]);
     render(<UserMenu username="dev_admin" displayName="Dev Admin" isAdmin />);
     openMenu();
     const admin = screen.getByRole("navigation", { name: "Admin" });
