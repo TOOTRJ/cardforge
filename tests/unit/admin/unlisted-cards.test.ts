@@ -4,47 +4,81 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // lib/admin/unlisted-cards.ts — a user's UNLISTED cards for an admin (the
 // profile page's debugging section, owner 2026-11-11). An unlisted card is
-// on no list anywhere else, so the gate is the reader's own: for anyone who
-// is not an admin it answers null and asks the database nothing.
+// on no list of the app's anywhere else, so the gate is the reader's own:
+// for anyone who is not an admin it answers null and reads no card.
+//
+// Two gates, in order: the database's `viewer_is_admin()` (one small call,
+// asked as the viewer — it is what every signed-in non-admin costs), then
+// the app's own `requireAdminClient`. The READ is a signed-out visitor's
+// (the cookie-free client), never the service role's: RLS hands an unlisted
+// card to anyone and keeps every private one out.
 // ---------------------------------------------------------------------------
 
 type Step = [string, ...unknown[]];
 
+type Answer = { data: unknown[] | null; count: number | null; error: null | { message: string; code?: string } };
+
 const db = vi.hoisted(() => ({
+  /** What the DATABASE says of the viewer (viewer_is_admin), and how often it was asked. */
+  databaseSays: true as boolean | "error" | "throws",
+  asked: 0,
   /** Whether the viewer is an admin: what requireAdminClient answers. */
   admin: true,
-  /** How often the reader asked who the viewer is. */
+  /** How often the reader asked the app's own gate. */
   gate: 0,
-  /** Every query built: the table, then each call made on it. */
+  /** Every query the cookie-free client built: the table, then each call made on it. */
   queries: [] as Array<{ table: string; steps: Step[] }>,
-  answer: { data: [] as unknown[] | null, count: 0 as number | null, error: null as null | { message: string } },
+  /** How often each client was made. */
+  publicClients: 0,
+  /** What a page read answers, and what the count-only read answers. */
+  answer: { data: [], count: 0, error: null } as Answer,
+  countAnswer: { data: null, count: 0, error: null } as Answer,
 }));
 
-function fakeAdmin() {
+/** The cookie-free client: a chain that answers when awaited. */
+function fakePublic() {
   return {
     from(table: string) {
       const query = { table, steps: [] as Step[] };
       db.queries.push(query);
+      const isCountOnly = () => query.steps.some((step) => step[0] === "select" && (step[2] as { head?: boolean } | undefined)?.head === true);
       const builder: Record<string, unknown> = {};
-      for (const method of ["select", "eq", "order"]) {
+      for (const method of ["select", "eq", "order", "range"]) {
         builder[method] = (...args: unknown[]) => {
           query.steps.push([method, ...args]);
           return builder;
         };
       }
-      builder.range = async (...args: unknown[]) => {
-        query.steps.push(["range", ...args]);
-        return db.answer;
-      };
+      builder.then = (resolve: (value: Answer) => unknown) => resolve(isCountOnly() ? db.countAnswer : db.answer);
       return builder;
     },
   };
 }
 
+// The app's gate hands back the service client — which the reader must
+// never read with: this one has no `from` at all.
 vi.mock("@/lib/admin/users-queries", () => ({
   requireAdminClient: async () => {
     db.gate += 1;
-    return db.admin ? fakeAdmin() : null;
+    return db.admin ? { serviceRole: true } : null;
+  },
+}));
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => {
+    if (db.databaseSays === "throws") throw new Error("no session store");
+    return {
+      rpc: async (name: string) => {
+        db.asked += 1;
+        if (name !== "viewer_is_admin") throw new Error(`unexpected rpc ${name}`);
+        return db.databaseSays === "error" ? { data: null, error: { message: "boom" } } : { data: db.databaseSays, error: null };
+      },
+    };
+  },
+}));
+vi.mock("@/lib/supabase/public", () => ({
+  createPublicClient: () => {
+    db.publicClients += 1;
+    return fakePublic();
   },
 }));
 
@@ -75,40 +109,68 @@ const row = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
+  db.databaseSays = true;
+  db.asked = 0;
   db.admin = true;
   db.gate = 0;
   db.queries = [];
+  db.publicClients = 0;
   db.answer = { data: [], count: 0, error: null };
+  db.countAnswer = { data: null, count: 0, error: null };
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("listUnlistedCardsForAdmin — the gate", () => {
-  it("answers null for a viewer who is not an admin, and asks the database nothing", async () => {
+  it("a viewer the DATABASE says is no admin gets null for ONE small call — no app gate, no card read", async () => {
+    for (const answer of [false, "error", "throws"] as const) {
+      db.databaseSays = answer;
+      db.answer = { data: [row()], count: 1, error: null };
+      expect(await listUnlistedCardsForAdmin(OWNER, 1), String(answer)).toBeNull();
+    }
+    expect(db.asked).toBe(2); // the third never got a client to ask with
+    expect(db.gate).toBe(0);
+    expect(db.publicClients).toBe(0);
+    expect(db.queries).toEqual([]);
+  });
+
+  it("the database's yes is not enough: the app's own gate is asked too, and its no is null with no card read", async () => {
     db.admin = false;
     db.answer = { data: [row()], count: 1, error: null };
     expect(await listUnlistedCardsForAdmin(OWNER, 1)).toBeNull();
+    expect(db.asked).toBe(1);
     expect(db.gate).toBe(1);
     expect(db.queries).toEqual([]);
   });
 
   it("asks who the viewer is on EVERY call — never once and remembered", async () => {
     await listUnlistedCardsForAdmin(OWNER, 1);
-    db.admin = false;
+    db.databaseSays = false;
     expect(await listUnlistedCardsForAdmin(OWNER, 1)).toBeNull();
-    expect(db.gate).toBe(2);
+    expect(db.asked).toBe(2);
     expect(db.queries).toHaveLength(1);
   });
 
-  it("is a server-only module that reaches the service client through requireAdminClient alone", () => {
+  it("is a server-only module that never reads a card with the service role", () => {
     const source = readFileSync("lib/admin/unlisted-cards.ts", "utf8");
     expect(source.startsWith('import "server-only";')).toBe(true);
     expect(source).toContain('import { requireAdminClient } from "@/lib/admin/users-queries";');
     expect(source).not.toContain("createAdminClient");
     expect(source).not.toContain("@/lib/supabase/admin");
+    // The gate's client is asked for and dropped; the read is the cookie-free client's.
+    expect(source).toContain("if (!(await requireAdminClient())) return null;");
+    expect(source).toContain("const reader = createPublicClient();");
+    expect(source.match(/\.from\("cards"\)/g)).toHaveLength(2);
+    expect(source).not.toMatch(/admin\s*\.from\(/);
   });
 });
 
 describe("listUnlistedCardsForAdmin — the read", () => {
+  it("reads as a signed-out visitor would — RLS, not this module's filter, is what keeps a private card out", async () => {
+    await listUnlistedCardsForAdmin(OWNER, 1);
+    expect(db.publicClients).toBe(1);
+    expect(db.queries).toHaveLength(1);
+  });
+
   it("reads THIS owner's UNLISTED cards, most recently edited first, one page with its exact count", async () => {
     db.answer = { data: [row(), row({ id: "c2", slug: "lamplighter", title: "Lamplighter" })], count: 31, error: null };
     const result = await listUnlistedCardsForAdmin(OWNER, 1);
@@ -138,7 +200,7 @@ describe("listUnlistedCardsForAdmin — the read", () => {
     const visibility = db.queries[0].steps.filter((step) => step[0] === "eq" && step[1] === "visibility");
     expect(visibility).toEqual([["eq", "visibility", "unlisted"]]);
     const source = readFileSync("lib/admin/unlisted-cards.ts", "utf8");
-    expect(source.match(/\.eq\("visibility", "[a-z]+"\)/g)).toEqual(['.eq("visibility", "unlisted")']);
+    expect([...new Set(source.match(/\.eq\("visibility", "[a-z]+"\)/g))]).toEqual(['.eq("visibility", "unlisted")']);
     expect(source).not.toMatch(/\.in\("visibility"|\.neq\("visibility"|\.or\(/);
   });
 
@@ -155,6 +217,39 @@ describe("listUnlistedCardsForAdmin — the read", () => {
       expect(db.queries[0].steps.at(-1), String(page)).toEqual(["range", 0, 23]);
       expect(result).toMatchObject({ ok: true, page: 1 });
     }
+  });
+
+  // PostgREST refuses a range that starts past the last row (HTTP 416) —
+  // it does not answer an empty page. A creator published ten cards while an
+  // admin sat on page 2: that is "past the end", and it said "couldn't load".
+  it("a page past the last card is an empty page with the real total — never a failure", async () => {
+    db.answer = { data: null, count: null, error: { message: "An offset of 48 was requested, but there are only 31 rows.", code: "PGRST103" } };
+    db.countAnswer = { data: null, count: 31, error: null };
+    expect(await listUnlistedCardsForAdmin(OWNER, 3)).toEqual({ ok: true, cards: [], total: 31, page: 3, pageSize: 24 });
+    // The count alone, for the same owner and the same visibility.
+    expect(db.queries[1]).toEqual({
+      table: "cards",
+      steps: [
+        ["select", "id", { count: "exact", head: true }],
+        ["eq", "owner_id", OWNER],
+        ["eq", "visibility", "unlisted"],
+      ],
+    });
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("…with none at all it is an empty page of zero; and if the count fails too, that is a failure", async () => {
+    db.answer = { data: null, count: null, error: { message: "range", code: "PGRST103" } };
+    expect(await listUnlistedCardsForAdmin(OWNER, 2)).toEqual({ ok: true, cards: [], total: 0, page: 2, pageSize: 24 });
+    db.countAnswer = { data: null, count: null, error: { message: "down" } };
+    expect(await listUnlistedCardsForAdmin(OWNER, 2)).toEqual({ ok: false });
+    expect(console.error).toHaveBeenCalledWith("[admin/unlisted-cards] count read failed:", "down");
+  });
+
+  it("that code on the FIRST page is a failure like any other (nothing is past the start)", async () => {
+    db.answer = { data: null, count: null, error: { message: "range", code: "PGRST103" } };
+    expect(await listUnlistedCardsForAdmin(OWNER, 1)).toEqual({ ok: false });
+    expect(db.queries).toHaveLength(1);
   });
 
   it("a failed read says so — never an empty list, which would read as “none”", async () => {

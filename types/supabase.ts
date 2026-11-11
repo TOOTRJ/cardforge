@@ -3776,6 +3776,9 @@ export type Database = {
         Args: { p_slug: string };
         Returns: boolean;
       };
+      // Migration 0080 — the caller's own admin flag (for RLS, and for a
+      // cheap "is this viewer an admin" before the app's own gate).
+      viewer_is_admin: { Args: Record<string, never>; Returns: boolean };
       // Migration 0190 — a table sheet open to visitors.
       deck_table_sheet_live: { Args: { p_deck: string }; Returns: boolean };
       // Migration 0185 — the Collection Deck Builder.
