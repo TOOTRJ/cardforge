@@ -252,6 +252,16 @@ export function scopeTakes(scope: ReartScope, kind: ReartEntryKind): boolean {
 export { BULK_VISIBILITY_VALUES as REART_VISIBILITY_VALUES };
 export type ReartVisibility = BulkVisibility;
 
+/**
+ * How the real cards a run turns into the maker's own are shown unless the
+ * maker picks otherwise: PRIVATE (owner 2026-11-10). A run makes up to 150
+ * near-copies of real cards with new art; public by default put every one
+ * of them — samples included — in the gallery, the hubs and the sitemap
+ * without anyone choosing that. The ONE default: the studio's picker opens
+ * on it, the start action falls back to it, and the schema defaults to it.
+ */
+export const REART_DEFAULT_VISIBILITY: ReartVisibility = "private";
+
 // ---------------------------------------------------------------------------
 // The cost line
 // ---------------------------------------------------------------------------
@@ -349,7 +359,7 @@ export const reartRunSchema = z
      *  deck's stored style (a re-roll paints in it). */
     style: reartStyleSchema.optional(),
     scope: z.enum(REART_SCOPE_VALUES).default("all"),
-    visibility: z.enum(BULK_VISIBILITY_VALUES).default("public"),
+    visibility: z.enum(BULK_VISIBILITY_VALUES).default(REART_DEFAULT_VISIBILITY),
     /** Paint exactly these entries (a sample, a re-roll), whether or not
      *  they are in the style already. Absent: every entry of the scope not
      *  yet in the style. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  REART_DEFAULT_VISIBILITY,
   REART_SAMPLE_MAX,
   classifyReartEntry,
   cleanReartTheme,
@@ -164,6 +165,19 @@ describe("a run's request", () => {
     expect(reartRunSchema.safeParse({ deckId: id, style: { preset: "not-a-preset", theme: "" } }).success).toBe(false);
     expect(reartRunSchema.safeParse({ deckId: id, entryIds: [] }).success).toBe(false);
     expect(reartRunSchema.safeParse({ deckId: id, extra: 1 }).success).toBe(false);
+  });
+
+  // Owner 2026-11-10: a run turns up to 150 real cards into the maker's own
+  // near-copies. Public by default put every one — samples included — in
+  // the gallery, the hubs and the sitemap without anyone choosing that.
+  it("makes the new cards PRIVATE unless the maker picks otherwise", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    expect(REART_DEFAULT_VISIBILITY).toBe("private");
+    expect(reartRunSchema.parse({ deckId: id }).visibility).toBe("private");
+    expect(reartRunSchema.parse({ deckId: id, entryIds: [id], sample: true }).visibility).toBe("private");
+    for (const visibility of ["public", "unlisted", "private"] as const) {
+      expect(reartRunSchema.parse({ deckId: id, visibility }).visibility).toBe(visibility);
+    }
   });
 });
 

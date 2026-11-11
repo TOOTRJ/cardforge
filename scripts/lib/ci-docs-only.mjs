@@ -26,10 +26,12 @@
 //            (owner 2026-10-16).
 //   nightly  the schedule: the unit shards with coverage and the floors, on
 //            main as it is (a verified merge runs no unit test on main), and
-//            the FULL "Frames published" check (owner 2026-11-02: the
-//            production build checks only new objects and a canary,
-//            scripts/lib/frames-check-plan.mjs — this finds an older object
-//            deleted by hand within a day).
+//            the "Frames published" SWEEP of the whole bucket (owner
+//            2026-11-02: the production build checks only new objects and a
+//            canary, scripts/lib/frames-check-plan.mjs — this finds an
+//            older object deleted by hand; since 2026-11-10 a pull request
+//            and a merge look up only what they add, and the sweep paces
+//            itself, so a cold CDN night covers a part of the bucket).
 //   idle     the schedule, when a run of ci.yml on this very commit already
 //            passed the coverage floors: only "Frames published" (the bucket
 //            can change with no commit).
@@ -169,9 +171,9 @@ export function classifyChange({ event, files, draft, treeIsPrHead, prRunGreen, 
   const full = (/** @type {string} */ reason, extra = {}) => ({ tier: "full", reason: `${reason}: everything runs`, ...extra });
   if (event === "schedule") {
     if (alreadyCovered === true) {
-      return { tier: "idle", reason: "a run of ci.yml on this commit already passed the coverage floors: only the nightly full \"Frames published\" check runs" };
+      return { tier: "idle", reason: "a run of ci.yml on this commit already passed the coverage floors: only the nightly \"Frames published\" sweep runs" };
     }
-    return { tier: "nightly", reason: "the nightly run: the unit shards with coverage, and the floors, on main as it is, and the full \"Frames published\" check" };
+    return { tier: "nightly", reason: "the nightly run: the unit shards with coverage, and the floors, on main as it is, and the \"Frames published\" sweep of the whole bucket" };
   }
   if (event !== "pull_request" && event !== "push") return full(`event "${event ?? ""}" is neither a pull request nor a push`);
   if (!Array.isArray(files)) return full("the changed files could not be read");
