@@ -19,16 +19,23 @@
 #                       plain vitest — no coverage, about twice as fast
 #                       (owner 2026-10-16). A red coverage run on main opens
 #                       (or comments on) ONE issue, `coverage-alert`.
-#   frames  every object in lib/frames/frame-manifest.json is readable from
+#   frames  the objects of lib/frames/frame-manifest.json are readable from
 #           PRODUCTION's frames bucket (frames plan 4.2, docs/FRAMES.md) — a
 #           PR that adds frames stays red until the owner runs
-#           `npm run frames:promote`. Public reads only; no secrets. It
-#           runs in FULL here every night too (the nightly / idle tiers):
-#           the production build checks only the objects new since the last
-#           deployment and a canary (scripts/lib/frames-check-plan.mjs), so
-#           this is what finds an older object gone from the bucket. A red
-#           run off a pull request opens (or comments on) ONE issue,
-#           `frames-alert`.
+#           `npm run frames:promote`. Public reads only; no secrets. A pull
+#           request and a merge look up only the objects they ADD or change
+#           (`--incremental` against the pull request's base / the commit
+#           before the push — scripts/lib/frames-check-plan.mjs). The
+#           WHOLE bucket is the nightly run's (`--sweep`, the nightly / idle
+#           tiers): it is what finds an older object gone from the bucket,
+#           it slows down whenever the CDN does not answer from its cache,
+#           and it may stop inside its budget with objects left for the next
+#           night (green, with the count; a MISSING object is red). Never the whole bucket at full speed, and never on every
+#           run: ~30 such runs a day exhausted production's storage
+#           connections (2026-11-10 — the site's thumbnails, uploads and
+#           bakes were refused meanwhile). A red run off a pull request
+#           opens (or comments on) ONE issue, `frames-alert`; only a sweep
+#           that looked at every object closes it.
 #   e2e     the full Playwright suite against a LOCAL Supabase stack booted
 #           inside the runner (never the dev branch, never production). This is
 #           the job that would have caught the 12 specs that drifted — and the
@@ -403,12 +410,14 @@ jobs:
           fi
 
   # How the owner hears of a red "Frames published" off a pull request (owner
-  # 2026-11-02) — above all the NIGHTLY full check, the one that looks at
-  # every object: the production build checks only the objects new since
-  # its last deployment and a canary of the rest, so an older object deleted
-  # by hand from production's bucket shows up here first. Same shape as the
+  # 2026-11-02) — above all the NIGHTLY sweep, the one that walks every
+  # object: the production build checks only the objects new since its last
+  # deployment and a canary of the rest, so an older object deleted by hand
+  # from production's bucket shows up here first. Same shape as the
   # coverage alert: ONE open issue, opened on the first red run, commented on
-  # by the next ones, closed by the first green one. It judges nothing.
+  # by the next ones — and closed only by a sweep that looked at EVERY
+  # object (`complete`): a green merge looked at what it added, a sweep cut
+  # short by a cold CDN at a part of the bucket. It judges nothing.
   frames-alert:
     name: Frames alert (main)
     needs: [changes, frames]
@@ -423,6 +432,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RESULT: ${{ needs.frames.result }}
+          COMPLETE: ${{ needs.frames.outputs.complete }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SHA: ${{ github.sha }}
           EVENT: ${{ github.event_name }}
@@ -430,10 +440,10 @@ jobs:
           title="CI: frames are missing from production's bucket"
           open=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
           if [ "$RESULT" = "failure" ]; then
-            body="\"Frames published\" failed on \`main\` at $SHA ($EVENT): an object of lib/frames/frame-manifest.json is missing from production's frames bucket, or the check ran out of its budget before it could verify them all. Run: $RUN_URL — its log lists each missing object. A missing object breaks every card on that frame; production builds check only new objects and a canary, so this check is the one that sees an older object go. Re-run it first (storage has slow days); if it stays red, \`npm run frames:promote\` the manifest again (docs/FRAMES.md)."
+            body="\"Frames published\" failed on \`main\` at $SHA ($EVENT): an object of lib/frames/frame-manifest.json is missing from production's frames bucket, or a merge's new object could not be verified. Run: $RUN_URL — its log lists each missing object. A missing object breaks every card on that frame; production builds check only new objects and a canary, so the nightly sweep is the one that sees an older object go. Re-run it first (storage has slow days); if it stays red, \`npm run frames:promote\` the manifest again (docs/FRAMES.md). This issue closes by itself after a nightly sweep that looked at every object and found them all."
             if [ -n "$open" ]; then gh issue comment "$open" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
-          elif [ -n "$open" ]; then
-            gh issue close "$open" --comment "Frames published is green again on \`main\` at $SHA: $RUN_URL"
+          elif [ -n "$open" ] && [ "$COMPLETE" = "true" ]; then
+            gh issue close "$open" --comment "Frames published looked at every object and found them all on \`main\` at $SHA: $RUN_URL"
           fi
 
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
@@ -637,22 +647,56 @@ jobs:
   frames:
     name: Frames published
     needs: changes
-    # The full and verified tiers: main must see it once the manifest moved.
-    # The nightly and idle tiers: the whole bucket, every night (the
-    # production build checks only new objects and a canary).
+    # The full and verified tiers: a pull request and a merge look up the
+    # objects they add or change — none at all on the ~9 runs in 10 that
+    # leave the manifest alone. The nightly and idle tiers: the sweep of the
+    # whole bucket (the production build checks only new objects and a
+    # canary). See the header for why it is never the whole bucket here.
     if: ${{ !cancelled() && needs.changes.outputs.frames != 'false' }}
     runs-on: ubuntu-24.04
-    # frames-check re-checks apparent misses one at a time with backoff
-    # (transient storage errors are common when several PRs run at once),
-    # and FAILS at its own 13-minute budget (--budget-seconds 780; at 4 lookups in flight a slow storage day answers ~10 objects a second, ~430 s for 4,280) with what
-    # it saw, before this timeout cancels it silently.
-    timeout-minutes: 15
+    # frames-check paces itself (4 lookups in flight while the CDN answers
+    # from its cache, about one a second when it does not, a minute's pause
+    # on a 429) and ends at its own budget — 13 to 22 minutes by the number
+    # of objects it must verify, the sweep 20 — with what it saw, before
+    # this timeout cancels it silently.
+    timeout-minutes: 25
+    outputs:
+      complete: ${{ steps.sweep.outputs.complete }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: node scripts/frames-check.mjs
+      # What the run's manifest is compared with. A pull request: the TIP
+      # OF THE DEFAULT BRANCH, whatever branch it targets — never its own
+      # base, which for a stacked pull request is another branch whose new
+      # frames nobody promoted (it would add "nothing" and merge green, and
+      # retargeting it to main starts no run). A push to main: the commit
+      # before it. The script fetches that commit alone when the shallow
+      # checkout lacks it; any doubt about it is the full check.
+      - name: The commit to compare the manifest with
+        id: base
+        if: ${{ github.event_name != 'schedule' }}
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            sha=$(git ls-remote origin "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          else
+            sha="$BEFORE"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: New or changed frames (a pull request, a merge)
+        if: ${{ github.event_name != 'schedule' }}
+        env:
+          FRAMES_CHECK_BASE_SHA: ${{ steps.base.outputs.sha }}
+        run: node scripts/frames-check.mjs --incremental
+      - name: The whole bucket (the nightly sweep)
+        id: sweep
+        if: ${{ github.event_name == 'schedule' }}
+        run: node scripts/frames-check.mjs --sweep
 
   e2e:
     name: E2E (local Supabase)
