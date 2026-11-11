@@ -14,6 +14,7 @@ import { extractToc, slugifyTag, tagHubHref, type Article, type ArticleMeta } fr
 import { ARTICLE_CATEGORIES, categoryPath, getArticleCategory } from "@/lib/content/article-categories";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { formatCalendarDate } from "@/lib/format/dates";
+import { EagerImage } from "@/components/ui/eager-image";
 
 // ---------------------------------------------------------------------------
 // One guide, as /articles/[slug] draws it — an MDX file or a composer article
@@ -145,9 +146,10 @@ export function ArticleView({
         {meta.cover ? (
           <figure className="mt-8">
             {/* Our own upload or diagram (isAllowedMediaUrl'd by the reader):
-                the probable LCP image, so eager with a high fetch priority. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+                the probable LCP image, so eager with a high fetch priority —
+                from the client leaf, or every list that links to this
+                article would preload its cover (components/ui/eager-image.tsx). */}
+            <EagerImage
               src={meta.cover.src}
               alt={meta.cover.alt}
               width={meta.cover.width ?? undefined}

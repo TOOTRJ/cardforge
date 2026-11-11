@@ -5,9 +5,26 @@
 // (they used to carry eight hand-written copies).
 // ---------------------------------------------------------------------------
 
-/** "just now", "5m ago", "3h ago", "2d ago", then "Aug 1" — with the year
- *  once it isn't this year. A value that isn't a date comes back untouched. */
-export function formatRelativeTime(value: string, now: number = Date.now()): string {
+/** The calendar year an instant falls in, in one time zone (`undefined` =
+ *  the runtime's own). */
+function yearIn(date: Date, timeZone: string | undefined): string {
+  return new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone }).format(date);
+}
+
+/**
+ * "just now", "5m ago", "3h ago", "2d ago", then "Aug 1" — with the year
+ * once it isn't this year. A value that isn't a date comes back untouched.
+ *
+ * BOTH inputs it reads besides the value differ between a server and a
+ * browser: `now`, and — for the date it prints from a week on — the time
+ * zone (`timeZone`, `undefined` = the runtime's own: UTC on the server, the
+ * viewer's in a browser, so one instant is "Oct 30" there and "Oct 29"
+ * here). In a component that HYDRATES, print it through `<RelativeTime>`
+ * (components/ui/local-date.tsx), never as bare text: a text that differs
+ * is React's "hydration failed" (#418), and the whole tree is rendered
+ * again in the browser.
+ */
+export function formatRelativeTime(value: string, now: number = Date.now(), timeZone?: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   const minutes = Math.round((now - date.getTime()) / 60_000);
@@ -20,7 +37,8 @@ export function formatRelativeTime(value: string, now: number = Date.now()): str
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: date.getFullYear() === new Date(now).getFullYear() ? undefined : "numeric",
+    year: yearIn(date, timeZone) === yearIn(new Date(now), timeZone) ? undefined : "numeric",
+    timeZone,
   }).format(date);
 }
 
@@ -56,8 +74,13 @@ export function formatDateIn(
   return new Intl.DateTimeFormat("en-US", { ...DATE_FORMATS[format], timeZone }).format(date);
 }
 
-/** "Sep 14, 2026". `fallback` (default: the input itself) when the value
- *  isn't a date — Intl throws on an invalid Date, so this never does. */
+/** "Sep 14, 2026", in the RUNTIME's zone — so it is for server components
+ *  and for text built after the page has loaded. In a component that
+ *  hydrates it is `<LocalDate format="short">` (a reader's own date) or
+ *  `formatUtcDate` (an admin page): UTC on the server and the viewer's zone
+ *  in the browser are two different days for the same instant. `fallback`
+ *  (default: the input itself) when the value isn't a date — Intl throws on
+ *  an invalid Date, so this never does. */
 export function formatShortDate(value: string, fallback: string = value): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return fallback;

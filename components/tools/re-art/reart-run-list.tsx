@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { formatShortDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 import type { ReartRun } from "@/lib/tools/re-art/server";
 
 /**
@@ -24,7 +24,7 @@ export function ReartRunList({
         {runs.map((run) => (
           <li key={run.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
             <span className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-foreground">{formatShortDate(run.createdAt)}</span>
+              <LocalDate iso={run.createdAt} format="short" className="text-foreground" />
               {showDeck && run.deckId ? (
                 <Link
                   href={`/dashboard/tools/re-art-deck?deck=${run.deckId}`}

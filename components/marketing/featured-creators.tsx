@@ -34,6 +34,8 @@ export async function FeaturedCreators() {
                 <img
                   src={c.bannerUrl}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover opacity-35"
                 />
               ) : (
@@ -55,6 +57,8 @@ export async function FeaturedCreators() {
                     <img
                       src={c.avatarUrl}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="h-14 w-14 rounded-full border-2 object-cover"
                       style={{ borderColor: accent }}
                     />

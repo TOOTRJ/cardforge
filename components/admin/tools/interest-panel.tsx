@@ -9,7 +9,7 @@ import { inputClass } from "@/components/ui/field-classes";
 import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { grantInterestedAction, grantToolAccessAction } from "@/lib/tools/admin-actions";
 import type { ToolInterested } from "@/lib/tools/admin-queries";
-import { formatShortDate } from "@/lib/format/dates";
+import { formatUtcDate } from "@/lib/format/dates";
 import { GRANT_LENGTHS, PersonLabel, grantDaysOf } from "./testers-panel";
 
 /** The waiting list ("Notify me"): let one person in, or everyone waiting. */
@@ -77,7 +77,7 @@ export function InterestPanel({
           <li key={person.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
             <PersonLabel person={person} />
             <span className="flex shrink-0 items-center gap-3">
-              <span className="hidden text-xs text-subtle sm:inline">Asked {formatShortDate(person.createdAt)}</span>
+              <span className="hidden text-xs text-subtle sm:inline">Asked {formatUtcDate(person.createdAt)}</span>
               {person.hasAccess ? (
                 <span className="text-xs text-gold-strong">Tester</span>
               ) : (

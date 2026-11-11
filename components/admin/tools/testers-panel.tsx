@@ -16,7 +16,7 @@ import {
   type ToolUserMatch,
 } from "@/lib/tools/admin-actions";
 import type { ToolTester } from "@/lib/tools/admin-queries";
-import { formatShortDate } from "@/lib/format/dates";
+import { formatUtcDate } from "@/lib/format/dates";
 import { cn } from "@/lib/utils";
 
 export const GRANT_LENGTHS: { value: string; label: string }[] = [
@@ -265,12 +265,12 @@ export function TestersPanel({
               <div className={cn("flex min-w-0 flex-1 flex-col gap-1.5", !t.live && "opacity-60")}>
                 <PersonLabel person={t} />
                 <p className="pl-11 text-xs text-subtle">
-                  Added {formatShortDate(t.grantedAt)}
+                  Added {formatUtcDate(t.grantedAt)}
                   {t.grantedBy ? ` by @${t.grantedBy}` : ""}
                   {" · "}
                   {t.expiresAt ? (
                     <span className={t.live ? "text-muted" : "font-medium text-danger"}>
-                      {t.live ? `ends ${formatShortDate(t.expiresAt)}` : `ended ${formatShortDate(t.expiresAt)}`}
+                      {t.live ? `ends ${formatUtcDate(t.expiresAt)}` : `ended ${formatUtcDate(t.expiresAt)}`}
                     </span>
                   ) : (
                     <span className="text-muted">no end</span>

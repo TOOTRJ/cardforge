@@ -1752,7 +1752,15 @@ Rules and gotchas:
   `rateLimitedResponse` + `cronRouteGuard` (`lib/api/*`), date strings
   (`lib/format/dates.ts`; a BILLING date a subscriber sees is `<LocalDate>` /
   `<LocalDateText>`, `components/ui/local-date.tsx` — the viewer's own day, as
-  Stripe's portal shows it; an admin page prints `formatUtcDate`, labelled), `lookupUsername`/`revalidateProfilePage`
+  Stripe's portal shows it; an admin page prints `formatUtcDate`, labelled; in a
+  component that HYDRATES a relative time is `<RelativeTime>` and a sentence
+  with a date names its zone (`useViewerTimeZone`, as `describeNotification`'s
+  `timeZone`) — never `formatRelativeTime` / `formatShortDate` /
+  `toLocaleString()` as bare text there: the server is UTC, English and
+  earlier, the browser the reader's zone, locale and now, and a text that
+  differs is React's #418, the tree rendered twice — production's
+  /notifications did it on every load; a list sorted in one names
+  `SORT_LOCALE`; `tests/unit/content/hydration-safe-text.test.ts`), `lookupUsername`/`revalidateProfilePage`
   (`lib/profile/username.ts`) + `getCurrentUsername()` for handles,
   `narrowCard` (`lib/cards/narrow.ts`), `useSearchParamPatch` for browse
   filters (always resets `page`), `RARITY_LABELS`/`COLOR_IDENTITY_LABELS`/

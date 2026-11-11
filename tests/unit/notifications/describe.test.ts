@@ -468,3 +468,41 @@ describe("describeNotification — deck likes and cards added to decks", () => {
   });
 });
 
+// 2026-11-11: a notification's sentence is built in a component that
+// hydrates (the row on /notifications), and its dates were printed in the
+// RUNTIME's zone — UTC on the server, the reader's in the browser — so a
+// trial ending at 03:00 UTC was "Sep 29" in the HTML and "Sep 28" in a
+// Mountain-time browser: React's hydration error #418. The zone is the
+// caller's to name now.
+describe("describeNotification — the zone its dates are printed in", () => {
+  const item = {
+    actor: null,
+    card: null,
+    threadId: null,
+    type: "trial_ending",
+    payload: { tier: "pro", trialEnd: "2026-09-29T03:00:00Z", hasPaymentMethod: true },
+  };
+
+  it("prints the day of the zone it is given — the server's HTML and the hydrating render name the same one", () => {
+    expect(describeNotification(item, { isAdmin: false, timeZone: "UTC" }).body).toContain("ends on Sep 29, 2026");
+    expect(describeNotification(item, { isAdmin: false, timeZone: "America/Denver" }).body).toContain("ends on Sep 28, 2026");
+    expect(notificationSentence(item, { isAdmin: false, timeZone: "UTC" })).toContain("Sep 29, 2026");
+  });
+
+  it("with no zone it is the runtime's own — a toast in the browser, an email on the server", () => {
+    const runtime = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+      new Date("2026-09-29T03:00:00Z"),
+    );
+    expect(describeNotification(item, { isAdmin: false }).body).toContain(`ends on ${runtime}`);
+  });
+
+  it("the row that is server-rendered names the zone; every date in the module goes through it", async () => {
+    const { readFileSync } = await import("node:fs");
+    const row = readFileSync("components/notifications/notification-row.tsx", "utf8");
+    expect(row).toContain("const timeZone = useViewerTimeZone();");
+    expect(row).toContain("describeNotification(item, { isAdmin, timeZone })");
+    const source = readFileSync("lib/notifications/describe.ts", "utf8");
+    expect(source).not.toMatch(/formatShortDate|toLocale(Date|Time)String|\.toLocaleString\(\s*\)|new Intl\.DateTimeFormat/);
+    expect(source).toContain('const day = (value: string) => formatDateIn(value, "short", opts.timeZone);');
+  });
+});

@@ -7,6 +7,8 @@
 // the cookie and the URL are both user-editable.
 // ---------------------------------------------------------------------------
 
+import { SORT_LOCALE } from "@/lib/format/sort-locale";
+
 /** How the grid is drawn. Remembered per browser (see MY_CARDS_VIEW_COOKIE). */
 const MY_CARDS_VIEWS = ["grid", "compact", "list"] as const;
 export type MyCardsView = (typeof MY_CARDS_VIEWS)[number];
@@ -82,7 +84,7 @@ export function sortMyCards<T extends SortableCard>(
 ): T[] {
   const byUpdated = (a: T, b: T) => b.updated_at.localeCompare(a.updated_at);
   const byTitle = (a: T, b: T) =>
-    (a.title ?? "").localeCompare(b.title ?? "", undefined, {
+    (a.title ?? "").localeCompare(b.title ?? "", SORT_LOCALE, {
       sensitivity: "base",
       numeric: true,
     });

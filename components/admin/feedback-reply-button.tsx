@@ -109,7 +109,7 @@ export function FeedbackReplyButton({
           <FieldGroup
             label="Your reply"
             error={error ?? undefined}
-            helper={`Up to ${MESSAGE_BODY_MAX.toLocaleString()} characters. Sent as the PipGlyph team.`}
+            helper={`Up to ${MESSAGE_BODY_MAX.toLocaleString("en-US")} characters. Sent as the PipGlyph team.`}
           >
             <textarea
               value={body}

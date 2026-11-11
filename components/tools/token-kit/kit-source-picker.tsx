@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { textareaClass, inputClass } from "@/components/ui/field-classes";
-import { formatShortDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 import type { KitSource } from "@/lib/tools/token-kit/actions";
 import type { RecentTokenKit } from "@/lib/tools/token-kit/queries";
 import { cn } from "@/lib/utils";
@@ -193,7 +193,7 @@ export function KitSourcePicker({
                 >
                   <span className="truncate text-sm font-medium text-foreground">{kit.title}</span>
                   <span className="text-xs text-subtle">
-                    {kit.deckId ? "Deck" : "Pasted list"} · {formatShortDate(kit.updatedAt)}
+                    {kit.deckId ? "Deck" : "Pasted list"} · <LocalDate iso={kit.updatedAt} format="short" />
                   </span>
                 </button>
               </li>

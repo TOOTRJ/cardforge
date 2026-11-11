@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { BakedCardFlip } from "@/components/cards/baked-card-flip";
+import { EagerImage } from "@/components/ui/eager-image";
 import { WINDOW_GRID_SIZES } from "@/components/cards/card-grid";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
@@ -172,15 +173,31 @@ export function BakedCardThumbnail({
       frontLandscape={isLandscape}
     />
   ) : thumbUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
-      alt={label}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : "auto"}
-      decoding="async"
-      className={cn("absolute inset-0 h-full w-full object-cover", backdrop)}
-    />
+    priority ? (
+      // A page's first row: eager and high priority — from the client leaf,
+      // so its preload hint stays on ITS page. As a server-rendered <img> it
+      // rode every prefetch of the page: the home page's six trending
+      // thumbnails were preloaded, at high priority, by every page that
+      // links to "/" (components/ui/eager-image.tsx).
+      <EagerImage
+        src={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
+        alt={label}
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+        className={cn("absolute inset-0 h-full w-full object-cover", backdrop)}
+      />
+    ) : (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
+        alt={label}
+        loading="lazy"
+        fetchPriority="auto"
+        decoding="async"
+        className={cn("absolute inset-0 h-full w-full object-cover", backdrop)}
+      />
+    )
   ) : (
     <Image
       src={pngUrl}
