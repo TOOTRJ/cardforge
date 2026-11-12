@@ -13,7 +13,6 @@ vi.mock("@/lib/referrals/settings-server", () => settingsServer);
 
 import * as referralServer from "@/lib/referrals/server";
 import {
-  QUALIFYING_CARD,
   advanceReferral,
   noteReferralPlan,
   qualifyReferral,
@@ -30,8 +29,11 @@ import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referral
 // link records ONE row (at onboarding, the email confirmed) and keeps the
 // email's keyed fingerprint (nobody is told) — never for two accounts
 // referring each other; the row QUALIFIES ON THE FRIEND'S CARDS ALONE — the
-// settings' cards WITH ARTWORK saved within the window, judged on every save
-// (advanceReferral) — and the reward step runs AT ONCE: the program on, both
+// settings' cards WITH ARTWORK OF THEIR OWN, each picture once, saved within
+// the window: ONE count, the database's `referral_qualifying_cards` (0208),
+// asked on every save (advanceReferral) and FAILING CLOSED (a count that
+// errors or is no number is 0: nothing qualifies on a guess) — and the
+// reward step runs AT ONCE: the program on, both
 // emails confirmed (a lookup that FAILED waits, it is never "unconfirmed"),
 // the key present (fail closed), the fraud rules, one email = one reward
 // ever, the claim (claim_referral_reward_v2: the friends cap, the referrer's
@@ -59,10 +61,15 @@ type World = {
   codeOwner: string | null;
   refereeCreatedAt: string;
   refereeStatus: string | null;
-  /** EVERY card the friend owns — what "is this account new" counts. */
+  /** EVERY card the friend owns — what "is this account new" counts (the
+   *  `cards` table, read by recordReferralSignup alone). */
   refereeCards: number;
-  /** The friend's cards WITH ARTWORK — the only ones the bar counts. */
-  refereeArtCards: number;
+  /** What `referral_qualifying_cards` answers — the friend's different
+   *  pictures of their own, the only cards the bar counts. A number, as
+   *  PostgREST hands a bigint; a test may script any other answer. */
+  refereeQualifyingCards: unknown;
+  /** The count's RPC fails (the function missing, the database away). */
+  qualifyingError: { message: string } | null;
   /** The friend's subscription as the profile stores it (a plan with a card
    *  on file — a fact the row records, never a condition). */
   refereeSub: { id: string | null; status: string | null };
@@ -120,10 +127,9 @@ const openRow = (over: Row = {}): Row => ({
 
 const bankCalls = () => bank.bankDays.mock.calls.map((c) => (c as unknown[])[1] as Record<string, unknown>);
 
-/** The bar's own filter on a `cards` read: artwork set, and not empty. */
-const countsArtOnly = (calls: ChainCall[]) =>
-  calls.some((c) => c.method === "not" && c.args[0] === "art_url" && c.args[1] === "is" && c.args[2] === null) &&
-  calls.some((c) => c.method === "neq" && c.args[0] === "art_url" && c.args[1] === "");
+/** The bar's one count (migration 0208): asked of the database, never
+ *  counted from the `cards` table by the app. */
+const COUNT_RPC = "referral_qualifying_cards";
 
 function db() {
   const stub = chainClient((table: string, calls: ChainCall[]): ChainAnswer => {
@@ -143,9 +149,9 @@ function db() {
       }
       return { data: world.profiles.find((p) => p.id === id) ?? null };
     }
-    // The database answers the question it was ASKED: every card, or only
-    // the cards with artwork.
-    if (table === "cards") return { count: countsArtOnly(calls) ? world.refereeArtCards : world.refereeCards };
+    // The `cards` table answers "every card" — the not-new check's question.
+    // The bar's count is the RPC below, a separate answer.
+    if (table === "cards") return { count: world.refereeCards };
     if (table === "referral_email_fingerprints" && called(calls, "select")) return { data: world.seen };
     if (table === "day_bank_entries") {
       if (called(calls, "update")) return { data: world.bankEntry?.status === "banked" ? [{ id: world.bankEntry.id }] : [] };
@@ -185,6 +191,9 @@ function db() {
     return {};
   });
   stub.rpc.mockImplementation((async (name: string) => {
+    if (name === COUNT_RPC) {
+      return world.qualifyingError ? { data: null, error: world.qualifyingError } : { data: world.refereeQualifyingCards, error: null };
+    }
     if (name === "claim_referral_reward_v2") return { data: world.claim ? [world.claim] : [], error: null };
     if (name === "referrals_awaiting_plan") return { data: world.awaiting, error: null };
     if (name === "referrals_stranded_signups") return { data: world.stranded, error: null };
@@ -225,6 +234,9 @@ const settles = (stub: ReturnType<typeof db>) =>
     .filter((e) => called(e.calls, "update") && called(e.calls, "in", "status"))
     .map((e) => payloadOf(e.calls, "update") as Record<string, unknown>);
 const rpcNames = (stub: ReturnType<typeof db>) => stub.rpc.mock.calls.map((c) => (c as unknown[])[0]);
+/** The count's calls, with their arguments. */
+const countCalls = (stub: ReturnType<typeof db>) =>
+  stub.rpc.mock.calls.map((c) => c as unknown[]).filter((c) => c[0] === COUNT_RPC);
 
 function freshWorld(): World {
   return {
@@ -232,7 +244,8 @@ function freshWorld(): World {
     refereeCreatedAt: at(-0.01),
     refereeStatus: null,
     refereeCards: 5,
-    refereeArtCards: 5,
+    refereeQualifyingCards: 5,
+    qualifyingError: null,
     // NO plan, no card on file: the default friend. A referral rewards on
     // the cards alone, so every reward below is earned without one.
     refereeSub: { id: null, status: null },
@@ -345,9 +358,9 @@ describe("recordReferralSignup", () => {
     }
   });
 
-  it("\"not new\" counts EVERY saved card — the artwork rule is the bar's, not this check's: five title-only cards still refuse the claim", async () => {
+  it("\"not new\" counts EVERY saved card through the `cards` table — the artwork rule is the bar's, not this check's: five title-only cards still refuse the claim, and the bar's count is never asked", async () => {
     world.refereeCards = 5;
-    world.refereeArtCards = 0;
+    world.refereeQualifyingCards = 0;
     const stub = db();
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "not_new" });
     expect(stub.forTable("cards").map((e) => e.calls)).toEqual([
@@ -356,11 +369,20 @@ describe("recordReferralSignup", () => {
         { method: "eq", args: ["owner_id", REFEREE] },
       ],
     ]);
+    expect(rpcNames(stub)).not.toContain(COUNT_RPC);
+    // …and the other way round: under the bar by EVERY card, the account is
+    // new whatever the bar's count would say — it is not this check's.
+    world = freshWorld();
+    world.refereeCards = 4;
+    world.refereeQualifyingCards = 9;
+    const under = db();
+    expect(await recordReferralSignup(under.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
+    expect(rpcNames(under)).not.toContain(COUNT_RPC);
   });
 
   it("a friend with a card or two already (a guest draft) is still new — only the bar's cards refuse", async () => {
     world.refereeCards = 4;
-    world.refereeArtCards = 4;
+    world.refereeQualifyingCards = 4;
     expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toMatchObject({ ok: true });
   });
 
@@ -532,7 +554,7 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
 
   it("fewer cards than the bar: waiting, nothing stamped, no claim", async () => {
     world.refereeCards = 4;
-    world.refereeArtCards = 4;
+    world.refereeQualifyingCards = 4;
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
     expect(referralUpdates(stub).some((u) => "cards_saved_at" in u)).toBe(false);
@@ -540,38 +562,159 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
     expect(bankCalls()).toEqual([]);
   });
 
-  // Owner 2026-11-11: a title-only card is a second's work, and the card on
-  // file was the bar that kept such accounts out. Only cards WITH ARTWORK
-  // count now (QUALIFYING_CARD; the SQL twin is 0208's).
-  it("ONLY CARDS WITH ARTWORK COUNT: nine saved cards of which four have art is under the bar — a plan changes nothing", async () => {
-    expect(QUALIFYING_CARD).toEqual({ column: "art_url" });
+  // Owner 2026-11-11: a title-only card is a second's work, a built-in image
+  // costs nothing and one upload on five cards is one picture — and the card
+  // on file was the bar that kept such accounts out. Only cards WITH ARTWORK
+  // OF THEIR OWN count now, each picture once: ONE count, in the database
+  // (0208's referral_qualifying_cards — its SQL is the migration's tests').
+  it("ONLY THE DATABASE'S COUNT DECIDES: nine saved cards of which four count is under the bar — a plan changes nothing", async () => {
     world.refereeCards = 9;
-    world.refereeArtCards = 4;
+    world.refereeQualifyingCards = 4;
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
     expect(referralUpdates(stub).some((u) => "cards_saved_at" in u)).toBe(false);
-    expect(stub.rpc).not.toHaveBeenCalled();
+    // The count is the one thing asked of the database's functions: no email
+    // check, no claim.
+    expect(rpcNames(stub)).toEqual([COUNT_RPC]);
     expect(bankCalls()).toEqual([]);
-    // The count asked of the database: the friend's own cards whose art_url
-    // is set AND not empty — exactly this read, once.
-    expect(stub.forTable("cards").map((e) => e.calls)).toEqual([
-      [
-        { method: "select", args: ["id", { count: "exact", head: true }] },
-        { method: "eq", args: ["owner_id", REFEREE] },
-        { method: "not", args: [QUALIFYING_CARD.column, "is", null] },
-        { method: "neq", args: [QUALIFYING_CARD.column, ""] },
-      ],
-    ]);
+    expect(notifications(stub)).toEqual([]);
     world = freshWorld();
     world.refereeCards = 9;
-    world.refereeArtCards = 4;
+    world.refereeQualifyingCards = 4;
     world.refereeSub = { ...PLAN };
     expect(await qualifyReferral(db().client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
-    // The fifth card with art is the one that qualifies.
+    // The fifth card that counts is the one that qualifies.
     world = freshWorld();
     world.refereeCards = 9;
-    world.refereeArtCards = 5;
+    world.refereeQualifyingCards = 5;
     expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
+    // …and the count of EVERY card is nothing to the bar: forty saved cards
+    // that share one picture are one card made.
+    world = freshWorld();
+    world.refereeCards = 40;
+    world.refereeQualifyingCards = 1;
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    // The bar is the settings' own number.
+    world = freshWorld();
+    world.settings = { ...DEFAULT_REFERRAL_SETTINGS, activation: { cardsRequired: 3, windowDays: 30 } };
+    world.refereeQualifyingCards = 3;
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
+    world = freshWorld();
+    world.settings = { ...DEFAULT_REFERRAL_SETTINGS, activation: { cardsRequired: 6, windowDays: 30 } };
+    world.refereeQualifyingCards = 5;
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+  });
+
+  it("the count is ONE call of the database's function, with exactly { p_owner: <the friend> } — and the app never reads the `cards` table for the bar", async () => {
+    expect("QUALIFYING_CARD" in referralServer).toBe(false);
+    // A friend who qualifies…
+    const stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
+    expect(countCalls(stub)).toEqual([[COUNT_RPC, { p_owner: REFEREE }]]);
+    expect(stub.forTable("cards")).toEqual([]);
+    // …the count comes first of the database's functions (nothing is checked
+    // or claimed for a friend who has not the cards).
+    expect(rpcNames(stub)[0]).toBe(COUNT_RPC);
+    // …and one who does not.
+    world = freshWorld();
+    world.refereeCards = 9;
+    world.refereeQualifyingCards = 2;
+    const under = db();
+    expect(await advanceReferral(under.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    expect(countCalls(under)).toEqual([[COUNT_RPC, { p_owner: REFEREE }]]);
+    expect(under.forTable("cards")).toEqual([]);
+    // The friend's id is the row's own — never the referrer's.
+    expect(JSON.stringify(countCalls(under))).not.toContain(REFERRER);
+    // The sweep's stranded friend is counted the same way.
+    world = freshWorld();
+    world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
+    const swept = db();
+    await sweepReferralRewards(swept.client as never, deps);
+    expect(countCalls(swept)).toEqual([[COUNT_RPC, { p_owner: REFEREE }]]);
+    expect(swept.forTable("cards")).toEqual([]);
+  });
+
+  it("FAILS CLOSED: a count that ERRORS counts 0 — the row waits (not_qualified), nothing is stamped, checked, claimed or banked, and the failure is logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // The friend has every card the bar asks for — by any other read.
+      world.refereeCards = 9;
+      world.refereeQualifyingCards = 9;
+      world.qualifyingError = { message: "Could not find the function public.referral_qualifying_cards(p_owner) in the schema cache" };
+      const stub = db();
+      expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+      expect(referralUpdates(stub)).toEqual([]);
+      expect(rpcNames(stub)).toEqual([COUNT_RPC]);
+      expect(countCalls(stub)).toEqual([[COUNT_RPC, { p_owner: REFEREE }]]);
+      expect(bankCalls()).toEqual([]);
+      expect(notifications(stub)).toEqual([]);
+      // No fallback count from the table either.
+      expect(stub.forTable("cards")).toEqual([]);
+      expect(error).toHaveBeenCalledTimes(1);
+      const logged = error.mock.calls[0].map(String).join(" ");
+      expect(logged).toContain(REFEREE);
+      expect(logged).toContain("Could not find the function");
+      // With a plan on file the fact is still noted — and still nothing qualifies.
+      world = freshWorld();
+      world.qualifyingError = { message: "statement timeout" };
+      world.refereeSub = { ...PLAN };
+      const withPlan = db();
+      expect(await qualifyReferral(withPlan.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+      expect(referralUpdates(withPlan)).toEqual([{ card_on_file_at: NOW.toISOString() }]);
+      expect(rpcNames(withPlan)).toEqual([COUNT_RPC]);
+      expect(error).toHaveBeenCalledTimes(2);
+      // The sweep: a stranded friend whose count fails waits for the next run.
+      world = freshWorld();
+      world.qualifyingError = { message: "statement timeout" };
+      world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
+      const swept = db();
+      expect(await sweepReferralRewards(swept.client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 1, retried: 0, failed: 0, released: 0 });
+      expect(rpcNames(swept)).not.toContain("claim_referral_reward_v2");
+      expect(bankCalls()).toEqual([]);
+      // A count that works again qualifies the same friend.
+      world = freshWorld();
+      expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
+      expect(error).toHaveBeenCalledTimes(3);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("FAILS CLOSED: an answer that is no count — null, a negative, NaN, an infinity, text, an object, a boolean — is 0: nothing qualifies on it", async () => {
+    for (const answer of [null, undefined, -5, -1, Number.NaN, Number.POSITIVE_INFINITY, "", "five", "Infinity", "-7", {}, [5], true, [{ count: 5 }]]) {
+      world = freshWorld();
+      world.refereeCards = 9;
+      world.refereeQualifyingCards = answer;
+      const stub = db();
+      expect(await qualifyReferral(stub.client as never, REFEREE, deps), JSON.stringify(answer) ?? String(answer)).toEqual({
+        status: "waiting",
+        reason: "not_qualified",
+      });
+      expect(referralUpdates(stub)).toEqual([]);
+      expect(rpcNames(stub)).toEqual([COUNT_RPC]);
+    }
+    expect(bankCalls()).toEqual([]);
+  });
+
+  it("a bigint handed back as TEXT is read as its number: \"5\" qualifies, \"4\" does not — and a fraction is read down, never up", async () => {
+    world.refereeQualifyingCards = "5";
+    const stub = db();
+    expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
+    expect(referralUpdates(stub)[0]).toEqual({ status: "cards_saved", cards_saved_at: NOW.toISOString(), first_card_at: NOW.toISOString() });
+    for (const [answer, qualifies] of [
+      ["4", false],
+      ["12", true],
+      ["05", true],
+      [4.9, false],
+      ["4.9", false],
+      [5.9, true],
+      [7, true],
+    ] as const) {
+      world = freshWorld();
+      world.refereeQualifyingCards = answer;
+      const result = await qualifyReferral(db().client as never, REFEREE, deps);
+      expect(result.status, String(answer)).toBe(qualifies ? "rewarded" : "waiting");
+    }
   });
 
   it("the cards and NO plan — a card on file is no bar any more: the cards are stamped (once), nothing is stamped for a plan, and the row is CLAIMED, not left waiting", async () => {
@@ -591,9 +734,16 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
     world.open = openRow({ status: "cards_saved", cards_saved_at: at(-3) });
     const later = db();
     expect(await qualifyReferral(later.client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
-    // The stamp it had is kept (no second cards move, no count needed).
+    // The stamp it had is kept (no second cards move, no count needed — a
+    // count that fails now cannot take a qualified row back).
     expect(referralUpdates(later).some((u) => "cards_saved_at" in u)).toBe(false);
+    expect(rpcNames(later)).not.toContain(COUNT_RPC);
     expect(later.forTable("cards")).toEqual([]);
+    world = freshWorld();
+    world.open = openRow({ status: "cards_saved", cards_saved_at: at(-3) });
+    world.qualifyingError = { message: "statement timeout" };
+    world.refereeQualifyingCards = 0;
+    expect(await qualifyReferral(db().client as never, REFEREE, deps)).toMatchObject({ status: "rewarded", step: 1 });
   });
 
   it("rewardReferral itself asks for the cards stamp only: a qualified row with NO card_on_file_at is claimed", async () => {
@@ -620,7 +770,16 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "expired" });
     expect(referralUpdates(stub).at(-1)).toEqual({ status: "expired", referrer_reward: "none", referee_reward: "none" });
-    expect(stub.rpc).not.toHaveBeenCalled();
+    // The count, and nothing after it: no email check, no claim.
+    expect(rpcNames(stub)).toEqual([COUNT_RPC]);
+    // Past the window WITHOUT the cards nothing is expired by a save (the
+    // sweep's own expiry does that): the row waits.
+    world = freshWorld();
+    world.open = openRow({ signed_up_at: at(-31) });
+    world.refereeQualifyingCards = 4;
+    const under = db();
+    expect(await qualifyReferral(under.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "not_qualified" });
+    expect(referralUpdates(under)).toEqual([]);
   });
 
   it("the ladder: step 2 is AI credits (grant_credits under the step's key), step 11 is the tail", async () => {
@@ -658,7 +817,8 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
       world.users[who].confirmed = false;
       const stub = db();
       expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "email_unconfirmed" });
-      expect(stub.rpc).not.toHaveBeenCalled();
+      // The count alone: no email-reuse check, no claim.
+      expect(rpcNames(stub)).toEqual([COUNT_RPC]);
       expect(notifications(stub)).toEqual([]);
       expect(bankCalls()).toEqual([]);
     }
@@ -744,7 +904,7 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
   it("billing off: nothing happens (the row waits)", async () => {
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, { now: NOW, billingEnabled: false })).toEqual({ status: "waiting", reason: "billing_off" });
-    expect(stub.rpc).not.toHaveBeenCalled();
+    expect(rpcNames(stub)).toEqual([COUNT_RPC]);
     expect(notifications(stub)).toEqual([]);
   });
 
@@ -753,7 +913,7 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const stub = db();
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "hash_key_missing" });
-    expect(stub.rpc).not.toHaveBeenCalled();
+    expect(rpcNames(stub)).toEqual([COUNT_RPC]);
     expect(bankCalls()).toEqual([]);
     error.mockRestore();
   });
@@ -803,8 +963,10 @@ describe("advanceReferral — the cards alone, then the reward at once", () => {
 
   it("the email check failing leaves the row waiting (never a reward on a guess)", async () => {
     const stub = db();
-    stub.rpc.mockImplementation((async (name: string) =>
-      name === "referral_email_in_use" ? { data: null, error: { message: "down" } } : { data: null, error: null }) as never);
+    stub.rpc.mockImplementation((async (name: string) => {
+      if (name === COUNT_RPC) return { data: 5, error: null };
+      return name === "referral_email_in_use" ? { data: null, error: { message: "down" } } : { data: null, error: null };
+    }) as never);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(await qualifyReferral(stub.client as never, REFEREE, deps)).toEqual({ status: "waiting", reason: "check_failed" });
     expect(rpcNames(stub)).not.toContain("claim_referral_reward_v2");
@@ -1185,8 +1347,8 @@ describe("sweepReferralRewards (the cron's retry)", () => {
     expect(expiry.calls.find((c) => c.method === "eq")?.args).toEqual(["status", "signed_up"]);
     expect(expiry.calls.find((c) => c.method === "lt")?.args).toEqual(["signed_up_at", new Date(NOW.getTime() - 30 * DAY).toISOString()]);
     // The read is the database's (the card count judged there — 0208: the
-    // cards with artwork): before now − 10 min, inside the window, the bar's
-    // cards.
+    // same referral_qualifying_cards): before now − 10 min, inside the
+    // window, the bar's cards.
     expect(stub.rpc).toHaveBeenCalledWith("referrals_stranded_signups", {
       p_cards: 5,
       p_since: new Date(NOW.getTime() - 30 * DAY).toISOString(),
@@ -1196,10 +1358,10 @@ describe("sweepReferralRewards (the cron's retry)", () => {
     // The sweep's own RPCs are the stranded read alone (the reward step's
     // are the email check and the claim).
     expect(rpcNames(stub).filter((name) => String(name).startsWith("referrals_"))).toEqual(["referrals_stranded_signups"]);
-    // The app judges the stranded friend's cards again by its own count (art only).
+    // The app judges the stranded friend's cards again, by the same count.
     world = freshWorld();
     world.stranded = [{ id: REFERRAL, referee_id: REFEREE }];
-    world.refereeArtCards = 4;
+    world.refereeQualifyingCards = 4;
     expect(await sweepReferralRewards(db().client as never, deps)).toEqual({ ok: true, claimed: 0, waiting: 1, retried: 0, failed: 0, released: 0 });
   });
 
@@ -1233,6 +1395,7 @@ describe("advanceReferral is the card save's step", () => {
     expect(viaAdvance).toEqual(viaHook);
     expect(viaAdvance).toMatchObject({ status: "rewarded", step: 1 });
     expect(direct.log).toEqual(hook.log);
+    expect(direct.rpc.mock.calls).toEqual(hook.rpc.mock.calls);
     // …and a row stamped on an earlier save, still with no plan.
     world = freshWorld();
     world.open = openRow({ status: "cards_saved", cards_saved_at: at(-1) });

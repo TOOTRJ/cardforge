@@ -201,7 +201,7 @@ describe("ReferredFriendsTable", () => {
     expect(row).not.toContain("Referrer:</span>");
   });
 
-  it("Rewards counts the cards with artwork, and says how many of the friend's cards do not count", () => {
+  it("Rewards counts the cards with artwork of their own, and says how many of the friend's cards do not count", () => {
     const some = html(
       <ReferredFriendsTable
         page={pageOf([
@@ -214,10 +214,10 @@ describe("ReferredFriendsTable", () => {
     );
     const rowIn = (text: string) => some.split("</tr>").find((row) => row.includes(text)) ?? "";
     expect(rowIn("@half_art")).toContain(
-      "Both sides:</span> not yet — the friend has saved 3 of 5 cards (until Dec 2, 2026 UTC); 2 cards more have no artwork and do not count</li>",
+      "Both sides:</span> not yet — the friend has saved 3 of 5 cards (until Dec 2, 2026 UTC); 2 cards more have no artwork of their own and do not count</li>",
     );
     expect(rowIn("@one_short")).toContain(
-      "Both sides:</span> not yet — the friend has saved 4 of 5 cards (until Dec 2, 2026 UTC); 1 card more has no artwork and does not count</li>",
+      "Both sides:</span> not yet — the friend has saved 4 of 5 cards (until Dec 2, 2026 UTC); 1 card more has no artwork of its own and does not count</li>",
     );
     // The Cards column still counts every card the friend has.
     expect(rowIn("@half_art")).toContain("5 · 0 public");
@@ -307,7 +307,7 @@ describe("ReferralsTabView", () => {
     expect(out).toContain("Referrals in the last 30 days");
   });
 
-  it("each number says what it counts: the cards carry artwork, and the plan is not needed for the reward", () => {
+  it("each number says what it counts: each card carries its own artwork, and the plan is not needed for the reward", () => {
     /** A tile's last line (its hint), by its label. */
     const hintOf = (label: string) => {
       const tile = out.slice(out.indexOf(`>${label}</dt>`));
@@ -315,19 +315,23 @@ describe("ReferralsTabView", () => {
       return lines.at(-1);
     };
     expect(hintOf("Friends referred")).toBe("Signed up through a link");
-    expect(hintOf("Saved their 5 cards")).toBe("With artwork, within 30 days of joining");
+    expect(hintOf("Saved their 5 cards")).toBe("Each with its own artwork, within 30 days of joining");
     expect(hintOf("Rewarded")).toBe("Both sides got their reward");
     expect(hintOf("Started a plan")).toBe("Became a subscriber — not needed for the reward");
   });
 
-  it("says the rule above the numbers: the cards with artwork, and no plan", () => {
+  it("says the rule above the numbers: the cards, each with its own artwork, and no plan", () => {
     expect(out).toContain(
-      "A referral rewards both sides once the friend has saved 5 cards with artwork within 30 days of joining. No plan is needed for the reward; &quot;Started a plan&quot; counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.",
+      "A referral rewards both sides once the friend has saved 5 cards, each with its own artwork, within 30 days of joining. No plan is needed for the reward; &quot;Started a plan&quot; counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.",
     );
     // Nothing above the per-day chart makes a card on file a condition.
     const numbers = out.slice(0, out.indexOf("Friends referred per day"));
     expect(numbers).not.toMatch(/card on file/i);
     expect(numbers).not.toContain("and started a plan");
+    // The first version's wording ("cards with artwork", "With artwork, …")
+    // read as "any picture will do": it is gone from the rule and the tile.
+    expect(numbers).not.toContain("cards with artwork");
+    expect(numbers).not.toContain(">With artwork,");
   });
 
   it("charts friends per day in the one chart hue, with a table twin holding the same numbers", () => {
@@ -360,8 +364,8 @@ describe("ReferralsTabView", () => {
       />,
     );
     expect(custom).toContain("Saved their 3 cards");
-    expect(custom).toContain("has saved 3 cards with artwork within 14 days of joining");
-    expect(custom).toContain("With artwork, within 14 days of joining");
+    expect(custom).toContain("has saved 3 cards, each with its own artwork, within 14 days of joining");
+    expect(custom).toContain(">Each with its own artwork, within 14 days of joining<");
     expect(custom).toContain("Saved 3 cards");
   });
 

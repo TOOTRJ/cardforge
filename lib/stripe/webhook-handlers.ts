@@ -174,20 +174,21 @@ async function handleSubscriptionEvent(
     });
     return { userId, result };
   }
+  // A referred friend holds a plan with a card on file: noted on their
+  // referral as a FACT for the admin's numbers — once, whichever event
+  // first shows it (the note only writes where the stamp is missing). It no
+  // longer qualifies anything (owner 2026-11-11: a referral rewards on the
+  // friend's cards alone). Only a state Stripe gives with a payment method
+  // counts: a subscription created `incomplete` (its first payment has not
+  // gone through) is no plan yet, and is noted by the UPDATE that makes it
+  // active. Best effort inside, never fails the sync.
+  if (isCardOnFileStatus(sub.status)) await noteReferralPlan(admin, userId);
   if (opts.isCreationEvent) {
     await recordFunnelEvent(admin, {
       event: sub.status === "trialing" ? "trial_started" : "subscription_started",
       userId,
       props: { tier, interval: interval ?? undefined, subscriptionId: sub.id },
     });
-    // A referred friend became a subscriber: noted on their referral as a
-    // FACT for the admin's numbers. It no longer qualifies anything (owner
-    // 2026-11-11: a referral rewards on the friend's cards alone). Best
-    // effort inside, never fails the sync. Only a subscription Stripe gives
-    // with a payment method counts: an `incomplete` one (its first payment
-    // never went through) is no plan yet — a later card save notes it once
-    // it is live (advanceReferral).
-    if (isCardOnFileStatus(sub.status)) await noteReferralPlan(admin, userId);
   } else if (opts.previous) {
     // What an updated event changed: a trial converting, or a plan switch.
     // A paying plan coming off a free-days hold converts no trial — asked of

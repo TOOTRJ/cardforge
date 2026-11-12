@@ -14,12 +14,21 @@
 -- The card was also the program's fraud bar, so three things change WITH it,
 -- and this file is the database's half of them:
 --
--- 1. ONLY CARDS WITH ARTWORK COUNT toward the bar. A title-only card is a
---    second's work; on production every account that saved the bar's cards
---    did it with art (58 of 58), so no real friend waits longer. The app
---    counts `art_url` set and not empty; `referrals_stranded_signups` — the
---    sweep's read of signed-up rows whose friend has the cards — counts the
---    same cards here, so the two agree.
+-- 1. ONLY CARDS WITH ARTWORK OF THEIR OWN COUNT toward the bar, each
+--    picture once. `referral_qualifying_cards(owner)` is the ONE count: the
+--    number of DIFFERENT pictures on the friend's cards that sit in the
+--    friend's own `card-art/<their id>/` folder — a picture they uploaded,
+--    generated or brought in with an import or a remix (0127: a card's
+--    art_url only takes the caller's own storage objects, or a built-in
+--    image). A title-only card is a second's work; a built-in image costs
+--    nothing; and one upload on five cards is one picture, whatever `?v=`
+--    version suffix each address carries — none of those is five cards
+--    made. On production every account that saved the bar's
+--    cards inside the window did it with that many different pictures of
+--    their own (59 of 59), so no real friend waits longer. The app
+--    (lib/referrals/server.ts), `referrals_stranded_signups` — the sweep's
+--    read of signed-up rows whose friend has the cards — and the admin's
+--    list all call this one function, so they cannot disagree.
 --
 -- 2. THE FRIENDS CAP COUNTS EVERY REWARDED REFERRAL. claim_referral_reward_v2
 --    (0180) counted a rewarded row only while the friend's own side was not
@@ -32,10 +41,20 @@
 --
 -- 3. THE ADMIN'S LIST CARRIES THE COUNT THAT MATTERS. admin_referred_friends
 --    (0202, widened by 0206) gains `referee_art_cards` after its 27 columns:
---    the friend's cards with artwork, so the Referrals tab can say "has
---    saved 3 of 5 cards" by the bar's own count. The first 27 are unchanged,
---    in their places. Its return type changes, so it is dropped and made
---    again (0202's own pattern).
+--    referral_qualifying_cards() for the friend, so the Referrals tab can
+--    say "has saved 3 of 5 cards" by the bar's own count. The first 27 are
+--    unchanged, in their places. Its return type changes, so it is dropped
+--    and made again (0202's own pattern).
+--
+-- 4. A REFERRER NO LONGER READS WHETHER A FRIEND SUBSCRIBED. 0180 granted
+--    signed-in users `card_on_file_at` on their own referral rows, because
+--    the page showed "started a plan" as a step. It is no step now, and the
+--    stamp is written on a referral in ANY state (how many friends became
+--    subscribers, for the admin) — so through the API a referrer could
+--    learn that a friend they were already rewarded for later started a
+--    plan. The column grant is taken back; the app no longer selects it.
+--    (For the minutes the deployment before this one is still serving, its
+--    Refer a friend page reads no friends: it selects the column.)
 --
 -- NOT changed here: `referrals_awaiting_plan` (0180) is no longer called by
 -- the app — a row no longer waits for a plan — and is left in place, because
@@ -44,10 +63,35 @@
 -- (status cards_saved) is claimed by the next hourly sweep under the new
 -- rule — that is the point of the change.
 --
--- Grants are explicit (0097): all three are the service role's alone, as
--- they were. Idempotent. Ships through a PR; never applied ad-hoc.
+-- Grants are explicit (0097): all four functions are the service role's
+-- alone (the three restated ones as they were). Idempotent. Ships through a
+-- PR; never applied ad-hoc.
 
--- 1. The sweep's stranded signups: the cards that count.
+-- 1. The cards a referral counts: different pictures of the friend's own.
+create or replace function public.referral_qualifying_cards(p_owner uuid)
+returns bigint
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  -- The picture is the stored object: an address may carry a `?v=<n>`
+  -- version suffix (0127's media_url_allowed), and the same object under
+  -- five suffixes is still one picture.
+  select count(distinct split_part(c.art_url, '?', 1))
+  from public.cards c
+  where c.owner_id = p_owner
+    and c.frame_preview is not true
+    and c.art_url like '%/card-art/' || p_owner::text || '/%';
+$$;
+
+comment on function public.referral_qualifying_cards(uuid) is
+  'The cards a referral counts toward its bar (0208): how many DIFFERENT pictures on this owner''s cards sit in their own card-art/<id>/ folder — uploaded, generated or brought in with an import or a remix. A card with no picture, a built-in image or a picture already counted adds nothing. The one count the app, referrals_stranded_signups and admin_referred_friends share. Service role only.';
+
+revoke all on function public.referral_qualifying_cards(uuid) from public, anon, authenticated;
+grant execute on function public.referral_qualifying_cards(uuid) to service_role;
+
+-- The sweep's stranded signups: the same count.
 create or replace function public.referrals_stranded_signups(
   p_cards int,
   p_since timestamptz,
@@ -66,13 +110,7 @@ as $$
     and r.referee_id is not null
     and r.signed_up_at >= p_since
     and r.signed_up_at < p_until
-    and (
-      select count(*)
-      from public.cards c
-      where c.owner_id = r.referee_id
-        and c.art_url is not null
-        and c.art_url <> ''
-    ) >= greatest(1, coalesce(p_cards, 1))
+    and public.referral_qualifying_cards(r.referee_id) >= greatest(1, coalesce(p_cards, 1))
   order by r.signed_up_at asc
   limit greatest(1, least(coalesce(p_limit, 100), 500));
 $$;
@@ -269,7 +307,7 @@ as $$
       else friend.stripe_subscription_id is not null
        and coalesce(friend.subscription_status, '') in ('trialing', 'active', 'past_due', 'unpaid')
     end,
-    coalesce(made.art_cards, 0)
+    public.referral_qualifying_cards(l.referee_id)
   from listed l
   left join public.profiles friend on friend.id = l.referee_id
   left join public.profiles referrer on referrer.id = l.referrer_id
@@ -294,7 +332,6 @@ as $$
     select
       count(*) as cards,
       count(*) filter (where c.visibility = 'public') as public_cards,
-      count(*) filter (where c.art_url is not null and c.art_url <> '') as art_cards,
       max(c.created_at) as last_card_at
     from public.cards c
     where c.owner_id = l.referee_id
@@ -310,7 +347,23 @@ as $$
 $$;
 
 comment on function public.admin_referred_friends(integer, integer) is
-  'The admin Referrals tab''s list of referred friends (0202, widened by 0206 and 0208): one row per referral, newest signup first, with the friend''s plan (card_capacity_for''s rule), their cards now — all of them, the public ones, and the ones WITH ARTWORK, which are the cards a referral counts (0208) —, the days this referral banked to them (revoked entries left out), total_count for the pager, and what the page needs to say why a reward is not given: each side''s recorded reward and its detail, the failed grant attempts, whether each account''s email is confirmed and whether the friend holds a plan with a card on file (a fact since 0208, no longer a condition). A friend whose account is gone keeps a row with NULL referee columns. Service role only.';
+  'The admin Referrals tab''s list of referred friends (0202, widened by 0206 and 0208): one row per referral, newest signup first, with the friend''s plan (card_capacity_for''s rule), their cards now — all of them, the public ones, and referral_qualifying_cards(), the count a referral''s bar reads (0208) —, the days this referral banked to them (revoked entries left out), total_count for the pager, and what the page needs to say why a reward is not given: each side''s recorded reward and its detail, the failed grant attempts, whether each account''s email is confirmed and whether the friend holds a plan with a card on file (a fact since 0208, no longer a condition). A friend whose account is gone keeps a row with NULL referee columns. Service role only.';
 
 revoke all on function public.admin_referred_friends(integer, integer) from public, anon, authenticated;
 grant execute on function public.admin_referred_friends(integer, integer) to service_role;
+
+-- 4. A referrer no longer reads whether a friend went on to subscribe.
+revoke select (card_on_file_at) on public.referrals from authenticated;
+
+-- A column REVOKE is a silent no-op while the role holds the privilege on
+-- the whole table: fail here rather than ship a migration that only says it
+-- closed the read.
+do $$
+begin
+  if has_column_privilege('authenticated', 'public.referrals', 'card_on_file_at', 'SELECT')
+     or has_column_privilege('anon', 'public.referrals', 'card_on_file_at', 'SELECT')
+  then
+    raise exception '0208: an API role can still read referrals.card_on_file_at'
+      using errcode = 'insufficient_privilege';
+  end if;
+end $$;

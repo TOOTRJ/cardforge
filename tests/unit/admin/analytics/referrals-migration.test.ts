@@ -4,18 +4,18 @@ import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // The Referred friends list's function, as text — 0202 made it, 0206 made it
-// again with the reward facts, and 0208 once more with the friend's cards
-// WITH ARTWORK (the cards a referral counts since 2026-11-11). The
-// definition a database runs is 0208's, so that is the file read here: its
-// signature and columns are the contract types/supabase.ts declares, it is
-// the service role's alone, and it holds the rules the page relies on
+// again with the reward facts, and 0208 once more with the cards a referral
+// COUNTS (since 2026-11-11: the friend's different pictures of their own).
+// The definition a database runs is 0208's, so that is the file read here:
+// its signature and columns are the contract types/supabase.ts declares, it
+// is the service role's alone, and it holds the rules the page relies on
 // (newest first on a stable order, the page clamp, the friend's days by this
 // referral's own reference with revoked entries left out, a row kept for a
 // friend whose account is gone, each side's recorded reward, the reward
 // step's own tests for a confirmed email and a card on file — a fact now,
-// no condition — and the artwork count by the very test the sweep and the
-// app use). Its results are checked on a real database by the PR's Supabase
-// preview.
+// no condition — and the bar's count by the very FUNCTION the sweep and the
+// app call: `referral_qualifying_cards`, never a test of its own). Its
+// results are checked on a real database by the PR's Supabase preview.
 // ---------------------------------------------------------------------------
 
 const MIGRATIONS = join(process.cwd(), "supabase/migrations");
@@ -30,10 +30,16 @@ const codeOf = (text: string) =>
 const LIVE = "0208_referrals_cards_only.sql";
 const sql = migration(LIVE);
 const whole = codeOf(sql);
-// 0208 makes three functions; the list's is the last: from its drop to the
-// file's end. Everything below that speaks of "the function" reads this.
+// 0208 makes four functions; the list's is the last: from its drop to its
+// own grant (what follows — a column grant taken back from signed-in users,
+// and its self-check — is no part of it). Everything below that speaks of
+// "the function" reads this.
+const LIST_GRANT = "grant execute on function public.admin_referred_friends(integer, integer) to service_role;";
 const listStart = whole.indexOf("drop function if exists public.admin_referred_friends(");
-const code = listStart >= 0 ? whole.slice(listStart) : "";
+const listEnd = whole.indexOf(LIST_GRANT, listStart);
+const code = listStart >= 0 && listEnd > listStart ? whole.slice(listStart, listEnd + LIST_GRANT.length) : "";
+/** The list's own SQL, between its dollar quotes. */
+const listBody = /as \$\$([\s\S]*?)\$\$;/.exec(code)?.[1] ?? "";
 const first = codeOf(migration("0202_admin_referred_friends.sql"));
 const widened = codeOf(migration("0206_admin_referred_friends_rewards.sql"));
 /** The columns of the first `returns table (…) language sql` in `text`. */
@@ -43,8 +49,10 @@ const returnsOf = (text: string) =>
     .map((part) => part.trim().replace(/\s+/g, " "))
     .filter(Boolean);
 const types = readFileSync(join(process.cwd(), "types/supabase.ts"), "utf8");
-/** The cards a referral counts, as SQL says it of a `public.cards c`. */
-const WITH_ARTWORK = "c.art_url is not null and c.art_url <> ''";
+/** The ONE count of the cards a referral counts (0208). */
+const COUNT = "referral_qualifying_cards";
+/** A migration function's whole statement in `whole`. */
+const functionOf = (name: string) => new RegExp(`create or replace function public\\.${name}\\(([\\s\\S]*?)\\$\\$;`).exec(whole)?.[0] ?? "";
 
 describe("admin_referred_friends (0202, widened by 0206 and 0208)", () => {
   it("0208's is the definition a database runs: no later migration makes the function again", () => {
@@ -57,6 +65,12 @@ describe("admin_referred_friends (0202, widened by 0206 and 0208)", () => {
     // One definition in the file, and the slice read here holds it.
     expect(whole.match(/create or replace function public\.admin_referred_friends\(/g)).toHaveLength(1);
     expect(code).toContain("create or replace function public.admin_referred_friends(");
+    expect(listBody).not.toBe("");
+    // The slice ends on the list's own grant: the column revoke and its
+    // self-check after it are the file's, not the function's.
+    expect(code.endsWith(LIST_GRANT)).toBe(true);
+    expect(code).not.toContain("revoke select (");
+    expect(code).not.toMatch(/^do \$\$/m);
   });
 
   it("has the declared signature and is idempotent", () => {
@@ -105,33 +119,80 @@ describe("admin_referred_friends (0202, widened by 0206 and 0208)", () => {
     expect(now.slice(27)).toEqual(["referee_art_cards bigint"]);
   });
 
-  it("the 28th column counts the friend's cards WITH ARTWORK, beside the count of all of them", () => {
-    // One read of the friend's cards gives every count: all, public, with artwork.
-    const made = /left join lateral \(\s*select([\s\S]*?)from public\.cards c\s+where c\.owner_id = l\.referee_id\s*\) made on true/.exec(code)?.[1] ?? "";
-    expect(made).toContain("count(*) as cards,");
-    expect(made).toContain(`count(*) filter (where ${WITH_ARTWORK}) as art_cards,`);
-    // The last value selected, in the 28th column's place — and never NULL.
+  it("the 28th column is the bar's own count — referral_qualifying_cards for the friend — beside the count of all their cards", () => {
+    // The last value selected, in the 28th column's place: the function, for
+    // the row's friend.
     const selected = /\n  select\n([\s\S]*?)\n  from listed l\n/.exec(code)?.[1] ?? "";
     const values = selected.trim().split("\n").map((line) => line.trim());
-    expect(values.at(-1)).toBe("coalesce(made.art_cards, 0)");
-    expect(code.match(/made\.art_cards/g)).toHaveLength(1);
+    expect(values.at(-1)).toBe(`public.${COUNT}(l.referee_id)`);
+    // Called once in the list, schema-qualified (the list's search_path is empty).
+    expect(listBody.match(/referral_qualifying_cards\(/g)).toHaveLength(1);
+    expect(listBody.match(/public\.referral_qualifying_cards\(/g)).toHaveLength(1);
+    // The read of the friend's cards counts all of them and the public ones
+    // — and no longer art: the first version's filtered count is gone.
+    const made = /left join lateral \(\s*select\s+(count\(\*\) as cards,[\s\S]*?)from public\.cards c\s+where c\.owner_id = l\.referee_id\s*\) made on true/.exec(code)?.[1] ?? "";
+    expect(made.trim().split("\n").map((line) => line.trim())).toEqual([
+      "count(*) as cards,",
+      "count(*) filter (where c.visibility = 'public') as public_cards,",
+      "max(c.created_at) as last_card_at",
+    ]);
+    expect(listBody).not.toContain("art_cards");
+    expect(listBody).not.toContain("art_url");
     // Every card is still counted as it was (the Cards column).
     expect(selected).toContain("coalesce(made.cards, 0),");
+    // Never NULL (the page reads null as "a database before 0208"): the
+    // count is an aggregate, 0 over no rows, and the function is not STRICT —
+    // a friend whose account is gone (a NULL referee_id) still gets 0.
+    const count = functionOf(COUNT);
+    expect(count).toMatch(/returns bigint/);
+    expect(count).toContain("select count(distinct split_part(c.art_url, '?', 1))");
+    expect(count).not.toMatch(/\bstrict\b|returns null on null input/i);
   });
 
-  it("counts the same cards as the hourly sweep's stranded signups and the app's own count", () => {
-    // The sweep's read of signed-up friends who have the cards (0208, part 1).
-    const stranded = /create or replace function public\.referrals_stranded_signups\(([\s\S]*?)\$\$;/.exec(whole)?.[1] ?? "";
-    expect(stranded).not.toBe("");
-    expect(stranded.replace(/\s+/g, " ")).toContain(
-      `( select count(*) from public.cards c where c.owner_id = r.referee_id and ${WITH_ARTWORK} ) >= greatest(1, coalesce(p_cards, 1))`,
+  it("counts the same cards as the hourly sweep's stranded signups and the app: all three call the ONE function", () => {
+    // The function itself: the friend's different pictures in their own
+    // folder (its whole definition is tests/unit/db/referrals-cards-only-
+    // migration.test.ts's).
+    const count = functionOf(COUNT);
+    expect(count).not.toBe("");
+    expect(count.replace(/\s+/g, " ")).toContain(
+      "select count(distinct split_part(c.art_url, '?', 1)) from public.cards c where c.owner_id = p_owner and c.frame_preview is not true and c.art_url like '%/card-art/' || p_owner::text || '/%';",
     );
-    // The app (lib/referrals/server.ts): the same column, set and not empty.
+    // Defined before the two readers that call it, and by no other migration.
+    expect(whole.indexOf(`create or replace function public.${COUNT}(`)).toBeLessThan(whole.indexOf("create or replace function public.referrals_stranded_signups("));
+    expect(whole.indexOf(`create or replace function public.${COUNT}(`)).toBeLessThan(listStart);
+    const makers = readdirSync(MIGRATIONS)
+      .filter((name) => /^\d{4}_.*\.sql$/.test(name))
+      .sort()
+      .filter((name) => codeOf(migration(name)).includes(`function public.${COUNT}(`));
+    expect(makers).toEqual([LIVE]);
+    // The sweep's read of signed-up friends who have the cards.
+    const stranded = functionOf("referrals_stranded_signups");
+    expect(stranded).not.toBe("");
+    expect(stranded.replace(/\s+/g, " ")).toContain(`and public.${COUNT}(r.referee_id) >= greatest(1, coalesce(p_cards, 1))`);
+    // …which, like the list, has no art test of its own any more.
+    expect(stranded).not.toContain("art_url");
+    expect(stranded).not.toContain("public.cards");
+    // The list.
+    expect(listBody).toContain(`public.${COUNT}(l.referee_id)`);
+    // The app (lib/referrals/server.ts): the same function, by name, for the friend.
     const server = readFileSync(join(process.cwd(), "lib/referrals/server.ts"), "utf8");
-    const column = /QUALIFYING_CARD = \{ column: "(\w+)" \}/.exec(server)?.[1];
-    expect(column).toBe("art_url");
-    expect(WITH_ARTWORK).toBe(`c.${column} is not null and c.${column} <> ''`);
-    expect(server).toMatch(/\.not\(QUALIFYING_CARD\.column, "is", null\)\s*\.neq\(QUALIFYING_CARD\.column, ""\)/);
+    expect(server).toContain(`rpc("${COUNT}"`);
+    expect(server).toContain(`admin.rpc("${COUNT}", { p_owner: refereeId })`);
+    expect(server).not.toMatch(/QUALIFYING_CARD\s*=/);
+    // …declared for the typed client as the database defines it.
+    expect(types).toMatch(/referral_qualifying_cards: \{\s*Args: \{ p_owner: string \};\s*Returns: number;?\s*\};/);
+    // One spelling of "a card that counts" in the whole file: `art_url` is
+    // named in the function's own body alone.
+    expect(whole.match(/art_url/g)).toHaveLength(2);
+    expect(count.match(/art_url/g)).toHaveLength(2);
+    expect(whole).not.toMatch(/art_url is not null|art_url <> ''/);
+  });
+
+  it("the count is the service role's alone, like the list", () => {
+    expect(whole).toContain(`revoke all on function public.${COUNT}(uuid) from public, anon, authenticated;`);
+    expect(whole).toContain(`grant execute on function public.${COUNT}(uuid) to service_role;`);
+    expect(whole).not.toMatch(/\bto (anon|authenticated|public)\b/i);
   });
 
   it("hands out each side's reward as the reward step recorded it", () => {
@@ -206,7 +267,7 @@ describe("admin_referred_friends (0202, widened by 0206 and 0208)", () => {
   });
 
   it("runs as the migration runner sends it: no transaction or lock statements of its own, and the list writes nothing", () => {
-    // The whole file (its other two functions too).
+    // The whole file (its other three functions, the column revoke and its check too).
     expect(whole).not.toMatch(/^\s*(begin|commit|rollback)\s*;/im);
     expect(whole).not.toMatch(/\block table\b/i);
     // The list only reads.
@@ -214,7 +275,16 @@ describe("admin_referred_friends (0202, widened by 0206 and 0208)", () => {
   });
 
   it("says in its header how it ships", () => {
-    expect(sql).toContain("Ships through a PR; never");
-    expect(sql).toContain("Grants are explicit (0097)");
+    // The header's comment lines as running prose (their wraps taken out).
+    const header = sql
+      .split("\n")
+      .filter((line) => line.trim().startsWith("--"))
+      .map((line) => line.trim().replace(/^--\s?/, ""))
+      .join(" ")
+      .replace(/\s+/g, " ");
+    expect(header).toContain("Ships through a PR; never applied ad-hoc.");
+    expect(header).toContain("Grants are explicit (0097)");
+    // …and what the list's new column is.
+    expect(header).toContain("gains `referee_art_cards` after its 27 columns: referral_qualifying_cards() for the friend");
   });
 });

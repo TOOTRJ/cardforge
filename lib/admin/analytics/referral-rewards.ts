@@ -18,8 +18,8 @@ import { formatUtcDate } from "@/lib/format/dates";
 //
 //   not claimed yet   billing off (nothing is rewarded and the hourly
 //                     sweep does not run, so it is said first); the friend's
-//                     cards with artwork (the settings' number, inside the
-//                     window); the program on, both emails confirmed, the
+//                     cards with artwork of their own (the settings' number,
+//                     inside the window); the program on, both emails confirmed, the
 //                     hash key — else "the hourly check gives the reward"
 //                     (/api/cron/referral-rewards, every hour), and a row
 //                     still unclaimed hours after it qualified says the step
@@ -152,8 +152,9 @@ function unclaimedWhy(row: ReferredFriend, ctx: RewardContext): string {
   if (!ctx.billingEnabled) return "billing is switched off, so no referral is rewarded until it is on";
   const facts = row.rewards;
   if (!row.cardsSavedAt) {
-    // The cards a referral counts carry artwork (0208). A database before
-    // 0208 has no such count: every card is read, as the rule then was.
+    // The cards a referral counts carry artwork of their own, each picture
+    // once (0208's referral_qualifying_cards). A database before 0208 has
+    // no such count: every card is read, as the rule then was.
     const counted = facts?.friendQualifyingCards ?? row.cards;
     const without = Math.max(0, row.cards - counted);
     const deadline = Date.parse(row.signedUpAt) + ctx.windowDays * DAY_MS;
@@ -163,7 +164,9 @@ function unclaimedWhy(row: ReferredFriend, ctx: RewardContext): string {
     if (counted >= ctx.cardsRequired) return `the friend has ${cardsWords(counted)} saved; the hourly check records it`;
     const until = Number.isFinite(deadline) ? ` (until ${dayOf(deadline)})` : "";
     const saved = `the friend has saved ${counted} of ${cardsWords(ctx.cardsRequired)}${until}`;
-    return without > 0 ? `${saved}; ${cardsWords(without)} more ${without === 1 ? "has" : "have"} no artwork and ${without === 1 ? "does" : "do"} not count` : saved;
+    return without > 0
+      ? `${saved}; ${cardsWords(without)} more ${without === 1 ? "has" : "have"} no artwork of ${without === 1 ? "its" : "their"} own and ${without === 1 ? "does" : "do"} not count`
+      : saved;
   }
 
   // The cards stand: what the reward step still checks before the claim.

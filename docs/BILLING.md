@@ -1313,28 +1313,38 @@ people who join ever met the second; 18 % save the cards. A banked day can
 only be USED by starting a plan, which is where the card is asked for, so
 the reward itself no longer waits for one.
 
-The friend must save `activation.cardsRequired` cards (5) **with artwork**
-within `activation.windowDays` (30) of signing up. EVERY save runs
-`advanceReferral` (`lib/cards/actions.ts`, in `after()`), which counts the
-friend's cards whose `art_url` is set (`QUALIFYING_CARD` — a title-only
-card is a second's work, and on production every account that reached the
-bar did it with art), stamps `cards_saved_at` once (status `cards_saved`;
+The friend must save `activation.cardsRequired` cards (5) **each with
+artwork of its own** within `activation.windowDays` (30) of signing up.
+EVERY save runs `advanceReferral` (`lib/cards/actions.ts`, in `after()`) —
+and so does an edit that puts a new picture on a card — which asks the
+database's ONE count, `referral_qualifying_cards(owner)` (0208): the
+DIFFERENT pictures on the friend's cards that sit in their own
+`card-art/<id>/` folder (uploaded, generated, or brought in by an import or
+a remix). A title-only card, a built-in image, or one upload on five cards
+is not five cards made; on production every account that reached the bar
+did it this way (59 of 59). The count fails closed (an error counts 0; the
+sweep catches up). It stamps `cards_saved_at` once (status `cards_saved`;
 0177's `first_card` reads the same) or expires a row past the window. The
 stamp standing, `rewardReferral` runs at once: the program ON (else the row
 waits), both emails confirmed, the key present, the fraud rules, one email
 one referral, then the claim.
 
 `card_on_file_at` is still stamped — by `noteReferralPlan`
-(`customer.subscription.created`, `lib/stripe/webhook-handlers.ts`), on the
-friend's row whatever its status — as a FACT: how many referred friends
-became subscribers. It gates nothing.
+(`lib/stripe/webhook-handlers.ts`: a subscription created or updated into a
+state Stripe only gives with a payment method), on the friend's row
+whatever its status — as a FACT: how many referred friends became
+subscribers. It gates nothing, and no user reads it: 0208 took back the
+column grant that let a referrer see it on their own rows.
 
 **What stands between a made-up friend and a reward, now the card is gone.**
 The card was the program's fraud bar. What is left: a CONFIRMED inbox (the
 one identity check — keep it), the email rules (same inbox, throwaway
 domain, same company domain, one email one referral ever), cards with
-artwork, no two accounts referring each other (`recordReferralSignup`
-refuses the second of a pair, reason `reciprocal`), and the friends cap.
+artwork of their own (five different pictures: five uploads, each scanned
+and rate limited), no two accounts referring each other
+(`recordReferralSignup` refuses the second of a pair, reason `reciprocal` —
+a check before the insert, so two claims at the very same moment can both
+pass, and a ring of three is not caught), and the friends cap.
 The shared-card rule only speaks when both accounts already have a card
 with Stripe, which a friend rewarded on their cards usually has not. The
 most one account can take with made-up friends: 28 days and 15 credits in

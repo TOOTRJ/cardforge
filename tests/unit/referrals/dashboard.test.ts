@@ -75,8 +75,9 @@ import { REFERRAL_STATUS_LABELS } from "@/lib/referrals/rules";
 // ---------------------------------------------------------------------------
 // The referral dashboard's numbers (the user's page: the ladder's progress,
 // the cards saved, the friends cap), the page itself — three steps, the
-// cards WITH ARTWORK and no plan (owner 2026-11-11: a referral rewards on
-// the friend's cards alone) — and the admin panel's parse + render (v2: the
+// cards EACH WITH ITS OWN ARTWORK and no plan (owner 2026-11-11: a referral
+// rewards on the friend's cards alone; saved cards read "reward pending",
+// never a promise) — and the admin panel's parse + render (v2: the
 // chain, with "started a plan" as what came of it; per-day counts, the
 // ladder's distribution, the days bank). "This month" is the UTC calendar
 // month, as the database's friends cap counts it.
@@ -250,17 +251,34 @@ describe("admin referral stats (v2)", () => {
     expect(html).not.toMatch(/free month/i);
   });
 
-  it("the settings form says the rule: the cards with artwork, no plan — and that the friends cap is what limits made-up friends", () => {
+  it("the settings form says the rule: a card counts when it has artwork of its own, no plan — and that the cap, with the size of each step, is what limits made-up friends", () => {
     const html = renderToStaticMarkup(createElement(ReferralSettingsForm, { initial: DEFAULT_REFERRAL_SETTINGS }));
-    expect(html).toContain(
-      "A referral qualifies when the friend has saved the cards below within the window. Only cards with artwork count, and no plan is needed.",
+    // The description under the switch, whole: every sentence of it is a
+    // statement about the program an admin acts on.
+    const description = /<p class="text-xs leading-5 text-muted">([\s\S]*?)<\/p>/.exec(html)?.[1] ?? "";
+    expect(description).toBe(
+      "A referral qualifies when the friend has saved the cards below within the window. " +
+        "A card counts when it has artwork of its own (a picture used on several cards counts once), and no plan is needed. " +
+        "Rewards are DAYS INTO THE BANK (tier-less, no AI credits; using them takes a plan with a card on file) or AI credits at once — changed here, never with a deploy. " +
+        "The referrer climbs the ladder by qualified referral; past its last step every further referral earns the tail. " +
+        "OFF pauses new signups and rewards (a friend who qualifies meanwhile waits until it is on again); what was already given stays. " +
+        "The friends cap counts every rewarded referral in a month; 0 means nobody is rewarded. " +
+        "There is no card check any more, so the cap, with the size of each step, is what limits made-up friends.",
     );
     // A card on file is named once, for USING the days — never for earning them.
     expect(html.match(/card on file/g)).toHaveLength(1);
     expect(html).toContain("using them takes a plan with a card on file");
     expect(html).not.toMatch(/AND started a plan/);
-    expect(html).toContain("The friends cap counts every rewarded referral in a month; 0 means nobody is rewarded.");
-    expect(html).toContain("There is no card check any more, so the cap is what limits made-up friends");
+    // Two claims the first version made that are not true: a paused
+    // program's friend does not expire after 30 days (the row waits for as
+    // long as it is off), and "five a month at the tail's days" is not the
+    // most one account can earn (the ladder's steps are larger than the tail).
+    expect(html).toContain("a friend who qualifies meanwhile waits until it is on again");
+    expect(html).not.toContain("up to 30 days");
+    expect(html).not.toContain("is the most plan time");
+    // …nor the first version's "any picture will do" wording.
+    expect(html).not.toContain("Only cards with artwork count");
+    expect(html).not.toContain("so the cap is what limits made-up friends");
   });
 });
 
@@ -352,17 +370,19 @@ describe("/dashboard/referrals — the page", () => {
   /** The page's markup with its tags taken out: the words as they read. */
   const wordsOf = (html: string) => html.replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'");
 
-  it("explains the program in THREE steps: share, cards with artwork inside the window, both rewarded — no plan, no card", async () => {
+  it("explains the program in THREE steps: share, cards each with its own artwork inside the window, both rewarded — no plan, no card", async () => {
     const html = await page();
     const steps = /<ol class="grid gap-3 text-sm text-muted sm:grid-cols-3">([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
     const items = steps.split("</li>").filter((li) => li.includes("<li")).map(wordsOf);
     expect(items).toEqual([
       "1. Share your link. A friend opens it and creates an account.",
-      "2. They save 5 cards with artwork within 30 days of signing up.",
+      "2. They save 5 cards, each with its own artwork, within 30 days of signing up.",
       "3. You both get your reward. 7 free days go into their bank, and you get your next step on the ladder below. Nobody has to start a plan or add a card to earn it.",
     ]);
     expect(html).not.toContain("4. You both get your reward");
     expect(html).not.toMatch(/They start a plan/);
+    // The step's own heading is the count alone; the rest is its sentence.
+    expect(steps).toContain(">2. They save 5 cards</span>, each with its own artwork, within 30 days of signing up.");
   });
 
   it("the steps follow the program's own settings", async () => {
@@ -370,9 +390,9 @@ describe("/dashboard/referrals — the page", () => {
     view.settings = { ...DEFAULT_REFERRAL_SETTINGS, activation: { cardsRequired: 3, windowDays: 14 }, friend: { days: 10 } };
     view.mine = { id: "r9", referrer_id: "them", status: "signed_up", cards_saved_at: null, first_card_at: null, referee_reward: null };
     const words = wordsOf(await page());
-    expect(words).toContain("2. They save 3 cards with artwork within 14 days of signing up.");
+    expect(words).toContain("2. They save 3 cards, each with its own artwork, within 14 days of signing up.");
     expect(words).toContain("3. You both get your reward. 10 free days go into their bank");
-    expect(words).toContain("You joined through a friend's link — save 3 cards with artwork to get 10 free days.");
+    expect(words).toContain("You joined through a friend's link — save 3 cards, each with its own artwork, to get 10 free days.");
   });
 
   it("never makes a card on file a condition: a card is named only where banked days are USED", async () => {
@@ -384,8 +404,9 @@ describe("/dashboard/referrals — the page", () => {
     // The fine print: starting a plan is how the days are used, and that is
     // when a card is asked for.
     expect(words).toContain(
-      "Banked days are a plan's free time. Starting a plan applies them all — that is when a card is asked for — and days earned later are applied from your billing page whenever you like. The plan bills at its usual price when the days end unless you cancel. Only cards with artwork count toward a friend's cards. Up to 5 rewarded friends a month; past that, the extra friends that month earn nobody a reward. New accounts only, and one reward per email address.",
+      "Banked days are a plan's free time. Starting a plan applies them all — that is when a card is asked for — and days earned later are applied from your billing page whenever you like. The plan bills at its usual price when the days end unless you cancel. A friend's card counts when it has artwork of its own; the same picture on several cards counts once. Up to 5 rewarded friends a month; past that, the extra friends that month earn nobody a reward. New accounts only, and one reward per email address.",
     );
+    expect(words).not.toContain("Only cards with artwork count");
     // "A card" is spoken of twice on the whole page: not needed to earn the
     // reward (step 3), asked for when a plan is started (the fine print).
     expect(words.match(/\b(?:a|the|their|your) card\b[^.—]*/gi)).toEqual(["a card to earn it", "a card is asked for "]);
@@ -407,7 +428,7 @@ describe("/dashboard/referrals — the page", () => {
     expect(html).not.toContain("Started a plan");
   });
 
-  it("a friend whose cards are saved: the reward is on its way — nothing is waited for", async () => {
+  it("a friend whose cards are saved: the reward is PENDING — no plan is waited for, and nothing is promised (the check can still find the referral not eligible)", async () => {
     view.made = [
       dbRow({ id: "r1", referee_id: "friend-1", status: "cards_saved", cards_saved_at: "2026-11-02T00:00:00Z" }),
       dbRow({ id: "r2", referee_id: "friend-2", status: "first_card", first_card_at: "2026-10-02T00:00:00Z" }),
@@ -422,17 +443,19 @@ describe("/dashboard/referrals — the page", () => {
       const tr = html.split("</tr>").find((r) => r.includes(`@${username}`)) ?? "";
       return wordsOf(tr.slice(tr.lastIndexOf("<td")));
     };
-    expect(rewardOf("friend_1")).toBe("Cards saved — your reward is on its way");
-    expect(rewardOf("friend_2")).toBe("Cards saved — your reward is on its way");
+    expect(rewardOf("friend_1")).toBe("Cards saved — reward pending");
+    expect(rewardOf("friend_2")).toBe("Cards saved — reward pending");
     expect(rewardOf("friend_3")).toBe("Waiting for their cards");
     expect(rewardOf("friend_4")).toBe("None — this month's limit of rewarded friends was reached");
     expect(rewardOf("friend_5")).toBe("AI credits · referral #2");
     // On a phone the same words read under the badge: twice a row.
-    expect(html.match(/Cards saved — your reward is on its way/g)).toHaveLength(4);
+    expect(html.match(/Cards saved — reward pending/g)).toHaveLength(4);
+    // Never the first version's promise.
+    expect(html).not.toContain("your reward is on its way");
     expect(html).not.toMatch(/waiting for a plan with a card on file|Pending — waiting on a confirmed email/);
   });
 
-  it("'You joined through…' says what is left for the friend to do: the cards with artwork, and nothing about a plan", async () => {
+  it("'You joined through…' says what is left for the friend to do: the cards, each with its own artwork, and nothing about a plan — and saved cards are 'being checked', not promised", async () => {
     view.profiles = [{ id: "them", username: "dev_pro" }];
     const sentence = async (mine: Record<string, unknown> | null, named = true) => {
       view.profiles = named ? [{ id: "them", username: "dev_pro" }] : [];
@@ -442,9 +465,9 @@ describe("/dashboard/referrals — the page", () => {
       return at < 0 ? null : words.slice(at);
     };
     expect(await sentence(null)).toBeNull();
-    expect(await sentence({})).toBe("You joined through @dev_pro's link — save 5 cards with artwork to get 7 free days.");
-    expect(await sentence({}, false)).toBe("You joined through a friend's link — save 5 cards with artwork to get 7 free days.");
-    const saved = "You joined through @dev_pro's link — your cards are saved, and your reward is on its way.";
+    expect(await sentence({})).toBe("You joined through @dev_pro's link — save 5 cards, each with its own artwork, to get 7 free days.");
+    expect(await sentence({}, false)).toBe("You joined through a friend's link — save 5 cards, each with its own artwork, to get 7 free days.");
+    const saved = "You joined through @dev_pro's link — your cards are saved, and your reward is being checked.";
     expect(await sentence({ status: "cards_saved", cards_saved_at: "2026-11-02T00:00:00Z" })).toBe(saved);
     expect(await sentence({ status: "first_card", first_card_at: "2026-10-02T00:00:00Z" })).toBe(saved);
     expect(await sentence({ status: "rewarded", referee_reward: "banked_days" })).toBe("You joined through @dev_pro's link — your free days are in your bank.");

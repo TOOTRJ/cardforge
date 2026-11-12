@@ -413,19 +413,21 @@ instead. Each bullet: what the header says, and what is true now.
   cards and a plan with a card on file; "the card is the fraud bar";
   `referrals_awaiting_plan` is "the sweep's read")** — since 0208 (owner
   2026-11-11) a referral qualifies on the friend's cards ALONE, counted
-  with artwork; `card_on_file_at` is a fact the webhook stamps, not a
-  condition; nothing banks the friend's days ahead of a checkout; and
+  by `referral_qualifying_cards` (different pictures of the friend's own);
+  `card_on_file_at` is a fact the webhook stamps, not a condition, and the
+  `authenticated` column grant on it ("the user reads the two stamps") is
+  taken back; nothing banks the friend's days ahead of a checkout; and
   `referrals_awaiting_plan` is no longer called by the app (left in place
   for the deployment that still did). 0208 also restates
   `claim_referral_reward_v2` with the friends cap counting every rewarded
   row of the month — 0180's count left a rewarded row out while the
-  friend's side was `none` — and `referrals_stranded_signups` counting the
-  cards with artwork.
+  friend's side was `none` — and `referrals_stranded_signups` asking
+  `referral_qualifying_cards`.
 - **0206 (`admin_referred_friends`: "EIGHT more columns", 27 in all;
   `referee_has_plan` as "the reward step's card on file test")** — since
-  0208 there are 28 (`referee_art_cards`, the friend's cards with artwork:
-  the ones a referral counts), and a plan is a fact, no longer a test the
-  reward step makes.
+  0208 there are 28 (`referee_art_cards`: `referral_qualifying_cards` for
+  the friend, the count a referral's bar reads), and a plan is a fact, no
+  longer a test the reward step makes.
 - **0202 (`admin_referred_friends`: the nineteen columns its header
   lists)** — since 0206 the function returns eight more after them: each
   side's recorded reward and its detail, the failed grant attempts, whether

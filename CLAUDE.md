@@ -1829,16 +1829,24 @@ Rules and gotchas:
   hands an unconfirmed address the same user id). A referral QUALIFIES on
   the friend's CARDS ALONE (owner 2026-11-11, migration 0208 — until then it
   also took a plan with a card on file, and 2 % of sign-ups ever met that):
-  the friend saves `activation.cardsRequired` cards (5) WITH ARTWORK within
-  `activation.windowDays` (30) — EVERY save runs `advanceReferral` in
-  `after()` (`lib/cards/actions.ts`; `QUALIFYING_CARD` = `art_url` set, the
-  same count in `referrals_stranded_signups` and `admin_referred_friends`;
-  `cards_saved_at`, status `cards_saved` = 0177's `first_card`). Never bring
+  the friend saves `activation.cardsRequired` cards (5), EACH WITH ARTWORK
+  OF ITS OWN, within `activation.windowDays` (30) — EVERY save, and an edit
+  that puts a new picture on a card, runs `advanceReferral` in `after()`
+  (`lib/cards/actions.ts`). ONE count, in the database:
+  `referral_qualifying_cards(owner)` (0208) = the different pictures on the
+  friend's cards in their own `card-art/<id>/` folder — never count `cards`
+  rows or "any `art_url`" for the bar (a built-in image, or one upload on
+  five cards, is not five cards made); the app (failing closed: an error
+  counts 0), `referrals_stranded_signups` and `admin_referred_friends` all
+  call it (`cards_saved_at`, status `cards_saved` = 0177's `first_card`).
+  Never bring
   a plan or a card back as a condition without the owner: a banked day can
   only be used by starting a plan, which asks for the card.
-  `card_on_file_at` is a FACT (`noteReferralPlan`, on
-  `customer.subscription.created`: how many friends became subscribers) and
-  gates nothing. Then the reward at once: both emails confirmed — the one
+  `card_on_file_at` is a FACT (`noteReferralPlan`, on a subscription
+  created or updated into a card-on-file state: how many friends became
+  subscribers), gates nothing, and is NOT readable by a user (0208 revoked
+  the column: a referrer must not learn that a friend subscribed). Then the
+  reward at once: both emails confirmed — the one
   identity check left, kept; a lookup that FAILS is a wait (`check_failed`),
   never "unconfirmed" — the fraud rules, one email one referral ever
   (`lib/referrals/fraud.ts`, the keyed fingerprint under
@@ -1873,7 +1881,8 @@ Rules and gotchas:
   `referralRewardWords` (`lib/admin/analytics/referral-rewards.ts`, pure) is
   the reward step's own conditions in its order (billing off first —
   nothing moves and no sweep runs — then the cards with artwork inside the
-  window, the program's switch, both emails, the hash key; then a
+  window (artwork of their own), the program's switch, both emails, the
+  hash key; then a
   failed grant, a side recorded `none`) — a condition added to or taken
   from `rewardReferral` / `advanceReferral` changes there in the same PR.
   It says "the hourly check does it" only of what `sweepReferralRewards`

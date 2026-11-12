@@ -11,7 +11,8 @@
 --     (referral_step). The bank rows are in this file (the day_bank_entries
 --     table is 0179's); nothing on Stripe.
 --   dev_free → dev_new     SIGNED UP, no cards yet: sign in as dev_new and
---     save five cards WITH ARTWORK to watch both rewards land and the two
+--     save five cards, EACH WITH ITS OWN ARTWORK (five different pictures
+--     in dev_new's own folder), to watch both rewards land and the two
 --     referral_reward notifications — no plan and no Checkout is needed
 --     since 0208 (owner 2026-11-11: a referral rewards on the friend's cards
 --     alone). (Seeded emails are confirmed; the reward needs

@@ -14,8 +14,8 @@ import { z } from "zod";
 //               nothing, and a qualified friend rewards nobody until it is
 //               on again (the row waits). Rewards already given stay.
 //   activation  what a friend must do for the referral to QUALIFY: save
-//               `cardsRequired` cards WITH ARTWORK within `windowDays` of
-//               signing up — and nothing else (owner 2026-11-11: no plan,
+//               `cardsRequired` cards, each with artwork of its own, within
+//               `windowDays` of signing up — and nothing else (owner 2026-11-11: no plan,
 //               no card; lib/referrals/server.ts). The card used to be the
 //               fraud bar; the friends cap below is what bounds made-up
 //               friends now.

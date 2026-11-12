@@ -44,11 +44,12 @@ const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "g
 };
 
 /** The reward cell when nothing was recorded for the viewer. A friend whose
- *  cards are saved has qualified (owner 2026-11-11: no plan is waited for);
- *  the reward follows within the hour. */
+ *  cards are saved has qualified (owner 2026-11-11: no plan is waited for)
+ *  and the reward is being checked — "pending", not a promise: the check
+ *  can still find the referral not eligible. */
 function noRewardText(status: ReferralStatus): string {
   if (status === "signed_up") return "Waiting for their cards";
-  if (status === "first_card" || status === "cards_saved") return "Cards saved — your reward is on its way";
+  if (status === "first_card" || status === "cards_saved") return "Cards saved — reward pending";
   if (status === "capped") return "None — this month's limit of rewarded friends was reached";
   return "—";
 }
@@ -99,7 +100,7 @@ export default async function ReferralsPage() {
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">{`2. They save ${cardsRequired} cards`}</span>
-                  {` with artwork within ${windowDays} days of signing up.`}
+                  {`, each with its own artwork, within ${windowDays} days of signing up.`}
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">3. You both get your reward.</span>
@@ -109,9 +110,10 @@ export default async function ReferralsPage() {
               <p className="text-xs leading-5 text-subtle">
                 Banked days are a plan&apos;s free time. Starting a plan applies them all — that is when a card is
                 asked for — and days earned later are applied from your billing page whenever you like. The plan bills
-                at its usual price when the days end unless you cancel. Only cards with artwork count toward a
-                friend&apos;s cards. Up to {summary.friendsPerMonth} rewarded friends a month; past that, the extra
-                friends that month earn nobody a reward. New accounts only, and one reward per email address.
+                at its usual price when the days end unless you cancel. A friend&apos;s card counts when it has artwork
+                of its own; the same picture on several cards counts once. Up to {summary.friendsPerMonth} rewarded
+                friends a month; past that, the extra friends that month earn nobody a reward. New accounts only, and
+                one reward per email address.
               </p>
             </>
           ) : null}
@@ -259,9 +261,9 @@ export default async function ReferralsPage() {
         <p className="mt-6 text-sm text-muted">
           You joined through {joinedThrough.username ? `@${joinedThrough.username}` : "a friend"}&apos;s link
           {joinedThrough.status === "signed_up"
-            ? ` — save ${cardsRequired} cards with artwork to get ${friendGets}.`
+            ? ` — save ${cardsRequired} cards, each with its own artwork, to get ${friendGets}.`
             : joinedThrough.status === "first_card" || joinedThrough.status === "cards_saved"
-              ? " — your cards are saved, and your reward is on its way."
+              ? " — your cards are saved, and your reward is being checked."
               : joinedThrough.rewarded === true
                 ? " — your free days are in your bank."
                 : joinedThrough.rewarded == null && (joinedThrough.status === "rewarded" || joinedThrough.status === "capped" || joinedThrough.status === "blocked")

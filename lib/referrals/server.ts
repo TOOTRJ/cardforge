@@ -34,19 +34,24 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 //                         Nobody is told yet. Nothing is recorded while the
 //                         program is OFF (the settings).
 //   advanceReferral       the friend saved a card (createCardAction, every
-//                         save). The row QUALIFIES when `cards_saved_at`
+//                         save, and an edit that puts a new picture on a
+//                         card). The row QUALIFIES when `cards_saved_at`
 //                         stands — the settings' `activation.cardsRequired`
-//                         cards WITH ARTWORK (QUALIFYING_CARD: a title-only
-//                         card is a second's work, and every real account
-//                         that reached the bar did it with art) within
-//                         `activation.windowDays` of signing up — and the
-//                         reward step runs at once. `qualifyReferral` is the
-//                         card-save hook's name for it.
-//   noteReferralPlan      the friend started a plan with a card on file (the
-//                         webhook, the subscription's creation):
-//                         `card_on_file_at` is stamped as a FACT for the
-//                         admin's numbers ("of the friends referred, who
-//                         became a subscriber") — it gates nothing.
+//                         cards WITH ARTWORK OF THEIR OWN, each picture
+//                         once (0208 `referral_qualifying_cards`: a
+//                         title-only card, a built-in image or one upload
+//                         on five cards is not five cards made; every real
+//                         account that reached the bar did it this way)
+//                         within `activation.windowDays` of signing up —
+//                         and the reward step runs at once.
+//                         `qualifyReferral` is the card-save hook's name.
+//   noteReferralPlan      the friend holds a plan with a card on file (the
+//                         webhook, a subscription created or updated into
+//                         such a state): `card_on_file_at` is stamped as a
+//                         FACT for the admin's numbers ("of the friends
+//                         referred, who became a subscriber") — it gates
+//                         nothing, and no user reads it (0208 took the
+//                         column grant back).
 //   rewardReferral        a qualified row: the program ON (else it WAITS),
 //                         both emails CONFIRMED (else it waits — a lookup
 //                         that FAILED is a wait, never "unconfirmed"), the
@@ -225,20 +230,28 @@ function qualifiedAt(row: ReferralRow): string | null {
   return row.cards_saved_at ?? row.first_card_at;
 }
 
-/** The cards that count toward the bar: the friend's own, WITH ARTWORK. The
- *  same test in SQL: referrals_stranded_signups and admin_referred_friends'
- *  `referee_art_cards` (0208) — a test holds the three together. */
-export const QUALIFYING_CARD = { column: "art_url" } as const;
-
-/** How many of the friend's cards count toward the bar. */
+/**
+ * How many of the friend's cards count toward the bar: the DIFFERENT
+ * pictures of their own on them (0208's `referral_qualifying_cards` — an
+ * upload, a generated picture, an import's or a remix's copy in their
+ * `card-art/<id>/` folder). A card with no picture, a built-in image, or a
+ * picture another of their cards already uses adds nothing: none of those
+ * is a card made. ONE count, in the database, shared with the sweep's
+ * stranded read and the admin's list.
+ *
+ * FAILS CLOSED: a read that errors — or a database the function has not
+ * reached yet (the app can deploy minutes before the migration) — counts 0,
+ * so nothing qualifies on a guess; the hourly sweep finds the friend once
+ * the count works.
+ */
 async function qualifyingCardCount(admin: AdminClient, refereeId: string): Promise<number> {
-  const { count } = await admin
-    .from("cards")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", refereeId)
-    .not(QUALIFYING_CARD.column, "is", null)
-    .neq(QUALIFYING_CARD.column, "");
-  return count ?? 0;
+  const { data, error } = await admin.rpc("referral_qualifying_cards", { p_owner: refereeId });
+  if (error) {
+    console.error(`[referrals] the card count for ${refereeId} failed (nothing qualifies on it):`, error.message);
+    return 0;
+  }
+  const count = typeof data === "string" ? Number(data) : data;
+  return typeof count === "number" && Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
 }
 
 /**
@@ -318,11 +331,12 @@ export async function qualifyReferral(admin: AdminClient, refereeId: string, dep
 }
 
 /**
- * The friend started a plan with a card on file (the webhook: a
- * subscription was created). Stamps `card_on_file_at` on their referral,
- * whatever its status, once — the admin's "started a plan" number, i.e. how
- * many referred friends became subscribers. It is NOT a condition of the
- * reward (owner 2026-11-11): a friend qualifies on their cards. Best effort.
+ * The friend holds a plan with a card on file (the webhook: a subscription
+ * created, or updated into such a state). Stamps `card_on_file_at` on their
+ * referral, whatever its status, once — the admin's "started a plan"
+ * number, i.e. how many referred friends became subscribers. It is NOT a
+ * condition of the reward (owner 2026-11-11): a friend qualifies on their
+ * cards. No user reads the stamp (0208). Best effort.
  */
 export async function noteReferralPlan(admin: AdminClient, refereeId: string, now: Date = new Date()): Promise<void> {
   try {
@@ -350,9 +364,9 @@ export async function rewardReferral(
   if (referral.status !== "cards_saved" && referral.status !== "first_card") return { status: "none" };
   if (!qualifiedAt(referral)) return { status: "waiting", reason: "not_qualified" };
   const settings = deps.settings ?? (await readReferralSettings(admin));
-  // The program is PAUSED (an admin's switch): the row waits — the sweep
-  // rewards it once the program is on again, or the confirm window below
-  // expires it. Nothing is granted, nobody told, while it is off.
+  // The program is PAUSED (an admin's switch): the row waits, for as long
+  // as it is off — the sweep rewards it once the program is on again.
+  // Nothing is granted, nobody told, and nothing expires while it is off.
   if (!settings.enabled) return { status: "waiting", reason: "program_off" };
 
   // The friend's account is gone: nobody is rewarded (the row stays — it is

@@ -155,8 +155,9 @@ export type ReferralRewardFacts = {
   /** The friend holds a subscription Stripe only gives with a card — a fact
    *  since 2026-11-11, no longer a condition of the reward. */
   friendHasPlan: boolean | null;
-  /** The friend's cards WITH ARTWORK: the ones a referral counts (0208).
-   *  Null on a database before 0208 — the page then reads every card. */
+  /** The friend's cards a referral counts (0208's
+   *  referral_qualifying_cards: different pictures of their own). Null on a
+   *  database before 0208 — the page then reads every card. */
   friendQualifyingCards: number | null;
 };
 

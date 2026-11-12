@@ -3823,6 +3823,10 @@ export type Database = {
         Args: { p_since: string; p_until?: string; p_include_admins?: boolean };
         Returns: Json;
       };
+      referral_qualifying_cards: {
+        Args: { p_owner: string };
+        Returns: number;
+      };
       saved_card_counts: {
         Args: Record<string, never>;
         Returns: { cards: number; cards_this_week: number }[];

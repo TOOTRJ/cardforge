@@ -15,8 +15,9 @@ import { REFERRAL_CONFIRM_WINDOW_DAYS, REFERRAL_GRANT_MAX_ATTEMPTS } from "@/lib
 // WHY a referral's reward has not been given (owner 2026-11-11) — the
 // Referred friends table's Rewards column. Each reason is one of the reward
 // step's own conditions (lib/referrals/server.ts), in its order: billing
-// (off, nothing moves), the friend's cards WITH ARTWORK inside the window,
-// the program's switch, both emails, the hash key — then a claimed row's
+// (off, nothing moves), the friend's cards WITH ARTWORK OF THEIR OWN inside
+// the window (0208's referral_qualifying_cards: each picture once), the
+// program's switch, both emails, the hash key — then a claimed row's
 // failed grant, and what a side that ended with nothing was refused for.
 // A plan with a card on file is NO condition (owner 2026-11-11: a referral
 // rewards on the cards alone), so no reason names one. "The hourly check
@@ -70,7 +71,8 @@ const row = (over: Partial<ReferredFriend> = {}): ReferredFriend => ({
 });
 
 /** The friend's cards now: `all` of them, `withArt` of those carrying
- *  artwork — the ones a referral counts (0208). */
+ *  artwork of their own, each picture once — the ones a referral counts
+ *  (0208's referral_qualifying_cards). */
 const saved = (all: number, withArt: number = all, over: Partial<ReferralRewardFacts> = {}): Partial<ReferredFriend> => ({
   cards: all,
   rewards: facts({ friendQualifyingCards: withArt, ...over }),
@@ -99,26 +101,44 @@ describe("a referral the reward step has not claimed yet", () => {
     expect(late.friend.detail).toContain("the friend did not save 1 card within 7 days of joining");
   });
 
-  it("counts only the cards WITH ARTWORK, and says how many more the friend has that do not count", () => {
+  it("counts only the cards WITH ARTWORK OF THEIR OWN, and says how many more the friend has that do not count", () => {
+    // Plural: "cards … have … their … do".
     expect(words(row(saved(5, 3))).friend.detail).toBe(
-      "the friend has saved 3 of 5 cards (until Dec 1, 2026 UTC); 2 cards more have no artwork and do not count",
+      "the friend has saved 3 of 5 cards (until Dec 1, 2026 UTC); 2 cards more have no artwork of their own and do not count",
     );
+    // Singular: "card … has … its … does".
     expect(words(row(saved(5, 4))).referrer.detail).toBe(
-      "the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 1 card more has no artwork and does not count",
+      "the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 1 card more has no artwork of its own and does not count",
     );
-    // No artwork at all: none of them counts.
+    // No artwork of their own at all: none of them counts.
     expect(words(row(saved(3, 0))).friend.detail).toBe(
-      "the friend has saved 0 of 5 cards (until Dec 1, 2026 UTC); 3 cards more have no artwork and do not count",
+      "the friend has saved 0 of 5 cards (until Dec 1, 2026 UTC); 3 cards more have no artwork of their own and do not count",
+    );
+    expect(words(row(saved(1, 0))).friend.detail).toBe(
+      "the friend has saved 0 of 5 cards (until Dec 1, 2026 UTC); 1 card more has no artwork of its own and does not count",
     );
   });
 
-  it("cards without artwork never reach the bar, however many there are", () => {
+  it("the clause says artwork OF ITS / THEIR OWN — one picture on several cards, or a built-in image, is what it covers — never the old 'no artwork' alone", () => {
+    for (const [all, counted] of [
+      [5, 3],
+      [5, 4],
+      [3, 0],
+      [40, 4],
+    ] as const) {
+      const detail = words(row(saved(all, counted))).friend.detail;
+      expect(detail, `${all}/${counted}`).toMatch(/ no artwork of (its|their) own and (does|do) not count$/);
+      expect(detail, `${all}/${counted}`).not.toMatch(/no artwork and/);
+    }
+  });
+
+  it("cards without artwork of their own never reach the bar, however many there are", () => {
     const many = words(row(saved(40, 4))).friend.detail;
-    expect(many).toBe("the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 36 cards more have no artwork and do not count");
+    expect(many).toBe("the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 36 cards more have no artwork of their own and do not count");
     expect(many).not.toContain("hourly check");
   });
 
-  it("every card carrying artwork adds no second sentence", () => {
+  it("every card carrying artwork of its own adds no second sentence", () => {
     expect(words(row(saved(3, 3))).friend.detail).not.toContain("artwork");
     // A count that says more than the friend has cards (it cannot) is read as it is.
     expect(words(row(saved(2, 3))).friend.detail).toBe("the friend has saved 3 of 5 cards (until Dec 1, 2026 UTC)");
@@ -479,7 +499,7 @@ describe("the cell's lines", () => {
     expect(referralRewardLines(words(row(saved(5, 4))))).toEqual([
       {
         who: "Both sides",
-        text: "not yet — the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 1 card more has no artwork and does not count",
+        text: "not yet — the friend has saved 4 of 5 cards (until Dec 1, 2026 UTC); 1 card more has no artwork of its own and does not count",
       },
     ]);
     const capped = qualified({ status: "capped", rewards: facts({ friend: side({ kind: "none" }), referrer: side({ kind: "none" }) }) });

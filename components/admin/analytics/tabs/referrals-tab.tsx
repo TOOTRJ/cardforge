@@ -91,7 +91,7 @@ export function ReferralsTabView({
     <div className="flex flex-col gap-6">
       <Section
         title={`Referrals in ${periodLabel(params.days)}`}
-        description={`A referral rewards both sides once the friend has saved ${cards} with artwork within ${windowDays} days of joining. No plan is needed for the reward; "Started a plan" counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.`}
+        description={`A referral rewards both sides once the friend has saved ${cards}, each with its own artwork, within ${windowDays} days of joining. No plan is needed for the reward; "Started a plan" counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.`}
       >
         {stats ? (
           <KpiRow className="md:grid-cols-4 xl:grid-cols-4">
@@ -109,7 +109,7 @@ export function ReferralsTabView({
               current={stats.current.cardsSaved}
               previous={stats.previous.cardsSaved}
               previousLabel={before}
-              hint={`With artwork, within ${windowDays} days of joining`}
+              hint={`Each with its own artwork, within ${windowDays} days of joining`}
             />
             <KpiTile
               label="Rewarded"
