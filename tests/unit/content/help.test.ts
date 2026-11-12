@@ -374,6 +374,11 @@ describe("answers that follow the product", () => {
       expect([REFERRAL_CLAIM_WINDOW_DAYS, REFERRAL_CODE_KEEP_DAYS]).toEqual([14, 30]);
     });
 
+    it("every one of them is found by the hub's search for \"referral\"", () => {
+      const found = helpSearchItems().filter((item) => `${item.title} ${item.text}`.toLowerCase().includes("referral"));
+      expect(found.map((item) => item.id)).toEqual(expect.arrayContaining(REFERRALS_FAQ.map((entry) => entry.id)));
+    });
+
     it("is linked from the Refer a friend page — at an anchor that exists", () => {
       expect(helpEntryHref("how-referrals-work")).toBe("/help/sharing-and-community#how-referrals-work");
       const page = source("app/(app)/dashboard/referrals/page.tsx");

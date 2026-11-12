@@ -404,12 +404,12 @@ export const REFERRALS_FAQ: FaqEntry[] = [
   {
     id: "use-free-days",
     q: "How do I use the free days I earned?",
-    a: "Free days wait in your days bank, shown on the Billing page of your dashboard. To use them, start a Plus or Pro plan: checkout asks for a payment card and your banked days become the plan's free period, so nothing is charged until they end. If you already have a plan, press Apply beside your banked days on the Billing page and your next charge moves out by that many days. The days work on whichever plan you pick. When they run out the plan bills at its usual price unless you cancel first. AI credits from the ladder need no plan: they go straight into your balance.",
+    a: "Free days, from a referral or from signing up, wait in your days bank, shown on the Billing page of your dashboard. To use them, start a Plus or Pro plan: checkout asks for a payment card and your banked days become the plan's free period, so nothing is charged until they end. If you already have a plan, press Apply beside your banked days on the Billing page and your next charge moves out by that many days. The days work on whichever plan you pick. When they run out the plan bills at its usual price unless you cancel first. AI credits from the ladder need no plan: they go straight into your balance.",
   },
   {
     id: "referral-limits",
     q: "Is there a limit on how many friends I can refer?",
-    a: `You can share your link with as many people as you like, and up to ${REFERRALS.caps.friendsPerMonth} friends can be rewarded in one calendar month (counted in UTC). Past that, a friend who qualifies in the same month earns neither of you a reward. A person can be referred once, by one account, and only as a new member: someone who already has a PipGlyph account can't be referred later. You can't refer yourself, and two accounts can't refer each other.`,
+    a: `Referrals themselves have no limit: you can share your link with as many people as you like, and up to ${REFERRALS.caps.friendsPerMonth} friends can be rewarded in one calendar month (counted in UTC). Past that, a friend who qualifies in the same month earns neither of you a reward. A person can be referred once, by one account, and only as a new member: someone who already has a PipGlyph account can't be referred later. You can't refer yourself, and two accounts can't refer each other.`,
   },
   {
     id: "add-a-referral-code",
