@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CREDIT_PACKS, PACK_SUBSCRIBER_COUPON_ID, TRIAL_DAYS, TRIAL_WINBACK_COUPON_ID } from "@/lib/billing/plans";
 
@@ -159,9 +161,28 @@ vi.mock("@/lib/stripe/client", () => ({
     billingPortal: { sessions: { create: s.portalCreate } },
   }),
 }));
-// The referred friend's days, banked before the checkout reserves the bank
-// (0180) — its own tests.
-vi.mock("@/lib/referrals/server", () => ({ preBankFriendDays: async () => false }));
+// The referral program is NO part of a checkout any more (owner 2026-11-11:
+// a referral rewards the friend when their cards are saved, so nothing is
+// banked ahead of a checkout — 0180's `preBankFriendDays` is gone). Every
+// entry point the module has, or had, is a TRAP here: a checkout that
+// reaches one throws, and the test below reads each as never called.
+const referralServer = vi.hoisted(() => {
+  const trap = (name: string) =>
+    vi.fn<(...args: unknown[]) => Promise<never>>(async () => {
+      throw new Error(`the checkout called lib/referrals/server ${name}()`);
+    });
+  return {
+    preBankFriendDays: trap("preBankFriendDays"),
+    advanceReferral: trap("advanceReferral"),
+    qualifyReferral: trap("qualifyReferral"),
+    noteReferralPlan: trap("noteReferralPlan"),
+    rewardReferral: trap("rewardReferral"),
+    recordReferralSignup: trap("recordReferralSignup"),
+    sweepReferralRewards: trap("sweepReferralRewards"),
+    grantOwedSides: trap("grantOwedSides"),
+  };
+});
+vi.mock("@/lib/referrals/server", () => referralServer);
 vi.mock("@/lib/stripe/config", () => ({
   priceIdForTier: (tier: string, period: string) => `price_${tier}_${period}`,
   priceIdForPack: (pack: string) => `price_pack_${pack}`,
@@ -285,6 +306,7 @@ beforeEach(() => {
   s.bankStamped = [];
   s.bankReclaimed = 0;
   s.portalCreate.mockReset().mockResolvedValue({ url: "https://portal.test/session" });
+  for (const trap of Object.values(referralServer)) trap.mockClear();
 });
 
 describe("createCheckoutSessionAction", () => {
@@ -723,6 +745,42 @@ describe("createCheckoutSessionAction", () => {
     expect(checkoutParams()).not.toHaveProperty("custom_text");
     expect(s.bankStamped).toEqual([]);
     expect(checkoutParams().metadata).not.toHaveProperty("bank_batch");
+  });
+
+  // Owner 2026-11-11: the referral rewards a friend on their cards alone, so
+  // their days are in the bank before any checkout (or arrive later and are
+  // applied from the billing page). 0180 banked them from INSIDE the checkout
+  // (`preBankFriendDays(admin, userId)`, before the bank was reserved); that
+  // call and its import are gone.
+  it("a checkout does nothing for the referral program: lib/referrals/server is not imported and none of its entry points runs — the bank is prepared as for anyone", async () => {
+    // A first subscription with the signup days, and one checking out earned
+    // days (where a referred friend's days sit): the two paths that reserve
+    // the bank.
+    expect(await createCheckoutSessionAction({ kind: "subscription", tier: "pro" })).toEqual({ ok: true, url: "https://checkout.test/session" });
+    s.profile = { stripe_customer_id: "cus_1", subscription_status: "canceled" };
+    s.history = [{ id: "sub_old_trial", status: "canceled" }];
+    s.bankEarned = { batchId: "bb_2", days: 7 };
+    expect(await createCheckoutSessionAction({ kind: "subscription", tier: "plus" })).toEqual({ ok: true, url: "https://checkout.test/session" });
+    // …and a pack, which never touched it.
+    expect((await createCheckoutSessionAction({ kind: "pack", pack: "small" })).ok).toBe(true);
+
+    for (const [name, trap] of Object.entries(referralServer)) expect(trap, name).not.toHaveBeenCalled();
+    // The bank is asked once per subscription checkout, after the open
+    // checkouts are reclaimed — nothing was banked first.
+    expect(s.bankCalls).toEqual([
+      { userId: USER, signupEligible: true },
+      { userId: USER, signupEligible: false },
+    ]);
+    expect(s.bankReclaimed).toBe(2);
+    expect(s.checkoutCreate.mock.calls.map((c) => (c[0] as { metadata: Record<string, string> }).metadata.bank_batch)).toEqual(["bb_1", "bb_2", undefined]);
+
+    // The import is gone, not only unused on these paths.
+    const source = readFileSync(join(process.cwd(), "lib/stripe/actions.ts"), "utf8")
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    expect(source).not.toMatch(/lib\/referrals\/server/);
+    expect(source).not.toMatch(/preBankFriendDays|advanceReferral|noteReferralPlan|qualifyReferral/);
   });
 
   it("the days bank: a Checkout that can't be created hands the reserved days straight back", async () => {

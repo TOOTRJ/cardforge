@@ -3857,6 +3857,7 @@ export type Database = {
           referee_email_confirmed: boolean | null;
           referrer_email_confirmed: boolean | null;
           referee_has_plan: boolean | null;
+          referee_art_cards: number;
         }[];
       };
       admin_content_stats: {

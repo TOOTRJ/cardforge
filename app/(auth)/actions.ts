@@ -2,6 +2,7 @@
 
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import { ATTRIBUTION_FIELDS, attributionProps, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 import { revalidatePath } from "next/cache";
@@ -245,7 +246,11 @@ export async function signupAction(
     // A REAL new user only (identities: an already-registered address gets
     // an obfuscated user with none): the referral code goes on the
     // account's app_metadata, which only the server writes.
-    if (attribution.ref) {
+    // First touch wins here too: an address still waiting for its
+    // confirmation is handed back as the same user, and a second sign-up
+    // with another link must not take the referral over.
+    const kept = normalizeReferralCode((newUser.app_metadata as { referral_code?: unknown } | null)?.referral_code);
+    if (attribution.ref && !kept) {
       const { error: metaError } = await admin.auth.admin.updateUserById(newUser.id, {
         app_metadata: { referral_code: attribution.ref },
       });

@@ -19,7 +19,6 @@ import {
 import { formatMoney } from "@/lib/format/money";
 import { trialTermsLine } from "@/lib/billing/trial-terms";
 import { prepareCheckoutBank, reclaimOpenCheckouts, settleBankBatch, stampBankBatchSession } from "@/lib/billing/day-bank";
-import { preBankFriendDays } from "@/lib/referrals/server";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import {
   TRIAL_END_BEFORE_COMP_KEY,
@@ -560,10 +559,10 @@ export async function createCheckoutSessionAction(
           }
           signupEligible = eligibility === "eligible";
         }
-        // A referred friend with the cards saved is about to qualify with
-        // THIS checkout: their days are banked first, so this checkout is the
-        // one that applies them (lib/referrals/server.ts, owner 2026-11-06).
-        await preBankFriendDays(admin, customer.userId);
+        // A referred friend's days need nothing done here any more (owner
+        // 2026-11-11): the referral rewards them when their cards are saved,
+        // so the days are already in the bank this checkout applies — or they
+        // arrive later and are applied from the billing page.
         // A Checkout the user backed out of still holds its days: expired
         // and reclaimed first, so this one applies them.
         await reclaimOpenCheckouts(admin, stripe, customer.userId, new Date(checkoutSec * 1000));

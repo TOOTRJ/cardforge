@@ -163,13 +163,22 @@ export async function completeOnboardingAction(input: {
   // an account takes with a confirmed email (a session needs one) — from
   // the code the signup put on the account's app_metadata (the server's),
   // else the tab's first touch (a Google sign-up posts no signup form).
-  // Before onboarded_at, so a transient failure can be retried on the next
-  // finish; recordReferralSignup checks the account is new, the program is
-  // on, and keeps the first claim (a repeat is "exists", harmless).
+  // recordReferralSignup checks the account is new, the program is on, and
+  // keeps the first claim (a repeat is "exists", harmless). A claim that
+  // FAILED on a read is tried once more: nothing else retries it (onboarding
+  // goes on either way — a referral never blocks an account), and a friend's
+  // link lost here is lost for good.
   const metadataCode = normalizeReferralCode((user.app_metadata as { referral_code?: unknown } | null)?.referral_code);
   const referralCode = metadataCode ?? parsed.data.referralCode;
   if (referralCode && isAdminConfigured()) {
-    await recordReferralSignup(createAdminClient(), { refereeId: user.id, code: referralCode });
+    const admin = createAdminClient();
+    const claim = await recordReferralSignup(admin, { refereeId: user.id, code: referralCode });
+    if (!claim.ok && claim.reason === "error") {
+      const again = await recordReferralSignup(admin, { refereeId: user.id, code: referralCode });
+      if (!again.ok && again.reason === "error") {
+        console.error(`[referrals] the claim for ${user.id} failed twice; the referral is not recorded.`);
+      }
+    }
   }
   // The signup days (the days bank, 0179): every new account's free period
   // in waiting. Once per account; the first checkout judges whether they

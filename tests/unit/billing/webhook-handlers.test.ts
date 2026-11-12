@@ -24,8 +24,18 @@ const chargeEvents = vi.hoisted(() => ({
   dispute: vi.fn(),
   fraud: vi.fn(),
 }));
-// The referral program's card-on-file hook (0180) — its own tests.
-vi.mock("@/lib/referrals/server", () => ({ advanceReferral: async () => ({ status: "none" }) }));
+// The referral program's hook on a new subscription (owner 2026-11-11): the
+// webhook only NOTES the plan on the friend's referral (`noteReferralPlan`,
+// a fact for the admin's numbers — its own tests). It no longer advances or
+// rewards anything: `advanceReferral` is here only to prove it is not called.
+const referrals = vi.hoisted(() => ({
+  noteReferralPlan: vi.fn<(...args: unknown[]) => Promise<void>>(async () => {}),
+  advanceReferral: vi.fn<(...args: unknown[]) => Promise<{ status: string }>>(async () => ({ status: "none" })),
+  // The module's own rule (lib/referrals/server.ts CARD_ON_FILE_STATUSES —
+  // its tests hold the list): a subscription Stripe only gives with a card.
+  isCardOnFileStatus: (status: string | null | undefined) => ["trialing", "active", "past_due", "unpaid"].includes(status ?? ""),
+}));
+vi.mock("@/lib/referrals/server", () => referrals);
 vi.mock("@/lib/stripe/charge-events", () => ({
   handleChargeRefunded: (...args: unknown[]) => chargeEvents.refunded(...args),
   handleDispute: (...args: unknown[]) => chargeEvents.dispute(...args),
@@ -120,6 +130,8 @@ beforeEach(() => {
   email.configured = true;
   email.recipient = { email: "trial@example.test", unsubscribeToken: "tok" };
   email.send.mockReset().mockResolvedValue({ ok: true });
+  referrals.noteReferralPlan.mockClear();
+  referrals.advanceReferral.mockClear();
 });
 afterEach(() => {
   delete process.env.STRIPE_PRICE_PLUS_MONTHLY;
@@ -159,6 +171,10 @@ describe("handleStripeEvent", () => {
     expect(typeof updates[0].values.current_period_end).toBe("string");
 
     expect(rpcs.some(isCreditGrant)).toBe(false);
+    // The plan is noted on the friend's referral — the admin client and the
+    // user, nothing else (no Stripe client: nothing is judged or rewarded).
+    expect(referrals.noteReferralPlan.mock.calls).toEqual([[admin, "user-1"]]);
+    expect(referrals.advanceReferral).not.toHaveBeenCalled();
   });
 
   it("falls back to subscription metadata when the customer id was never persisted, and backfills it", async () => {
@@ -210,6 +226,9 @@ describe("handleStripeEvent", () => {
       p_reason: "free_period_bonus",
       p_idempotency_key: "free-period:user-meta",
     });
+    // The referral's plan note goes to the user the METADATA named.
+    expect(referrals.noteReferralPlan.mock.calls).toEqual([[admin, "user-meta"]]);
+    expect(referrals.advanceReferral).not.toHaveBeenCalled();
   });
 
   it("on subscription.updated while trialing: NO grant (one trial grant, at creation)", async () => {
@@ -1757,6 +1776,62 @@ describe("handleStripeEvent — funnel rows for subscription lifecycle", () => {
     const paid = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
     await handleStripeEvent({ id: "e2", type: "customer.subscription.created", data: { object: sub() } } as never, { admin: paid.admin, stripe: noApiStripe });
     expect(funnel(paid.inserts).map((r) => r.event)).toEqual(["subscription_started"]);
+  });
+
+  // Owner 2026-11-11: a referral rewards on the friend's CARDS alone. The
+  // webhook used to run the referral's reward step on a new subscription
+  // (`advanceReferral(admin, userId, { stripe })`); it now only notes the
+  // plan — `card_on_file_at`, a fact for the admin's "started a plan" number.
+  it("created: the plan is NOTED on the friend's referral, once per event, for a trial and a paid plan alike — the reward step is never run from the webhook", async () => {
+    const trial = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e1", type: "customer.subscription.created", data: { object: sub({ status: "trialing" }) } } as never, { admin: trial.admin, stripe: noApiStripe });
+    expect(referrals.noteReferralPlan.mock.calls).toEqual([[trial.admin, "user-1"]]);
+
+    const paid = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e2", type: "customer.subscription.created", data: { object: sub() } } as never, { admin: paid.admin, stripe: noApiStripe });
+    expect(referrals.noteReferralPlan.mock.calls).toEqual([
+      [trial.admin, "user-1"],
+      [paid.admin, "user-1"],
+    ]);
+    expect(referrals.advanceReferral).not.toHaveBeenCalled();
+    // The note writes nothing itself here (it is the module's own update):
+    // the webhook made no referral write and no referral RPC of its own.
+    for (const stub of [trial, paid]) {
+      expect(stub.updates.filter((u) => u.table === "referrals")).toEqual([]);
+      expect(stub.inserts.filter((i) => i.table === "referrals")).toEqual([]);
+      expect(stub.rpcs.map((r) => r.fn).filter((fn) => /referral/.test(fn))).toEqual([]);
+    }
+  });
+
+  it("created but INCOMPLETE (its first payment never went through): no plan is noted — it is not a card on file yet", async () => {
+    for (const status of ["incomplete", "incomplete_expired", "canceled", "paused"]) {
+      const stub = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+      await handleStripeEvent({ id: `e-${status}`, type: "customer.subscription.created", data: { object: sub({ status }) } } as never, { admin: stub.admin, stripe: noApiStripe });
+    }
+    expect(referrals.noteReferralPlan).not.toHaveBeenCalled();
+    // …and each state Stripe gives only with a payment method is one.
+    for (const status of ["trialing", "active", "past_due", "unpaid"]) {
+      const stub = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+      await handleStripeEvent({ id: `e-${status}`, type: "customer.subscription.created", data: { object: sub({ status }) } } as never, { admin: stub.admin, stripe: noApiStripe });
+    }
+    expect(referrals.noteReferralPlan).toHaveBeenCalledTimes(4);
+  });
+
+  it("updated and deleted: nothing is noted — only the subscription's creation is a plan starting", async () => {
+    const converted = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e3", type: "customer.subscription.updated", data: { object: sub(), previous_attributes: { status: "trialing" } } } as never, { admin: converted.admin, stripe: noApiStripe });
+    const changed = makeChainAdmin({ profiles: [profile], credit_ledger: [] });
+    await handleStripeEvent({ id: "e4", type: "customer.subscription.updated", data: { object: sub(), previous_attributes: { items: { data: [{ price: { id: "price_plus" } }] } } } } as never, { admin: changed.admin, stripe: noApiStripe });
+    const ended = makeChainAdmin({ profiles: [{ ...profile, subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_1" }], credit_ledger: [] });
+    await handleStripeEvent({ id: "e6", type: "customer.subscription.deleted", data: { object: sub({ status: "canceled" }) } } as never, { admin: ended.admin, stripe: noApiStripe });
+    expect(referrals.noteReferralPlan).not.toHaveBeenCalled();
+    expect(referrals.advanceReferral).not.toHaveBeenCalled();
+  });
+
+  it("created for a customer no account answers to: nothing is noted", async () => {
+    const nobody = makeChainAdmin({ profiles: [], credit_ledger: [] });
+    await handleStripeEvent({ id: "e8", type: "customer.subscription.created", data: { object: sub() } } as never, { admin: nobody.admin, stripe: noApiStripe });
+    expect(referrals.noteReferralPlan).not.toHaveBeenCalled();
   });
 
   it("updated: trial_converted when previous_attributes.status was trialing; subscription_changed when the price changed; nothing otherwise", async () => {

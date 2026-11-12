@@ -21,7 +21,10 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 // ---------------------------------------------------------------------------
 // The referral program's server side, v2 (owner 2026-11-06; migration 0180)
 // — the service role only (0177: users read their rows, nobody but the
-// server writes them). Entry points:
+// server writes them). Since 2026-11-11 (owner: "the reward only happens if
+// the person referred starts a plan with a card on file. I want to remove
+// that requirement") a referral qualifies on the friend's CARDS ALONE; a
+// plan is no condition any more (migration 0208). Entry points:
 //
 //   recordReferralSignup  a NEW account arrived through a link — claimed at
 //                         ONBOARDING, the first step with a CONFIRMED email
@@ -30,37 +33,39 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 //                         (unique per referee — the first claim wins).
 //                         Nobody is told yet. Nothing is recorded while the
 //                         program is OFF (the settings).
-//   advanceReferral       the friend did something: saved a card
-//                         (createCardAction, every save) or started a plan
-//                         with a card on file (the webhook, the
-//                         subscription's creation). The row QUALIFIES when
-//                         both stand — `cards_saved_at` (the settings'
-//                         `activation.cardsRequired` cards within
-//                         `activation.windowDays` of signing up) and
-//                         `card_on_file_at` — and the reward step runs at
-//                         once. `qualifyReferral` is the card-save hook's
-//                         name for it.
-//   preBankFriendDays     the friend's checkout (lib/stripe/actions.ts): a
-//                         friend who has the cards and is about to put a card
-//                         on file gets their days BANKED before the checkout
-//                         reserves the bank — so the qualifying checkout is
-//                         the one that applies them (owner 2026-11-06).
+//   advanceReferral       the friend saved a card (createCardAction, every
+//                         save). The row QUALIFIES when `cards_saved_at`
+//                         stands — the settings' `activation.cardsRequired`
+//                         cards WITH ARTWORK (QUALIFYING_CARD: a title-only
+//                         card is a second's work, and every real account
+//                         that reached the bar did it with art) within
+//                         `activation.windowDays` of signing up — and the
+//                         reward step runs at once. `qualifyReferral` is the
+//                         card-save hook's name for it.
+//   noteReferralPlan      the friend started a plan with a card on file (the
+//                         webhook, the subscription's creation):
+//                         `card_on_file_at` is stamped as a FACT for the
+//                         admin's numbers ("of the friends referred, who
+//                         became a subscriber") — it gates nothing.
 //   rewardReferral        a qualified row: the program ON (else it WAITS),
-//                         both emails CONFIRMED (else it waits), the fraud
-//                         rules, the claim (claim_referral_reward_v2: the
-//                         friends cap, the referrer's LADDER STEP under
+//                         both emails CONFIRMED (else it waits — a lookup
+//                         that FAILED is a wait, never "unconfirmed"), the
+//                         fraud rules, the claim (claim_referral_reward_v2:
+//                         the friends cap, the referrer's LADDER STEP under
 //                         their lock), then each side's reward
 //                         (grantOwedSides).
 //   sweepReferralRewards  the cron's retry (/api/cron/referral-rewards):
-//                         rows a lost `after()` or webhook left behind,
-//                         qualified rows not claimed yet, claimed rows with
-//                         a side still owed, expiries — and the bank's
-//                         stale reservations.
+//                         rows a lost `after()` left behind, qualified rows
+//                         not claimed yet, claimed rows with a side still
+//                         owed, expiries — and the bank's stale
+//                         reservations.
 //
 // WHAT a side gets is the settings' (lib/referrals/settings.ts, read at
 // grant time) made concrete by lib/referrals/reward.ts: DAYS into the days
 // bank (lib/billing/day-bank.ts — a free period the user applies with a
-// card on file; the bank is tier-less) under the reference
+// card on file: THAT is where the card is asked for, which is why the
+// referral itself no longer waits for one; the bank is tier-less) under the
+// reference
 // `referral:<id>:referee` / `referral-step:<referrer>:<step>` (unique: a
 // retry finds the entry it made), or AI credits through grant_credits under
 // the same key, or nothing. No money moves. Nothing here runs while billing
@@ -75,8 +80,15 @@ const DAY_MS = 86_400_000;
 /** A signed_up row this old whose friend has the cards missed its step. */
 const STRANDED_AFTER_MS = 10 * 60_000;
 /** A card on file: a Stripe subscription the profile points at, in a state
- *  Stripe only gives a subscription with a payment method. */
+ *  Stripe only gives a subscription with a payment method. A FACT the row
+ *  records (`card_on_file_at`), not a condition of the reward. */
 const CARD_ON_FILE_STATUSES = new Set(["trialing", "active", "past_due", "unpaid"]);
+
+/** A subscription in a state Stripe only gives one with a payment method —
+ *  not `incomplete`, whose first payment never went through. */
+export function isCardOnFileStatus(status: string | null | undefined): boolean {
+  return CARD_ON_FILE_STATUSES.has(status ?? "");
+}
 
 const REWARD_PROFILE_COLUMNS = "is_admin, subscription_tier, subscription_status, stripe_customer_id, stripe_subscription_id";
 
@@ -111,7 +123,7 @@ export type RewardDeps = {
 
 export type RecordReferralSignupResult =
   | { ok: true; referralId: string }
-  | { ok: false; reason: "bad_code" | "unknown_code" | "self" | "not_new" | "exists" | "error" | "program_off" };
+  | { ok: false; reason: "bad_code" | "unknown_code" | "self" | "reciprocal" | "not_new" | "exists" | "error" | "program_off" };
 
 export async function recordReferralSignup(
   admin: AdminClient,
@@ -123,13 +135,26 @@ export async function recordReferralSignup(
   try {
     const settings = input.settings ?? (await readReferralSettings(admin));
     if (!settings.enabled) return { ok: false, reason: "program_off" };
-    const { data: owner } = await admin
+    const { data: owner, error: ownerError } = await admin
       .from("referral_codes")
       .select("user_id")
       .eq("code", code)
       .maybeSingle();
+    // A read that failed is not "nobody has this code": the caller retries.
+    if (ownerError) return { ok: false, reason: "error" };
     if (!owner) return { ok: false, reason: "unknown_code" };
     if (owner.user_id === input.refereeId) return { ok: false, reason: "self" };
+    // Two accounts referring EACH OTHER bring in nobody: the code's owner was
+    // themselves referred by this account, so this claim is refused (the
+    // first of the pair stands). Without it both would collect both sides.
+    const { data: back, error: backError } = await admin
+      .from("referrals")
+      .select("id")
+      .eq("referee_id", owner.user_id)
+      .eq("referrer_id", input.refereeId)
+      .limit(1);
+    if (backError) return { ok: false, reason: "error" };
+    if ((back?.length ?? 0) > 0) return { ok: false, reason: "reciprocal" };
 
     // Only a NEW account: young, never subscribed, nothing saved yet.
     const { data: referee } = await admin
@@ -163,7 +188,7 @@ export async function recordReferralSignup(
     // the account. The account is created normally whatever it finds; the
     // reward step judges (owner 2026-11-02).
     const user = await authUserOf(admin, input.refereeId);
-    await recordEmailFingerprint(admin, row.id, user?.email ?? null);
+    await recordEmailFingerprint(admin, row.id, user && user !== "error" ? user.email : null);
     return { ok: true, referralId: row.id };
   } catch (error) {
     console.warn("recordReferralSignup failed", error instanceof Error ? error.message : error);
@@ -200,11 +225,28 @@ function qualifiedAt(row: ReferralRow): string | null {
   return row.cards_saved_at ?? row.first_card_at;
 }
 
+/** The cards that count toward the bar: the friend's own, WITH ARTWORK. The
+ *  same test in SQL: referrals_stranded_signups and admin_referred_friends'
+ *  `referee_art_cards` (0208) — a test holds the three together. */
+export const QUALIFYING_CARD = { column: "art_url" } as const;
+
+/** How many of the friend's cards count toward the bar. */
+async function qualifyingCardCount(admin: AdminClient, refereeId: string): Promise<number> {
+  const { count } = await admin
+    .from("cards")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", refereeId)
+    .not(QUALIFYING_CARD.column, "is", null)
+    .neq(QUALIFYING_CARD.column, "");
+  return count ?? 0;
+}
+
 /**
- * The friend did something that may qualify the referral: a saved card or a
- * card on file. Reads the row, judges both conditions, stamps what is new
- * (the cards stamp moves the status to `cards_saved`; a row past the window
- * expires), and runs the reward step once both stand.
+ * The friend saved a card, which may qualify the referral. Reads the row,
+ * judges the cards, stamps what is new (the cards stamp moves the status to
+ * `cards_saved`; a row past the window expires), and runs the reward step
+ * once the cards stand. A plan with a card on file is noted when the friend
+ * has one (a fact for the admin's numbers) and gates nothing.
  */
 export async function advanceReferral(
   admin: AdminClient,
@@ -219,8 +261,8 @@ export async function advanceReferral(
 
   let cardsAt = qualifiedAt(row);
   if (!cardsAt) {
-    const { count } = await admin.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", refereeId);
-    if ((count ?? 0) >= settings.activation.cardsRequired) {
+    const count = await qualifyingCardCount(admin, refereeId);
+    if (count >= settings.activation.cardsRequired) {
       if (now.getTime() - Date.parse(row.signed_up_at) > windowMs) {
         await admin
           .from("referrals")
@@ -240,6 +282,8 @@ export async function advanceReferral(
     }
   }
 
+  // The fact of a plan, for an open row the webhook's note missed. Never a
+  // condition: the reward below does not look at it.
   let cardAt = row.card_on_file_at;
   if (!cardAt) {
     const { data: profile } = await admin
@@ -259,7 +303,7 @@ export async function advanceReferral(
     }
   }
 
-  if (!cardsAt || !cardAt) return { status: "waiting", reason: "not_qualified" };
+  if (!cardsAt) return { status: "waiting", reason: "not_qualified" };
   return rewardReferral(
     admin,
     { ...row, status: row.status === "signed_up" ? "cards_saved" : row.status, cards_saved_at: cardsAt, card_on_file_at: cardAt },
@@ -274,108 +318,23 @@ export async function qualifyReferral(admin: AdminClient, refereeId: string, dep
 }
 
 /**
- * The friend's checkout (lib/stripe/actions.ts), before the bank is
- * reserved: a friend who has the cards and no card on file yet is about to
- * qualify with THIS checkout — their days are banked now, so the checkout
- * that qualifies them is the one that applies them. The reward step later
- * finds the entry under its reference and records the side. Best effort.
+ * The friend started a plan with a card on file (the webhook: a
+ * subscription was created). Stamps `card_on_file_at` on their referral,
+ * whatever its status, once — the admin's "started a plan" number, i.e. how
+ * many referred friends became subscribers. It is NOT a condition of the
+ * reward (owner 2026-11-11): a friend qualifies on their cards. Best effort.
  */
-export async function preBankFriendDays(admin: AdminClient, refereeId: string, deps: RewardDeps = {}): Promise<boolean> {
+export async function noteReferralPlan(admin: AdminClient, refereeId: string, now: Date = new Date()): Promise<void> {
   try {
-    if (!(deps.billingEnabled ?? isBillingEnabled())) return false;
-    const row = await openRowOf(admin, refereeId);
-    if (!row || !qualifiedAt(row) || row.card_on_file_at || row.referee_reward != null) return false;
-    const settings = deps.settings ?? (await readReferralSettings(admin));
-    if (!settings.enabled || settings.friend.days < 1) return false;
-    // The reward step's gate, judged NOW (independent check P1): the
-    // checkout spends these days as the free period, so nothing may be
-    // banked that the step would refuse — both emails confirmed, the key
-    // present, the fraud rules (all but the shared card, which exists only
-    // after this checkout; `reclaimFriendDays` takes that case back), one
-    // email one reward, the friends cap, an admin friend.
-    const [referrerUser, refereeUser, profiles] = await Promise.all([
-      authUserOf(admin, row.referrer_id),
-      authUserOf(admin, refereeId),
-      admin.from("profiles").select(`id, ${REWARD_PROFILE_COLUMNS}`).in("id", [row.referrer_id, refereeId]),
-    ]);
-    if (!refereeUser?.confirmed || !referrerUser?.confirmed) return false;
-    const hashKey = referralEmailHashKey();
-    if (!hashKey) return false;
-    const rows = (profiles.data ?? []) as Array<ReferralRewardProfile & { id: string }>;
-    const referee = rows.find((r) => r.id === refereeId) ?? null;
-    if (!referee || referee.is_admin) return false;
-    const verdict = referralFraudVerdict({ referrerEmail: referrerUser.email, refereeEmail: refereeUser.email, sameCard: false });
-    if (verdict.block && !verdict.refereeRewarded) return false;
-    const reused = await emailReused(admin, row.id, refereeId, refereeUser.email, hashKey);
-    if (reused !== false) return false;
-    if (await friendsCapReached(admin, row.referrer_id, settings.caps.friendsPerMonth, deps.now ?? new Date())) return false;
-    const banked = await bankDays(admin, {
-      userId: refereeId,
-      days: settings.friend.days,
-      source: "referral_friend",
-      reference: referralRewardKey(row.id, "referee"),
-    });
-    return banked.ok;
+    const { error } = await admin
+      .from("referrals")
+      .update({ card_on_file_at: now.toISOString() })
+      .eq("referee_id", refereeId)
+      .is("card_on_file_at", null);
+    if (error) console.warn(`[referrals] plan note for ${refereeId} failed:`, error.message);
   } catch (error) {
-    console.warn(`[referrals] pre-bank for ${refereeId} failed:`, error instanceof Error ? error.message : error);
-    return false;
+    console.warn(`[referrals] plan note for ${refereeId} failed:`, error instanceof Error ? error.message : error);
   }
-}
-
-/** The friends cap as the claim counts it (rewarded, capped and
- *  referrer-blocked rows this UTC month whose friend was rewarded) — a
- *  best-effort read; the claim is the judge. */
-async function friendsCapReached(admin: AdminClient, referrerId: string, cap: number, now: Date): Promise<boolean> {
-  if (cap <= 0) return true;
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-  const { count } = await admin
-    .from("referrals")
-    .select("id", { count: "exact", head: true })
-    .eq("referrer_id", referrerId)
-    .in("status", ["rewarded", "capped", "blocked"])
-    .neq("referee_reward", "none")
-    .gte("rewarded_at", monthStart);
-  return (count ?? 0) >= cap;
-}
-
-/**
- * The friend's pre-banked days when the row ends with NO reward for them
- * (blocked, capped, expired, the account gone): an entry still BANKED is
- * revoked; one already reserved or applied — the checkout spent it — is
- * named in the side's detail so the admin sees it (`spent`).
- */
-async function reclaimFriendDays(
-  admin: AdminClient,
-  referralId: string,
-  reason: string,
-  now: Date,
-): Promise<{ revoked: boolean; spentEntryId: string | null }> {
-  const reference = referralRewardKey(referralId, "referee");
-  try {
-    const { data: revoked } = await admin
-      .from("day_bank_entries")
-      .update({ status: "revoked", revoked_at: now.toISOString(), revoke_reason: `referral ${reason}`.slice(0, 200) })
-      .eq("reference", reference)
-      .eq("status", "banked")
-      .select("id");
-    if ((revoked?.length ?? 0) > 0) return { revoked: true, spentEntryId: null };
-    const { data: entry } = await admin.from("day_bank_entries").select("id, status").eq("reference", reference).maybeSingle();
-    const e = entry as { id: string; status: string } | null;
-    if (e && (e.status === "reserved" || e.status === "applied")) {
-      console.warn(`[referrals] ${referralId}: the friend's pre-banked days were already ${e.status} (${reason})`);
-      return { revoked: false, spentEntryId: e.id };
-    }
-    return { revoked: false, spentEntryId: null };
-  } catch (error) {
-    console.warn(`[referrals] ${referralId}: reclaim failed:`, error instanceof Error ? error.message : error);
-    return { revoked: false, spentEntryId: null };
-  }
-}
-
-/** The friend's side ends with nothing: the detail names why — and the
- *  pre-banked entry the checkout already spent, if any. */
-function noneDetail(reason: string, spentEntryId: string | null): Record<string, unknown> {
-  return spentEntryId ? { kind: "none", reason, preBankedEntryId: spentEntryId, spent: true } : { kind: "none", reason };
 }
 
 /** The reward step for one qualified row. Safe to run again (the sweep):
@@ -389,7 +348,7 @@ export async function rewardReferral(
   const stripe = deps.stripe ?? null;
   if (!(deps.billingEnabled ?? isBillingEnabled())) return { status: "waiting", reason: "billing_off" };
   if (referral.status !== "cards_saved" && referral.status !== "first_card") return { status: "none" };
-  if (!qualifiedAt(referral) || !referral.card_on_file_at) return { status: "waiting", reason: "not_qualified" };
+  if (!qualifiedAt(referral)) return { status: "waiting", reason: "not_qualified" };
   const settings = deps.settings ?? (await readReferralSettings(admin));
   // The program is PAUSED (an admin's switch): the row waits — the sweep
   // rewards it once the program is on again, or the confirm window below
@@ -399,13 +358,12 @@ export async function rewardReferral(
   // The friend's account is gone: nobody is rewarded (the row stays — it is
   // evidence, never cascaded).
   if (!referral.referee_id) {
-    const reclaimed = await reclaimFriendDays(admin, referral.id, "account_deleted", now);
     const moved = await settleQualified(admin, referral.id, {
       status: "blocked",
       block_reason: "account_deleted",
       referrer_reward: "none",
       referee_reward: "none",
-      referee_reward_detail: noneDetail("account_deleted", reclaimed.spentEntryId) as Json,
+      referee_reward_detail: { kind: "none", reason: "account_deleted" } as Json,
     });
     return moved ? { status: "blocked", reason: "account_deleted", referee: null } : { status: "none" };
   }
@@ -417,16 +375,23 @@ export async function rewardReferral(
     admin.from("profiles").select(`id, ${REWARD_PROFILE_COLUMNS}`).in("id", [referral.referrer_id, refereeId]),
   ]);
 
+  // A lookup that FAILED says nothing about the address: the row waits and
+  // is judged again by the sweep. It must never read as "unconfirmed" — past
+  // the confirm window that expired a legitimate referral for good on one
+  // auth hiccup.
+  if (referrerUser === "error" || refereeUser === "error") return { status: "waiting", reason: "check_failed" };
+
   // Both emails CONFIRMED before either side is rewarded (owner 2026-11-02).
+  // With the card gone (2026-11-11) a confirmed inbox is the one identity
+  // check left — keep it.
   if (!refereeUser?.confirmed || !referrerUser?.confirmed) {
     const since = Date.parse(qualifiedAt(referral) ?? "") || now.getTime();
     if (now.getTime() - since > REFERRAL_CONFIRM_WINDOW_DAYS * DAY_MS) {
-      const reclaimed = await reclaimFriendDays(admin, referral.id, "expired", now);
       const moved = await settleQualified(admin, referral.id, {
         status: "expired",
         referrer_reward: "none",
         referee_reward: "none",
-        referee_reward_detail: noneDetail("expired", reclaimed.spentEntryId) as Json,
+        referee_reward_detail: { kind: "none", reason: "expired" } as Json,
       });
       return moved ? { status: "expired" } : { status: "none" };
     }
@@ -445,6 +410,11 @@ export async function rewardReferral(
   const referrer = rows.find((r) => r.id === referral.referrer_id) ?? null;
   const referee = rows.find((r) => r.id === refereeId) ?? null;
 
+  // The shared-card rule only speaks when BOTH accounts already have a card
+  // with Stripe. A friend rewarded on their cards alone usually has none yet,
+  // so this is false for them — the card was the fraud bar the program gave
+  // up (the owner's call, 2026-11-11); the cap, the email rules and the
+  // artwork on the cards are what is left.
   const sameCard = await sharesCard(stripe, referrer?.stripe_customer_id, referee?.stripe_customer_id);
   const verdict = referralFraudVerdict({
     referrerEmail: referrerUser.email,
@@ -460,13 +430,12 @@ export async function rewardReferral(
   }
 
   if (fullBlock) {
-    const reclaimed = await reclaimFriendDays(admin, referral.id, fullBlock, now);
     const moved = await settleQualified(admin, referral.id, {
       status: "blocked",
       block_reason: fullBlock,
       referrer_reward: "none",
       referee_reward: "none",
-      referee_reward_detail: noneDetail(fullBlock, reclaimed.spentEntryId) as Json,
+      referee_reward_detail: { kind: "none", reason: fullBlock } as Json,
     });
     if (!moved) return { status: "none" };
     // The friend is never told why (anti-enumeration); the referrer reads
@@ -496,15 +465,7 @@ export async function rewardReferral(
     await notifyNoReward(admin, referral.referrer_id, refereeId, referral.id, "not_eligible");
   } else if (claim.outcome === "capped_friends") {
     await notifyNoReward(admin, referral.referrer_id, refereeId, referral.id, "capped_friends");
-    // The friends cap: the friend's side is 'none' too (the database wrote
-    // it) — their pre-banked days come back, or are named as spent.
-    const reclaimed = await reclaimFriendDays(admin, referral.id, "capped_friends", now);
-    if (reclaimed.spentEntryId) {
-      await admin
-        .from("referrals")
-        .update({ referee_reward_detail: noneDetail("capped_friends", reclaimed.spentEntryId) as Json })
-        .eq("id", referral.id);
-    }
+    // The friends cap: the friend's side is 'none' too (the database wrote it).
     return { status: "capped", referrer: null, referee: null };
   } else return { status: "none" };
 
@@ -697,10 +658,11 @@ export type ReferralSweepResult =
 
 /**
  * The cron's sweep (/api/cron/referral-rewards): finish what the live steps
- * didn't — a qualified row whose emails weren't confirmed yet or whose card
- * arrived while the program was off, a row a lost `after()` or webhook left
- * short of its stamps, a grant that failed — plus the expiries and the days
- * bank's stale reservations. Idempotent; does nothing while billing is off.
+ * didn't — a qualified row whose emails weren't confirmed yet, whose lookup
+ * failed or that qualified while the program was off, a row a lost `after()`
+ * left short of its cards stamp, a grant that failed — plus the expiries and
+ * the days bank's stale reservations. Idempotent; does nothing while billing
+ * is off.
  */
 export async function sweepReferralRewards(admin: AdminClient, deps0: RewardDeps = {}): Promise<ReferralSweepResult> {
   if (!(deps0.billingEnabled ?? isBillingEnabled())) return { ok: true, skipped: "billing_off" };
@@ -712,32 +674,24 @@ export async function sweepReferralRewards(admin: AdminClient, deps0: RewardDeps
   let retried = 0;
   let failed = 0;
 
-  // Qualified-not-claimed rows that CAN move (independent check P2: a
-  // friend with the cards and no plan has no deadline, so those rows
-  // accumulate and a plain oldest-first batch would starve): the rows with
-  // BOTH stamps (an email got confirmed, the program came back on), and the
-  // rows whose friend now holds a subscription (a lost webhook) — the
-  // latter joined in the database (referrals_awaiting_plan).
+  // Qualified-not-claimed rows, oldest first: a row with its cards stamp is
+  // claimable (2026-11-11: no plan is waited for), so each is judged again —
+  // an email got confirmed, a lookup works now, the program came back on.
+  // A friend whose account is gone is settled here too (blocked: nobody is
+  // rewarded), so no such row waits for ever.
   const { data: stamped, error } = await admin
     .from("referrals")
     .select(REFERRAL_ROW_COLUMNS)
     .in("status", ["cards_saved", "first_card"])
-    .not("card_on_file_at", "is", null)
     .order("cards_saved_at", { ascending: true, nullsFirst: true })
     .limit(REFERRAL_SWEEP_BATCH);
   if (error) return { ok: false, error: error.message };
-  const { data: awaiting, error: awaitingError } = await admin.rpc("referrals_awaiting_plan", { p_limit: REFERRAL_SWEEP_BATCH });
-  if (awaitingError) return { ok: false, error: awaitingError.message };
-  const seen = new Set<string>();
-  const pending = [...((stamped ?? []) as ReferralRow[]), ...((awaiting ?? []) as ReferralRow[])].filter((row) => {
-    if (seen.has(row.id)) return false;
-    seen.add(row.id);
-    return true;
-  });
+  const pending = (stamped ?? []) as ReferralRow[];
   for (const row of pending) {
     if (!row.referee_id) {
       const result = await rewardReferral(admin, row, deps);
-      if (result.status !== "none") claimed += 1;
+      if (result.status === "waiting") waiting += 1;
+      else if (result.status !== "none") claimed += 1;
       continue;
     }
     const result = await advanceReferral(admin, row.referee_id, deps);
@@ -895,14 +849,31 @@ async function notify(
   if (error) console.warn(`[referrals] ${input.type} notification for ${input.recipientId} failed:`, error.message);
 }
 
-async function authUserOf(admin: AdminClient, userId: string): Promise<{ email: string | null; confirmed: boolean } | null> {
+/**
+ * The account's sign-in record: its address and whether it is confirmed.
+ * `null` = there is no such account (it was deleted); `"error"` = the read
+ * FAILED, which says nothing about the address — the caller waits, and never
+ * treats it as "unconfirmed".
+ */
+async function authUserOf(
+  admin: AdminClient,
+  userId: string,
+): Promise<{ email: string | null; confirmed: boolean } | null | "error"> {
   try {
-    const { data } = await admin.auth.admin.getUserById(userId);
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    if (error) {
+      // GoTrue answers 404 for an id it does not know; anything else is a
+      // failure of the read.
+      if ((error as { status?: number }).status === 404) return null;
+      console.warn(`[referrals] auth lookup for ${userId} failed:`, error.message);
+      return "error";
+    }
     const user = data?.user;
     if (!user) return null;
     return { email: user.email ?? null, confirmed: Boolean(user.email_confirmed_at) };
-  } catch {
-    return null;
+  } catch (error) {
+    console.warn(`[referrals] auth lookup for ${userId} failed:`, error instanceof Error ? error.message : error);
+    return "error";
   }
 }
 
