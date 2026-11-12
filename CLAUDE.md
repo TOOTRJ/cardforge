@@ -1875,7 +1875,18 @@ Rules and gotchas:
   friend went on to subscribe); writes are the service role's. The admin
   panel ("Referrals and the days bank", `admin_referral_stats` v2) shows
   the chain, per-day counts, the ladder's distribution and the bank's
-  ledger. Nothing runs with billing off. The Referred friends table's
+  ledger. Nothing runs with billing off. The user's page
+  (`/dashboard/referrals`, owner 2026-11-11) is the WIDE dashboard frame —
+  never `readable` again: from `xl` the ladder and the friends on the left
+  and a rail on the right (the link, how it works, the bank); below it one
+  column with the link FIRST. Its ladder is `ReferralLadder` over
+  `buildLadderView` (`lib/referrals/ladder-view.ts`): a staircase from 32rem
+  of its own width (a container query), rows under the thin bar on a phone —
+  ONE `<ol>` either way, whose words say what the picture shows. ONE measure
+  on the axis, the free days banked by each step; AI credits are a label on
+  their step, never a second scale. Motion is `motion-safe:` only, and an
+  element runs one animation (the next step breathes, the others rise). The
+  Referred friends table's
   "Rewards" column (owner 2026-11-11; `admin_referred_friends`, 0202 widened
   by 0206) says what each side was given or WHY a side has nothing yet:
   `referralRewardWords` (`lib/admin/analytics/referral-rewards.ts`, pure) is
