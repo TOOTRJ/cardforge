@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { getSiteBaseUrl } from "@/lib/site-url";
-import { isReferralStatus, referralLink, type ReferralStatus } from "@/lib/referrals/rules";
+import { REFERRAL_CLAIM_WINDOW_DAYS, isReferralStatus, referralLink, type ReferralStatus } from "@/lib/referrals/rules";
 import { buildReferralSummary, type ReferralRow, type ReferralSummary } from "@/lib/referrals/summary";
 import { readReferralSettings } from "@/lib/referrals/settings-server";
 import type { ReferralSettings } from "@/lib/referrals/settings";
@@ -27,6 +27,11 @@ export type ReferralDashboard = {
   settings: ReferralSettings;
   /** The viewer's days bank (banked / reserved / entries). */
   bank: Bank;
+  /** "Joined because of a friend?" — open while the account has no referral,
+   *  the program is on, the account never started a plan and it is inside
+   *  the claim window (owner 2026-11-11: new accounts only). `until` is when
+   *  the window closes. The server judges it again, and the code itself. */
+  codeEntry: { open: boolean; until: string | null };
   /** The referral that brought the viewer, if they joined through a link —
    *  its stamps, and whether THEIR side was rewarded (their own reward column). */
   joinedThrough: {
@@ -46,7 +51,7 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
   if (!user) return null;
   const supabase = await createClient();
 
-  const [settings, { data: code }, { data: made }, { data: mine }, bank] = await Promise.all([
+  const [settings, { data: code }, { data: made }, { data: mine }, bank, { data: billing }] = await Promise.all([
     readReferralSettings(supabase),
     supabase.rpc("my_referral_code"),
     supabase
@@ -62,6 +67,8 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
       .eq("referee_id", user.id)
       .maybeSingle(),
     readBank(supabase, user.id),
+    // Whether the viewer ever started a plan — for the code-entry form.
+    supabase.rpc("get_my_billing"),
   ]);
 
   // A friend whose account was deleted keeps the row (referee_id NULL, 0177).
@@ -95,7 +102,21 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
           : null,
     }));
 
+  // The account's own age: the session's user carries when it was made.
+  const madeAt = Date.parse(user.created_at ?? "");
+  const windowEnds = Number.isFinite(madeAt) ? madeAt + REFERRAL_CLAIM_WINDOW_DAYS * 86_400_000 : null;
+  // Never subscribed, as the claim itself asks (recordReferralSignup): a
+  // status that could not be read keeps the form shut rather than offer
+  // something the server would refuse.
+  const billingRow = (Array.isArray(billing) ? billing[0] : billing) as { subscription_status?: string | null } | null | undefined;
+  const neverSubscribed = billingRow != null && billingRow.subscription_status == null;
+  const codeEntry = {
+    open: settings.enabled && !mine && neverSubscribed && windowEnds != null && now.getTime() <= windowEnds,
+    until: windowEnds != null ? new Date(windowEnds).toISOString() : null,
+  };
+
   return {
+    codeEntry,
     code: typeof code === "string" ? code : null,
     link: typeof code === "string" ? referralLink(getSiteBaseUrl(), code) : null,
     rows,

@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { chainClient, type ChainCall } from "@/tests/stubs/supabase-chain";
 
 // What the page's one read (lib/referrals/queries.ts) is given: the viewer,
 // and the rows their session reads through the column grant.
 const view = vi.hoisted(() => ({
-  user: { id: "me" } as { id: string } | null,
+  /** `created_at`: when the account was made, as the session's user carries
+   *  it — what the code-entry window is counted from. Absent = unreadable. */
+  user: { id: "me" } as { id: string; created_at?: string } | null,
   /** The viewer's referrals (they are the referrer), as the database rows. */
   made: [] as Array<Record<string, unknown>>,
   /** The referral that brought the viewer (they are the friend), or null. */
@@ -15,6 +17,11 @@ const view = vi.hoisted(() => ({
   settings: null as unknown,
   /** Every table read, with its chain. */
   reads: [] as Array<{ table: string; calls: ChainCall[] }>,
+  /** What `get_my_billing` answers — the viewer's own billing row, which says
+   *  whether they ever started a plan (`subscription_status`). */
+  billing: { data: [{ subscription_tier: "free", subscription_status: null }] as unknown, error: null as null | { message: string } },
+  /** Every database function called, by name, in order. */
+  rpcs: [] as string[],
 }));
 
 // The settings form (a client component) reads the router for its refresh;
@@ -57,7 +64,11 @@ vi.mock("@/lib/supabase/server", () => ({
     });
     return {
       from: stub.client.from,
-      rpc: async (name: string) => ({ data: name === "my_referral_code" ? "d0000003" : null, error: null }),
+      rpc: async (name: string) => {
+        view.rpcs.push(name);
+        if (name === "get_my_billing") return view.billing;
+        return { data: name === "my_referral_code" ? "d0000003" : null, error: null };
+      },
     };
   },
 }));
@@ -70,7 +81,7 @@ import { buildReferralSummary, type ReferralRow } from "@/lib/referrals/summary"
 import { activationRate, parseReferralStats, qualificationRate } from "@/lib/admin/referral-queries";
 import { ReferralPanel } from "@/components/admin/referral-panel";
 import { ReferralSettingsForm } from "@/components/admin/referral-settings-form";
-import { REFERRAL_STATUS_LABELS } from "@/lib/referrals/rules";
+import { REFERRAL_CLAIM_WINDOW_DAYS, REFERRAL_STATUS_LABELS } from "@/lib/referrals/rules";
 
 // ---------------------------------------------------------------------------
 // The referral dashboard's numbers (the user's page: the ladder's progress,
@@ -81,6 +92,16 @@ import { REFERRAL_STATUS_LABELS } from "@/lib/referrals/rules";
 // chain, with "started a plan" as what came of it; per-day counts, the
 // ladder's distribution, the days bank). "This month" is the UTC calendar
 // month, as the database's friends cap counts it.
+//
+// "Joined because of a friend?" (owner 2026-11-11: code entry for NEW
+// accounts only, 14 days): the read says whether the code field is OPEN —
+// the program on, the viewer with no referral of their own, an account that
+// NEVER started a plan (its own billing row, `get_my_billing`: a status that
+// can't be read keeps the field shut rather than offer what the server would
+// refuse) and now inside the account's first 14 days, to the millisecond —
+// and until when; the page draws the field only then. The server judges it
+// all again, and the code itself, when one is sent
+// (lib/referrals/claim-actions.ts).
 // ---------------------------------------------------------------------------
 
 const NOW = new Date("2026-11-15T12:00:00Z");
@@ -103,6 +124,9 @@ beforeEach(() => {
   view.profiles = [];
   view.settings = null;
   view.reads = [];
+  // An account that never started a plan, unless a test says otherwise.
+  view.billing = { data: [{ subscription_tier: "free", subscription_status: null }], error: null };
+  view.rpcs = [];
 });
 
 describe("buildReferralSummary", () => {
@@ -363,6 +387,131 @@ describe("getMyReferralDashboard", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// codeEntry — whether "Joined because of a friend?" is offered.
+// ---------------------------------------------------------------------------
+
+const DAY = 86_400_000;
+/** An account made `ms` before NOW. */
+const madeAgo = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
+/** The viewer's own referral row (they were brought in by "them"). */
+const OWN_REFERRAL = { id: "r9", referrer_id: "them", status: "signed_up", cards_saved_at: null, first_card_at: null, referee_reward: null };
+
+describe("getMyReferralDashboard — codeEntry (the code field's window)", () => {
+  const codeEntry = async (now: Date = NOW) => (await getMyReferralDashboard(now))!.codeEntry;
+
+  it("OPEN inside the window: the program on, no referral of their own, never subscribed, the account 3 days old — until the instant 14 days after it was made", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    expect(await codeEntry()).toEqual({ open: true, until: new Date(NOW.getTime() + 11 * DAY).toISOString() });
+    expect(REFERRAL_CLAIM_WINDOW_DAYS).toBe(14);
+  });
+
+  it("the window is 14 days to the millisecond: open on its last instant, CLOSED one millisecond later — `until` is the same instant either side", async () => {
+    const created = "2026-11-01T08:30:00.000Z";
+    const ends = Date.parse(created) + 14 * DAY;
+    view.user = { id: "me", created_at: created };
+    for (const [at, open] of [
+      [Date.parse(created), true],
+      [ends - 7 * DAY, true],
+      // The old 7-day window is no edge any more.
+      [ends - 7 * DAY + 1, true],
+      [ends - 1, true],
+      [ends, true],
+      [ends + 1, false],
+      [ends + DAY, false],
+      [ends + 400 * DAY, false],
+    ] as const) {
+      expect(await codeEntry(new Date(at)), new Date(at).toISOString()).toEqual({ open, until: "2026-11-15T08:30:00.000Z" });
+    }
+  });
+
+  it("CLOSED when the viewer already has a referral of their own — whatever its state — and `until` still says when the window would close", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    const until = new Date(NOW.getTime() + 11 * DAY).toISOString();
+    for (const status of ["signed_up", "cards_saved", "rewarded", "capped", "blocked", "expired"]) {
+      view.mine = { ...OWN_REFERRAL, status };
+      expect(await codeEntry(), status).toEqual({ open: false, until });
+    }
+    // …and open again with no such row.
+    view.mine = null;
+    expect(await codeEntry()).toEqual({ open: true, until });
+  });
+
+  it("the referrals the viewer MADE (they are the referrer) never close it: only being someone's friend does", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    view.made = [dbRow({ id: "r1", status: "rewarded", cards_saved_at: "2026-11-02T00:00:00Z", rewarded_at: "2026-11-02T00:00:01Z", ladder_step: 1, referrer_reward: "banked_days" })];
+    expect((await codeEntry()).open).toBe(true);
+  });
+
+  it("CLOSED when the program is off, however new the account", async () => {
+    view.user = { id: "me", created_at: madeAgo(60_000) };
+    view.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false };
+    expect(await codeEntry()).toEqual({ open: false, until: new Date(NOW.getTime() - 60_000 + 14 * DAY).toISOString() });
+    view.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: true };
+    expect((await codeEntry()).open).toBe(true);
+  });
+
+  it("an account whose creation date can't be read is not offered the field: closed, and `until` is null (never a made-up date)", async () => {
+    for (const created_at of [undefined, "", "not a date"]) {
+      view.user = created_at === undefined ? { id: "me" } : { id: "me", created_at };
+      expect(await codeEntry(), String(created_at)).toEqual({ open: false, until: null });
+    }
+  });
+
+  it("an older account is closed with its window's end in the past — the field is for NEW accounts only", async () => {
+    view.user = { id: "me", created_at: "2026-01-01T00:00:00.000Z" };
+    expect(await codeEntry()).toEqual({ open: false, until: "2026-01-15T00:00:00.000Z" });
+  });
+
+  // As the claim itself asks (recordReferralSignup: never subscribed).
+  it("CLOSED for an account that EVER started a plan — any status at all, however new the account", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    const until = new Date(NOW.getTime() + 11 * DAY).toISOString();
+    for (const status of ["trialing", "active", "past_due", "unpaid", "incomplete", "canceled", ""]) {
+      view.billing = { data: [{ subscription_tier: "plus", subscription_status: status }], error: null };
+      expect(await codeEntry(), status || "(empty)").toEqual({ open: false, until });
+    }
+    // Never subscribed: the status is null — whatever the tier (a comp is no plan started).
+    for (const tier of ["free", "plus", "pro"]) {
+      view.billing = { data: [{ subscription_tier: tier, subscription_status: null }], error: null };
+      expect(await codeEntry(), tier).toEqual({ open: true, until });
+    }
+  });
+
+  it("a billing row that can't be read keeps it CLOSED — never an offer on a guess: no rows, null, an error, a row with no status in it", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    const until = new Date(NOW.getTime() + 11 * DAY).toISOString();
+    for (const billing of [
+      { data: null, error: null },
+      { data: [], error: null },
+      { data: undefined, error: null },
+      { data: null, error: { message: "permission denied for function get_my_billing" } },
+      { data: [null], error: null },
+    ]) {
+      view.billing = billing;
+      expect(await codeEntry(), JSON.stringify(billing)).toEqual({ open: false, until });
+    }
+    // The row as ONE object (not a list) reads the same as its first row.
+    view.billing = { data: { subscription_tier: "free", subscription_status: null }, error: null };
+    expect(await codeEntry()).toEqual({ open: true, until });
+    view.billing = { data: { subscription_tier: "plus", subscription_status: "active" }, error: null };
+    expect(await codeEntry()).toEqual({ open: false, until });
+  });
+
+  it("what it reads for it: the viewer's OWN referral row and their OWN billing row (get_my_billing, once) — no profile, no cards", async () => {
+    view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+    await codeEntry();
+    expect(view.rpcs.filter((name) => name === "get_my_billing")).toHaveLength(1);
+    expect(view.rpcs.sort()).toEqual(["get_my_billing", "my_referral_code"]);
+    expect(view.reads.map((r) => r.table)).not.toContain("cards");
+    expect(view.reads.filter((r) => r.table === "profiles")).toEqual([]);
+    // The one read that decides "has a referral" is the friend's own row.
+    const own = view.reads.filter((r) => r.table === "referrals" && r.calls.some((c) => c.method === "eq" && c.args[0] === "referee_id"));
+    expect(own).toHaveLength(1);
+    expect(own[0].calls.find((c) => c.method === "eq")?.args).toEqual(["referee_id", "me"]);
+  });
+});
+
 describe("/dashboard/referrals — the page", () => {
   const page = async () => renderToStaticMarkup(await ReferralsPage());
   /** The text of every element matching `<tag …>text</tag>` (no nested tags). */
@@ -478,6 +627,98 @@ describe("/dashboard/referrals — the page", () => {
     for (const mine of [{}, { status: "cards_saved" }, { status: "first_card" }, { status: "rewarded", referee_reward: "banked_days" }, { status: "expired" }]) {
       expect(await sentence(mine)).not.toMatch(/plan|card on file/i);
     }
+  });
+
+  // "Joined because of a friend?" — drawn only while the read says the code
+  // field is open. The page reads the clock itself, so it is set here.
+  describe("the code field", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(NOW);
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+    const HEADING = "Joined because of a friend?";
+    const shown = (html: string) => html.includes(HEADING);
+
+    it("a new account with no referral: the card is on the page — its heading, the labelled field, the button, what the friend's code earns and until when", async () => {
+      view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+      const html = await page();
+      const words = wordsOf(html);
+      expect(textsOf(html, "h2")).toContain(HEADING);
+      expect(words).toContain("Add their referral code or link and you can both earn a reward — 7 free days for you once your cards are saved.");
+      // "can": the reward is not promised (the cards, the check).
+      expect(words).not.toContain("and you both earn a reward");
+      expect(words).toContain("Your friend's referral code or link");
+      expect(html).toMatch(/<button[^>]*type="submit"[^>]*>(?:<[^>]+>)*Add code<\/button>/);
+      // The window's end, as the read gave it: an instant the browser prints in its own zone.
+      expect(html).toContain(`dateTime="${new Date(NOW.getTime() + 11 * DAY).toISOString()}"`);
+      expect(words).toContain("You can add it until November 26, 2026.");
+      // Once: one field, one heading.
+      expect(html.split(HEADING)).toHaveLength(2);
+      // It is not the sentence of someone who already joined through a link.
+      expect(html).not.toContain('data-testid="referral-joined-through"');
+    });
+
+    it("what the code earns is the settings' own number", async () => {
+      view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+      view.settings = { ...DEFAULT_REFERRAL_SETTINGS, friend: { days: 10 } };
+      expect(wordsOf(await page())).toContain("you can both earn a reward — 10 free days for you once your cards are saved.");
+    });
+
+    it("on the window's last instant it is still there; one millisecond later it is gone", async () => {
+      view.user = { id: "me", created_at: madeAgo(14 * DAY) };
+      expect(shown(await page())).toBe(true);
+      view.user = { id: "me", created_at: madeAgo(14 * DAY + 1) };
+      expect(shown(await page())).toBe(false);
+    });
+
+    it("an account that already has a referral: no field — the 'You joined through…' sentence instead", async () => {
+      view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+      view.mine = { ...OWN_REFERRAL };
+      view.profiles = [{ id: "them", username: "dev_pro" }];
+      const html = await page();
+      expect(shown(html)).toBe(false);
+      expect(html).not.toContain("Add code");
+      expect(html).toContain('data-testid="referral-joined-through"');
+    });
+
+    it("an account that ever started a plan, or whose billing row can't be read: no field", async () => {
+      view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+      for (const billing of [
+        { data: [{ subscription_tier: "plus", subscription_status: "active" }], error: null },
+        { data: [{ subscription_tier: "free", subscription_status: "canceled" }], error: null },
+        { data: null, error: { message: "permission denied" } },
+        { data: [], error: null },
+      ]) {
+        view.billing = billing;
+        const html = await page();
+        expect(shown(html), JSON.stringify(billing)).toBe(false);
+        expect(html, JSON.stringify(billing)).not.toContain("Add code");
+      }
+      // The same account, never subscribed: the field is there.
+      view.billing = { data: [{ subscription_tier: "free", subscription_status: null }], error: null };
+      expect(shown(await page())).toBe(true);
+    });
+
+    it("the program off: no field — the page says it is paused", async () => {
+      view.user = { id: "me", created_at: madeAgo(3 * DAY) };
+      view.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false };
+      const html = await page();
+      expect(shown(html)).toBe(false);
+      expect(html).not.toContain("Add code");
+      expect(html).toContain("The referral program is paused right now.");
+    });
+
+    it("an account past its first 14 days, or one whose age can't be read: no field", async () => {
+      for (const user of [{ id: "me", created_at: madeAgo(15 * DAY) }, { id: "me", created_at: "2025-06-01T00:00:00Z" }, { id: "me" }, { id: "me", created_at: "not a date" }]) {
+        view.user = user;
+        const html = await page();
+        expect(shown(html), JSON.stringify(user)).toBe(false);
+        expect(html, JSON.stringify(user)).not.toContain("Add code");
+      }
+    });
   });
 
   it("the page's description is about the cards, not a plan", () => {

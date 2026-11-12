@@ -7,6 +7,7 @@ import {
   sanitizeAttribution,
   type Attribution,
 } from "@/lib/analytics/attribution";
+import { storedReferralCode } from "@/lib/analytics/attribution-client";
 
 const KEYS = Object.keys(ATTRIBUTION_FIELDS) as Array<keyof Attribution>;
 
@@ -17,16 +18,20 @@ const KEYS = Object.keys(ATTRIBUTION_FIELDS) as Array<keyof Attribution>;
 export function AttributionFields() {
   const refs = useRef<Partial<Record<keyof Attribution, HTMLInputElement | null>>>({});
   useEffect(() => {
+    let attribution: Attribution = {};
     try {
       const raw = sessionStorage.getItem(ATTRIBUTION_STORAGE_KEY);
-      if (!raw) return;
-      const attribution = sanitizeAttribution(JSON.parse(raw) as Record<string, unknown>);
-      for (const key of KEYS) {
-        const input = refs.current[key];
-        if (input) input.value = attribution[key] ?? "";
-      }
+      if (raw) attribution = sanitizeAttribution(JSON.parse(raw) as Record<string, unknown>);
     } catch {
       // Storage unavailable or unreadable — attribution is optional.
+    }
+    // The referral code has more than the tab to go by (the page's own
+    // address — this effect runs before the layout's capture has stored it
+    // — and the code the browser kept from an earlier visit).
+    const ref = attribution.ref ?? storedReferralCode();
+    for (const key of KEYS) {
+      const input = refs.current[key];
+      if (input) input.value = (key === "ref" ? ref : attribution[key]) ?? "";
     }
   }, []);
   return (

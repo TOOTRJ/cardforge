@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { updateSession } from "@/lib/supabase/middleware";
+import { referralSearch } from "@/lib/referrals/rules";
 import {
   CREATORS_FILTER_PARAMS,
   DECKS_FILTER_PARAMS,
@@ -64,7 +65,8 @@ export async function proxy(request: NextRequest) {
   if (retiredTagHub) {
     const url = request.nextUrl.clone();
     url.pathname = retiredTagHub;
-    url.search = "";
+    // The query goes; a friend's referral code on it does not.
+    url.search = referralSearch(request.nextUrl.searchParams);
     return NextResponse.redirect(url, 308);
   }
   // /faq became the help centre (TODO NV6): one home per answer, so the long
@@ -74,13 +76,15 @@ export async function proxy(request: NextRequest) {
   if (requestPath === "/faq") {
     const url = request.nextUrl.clone();
     url.pathname = "/help";
-    url.search = "";
+    // The query goes; a friend's referral code on it does not.
+    url.search = referralSearch(request.nextUrl.searchParams);
     return NextResponse.redirect(url, 308);
   }
   if (requestPath === "/sets" || requestPath.startsWith("/set/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/decks";
-    url.search = "";
+    // The query goes; a friend's referral code on it does not.
+    url.search = referralSearch(request.nextUrl.searchParams);
     return NextResponse.redirect(url, 308);
   }
   if (requestPath === "/create") {

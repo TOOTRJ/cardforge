@@ -1,3 +1,4 @@
+import { REFERRAL_PARAM, normalizeReferralCode } from "@/lib/referrals/rules";
 import type { Metadata } from "next";
 import { DeckOwnerTools, DeckToolButton } from "@/components/decks/deck-owner-tools";
 import { DeckReartLink } from "@/components/tools/re-art/deck-reart-link";
@@ -118,8 +119,10 @@ function titleFromSlug(slug: string): string {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<{ import?: string; ref?: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
   if (!isSupabaseConfigured()) {
@@ -128,7 +131,9 @@ export async function generateMetadata({
   const deck = await getDeckBySlugWithOwner(slug);
   // A renamed deck's old slug is a 308 to its current one (TODO DK5.14);
   // anything else missing/unreadable is a real 404, never a titled 200.
-  if (!deck) await redirectRenamedDeckOrNotFound(slug);
+  // Whichever of this and the page's own redirect is thrown first wins: both
+  // carry the page's ?import=1 and a friend's referral code.
+  if (!deck) await redirectRenamedDeckOrNotFound(slug, await searchParams);
   if (!deck) notFound();
   const entryCount = deck.visibility === "public" ? await countDeckEntries(deck.id) : 0;
 
@@ -176,9 +181,19 @@ export async function generateMetadata({
  *  viewer's read, so a private deck's old link stays a 404 for anyone but
  *  its owner), keeping the page's own ?import=1; else the 404. Before any
  *  Suspense boundary, as the SEO contract asks of notFound(). */
-async function redirectRenamedDeckOrNotFound(slug: string, search?: { import?: string }): Promise<never> {
+async function redirectRenamedDeckOrNotFound(slug: string, search?: { import?: string; ref?: string }): Promise<never> {
   const current = await findRenamedDeckSlug(slug);
-  if (current) permanentRedirect(`/deck/${current}${search?.import === "1" ? "?import=1" : ""}`);
+  if (current) {
+    // The page's own ?import=1, and a friend's referral code on the old link.
+    const query = new URLSearchParams();
+    if (search?.import === "1") query.set("import", "1");
+    // A repeated ?ref= arrives as a list: the first one, as referralSearch reads it.
+    const ref: unknown = search?.ref;
+    const code = normalizeReferralCode(Array.isArray(ref) ? ref[0] : ref);
+    if (code) query.set(REFERRAL_PARAM, code);
+    const tail = query.toString();
+    permanentRedirect(`/deck/${current}${tail ? `?${tail}` : ""}`);
+  }
   notFound();
 }
 
@@ -202,7 +217,7 @@ export default async function DeckDetailPage({
   searchParams,
 }: {
   params: Promise<Params>;
-  searchParams: Promise<{ import?: string }>;
+  searchParams: Promise<{ import?: string; ref?: string }>;
 }) {
   const { slug } = await params;
   const [deck, user] = await Promise.all([

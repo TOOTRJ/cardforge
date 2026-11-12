@@ -13,6 +13,8 @@ import { normalizeReferralCode } from "@/lib/referrals/rules";
 import { sanitizeAttribution } from "@/lib/analytics/attribution";
 import { signupMethodOf } from "@/lib/analytics/funnel-events";
 import { recordSignup } from "@/lib/analytics/funnel-server";
+import { REFERRAL_LINK_COUNTED_INSTEAD, onboardingReferralNote } from "@/lib/referrals/claim-messages";
+import { hitKeyedLimit } from "@/lib/api/keyed-limit";
 import { welcomeEmail } from "@/lib/email/messages";
 import { getRecipientFor } from "@/lib/email/preferences";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
@@ -121,6 +123,10 @@ const completeSchema = z.object({
   /** The tab's first-touch referral code (a Google sign-up never posts the
    *  signup form's hidden fields — this is its one chance). */
   referralCode: z.string().max(16).optional(),
+  /** A code the person TYPED on this step ("Have a referral code?"): their
+   *  own word for who brought them, so it wins over the link the browser
+   *  remembered — which may be weeks old and somebody else's. */
+  typedReferralCode: z.string().max(16).optional(),
   /** The tab's first-touch attribution, for the same reason: an account
    *  made with Google or Discord has no `signup` funnel row until here.
    *  Sanitized on the server like the signup form's hidden fields
@@ -129,11 +135,19 @@ const completeSchema = z.object({
   attribution: z.record(z.string(), z.unknown()).optional().catch(undefined),
 });
 
-export type CompleteResult = { ok: true } | { ok: false; error: string };
+export type CompleteResult =
+  // `referralNote`: a referral code that was sent and not taken, in words —
+  // only where retyping it could help (a code nobody has, their own).
+  // Onboarding is finished all the same: a referral never blocks an account.
+  // `referralLinkCounted`: the code TYPED was not taken and the link the
+  // account arrived with was claimed in its place (the note says so).
+  | { ok: true; referralNote?: string; referralLinkCounted?: true }
+  | { ok: false; error: string };
 
 /** Finish (or skip) onboarding. `preferences` is omitted on "Skip" — the
  *  row's defaults stand, which never include the newsletter. */
 export async function completeOnboardingAction(input: {
+  typedReferralCode?: string;
   preferences?: { account: boolean; activity: boolean; newsletter: boolean };
   referralCode?: string;
   attribution?: Record<string, unknown>;
@@ -169,14 +183,54 @@ export async function completeOnboardingAction(input: {
   // goes on either way — a referral never blocks an account), and a friend's
   // link lost here is lost for good.
   const metadataCode = normalizeReferralCode((user.app_metadata as { referral_code?: unknown } | null)?.referral_code);
-  const referralCode = metadataCode ?? parsed.data.referralCode;
-  if (referralCode && isAdminConfigured()) {
+  const typedCode = normalizeReferralCode(parsed.data.typedReferralCode);
+  // The link this account arrived with — what stands when nothing readable
+  // was typed, and what a typed code that is NOT taken falls back to (a
+  // typo must not cost the friend whose link was followed).
+  const arrivedCode = metadataCode ?? normalizeReferralCode(parsed.data.referralCode);
+  const referralCode = typedCode ?? arrivedCode;
+  let referralNote: string | null = null;
+  let referralLinkCounted = false;
+  // The claim is counted against the same limit as the Refer a friend
+  // page's form (this action can be called again after onboarding, and its
+  // answer says whether a code exists): past it the code is not looked at.
+  const withinLimit =
+    referralCode && isAdminConfigured()
+      ? (
+          await hitKeyedLimit({
+            context: "referral-code-entry",
+            subject: user.id,
+            perMinute: 5,
+            perHour: 20,
+            message: "",
+          })
+        ).ok
+      : false;
+  if (referralCode && withinLimit) {
     const admin = createAdminClient();
-    const claim = await recordReferralSignup(admin, { refereeId: user.id, code: referralCode });
-    if (!claim.ok && claim.reason === "error") {
-      const again = await recordReferralSignup(admin, { refereeId: user.id, code: referralCode });
-      if (!again.ok && again.reason === "error") {
-        console.error(`[referrals] the claim for ${user.id} failed twice; the referral is not recorded.`);
+    const claimCode = async (code: string) => {
+      let answer = await recordReferralSignup(admin, { refereeId: user.id, code });
+      if (!answer.ok && answer.reason === "error") {
+        answer = await recordReferralSignup(admin, { refereeId: user.id, code });
+        if (!answer.ok && answer.reason === "error") {
+          console.error(`[referrals] the claim for ${user.id} failed twice; the referral is not recorded.`);
+        }
+      }
+      return answer;
+    };
+    const claim = await claimCode(referralCode);
+    if (!claim.ok) referralNote = onboardingReferralNote(claim.reason);
+    // A TYPED code nobody can be credited for (nobody has it, it is their
+    // own): the link the account arrived with is claimed in its place — a
+    // typo must not cost the friend whose link was really followed, nor the
+    // new account its own days. Said in the note: an account has one
+    // referral, so the typed code can no longer be added afterwards. A link
+    // that is not taken either leaves the typed code's note as it was.
+    if (!claim.ok && referralNote && typedCode && arrivedCode && arrivedCode !== typedCode) {
+      const fallback = await claimCode(arrivedCode);
+      if (fallback.ok) {
+        referralNote = REFERRAL_LINK_COUNTED_INSTEAD;
+        referralLinkCounted = true;
       }
     }
   }
@@ -254,5 +308,6 @@ export async function completeOnboardingAction(input: {
   }
 
   revalidatePath("/", "layout");
-  return { ok: true };
+  if (!referralNote) return { ok: true };
+  return referralLinkCounted ? { ok: true, referralNote, referralLinkCounted: true } : { ok: true, referralNote };
 }

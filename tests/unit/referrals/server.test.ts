@@ -20,7 +20,12 @@ import {
   rewardReferral,
   sweepReferralRewards,
 } from "@/lib/referrals/server";
-import { REFERRAL_CONFIRM_WINDOW_DAYS, REFERRAL_GRANT_MAX_ATTEMPTS, REFERRAL_SWEEP_BATCH } from "@/lib/referrals/rules";
+import {
+  REFERRAL_CLAIM_WINDOW_DAYS,
+  REFERRAL_CONFIRM_WINDOW_DAYS,
+  REFERRAL_GRANT_MAX_ATTEMPTS,
+  REFERRAL_SWEEP_BATCH,
+} from "@/lib/referrals/rules";
 import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referrals/settings";
 
 // ---------------------------------------------------------------------------
@@ -28,7 +33,16 @@ import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referral
 // 0180) with the rule of 2026-11-11 (migration 0208): a signup through a
 // link records ONE row (at onboarding, the email confirmed) and keeps the
 // email's keyed fingerprint (nobody is told) — never for two accounts
-// referring each other; the row QUALIFIES ON THE FRIEND'S CARDS ALONE — the
+// referring each other, and only for a NEW account: 14 days old at most and
+// never subscribed (owner 2026-11-11, code entry: how many cards it has
+// saved is no test any more, and the claim reads the `cards` table nowhere).
+// The account's AGE is its SIGN-IN record's (auth.users.created_at, through
+// the admin lookup) — never `profiles.created_at`, which a user can rewrite
+// in their own row: an old account that set it to today would read as new.
+// A lookup that fails, or finds no such account, is an error the caller
+// retries — never a claim on a guess; the same ONE lookup gives the email
+// whose fingerprint is kept;
+// the row QUALIFIES ON THE FRIEND'S CARDS ALONE — the
 // settings' cards WITH ARTWORK OF THEIR OWN, each picture once, saved within
 // the window: ONE count, the database's `referral_qualifying_cards` (0208),
 // asked on every save (advanceReferral) and FAILING CLOSED (a count that
@@ -59,10 +73,15 @@ const hmac = (normalized: string) => createHmac("sha256", TEST_KEY).update(norma
 type Row = Record<string, unknown>;
 type World = {
   codeOwner: string | null;
-  refereeCreatedAt: string;
+  /** `profiles.created_at` of the friend's OWN row — a TRAP: a user can
+   *  rewrite it, so the claim never reads it (the account's age is the
+   *  sign-in record's: `users[<id>].createdAt`). No answer may depend on it. */
+  profileCreatedAt: string;
   refereeStatus: string | null;
-  /** EVERY card the friend owns — what "is this account new" counts (the
-   *  `cards` table, read by recordReferralSignup alone). */
+  /** EVERY card the friend owns, as the `cards` table would count them — a
+   *  TRAP since 2026-11-11: "is this account new" is its age and its plan
+   *  history, never its cards, so nothing in the module reads the table and
+   *  no answer may depend on this number. */
   refereeCards: number;
   /** What `referral_qualifying_cards` answers — the friend's different
    *  pictures of their own, the only cards the bar counts. A number, as
@@ -83,7 +102,9 @@ type World = {
   /** The code lookup itself fails (not "no such code"). */
   codeError: { message: string } | null;
   profiles: Row[];
-  users: Record<string, { email: string | null; confirmed: boolean }>;
+  /** The sign-in records (auth.users) as the admin lookup hands them.
+   *  `createdAt`: when the account was made — absent = a moment ago. */
+  users: Record<string, { email: string | null; confirmed: boolean; createdAt?: unknown }>;
   /** A sign-in lookup that FAILS for an account: GoTrue's error answer (its
    *  HTTP status), or a throw. */
   authFailures: Record<string, { status?: number; message: string } | "throw">;
@@ -141,16 +162,19 @@ function db() {
     if (table === "profiles" && called(calls, "select")) {
       const id = calls.find((c) => c.method === "eq")?.args[1];
       const columns = String(calls.find((c) => c.method === "select")?.args[0] ?? "");
-      if (columns.startsWith("created_at")) {
-        return { data: { created_at: world.refereeCreatedAt, subscription_status: world.refereeStatus } };
+      // The claim's read of the account's plan history. The row still HOLDS
+      // its created_at (the trap) — a read that asked for it would get it.
+      if (columns === "subscription_status" || columns.includes("created_at")) {
+        return { data: { created_at: world.profileCreatedAt, subscription_status: world.refereeStatus } };
       }
       if (columns.startsWith("stripe_subscription_id")) {
         return { data: { stripe_subscription_id: world.refereeSub.id, subscription_status: world.refereeSub.status } };
       }
       return { data: world.profiles.find((p) => p.id === id) ?? null };
     }
-    // The `cards` table answers "every card" — the not-new check's question.
-    // The bar's count is the RPC below, a separate answer.
+    // The `cards` table would answer "every card" — nobody asks it any more
+    // (the tests hold `forTable("cards")` empty). The bar's count is the RPC
+    // below, a separate answer.
     if (table === "cards") return { count: world.refereeCards };
     if (table === "referral_email_fingerprints" && called(calls, "select")) return { data: world.seen };
     if (table === "day_bank_entries") {
@@ -200,23 +224,34 @@ function db() {
     if (name === "referral_email_in_use") return { data: world.inUse, error: null };
     return { data: null, error: null };
   }) as never);
+  /** Every sign-in lookup made, by account id, in order. */
+  const authLookups: string[] = [];
   const client = Object.assign(stub.client, {
     auth: {
       admin: {
         getUserById: async (id: string) => {
+          authLookups.push(id);
           const failure = world.authFailures[id];
           if (failure === "throw") throw new Error("auth is away");
           if (failure) return { data: { user: null }, error: failure };
           const user = world.users[id];
           return {
-            data: { user: user ? { email: user.email, email_confirmed_at: user.confirmed ? at(-3) : null } : null },
+            data: {
+              user: user
+                ? {
+                    email: user.email,
+                    email_confirmed_at: user.confirmed ? at(-3) : null,
+                    created_at: "createdAt" in user ? user.createdAt : at(-0.01),
+                  }
+                : null,
+            },
             error: null,
           };
         },
       },
     },
   });
-  return { ...stub, client };
+  return { ...stub, client, authLookups };
 }
 
 const notifications = (stub: ReturnType<typeof db>) =>
@@ -241,7 +276,8 @@ const countCalls = (stub: ReturnType<typeof db>) =>
 function freshWorld(): World {
   return {
     codeOwner: REFERRER,
-    refereeCreatedAt: at(-0.01),
+    // The profile row says "made a moment ago" — whatever the sign-in record says.
+    profileCreatedAt: at(-0.01),
     refereeStatus: null,
     refereeCards: 5,
     refereeQualifyingCards: 5,
@@ -341,10 +377,13 @@ describe("recordReferralSignup", () => {
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "self" });
     // Your own code is refused BEFORE the reciprocal read (it would name you twice).
     expect(stub.forTable("referrals")).toEqual([]);
+    // "Not new": past the claim window, or any plan history at all — whatever
+    // the account has saved (no cards here: the refusal is not theirs).
     for (const change of [
-      () => (world.refereeCreatedAt = at(-8)),
+      () => (world.users[REFEREE].createdAt = at(-15)),
+      () => (world.users[REFEREE].createdAt = at(-(REFERRAL_CLAIM_WINDOW_DAYS + 1))),
       () => (world.refereeStatus = "canceled"),
-      () => (world.refereeCards = 5),
+      () => (world.refereeStatus = "active"),
     ]) {
       world = freshWorld();
       world.refereeCards = 0;
@@ -355,35 +394,277 @@ describe("recordReferralSignup", () => {
       expect(referralInserts(refused)).toEqual([]);
       expect(referralUpdates(refused)).toEqual([]);
       expect(refused.forTable("referral_email_fingerprints")).toEqual([]);
+      expect(refused.forTable("cards")).toEqual([]);
     }
   });
 
-  it("\"not new\" counts EVERY saved card through the `cards` table — the artwork rule is the bar's, not this check's: five title-only cards still refuse the claim, and the bar's count is never asked", async () => {
-    world.refereeCards = 5;
-    world.refereeQualifyingCards = 0;
-    const stub = db();
-    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "not_new" });
-    expect(stub.forTable("cards").map((e) => e.calls)).toEqual([
-      [
-        { method: "select", args: ["id", { count: "exact", head: true }] },
-        { method: "eq", args: ["owner_id", REFEREE] },
-      ],
-    ]);
-    expect(rpcNames(stub)).not.toContain(COUNT_RPC);
-    // …and the other way round: under the bar by EVERY card, the account is
-    // new whatever the bar's count would say — it is not this check's.
-    world = freshWorld();
-    world.refereeCards = 4;
-    world.refereeQualifyingCards = 9;
-    const under = db();
-    expect(await recordReferralSignup(under.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
-    expect(rpcNames(under)).not.toContain(COUNT_RPC);
+  it("a code that is refused for itself (bad, unknown, your own, a friend you referred) never looks the account up: no sign-in lookup, no profile read", async () => {
+    for (const [code, change] of [
+      ["<script>", () => {}],
+      ["d0000003", () => (world.codeOwner = null)],
+      ["d0000003", () => (world.codeOwner = REFEREE)],
+      ["d0000003", () => (world.reciprocal = [{ id: OTHER_REFERRAL }])],
+    ] as const) {
+      world = freshWorld();
+      change();
+      const stub = db();
+      expect((await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code, now: NOW })).ok).toBe(false);
+      expect(stub.authLookups).toEqual([]);
+      expect(stub.forTable("profiles")).toEqual([]);
+    }
   });
 
-  it("a friend with a card or two already (a guest draft) is still new — only the bar's cards refuse", async () => {
-    world.refereeCards = 4;
-    world.refereeQualifyingCards = 4;
-    expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toMatchObject({ ok: true });
+  // Owner 2026-11-11 (code entry for NEW accounts, 14 days): a friend whose
+  // link the browser lost has usually made their cards by the time they type
+  // the code — refusing them for it would refuse exactly the people the field
+  // is for. "New" is the account's age and its plan history, nothing else.
+  it("\"not new\" never counts cards: FIFTY saved cards and 13 days old is claimed — the `cards` table is not read and the bar's count is not asked", async () => {
+    world.refereeCards = 50;
+    world.refereeQualifyingCards = 50;
+    world.users[REFEREE].createdAt = at(-13);
+    const stub = db();
+    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
+    expect(payloadOf(referralInserts(stub)[0].calls, "insert")).toEqual({ referrer_id: REFERRER, referee_id: REFEREE, code: "d0000003" });
+    expect(stub.forTable("cards")).toEqual([]);
+    expect(rpcNames(stub)).not.toContain(COUNT_RPC);
+    // Whatever the two counts say — none, the bar's worth, far past it.
+    for (const [cards, qualifying] of [
+      [0, 0],
+      [5, 0],
+      [5, 5],
+      [500, 9],
+    ]) {
+      world = freshWorld();
+      world.refereeCards = cards;
+      world.refereeQualifyingCards = qualifying;
+      world.users[REFEREE].createdAt = at(-13);
+      const any = db();
+      expect(await recordReferralSignup(any.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), `${cards} cards`).toEqual({
+        ok: true,
+        referralId: REFERRAL,
+      });
+      expect(any.forTable("cards")).toEqual([]);
+      expect(rpcNames(any)).not.toContain(COUNT_RPC);
+    }
+  });
+
+  // A user may update their own profile row, and nothing pins its
+  // created_at: an old account that set it to today would read as new and be
+  // paid at once for a friend's code. The age is the SIGN-IN record's.
+  it("the account's AGE is its sign-in record's, NEVER the profile row's: `profiles.created_at` is not even selected", async () => {
+    world.users[REFEREE].createdAt = at(-13);
+    const stub = db();
+    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
+    // The one read of the profile: its plan history, for this account — nothing else.
+    expect(stub.forTable("profiles").map((e) => e.calls)).toEqual([
+      [
+        { method: "select", args: ["subscription_status"] },
+        { method: "eq", args: ["id", REFEREE] },
+        { method: "maybeSingle", args: [] },
+      ],
+    ]);
+    expect(JSON.stringify(stub.forTable("profiles"))).not.toContain("created_at");
+    // …and the sign-in record is asked for the friend, once.
+    expect(stub.authLookups).toEqual([REFEREE]);
+  });
+
+  it("an OLD account whose profile row says \"made today\" is not new: 15 days by the sign-in record → not_new, nothing written", async () => {
+    for (const profileSays of [at(0), at(-0.01), at(-1), at(1)]) {
+      world = freshWorld();
+      world.users[REFEREE].createdAt = at(-15);
+      world.profileCreatedAt = profileSays;
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), profileSays).toEqual({
+        ok: false,
+        reason: "not_new",
+      });
+      expect(referralInserts(stub)).toEqual([]);
+      expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
+    }
+    // A year-old account, the same.
+    world = freshWorld();
+    world.users[REFEREE].createdAt = at(-400);
+    world.profileCreatedAt = at(0);
+    expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "not_new" });
+  });
+
+  it("…and the other way round: 13 days by the sign-in record is CLAIMED whatever the profile row says — a year ago, nothing, nonsense", async () => {
+    for (const profileSays of [at(-400), at(-15), "", "not a date"]) {
+      world = freshWorld();
+      world.users[REFEREE].createdAt = at(-13);
+      world.profileCreatedAt = profileSays;
+      expect(await recordReferralSignup(db().client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), profileSays).toEqual({
+        ok: true,
+        referralId: REFERRAL,
+      });
+    }
+  });
+
+  it("the claim window is 14 days to the millisecond: exactly 14 days old is claimed, one millisecond more is not_new — with no cards at all", async () => {
+    expect(REFERRAL_CLAIM_WINDOW_DAYS).toBe(14);
+    const made = (ageMs: number) => new Date(NOW.getTime() - ageMs).toISOString();
+    for (const [ageMs, claimed] of [
+      [0, true],
+      [7 * DAY, true],
+      // The old window (7 days) is no edge any more.
+      [8 * DAY, true],
+      [13 * DAY, true],
+      [14 * DAY - 1, true],
+      [14 * DAY, true],
+      [14 * DAY + 1, false],
+      [15 * DAY, false],
+      [400 * DAY, false],
+    ] as const) {
+      world = freshWorld();
+      world.refereeCards = 0;
+      world.refereeQualifyingCards = 0;
+      world.users[REFEREE].createdAt = made(ageMs);
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), `${ageMs} ms old`).toEqual(
+        claimed ? { ok: true, referralId: REFERRAL } : { ok: false, reason: "not_new" },
+      );
+      expect(referralInserts(stub)).toHaveLength(claimed ? 1 : 0);
+      expect(stub.forTable("cards")).toEqual([]);
+    }
+  });
+
+  it("an account \"made\" in the FUTURE is not new — past a minute of clock skew (a minute ahead is two clocks, not a forged date)", async () => {
+    const madeIn = (ms: number) => new Date(NOW.getTime() + ms).toISOString();
+    for (const [ahead, claimed] of [
+      [1, true],
+      [1_000, true],
+      [59_999, true],
+      [60_000, true],
+      [60_001, false],
+      [61_000, false],
+      [3_600_000, false],
+      [DAY, false],
+      [400 * DAY, false],
+    ] as const) {
+      world = freshWorld();
+      world.users[REFEREE].createdAt = madeIn(ahead);
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), `${ahead} ms ahead`).toEqual(
+        claimed ? { ok: true, referralId: REFERRAL } : { ok: false, reason: "not_new" },
+      );
+      expect(referralInserts(stub)).toHaveLength(claimed ? 1 : 0);
+    }
+  });
+
+  it("a creation date that can't be read is not new (never a claim on a guess) — whatever the profile row says", async () => {
+    for (const createdAt of [null, undefined, "", "not a date"]) {
+      world = freshWorld();
+      world.users[REFEREE].createdAt = createdAt;
+      // The profile's own date is perfectly readable, and "today".
+      world.profileCreatedAt = at(0);
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), String(createdAt)).toEqual({
+        ok: false,
+        reason: "not_new",
+      });
+      expect(referralInserts(stub)).toEqual([]);
+      expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
+    }
+  });
+
+  it("an account that EVER had a plan is not new, however young and whatever it saved", async () => {
+    for (const status of ["trialing", "active", "past_due", "canceled", "incomplete", "unpaid", ""]) {
+      world = freshWorld();
+      world.refereeCards = 0;
+      world.refereeStatus = status;
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), status || "(empty)").toEqual({
+        ok: false,
+        reason: "not_new",
+      });
+      expect(referralInserts(stub)).toEqual([]);
+      expect(stub.forTable("cards")).toEqual([]);
+    }
+  });
+
+  it("a sign-in lookup that FAILS (an error answer, a throw) is an error the caller retries — never a claim on an age nobody read: no row, no fingerprint", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (const failure of [{ status: 500, message: "upstream" }, { message: "no status at all" }, { status: 429, message: "slow down" }, "throw"] as const) {
+      world = freshWorld();
+      world.refereeCards = 0;
+      world.authFailures[REFEREE] = failure;
+      const stub = db();
+      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW }), JSON.stringify(failure)).toEqual({
+        ok: false,
+        reason: "error",
+      });
+      expect(referralInserts(stub)).toEqual([]);
+      expect(referralUpdates(stub)).toEqual([]);
+      expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
+      expect(notifications(stub)).toEqual([]);
+      // One try: the retry is the caller's (onboarding tries once more).
+      expect(stub.authLookups).toEqual([REFEREE]);
+    }
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("an account the sign-in service does not know (404, or no user in the answer) is an error too: nothing is written for an account that isn't there", async () => {
+    world.authFailures[REFEREE] = { status: 404, message: "User not found" };
+    let stub = db();
+    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "error" });
+    expect(referralInserts(stub)).toEqual([]);
+    world = freshWorld();
+    delete world.users[REFEREE];
+    stub = db();
+    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "error" });
+    expect(referralInserts(stub)).toEqual([]);
+    expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
+  });
+
+  it("ONE sign-in lookup per claim: the age and the email whose fingerprint is kept come from the same answer", async () => {
+    world.users[REFEREE] = { email: "Friend.Name+promo@GoogleMail.com", confirmed: true, createdAt: at(-13) };
+    const stub = db();
+    expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
+    expect(stub.authLookups).toEqual([REFEREE]);
+    const kept = stub.forTable("referral_email_fingerprints").find((e) => called(e.calls, "upsert"))!;
+    expect(payloadOf(kept.calls, "upsert")).toEqual({ fingerprint: hmac("friendname@gmail.com"), referral_id: REFERRAL });
+    // An account with no address at all still lands, with no fingerprint (never a hash of nothing).
+    world = freshWorld();
+    world.users[REFEREE] = { email: null, confirmed: false };
+    const bare = db();
+    expect(await recordReferralSignup(bare.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
+    expect(bare.forTable("referral_email_fingerprints")).toEqual([]);
+    expect(bare.authLookups).toEqual([REFEREE]);
+  });
+
+  it("recordReferralSignup NEVER reads the `cards` table — on a claim, on every refusal, on an error", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const scenarios: Array<[string, () => void, string]> = [
+      ["claimed", () => {}, "ok"],
+      ["bad code", () => {}, "bad_code"],
+      ["unknown code", () => (world.codeOwner = null), "unknown_code"],
+      ["own code", () => (world.codeOwner = REFEREE), "self"],
+      ["reciprocal", () => (world.reciprocal = [{ id: OTHER_REFERRAL }]), "reciprocal"],
+      ["too old", () => (world.users[REFEREE].createdAt = at(-15)), "not_new"],
+      ["subscribed", () => (world.refereeStatus = "active"), "not_new"],
+      ["sign-in lookup failed", () => (world.authFailures[REFEREE] = { status: 500, message: "upstream" }), "error"],
+      ["already referred", () => (world.insertError = { message: "duplicate", code: "23505" }), "exists"],
+      ["insert failed", () => (world.insertError = { message: "connection reset" }), "error"],
+      ["code read failed", () => (world.codeError = { message: "connection reset" }), "error"],
+      ["program off", () => (world.settings = { ...DEFAULT_REFERRAL_SETTINGS, enabled: false }), "program_off"],
+    ];
+    for (const [name, change, outcome] of scenarios) {
+      world = freshWorld();
+      // The trap: a count the old rule would have refused on.
+      world.refereeCards = 50;
+      change();
+      const stub = db();
+      const result = await recordReferralSignup(stub.client as never, {
+        refereeId: REFEREE,
+        code: name === "bad code" ? "not-a-code" : "d0000003",
+        now: NOW,
+      });
+      expect(result.ok ? "ok" : result.reason, name).toBe(outcome);
+      expect(stub.forTable("cards"), name).toEqual([]);
+      expect(rpcNames(stub), name).not.toContain(COUNT_RPC);
+    }
+    warn.mockRestore();
   });
 
   it("first claim wins: a second claim for the same account is 'exists'", async () => {
@@ -444,20 +725,6 @@ describe("recordReferralSignup", () => {
     expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: false, reason: "error" });
     expect(referralInserts(stub)).toEqual([]);
     expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
-  });
-
-  it("a sign-in lookup that fails at signup: the row still lands, with no fingerprint (never a hash of nothing)", async () => {
-    world.refereeCards = 0;
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    for (const failure of [{ status: 500, message: "upstream" }, "throw"] as const) {
-      world = freshWorld();
-      world.refereeCards = 0;
-      world.authFailures[REFEREE] = failure;
-      const stub = db();
-      expect(await recordReferralSignup(stub.client as never, { refereeId: REFEREE, code: "d0000003", now: NOW })).toEqual({ ok: true, referralId: REFERRAL });
-      expect(stub.forTable("referral_email_fingerprints")).toEqual([]);
-    }
-    warn.mockRestore();
   });
 });
 

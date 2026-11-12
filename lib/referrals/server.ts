@@ -161,24 +161,30 @@ export async function recordReferralSignup(
     if (backError) return { ok: false, reason: "error" };
     if ((back?.length ?? 0) > 0) return { ok: false, reason: "reciprocal" };
 
-    // Only a NEW account: young, never subscribed, nothing saved yet.
+    // Only a NEW account: young and never subscribed. How many cards it has
+    // saved is no test any more (owner 2026-11-11: a code can be typed in
+    // during the account's first days — a friend whose link the browser
+    // lost has usually made their cards by then, and refusing them for it
+    // would refuse exactly the people the field is for).
+    //
+    // The account's AGE is its sign-in record's (auth.users.created_at),
+    // never `profiles.created_at`: a user may update their own profile row,
+    // and nothing pins that column — an old account that set it to today
+    // would read as new and be paid at once for a friend's code. The
+    // subscription status is the profile's, where the database protects it.
+    const account = await authUserOf(admin, input.refereeId);
+    if (account === "error" || !account) return { ok: false, reason: "error" };
     const { data: referee } = await admin
       .from("profiles")
-      .select("created_at, subscription_status")
+      .select("subscription_status")
       .eq("id", input.refereeId)
       .maybeSingle();
     if (!referee) return { ok: false, reason: "error" };
-    const age = now.getTime() - Date.parse(referee.created_at ?? "");
-    if (!(age <= REFERRAL_CLAIM_WINDOW_DAYS * DAY_MS) || referee.subscription_status != null) {
+    const age = now.getTime() - Date.parse(account.createdAt ?? "");
+    // An unreadable date, one in the future, or one past the window: not new.
+    if (!(age >= -60_000 && age <= REFERRAL_CLAIM_WINDOW_DAYS * DAY_MS) || referee.subscription_status != null) {
       return { ok: false, reason: "not_new" };
     }
-    // Under the bar's cards (a guest draft saved before onboarding is no
-    // reason to refuse); at or past it the account isn't new to the program.
-    const { count } = await admin
-      .from("cards")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", input.refereeId);
-    if ((count ?? 0) >= settings.activation.cardsRequired) return { ok: false, reason: "not_new" };
 
     const { data: row, error } = await admin
       .from("referrals")
@@ -192,8 +198,7 @@ export async function recordReferralSignup(
     // Keep the email's fingerprint (no address, no user id) — it outlives
     // the account. The account is created normally whatever it finds; the
     // reward step judges (owner 2026-11-02).
-    const user = await authUserOf(admin, input.refereeId);
-    await recordEmailFingerprint(admin, row.id, user && user !== "error" ? user.email : null);
+    await recordEmailFingerprint(admin, row.id, account.email);
     return { ok: true, referralId: row.id };
   } catch (error) {
     console.warn("recordReferralSignup failed", error instanceof Error ? error.message : error);
@@ -872,7 +877,7 @@ async function notify(
 async function authUserOf(
   admin: AdminClient,
   userId: string,
-): Promise<{ email: string | null; confirmed: boolean } | null | "error"> {
+): Promise<{ email: string | null; confirmed: boolean; createdAt: string | null } | null | "error"> {
   try {
     const { data, error } = await admin.auth.admin.getUserById(userId);
     if (error) {
@@ -884,7 +889,7 @@ async function authUserOf(
     }
     const user = data?.user;
     if (!user) return null;
-    return { email: user.email ?? null, confirmed: Boolean(user.email_confirmed_at) };
+    return { email: user.email ?? null, confirmed: Boolean(user.email_confirmed_at), createdAt: user.created_at ?? null };
   } catch (error) {
     console.warn(`[referrals] auth lookup for ${userId} failed:`, error instanceof Error ? error.message : error);
     return "error";

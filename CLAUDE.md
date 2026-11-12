@@ -1824,7 +1824,32 @@ Rules and gotchas:
   code per user (`my_referral_code()`), the link `/?ref=<code>` rides the
   first-touch attribution (sessionStorage → hidden `attr_ref` → the signup's
   `app_metadata.referral_code`; a Google sign-up's from the tab at
-  onboarding) — never a cookie — and the referral row is written at
+  onboarding) — never a cookie. The CODE alone is also kept past the tab
+  (owner 2026-11-11: `localStorage`, 30 days, the code and the day —
+  `keepReferralCode`; forgotten once the account is onboarded), and ONE
+  reader answers "which code did this visitor arrive with":
+  `storedReferralCode()` (`lib/analytics/attribution-client.ts`: the tab's,
+  else the address being looked at, else the kept one) — the sign-up form's
+  hidden field, the join note and onboarding all ask it, never
+  sessionStorage directly. A redirect that drops the query carries a valid
+  `ref` across (`referralSearch`, `lib/referrals/rules.ts`: the three 308s
+  in `proxy.ts`, the legacy card address, a renamed deck; the sign-in
+  redirect puts it on `/login` itself) — a new redirect that clears the
+  query calls it. A NEW account can also TYPE a friend's code or paste
+  their link ("Have a referral code?" at onboarding; "Joined because of a
+  friend?" on the Refer a friend page — `claimReferralCodeAction`, rate
+  limited, one counter with onboarding's claim): the same
+  `recordReferralSignup`, the same rules — the account at most
+  `REFERRAL_CLAIM_WINDOW_DAYS` (14) old and never subscribed, whatever cards
+  it has. A typed code wins over a remembered one — and one nobody can be
+  credited for (nobody has it, their own) falls back to the link the account
+  arrived with, said in the toast (`REFERRAL_LINK_COUNTED_INSTEAD`), never
+  silently. Never for an established
+  account (it has its cards: both sides would be rewarded for bringing in
+  nobody) — and the account's AGE is `auth.users.created_at`, never
+  `profiles.created_at`: a user can update their own profile row and that
+  column is not pinned, so nothing that pays may trust it. The referral
+  row is written at
   ONBOARDING, the first step with a CONFIRMED email (never at signup: GoTrue
   hands an unconfirmed address the same user id). A referral QUALIFIES on
   the friend's CARDS ALONE (owner 2026-11-11, migration 0208 — until then it

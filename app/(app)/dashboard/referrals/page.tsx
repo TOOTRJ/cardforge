@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LocalDate } from "@/components/ui/local-date";
 import { ReferralLinkBox } from "@/components/referrals/referral-link-box";
 import { ReferralLadder } from "@/components/referrals/referral-ladder";
+import { ReferralCodeEntry } from "@/components/referrals/referral-code-entry";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -74,7 +75,7 @@ export default async function ReferralsPage() {
 
   const dashboard = await getMyReferralDashboard();
   if (!dashboard) redirect("/login");
-  const { link, rows, summary, joinedThrough, settings, bank } = dashboard;
+  const { link, rows, summary, joinedThrough, settings, bank, codeEntry } = dashboard;
   const friendGets = friendRewardPhrase(settings);
   const firstStep = rewardStepPhrase(ladderRewardFor(settings, 1));
   const { cardsRequired, windowDays } = settings.activation;
@@ -242,6 +243,13 @@ export default async function ReferralsPage() {
               </Button>
             </SurfaceCard>
           </section>
+
+          {/* A new account whose browser lost its friend's link types the code. */}
+          {codeEntry.open && codeEntry.until ? (
+            <SurfaceCard className="p-5">
+              <ReferralCodeEntry until={codeEntry.until} friendGets={friendGets} />
+            </SurfaceCard>
+          ) : null}
 
           {joinedThrough ? (
             <p className="text-sm text-muted" data-testid="referral-joined-through">
