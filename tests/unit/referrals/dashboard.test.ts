@@ -372,12 +372,12 @@ describe("/dashboard/referrals — the page", () => {
 
   it("explains the program in THREE steps: share, cards each with its own artwork inside the window, both rewarded — no plan, no card", async () => {
     const html = await page();
-    const steps = /<ol class="grid gap-3 text-sm text-muted sm:grid-cols-3">([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
+    const steps = /<ol class="flex flex-col gap-3 text-sm text-muted">([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
     const items = steps.split("</li>").filter((li) => li.includes("<li")).map(wordsOf);
     expect(items).toEqual([
       "1. Share your link. A friend opens it and creates an account.",
       "2. They save 5 cards, each with its own artwork, within 30 days of signing up.",
-      "3. You both get your reward. 7 free days go into their bank, and you get your next step on the ladder below. Nobody has to start a plan or add a card to earn it.",
+      "3. You both get your reward. 7 free days go into their bank, and you get your next step on the ladder. Nobody has to start a plan or add a card to earn it.",
     ]);
     expect(html).not.toContain("4. You both get your reward");
     expect(html).not.toMatch(/They start a plan/);
@@ -422,7 +422,7 @@ describe("/dashboard/referrals — the page", () => {
       dbRow({ id: "r3", referee_id: "friend-3", status: "rewarded", cards_saved_at: "2026-11-04T00:00:00Z", rewarded_at: new Date().toISOString(), ladder_step: 1, referrer_reward: "banked_days" }),
     ];
     const html = await page();
-    const stats = /<dl class="grid gap-3 sm:grid-cols-4">([\s\S]*?)<\/dl>/.exec(html)?.[1] ?? "";
+    const stats = /<dl class="grid grid-cols-2 gap-3 md:grid-cols-4">([\s\S]*?)<\/dl>/.exec(html)?.[1] ?? "";
     expect(textsOf(stats, "dt")).toEqual(["Friends joined", "Saved their cards", "Rewards earned", "Rewarded this month"]);
     expect(textsOf(stats, "dd")).toEqual(["3", "2", "1", "1 of 5"]);
     expect(html).not.toContain("Started a plan");
@@ -460,9 +460,9 @@ describe("/dashboard/referrals — the page", () => {
     const sentence = async (mine: Record<string, unknown> | null, named = true) => {
       view.profiles = named ? [{ id: "them", username: "dev_pro" }] : [];
       view.mine = mine && { id: "r9", referrer_id: "them", status: "signed_up", cards_saved_at: null, first_card_at: null, referee_reward: null, ...mine };
-      const words = wordsOf(await page());
-      const at = words.indexOf("You joined through");
-      return at < 0 ? null : words.slice(at);
+      // The sentence is its own paragraph in the rail (the small print follows it).
+      const own = /<p[^>]*data-testid="referral-joined-through"[^>]*>([\s\S]*?)<\/p>/.exec(await page())?.[1];
+      return own === undefined ? null : wordsOf(own);
     };
     expect(await sentence(null)).toBeNull();
     expect(await sentence({})).toBe("You joined through @dev_pro's link — save 5 cards, each with its own artwork, to get 7 free days.");

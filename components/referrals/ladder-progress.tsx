@@ -6,7 +6,17 @@ import { cn } from "@/lib/utils";
 // sentence `ladderProgressLine` says, as the bar's accessible name. Server
 // component (no state): the page and the share dialog pass the numbers.
 
-export function LadderProgressBar({ progress, className }: { progress: LadderProgress; className?: string }) {
+export function LadderProgressBar({
+  progress,
+  className,
+  showLine = true,
+}: {
+  progress: LadderProgress;
+  className?: string;
+  /** false where the sentence is already printed beside the bar (the Refer a
+   *  friend page's ladder heading): the bar keeps it as its name. */
+  showLine?: boolean;
+}) {
   const line = ladderProgressLine(progress);
   const fraction = ladderProgressFraction(progress);
   const now = Math.min(progress.rewardsEarned, progress.ladderLength);
@@ -25,9 +35,11 @@ export function LadderProgressBar({ progress, className }: { progress: LadderPro
           style={{ width: `${Math.round(fraction * 100)}%` }}
         />
       </div>
-      <p className="text-sm text-muted" aria-hidden>
-        {line}
-      </p>
+      {showLine ? (
+        <p className="text-sm text-muted" aria-hidden>
+          {line}
+        </p>
+      ) : null}
     </div>
   );
 }
