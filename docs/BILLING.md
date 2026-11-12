@@ -1306,23 +1306,49 @@ queries); the admin panel `components/admin/referral-panel.tsx` +
 `lib/admin/referral-queries.ts`; the settings form
 `components/admin/referral-settings-form.tsx`.
 
-**What qualifies a referral (the two bars).** The friend must (1) save
-`activation.cardsRequired` cards (5) within `activation.windowDays` (30) of
-signing up — EVERY save runs `advanceReferral` (`lib/cards/actions.ts`, in
-`after()`), which counts the friend's cards, stamps `cards_saved_at` once
-(status `cards_saved`; 0177's `first_card` reads the same) or expires a
-row past the window — AND (2) start a plan with a CARD ON FILE: a Stripe
-subscription the profile points at (`trialing` / `active` / past due) —
-`customer.subscription.created` runs `advanceReferral` too
-(`lib/stripe/webhook-handlers.ts`), stamping `card_on_file_at` once. Both
-stamps standing, `rewardReferral` runs at once: the program ON (else the
-row waits), both emails confirmed, the key present, the fraud rules, one
-email one reward, then the claim.
+**What qualifies a referral: the friend's cards, and nothing else** (owner
+2026-11-11; migration `0208_referrals_cards_only.sql`). Until then it took
+two bars — the cards AND a plan with a card on file — and about 2 % of the
+people who join ever met the second; 18 % save the cards. A banked day can
+only be USED by starting a plan, which is where the card is asked for, so
+the reward itself no longer waits for one.
+
+The friend must save `activation.cardsRequired` cards (5) **with artwork**
+within `activation.windowDays` (30) of signing up. EVERY save runs
+`advanceReferral` (`lib/cards/actions.ts`, in `after()`), which counts the
+friend's cards whose `art_url` is set (`QUALIFYING_CARD` — a title-only
+card is a second's work, and on production every account that reached the
+bar did it with art), stamps `cards_saved_at` once (status `cards_saved`;
+0177's `first_card` reads the same) or expires a row past the window. The
+stamp standing, `rewardReferral` runs at once: the program ON (else the row
+waits), both emails confirmed, the key present, the fraud rules, one email
+one referral, then the claim.
+
+`card_on_file_at` is still stamped — by `noteReferralPlan`
+(`customer.subscription.created`, `lib/stripe/webhook-handlers.ts`), on the
+friend's row whatever its status — as a FACT: how many referred friends
+became subscribers. It gates nothing.
+
+**What stands between a made-up friend and a reward, now the card is gone.**
+The card was the program's fraud bar. What is left: a CONFIRMED inbox (the
+one identity check — keep it), the email rules (same inbox, throwaway
+domain, same company domain, one email one referral ever), cards with
+artwork, no two accounts referring each other (`recordReferralSignup`
+refuses the second of a pair, reason `reciprocal`), and the friends cap.
+The shared-card rule only speaks when both accounts already have a card
+with Stripe, which a friend rewarded on their cards usually has not. The
+most one account can take with made-up friends: 28 days and 15 credits in
+its first calendar month, 72 days and 70 credits in the second (the ladder's
+ten steps), then the tail — 5 friends a month at 7 days is 35 days a month.
+The cap and the tail are settings (`/admin/analytics` → Referrals): lower
+the tail to 5 days and five friends a month can never cover a whole month.
 
 **The claim (`claim_referral_reward_v2`)**: the friends cap only
-(`caps.friendsPerMonth`, 5: rewarded, capped and referrer-blocked rows
-this UTC month — each rewarded the friend — past which NEITHER side is
-rewarded) and a referrer-only block reason (`same_domain`), under the
+(`caps.friendsPerMonth`, 5: this UTC month's rewarded rows — whatever the
+friend's own side came to — and referrer-blocked rows whose friend was
+rewarded; a capped row never counts — past which NEITHER side is rewarded.
+0208 fixed the count: 0180 left a rewarded row out while the friend's side
+was `none`, so with `friend.days` 0 the cap never tripped) and a referrer-only block reason (`same_domain`), under the
 referrer's named advisory lock; a rewarded claim returns the referrer's
 LADDER STEP — their rewarded count including this one — stored as
 `ladder_step`. Referrals are UNLIMITED (owner): 0177's monthly and
@@ -1336,13 +1362,13 @@ no credits) or AI credits:
 | the friend | `friend.days` (7) banked | `referral:<id>:referee` |
 | the referrer | the LADDER's step N for their N-th rewarded referral — 1: 7 days, 2: 5 credits, 3: 7 days, 4: 10 credits, 5: 14 days, 6: 20 credits, 7: 21 days, 8: 50 credits, 9: 21 days, 10: 30 days; past 10 the `tail` (7 days) each | `referral-step:<referrer>:<step>` (credits: the same key on `grant_credits`, reason `referral_credits`) |
 
-The friend's checkout is the qualifying moment, so their days are banked
-BEFORE the checkout reserves the bank (`preBankFriendDays`, called by
-`createCheckoutSessionAction` ahead of `prepareCheckoutBank`): that checkout
-applies them with the signup days — one free period, card on file,
-auto-billed after unless they cancel. The reward step later finds the entry
-under its reference and records the side. Days earned later (the referrer's
-steps, a friend who already had a plan) wait in the bank for the user's
+Both sides' days go into the bank when the referral is claimed, which is
+when the friend's cards are saved — usually before any checkout, so the
+friend's first checkout applies them with the signup days (one free period,
+card on file, auto-billed after unless they cancel). Nothing is banked ahead
+of a checkout any more (0180's `preBankFriendDays` is gone with the bar it
+served). Days that arrive after a plan was started wait in the bank for the
+user's
 own "Apply banked days". An admin account gets nothing; `friend.days` 0
 reads "nothing". Notifications: `referral_reward` with `reward:
 "banked_days"` (`days`, the referrer's `step`) or `"credits"` —
@@ -1356,23 +1382,27 @@ list of steps: `days` / `credits` / `none`), `tail`, `caps {friendsPerMonth}`.
 the ladder step by step (add / remove, the tail) with a confirm.
 
 **The pages.** `/dashboard/referrals`: the link box ("7 free days toward a
-plan…"), four steps (share → 5 cards in 30 days → a plan with a card on
-file → the rewards), the LADDER with the earned steps ticked and the next
-one marked, the two-bar counts, the friends-this-month count, the
-viewer's bank with a link to Apply, and the friends table (status, the
-reward and its step). The sign-up / onboarding note and every share
-surface carry the two bars (`/api/referrals/share` answers `cardsRequired`
-/ `windowDays` beside `friendGets`). `/admin/analytics` → Referrals → "Referrals and the
-days bank": the chain (signed up → cards → plan → rewarded, capped, blocked,
-expired, waiting, grants owed, credits through the ladder) for 30 days and
+plan…"), three steps (share → 5 cards with artwork in 30 days → the
+rewards), the LADDER with the earned steps ticked and the next one marked,
+the counts (joined, saved their cards, rewards earned, rewarded this
+month), the viewer's bank with a link to Apply, and the friends table
+(status, the reward and its step). The sign-up / onboarding note and every
+share surface say "once you've saved your first cards"
+(`/api/referrals/share` answers `cardsRequired` / `windowDays` beside
+`friendGets`). `/admin/analytics` → Referrals → "Referrals and the days
+bank": the chain (signed up → cards → rewarded; started a plan as what
+came of it; capped, blocked, expired, waiting, grants owed, credits
+through the ladder) for 30 days and
 all time, the top referrers with their step, the last 30 days day by day,
 referrers by rewarded count, and the days bank's ledger (banked / reserved
 / applied at checkout or to a plan / revoked, users with days waiting, the
 signup entries' fate, by source) — `admin_referral_stats` v2.
 
-**The sweep** (`/api/cron/referral-rewards`, hourly): advances every
-`cards_saved` row (the plan may have arrived while the program was off, an
-email got confirmed), expires signups past the window, catches a stranded
+**The sweep** (`/api/cron/referral-rewards`, hourly): judges every
+`cards_saved` row again, oldest first (the program came back on, an email
+got confirmed, a lookup that failed works now; a friend whose account is
+gone is settled as blocked, so no row waits for ever), expires signups
+past the window, catches a stranded
 signup whose friend has the cards, retries owed sides (the row's own
 ladder step, never step 1 again), and releases the bank's stale
 reservations.

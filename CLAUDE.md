@@ -1827,32 +1827,44 @@ Rules and gotchas:
   onboarding) — never a cookie — and the referral row is written at
   ONBOARDING, the first step with a CONFIRMED email (never at signup: GoTrue
   hands an unconfirmed address the same user id). A referral QUALIFIES on
-  TWO bars (owner 2026-11-06): the friend saves `activation.cardsRequired`
-  cards (5) within `activation.windowDays` (30) — EVERY save runs
-  `advanceReferral` in `after()` (`lib/cards/actions.ts`; `cards_saved_at`,
-  status `cards_saved` = 0177's `first_card`) — AND starts a plan with a
-  CARD ON FILE (`customer.subscription.created` runs it too,
-  `card_on_file_at`). Then the reward at once: both emails confirmed, the
-  fraud rules, one email one reward ever (`lib/referrals/fraud.ts`, the
-  keyed fingerprint under `REFERRAL_EMAIL_HASH_KEY`, fail closed), the
-  claim `claim_referral_reward_v2` (the friends cap ONLY — referrals are
-  unlimited — and the referrer's LADDER STEP under the named lock
-  `hashtext('pipglyph.referrals')`). Rewards are DAYS INTO THE BANK
+  the friend's CARDS ALONE (owner 2026-11-11, migration 0208 — until then it
+  also took a plan with a card on file, and 2 % of sign-ups ever met that):
+  the friend saves `activation.cardsRequired` cards (5) WITH ARTWORK within
+  `activation.windowDays` (30) — EVERY save runs `advanceReferral` in
+  `after()` (`lib/cards/actions.ts`; `QUALIFYING_CARD` = `art_url` set, the
+  same count in `referrals_stranded_signups` and `admin_referred_friends`;
+  `cards_saved_at`, status `cards_saved` = 0177's `first_card`). Never bring
+  a plan or a card back as a condition without the owner: a banked day can
+  only be used by starting a plan, which asks for the card.
+  `card_on_file_at` is a FACT (`noteReferralPlan`, on
+  `customer.subscription.created`: how many friends became subscribers) and
+  gates nothing. Then the reward at once: both emails confirmed — the one
+  identity check left, kept; a lookup that FAILS is a wait (`check_failed`),
+  never "unconfirmed" — the fraud rules, one email one referral ever
+  (`lib/referrals/fraud.ts`, the keyed fingerprint under
+  `REFERRAL_EMAIL_HASH_KEY`, fail closed), no two accounts referring each
+  other (`recordReferralSignup`: `reciprocal`), the claim
+  `claim_referral_reward_v2` (the friends cap ONLY — every rewarded row of
+  the month counts, 0208 — and the referrer's LADDER STEP under the named
+  lock `hashtext('pipglyph.referrals')`). Rewards are DAYS INTO THE BANK
   (`bankDays`: the friend `friend.days` under `referral:<id>:referee`, the
   referrer the ladder's step N under `referral-step:<referrer>:<step>` —
   1: 7d, 2: 5 credits, 3: 7d, 4: 10cr, 5: 14d, 6: 20cr, 7: 21d, 8: 50cr,
   9: 21d, 10: 30d, then the tail 7d each; credits through `grant_credits`
   under the same key) — never a tier, never credits with days, no money
-  ever. The friend's qualifying checkout banks their days FIRST
-  (`preBankFriendDays` before `prepareCheckoutBank`) so that checkout
-  applies them; later days wait for the user's own Apply. WHAT each side
+  ever. Both sides' days are banked at the claim, i.e. when the cards are
+  saved: a first checkout after that applies them; days that arrive later
+  wait for the user's own Apply (nothing is pre-banked at a checkout any
+  more). The cap and the tail are what bound made-up friends now
+  (`docs/BILLING.md` "What stands between…"). WHAT each side
   gets is a SETTING (`site_settings` key `referrals`, v2 shape:
   `activation`, `friend {days}`, `ladder[]`, `tail`, `caps
   {friendsPerMonth}`; edited on `/admin/analytics` (the Referrals tab), read
   at grant time).
   Every surface says "free days", never "a free month". Users read their
-  rows through a COLUMN grant (the two stamps and the step; no fraud
-  reason, no Stripe detail); writes are the service role's. The admin
+  rows through a COLUMN grant (the stamps and the step; no fraud reason, no
+  Stripe detail — the app reads the cards stamp only, never whether a
+  friend went on to subscribe); writes are the service role's. The admin
   panel ("Referrals and the days bank", `admin_referral_stats` v2) shows
   the chain, per-day counts, the ladder's distribution and the bank's
   ledger. Nothing runs with billing off. The Referred friends table's
@@ -1860,13 +1872,13 @@ Rules and gotchas:
   by 0206) says what each side was given or WHY a side has nothing yet:
   `referralRewardWords` (`lib/admin/analytics/referral-rewards.ts`, pure) is
   the reward step's own conditions in its order (billing off first —
-  nothing moves and no sweep runs — then the cards inside the window, a
-  card on file, the program's switch, both emails, the hash key; then a
+  nothing moves and no sweep runs — then the cards with artwork inside the
+  window, the program's switch, both emails, the hash key; then a
   failed grant, a side recorded `none`) — a condition added to or taken
   from `rewardReferral` / `advanceReferral` changes there in the same PR.
   It says "the hourly check does it" only of what `sweepReferralRewards`
   really picks up, a friend whose account is gone is an end (`none`), and a
-  row with both bars met for over two hours reads as FAILING, never fine.
+  row whose cards have stood for over two hours reads as FAILING, never fine.
   An admin page names a fraud reason; the referrer's dashboard never does.
 - Saved-card capacity is enforced in the DATABASE (migration 0104:
   `card_capacity_for()` + the `cards_enforce_capacity` trigger, advisory-locked

@@ -4,16 +4,18 @@
 --
 --   Codes — every seeded account has a fixed code (dev_free: d0000003, so
 --     its link is /?ref=d0000003).
---   dev_pro → dev_artist   REWARDED 10 days ago (v2): dev_artist saved the
---     cards and started a plan; 7 days are banked for dev_artist
+--   dev_pro → dev_artist   REWARDED 10 days ago (v2, under the two-bar rule
+--     of the time): dev_artist saved the cards and started a plan; 7 days
+--     are banked for dev_artist
 --     (referral_friend) and dev_pro took ladder step 1 — 7 days banked
 --     (referral_step). The bank rows are in this file (the day_bank_entries
 --     table is 0179's); nothing on Stripe.
---   dev_free → dev_new     SIGNED UP, no cards yet: sign in as dev_new, save
---     five cards and start a plan (the preview's sandbox Checkout) to watch
---     both rewards land and the two referral_reward notifications. (Seeded
---     emails are confirmed; the reward needs REFERRAL_EMAIL_HASH_KEY set,
---     else it waits.)
+--   dev_free → dev_new     SIGNED UP, no cards yet: sign in as dev_new and
+--     save five cards WITH ARTWORK to watch both rewards land and the two
+--     referral_reward notifications — no plan and no Checkout is needed
+--     since 0208 (owner 2026-11-11: a referral rewards on the friend's cards
+--     alone). (Seeded emails are confirmed; the reward needs
+--     REFERRAL_EMAIL_HASH_KEY set, else it waits.)
 --   dev_pro's referral_reward notification for the first row.
 --
 -- Runs after 36_*.sql (config.toml → [db.seed] sql_paths, filename order).
