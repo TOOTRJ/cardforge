@@ -16,7 +16,10 @@
 
 import { DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
 
-import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
+import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED, SIGNUP_BANK_DAYS } from "@/lib/billing/plans";
+import { REFERRAL_CODE_KEEP_DAYS } from "@/lib/analytics/attribution";
+import { REFERRAL_CLAIM_WINDOW_DAYS } from "@/lib/referrals/rules";
+import { DEFAULT_REFERRAL_SETTINGS, friendRewardPhrase, rewardStepPhrase } from "@/lib/referrals/settings";
 
 export type FaqEntry = {
   /** The answer's anchor in the help centre (/help/<section>#<id>), stable
@@ -366,6 +369,55 @@ const CREDITS_FAQ: FaqEntry[] = [
   },
 ];
 
+// --- Refer a friend (help centre only) --------------------------------------
+//
+// The numbers are the program's DEFAULT settings (lib/referrals/settings.ts)
+// — what production runs. An admin can change the live settings without a
+// deploy, so every answer that names a reward also points at the Refer a
+// friend page, which reads the live ones; change the defaults and these
+// sentences follow (tests/unit/content/help.test.ts holds them together).
+
+const REFERRALS = DEFAULT_REFERRAL_SETTINGS;
+const referralFriendGets = friendRewardPhrase(REFERRALS);
+const referralCards = REFERRALS.activation.cardsRequired;
+const referralWindow = REFERRALS.activation.windowDays;
+const referralLadder = REFERRALS.ladder.map(rewardStepPhrase);
+const referralLadderDays = REFERRALS.ladder.reduce((sum, step) => sum + (step.kind === "days" ? step.days : 0), 0);
+const referralLadderCredits = REFERRALS.ladder.reduce((sum, step) => sum + (step.kind === "credits" ? step.amount : 0), 0);
+
+export const REFERRALS_FAQ: FaqEntry[] = [
+  {
+    id: "how-referrals-work",
+    q: "How does Refer a friend work?",
+    a: `Every PipGlyph account has its own referral link, on the Refer a friend page of your dashboard. Share it: when a friend creates an account through it and saves their first ${referralCards} cards, each with artwork of its own, within ${referralWindow} days of signing up, you are both rewarded. Your friend gets ${referralFriendGets} of a paid plan and you get the next reward on your referral ladder. Nobody has to start a plan or add a payment card to earn a reward. While you're signed in, the share buttons on card and deck pages add your code to the link for you.`,
+  },
+  {
+    id: "referral-rewards",
+    q: "What do I get for referring a friend?",
+    a: `Your rewards climb a ladder, one step for each friend whose referral counts: ${referralLadder.slice(0, -1).join(", ")} and then ${referralLadder[referralLadder.length - 1]}. That is ${referralLadderDays} free days and ${referralLadderCredits} AI credits over your first ${referralLadder.length} friends, and every friend after that brings ${rewardStepPhrase(REFERRALS.tail)} more. Each friend gets ${referralFriendGets} as well, on top of the ${SIGNUP_BANK_DAYS} every new account starts with. Your Refer a friend page shows the ladder and where you stand on it.`,
+  },
+  {
+    id: "when-a-referral-counts",
+    q: "When does a referral count?",
+    a: `A referral counts once your friend has saved ${referralCards} cards with artwork within ${referralWindow} days of creating their account. Each picture counts once: art they upload, generate with AI or take from a real card all count, but the same picture on several cards counts as one card, and a card with no art doesn't count. Both of you need a confirmed email address. The reward usually arrives within minutes of the last card being saved, and you each get a notification. Your friend never has to pay or add a payment card for it to count.`,
+  },
+  {
+    id: "use-free-days",
+    q: "How do I use the free days I earned?",
+    a: "Free days wait in your days bank, shown on the Billing page of your dashboard. To use them, start a Plus or Pro plan: checkout asks for a payment card and your banked days become the plan's free period, so nothing is charged until they end. If you already have a plan, press Apply beside your banked days on the Billing page and your next charge moves out by that many days. The days work on whichever plan you pick. When they run out the plan bills at its usual price unless you cancel first. AI credits from the ladder need no plan: they go straight into your balance.",
+  },
+  {
+    id: "referral-limits",
+    q: "Is there a limit on how many friends I can refer?",
+    a: `You can share your link with as many people as you like, and up to ${REFERRALS.caps.friendsPerMonth} friends can be rewarded in one calendar month (counted in UTC). Past that, a friend who qualifies in the same month earns neither of you a reward. A person can be referred once, by one account, and only as a new member: someone who already has a PipGlyph account can't be referred later. You can't refer yourself, and two accounts can't refer each other.`,
+  },
+  {
+    id: "add-a-referral-code",
+    q: "I signed up without my friend's link. Can I still add their code?",
+    a: `Yes, while your account is new. For your first ${REFERRAL_CLAIM_WINDOW_DAYS} days, the Refer a friend page shows a “Joined because of a friend?” box: type your friend's code or paste their whole link. A field for it also appears on the last step of setting up a new account, unless you arrived through a friend's link already. Both are there for accounts that have no referral yet and haven't started a plan, and an account can have one referral. PipGlyph also remembers a friend's link you opened for ${REFERRAL_CODE_KEEP_DAYS} days in the same browser, so signing up a day later still counts.`,
+  },
+];
+
 // --- Choosing a card maker (rendered on /best-mtg-card-makers) --------------
 
 export const COMPARISON_FAQ: FaqEntry[] = [
@@ -444,6 +496,7 @@ export const FAQ_TOPICS: FaqTopic[] = [
   // Topics the help centre added (no /faq anchor ever pointed at them).
   { slug: "decks", title: "Decks", entries: DECKS_FAQ },
   { slug: "credits", title: "AI credits", entries: CREDITS_FAQ },
+  { slug: "referrals", title: "Refer a friend", entries: REFERRALS_FAQ },
 ];
 
 export function allFaqEntries(): FaqEntry[] {

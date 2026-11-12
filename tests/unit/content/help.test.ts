@@ -1,7 +1,13 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { HELP_SECTION_ICONS } from "@/components/content/help-icons";
 import { DECK_AI_PAUSED, DECK_AI_PAUSED_MESSAGE } from "@/lib/ai/deck-ai-pause";
-import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED } from "@/lib/billing/plans";
+import { CARD_CAPACITY, CARD_CAPACITY_UNLIMITED, SIGNUP_BANK_DAYS } from "@/lib/billing/plans";
+import { REFERRAL_CLAIM_WINDOW_DAYS } from "@/lib/referrals/rules";
+import { DEFAULT_REFERRAL_SETTINGS, rewardStepPhrase } from "@/lib/referrals/settings";
+import { REFERRAL_CODE_KEEP_DAYS } from "@/lib/analytics/attribution";
+import { siteConfig } from "@/lib/site-config";
 import {
   AI_GENERATOR_FAQ,
   allFaqEntries,
@@ -9,6 +15,7 @@ import {
   COMPARISON_FAQ,
   FAQ_TOPICS,
   MANA_PIP_FAQ,
+  REFERRALS_FAQ,
 } from "@/lib/content/faq";
 import {
   faqEntryById,
@@ -296,5 +303,92 @@ describe("answers that follow the product", () => {
     expect(getHelpSection("decks")!.howTo!.steps.map((step) => step.body).join("\n")).toContain(
       "Importing uses none of your saved-card slots",
     );
+  });
+
+  describe("Refer a friend (owner 2026-11-11: the cards-only rule, the typed code)", () => {
+    const answer = (id: string) => faqEntryById(id)!.a;
+    const all = REFERRALS_FAQ.map((entry) => `${entry.q}\n${entry.a}`).join("\n");
+    const settings = DEFAULT_REFERRAL_SETTINGS;
+    const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+
+    it("is one group of six answers under Sharing & community", () => {
+      const group = getHelpSection("sharing-and-community")!.groups.find((g) => g.id === "refer-a-friend")!;
+      expect(group.title).toBe("Refer a friend");
+      expect(group.entryIds).toEqual(REFERRALS_FAQ.map((entry) => entry.id));
+      expect(group.entryIds).toEqual([
+        "how-referrals-work",
+        "referral-rewards",
+        "when-a-referral-counts",
+        "use-free-days",
+        "referral-limits",
+        "add-a-referral-code",
+      ]);
+      for (const entry of REFERRALS_FAQ) expect(helpSectionOf(entry.id)?.slug, entry.id).toBe("sharing-and-community");
+    });
+
+    it("names the program's own numbers (lib/referrals/settings.ts) — the bar, the friend's days, the cap", () => {
+      const { cardsRequired, windowDays } = settings.activation;
+      expect(answer("how-referrals-work")).toContain(`saves their first ${cardsRequired} cards, each with artwork of its own, within ${windowDays} days of signing up`);
+      expect(answer("how-referrals-work")).toContain(`Your friend gets ${settings.friend.days} free days`);
+      expect(answer("when-a-referral-counts")).toContain(`saved ${cardsRequired} cards with artwork within ${windowDays} days`);
+      expect(answer("referral-limits")).toContain(`up to ${settings.caps.friendsPerMonth} friends can be rewarded in one calendar month`);
+      // What production runs today (read 2026-11-11): the numbers as a reader sees them.
+      expect([cardsRequired, windowDays, settings.friend.days, settings.caps.friendsPerMonth]).toEqual([5, 30, 7, 5]);
+    });
+
+    it("spells the ladder out step by step, with totals that add up", () => {
+      const ladder = answer("referral-rewards");
+      const steps = settings.ladder.map(rewardStepPhrase);
+      expect(steps).toHaveLength(10);
+      // Every step, in order.
+      let from = 0;
+      for (const phrase of steps) {
+        const at = ladder.indexOf(phrase, from);
+        expect(at, phrase).toBeGreaterThanOrEqual(from);
+        from = at + phrase.length;
+      }
+      const days = settings.ladder.reduce((sum, step) => sum + (step.kind === "days" ? step.days : 0), 0);
+      const credits = settings.ladder.reduce((sum, step) => sum + (step.kind === "credits" ? step.amount : 0), 0);
+      expect([days, credits]).toEqual([100, 85]);
+      expect(ladder).toContain(`That is ${days} free days and ${credits} AI credits over your first ${steps.length} friends`);
+      expect(ladder).toContain(`every friend after that brings ${rewardStepPhrase(settings.tail)} more`);
+      expect(ladder).toContain(`on top of the ${SIGNUP_BANK_DAYS} every new account starts with`);
+    });
+
+    it("says nobody needs a plan or a payment card to EARN a reward — only to use the free days", () => {
+      expect(answer("how-referrals-work")).toContain("Nobody has to start a plan or add a payment card to earn a reward.");
+      expect(answer("when-a-referral-counts")).toContain("Your friend never has to pay or add a payment card for it to count.");
+      expect(answer("use-free-days")).toMatch(/start a Plus or Pro plan: checkout asks for a payment card/);
+      expect(answer("use-free-days")).toContain("AI credits from the ladder need no plan");
+      // The retired rule (a plan with a card on file before anyone was rewarded) is in none of them.
+      expect(all).not.toMatch(/card on file|starts? a (paid )?plan (and|with)|once (they|your friend) subscribe/i);
+    });
+
+    it("says free DAYS, never a free month", () => {
+      expect(all).not.toMatch(/free months?|a month free|months? of (Plus|Pro)/i);
+    });
+
+    it("names the typed code's window and the remembered link's days from their constants", () => {
+      expect(answer("add-a-referral-code")).toContain(`For your first ${REFERRAL_CLAIM_WINDOW_DAYS} days`);
+      expect(answer("add-a-referral-code")).toContain(`remembers a friend's link you opened for ${REFERRAL_CODE_KEEP_DAYS} days in the same browser`);
+      expect([REFERRAL_CLAIM_WINDOW_DAYS, REFERRAL_CODE_KEEP_DAYS]).toEqual([14, 30]);
+    });
+
+    it("is linked from the Refer a friend page — at an anchor that exists", () => {
+      expect(helpEntryHref("how-referrals-work")).toBe("/help/sharing-and-community#how-referrals-work");
+      const page = source("app/(app)/dashboard/referrals/page.tsx");
+      expect(page).toContain('helpEntryHref("how-referrals-work")');
+      expect(page).toContain("Questions and answers about referrals");
+    });
+
+    it("quotes the screen's own labels", () => {
+      expect(siteConfig.dashboardNav.map((item) => item.label)).toEqual(expect.arrayContaining(["Refer a friend", "Billing"]));
+      expect(all).toContain("Refer a friend page");
+      expect(all).toContain("Billing page");
+      expect(answer("add-a-referral-code")).toContain("“Joined because of a friend?”");
+      expect(source("components/referrals/referral-code-entry.tsx")).toContain(">Joined because of a friend?<");
+      expect(source("components/billing/apply-bank-button.tsx")).toMatch(/Apply \{days\} banked day/);
+      expect(answer("use-free-days")).toContain("press Apply beside your banked days");
+    });
   });
 });

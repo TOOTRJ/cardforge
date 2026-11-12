@@ -21,6 +21,7 @@ import type { ReferralRow } from "@/lib/referrals/summary";
 import { ladderProgressLine, ladderProgressOf } from "@/lib/referrals/ladder-progress";
 import { buildLadderView } from "@/lib/referrals/ladder-view";
 import { REFERRAL_STATUS_LABELS, type ReferralStatus } from "@/lib/referrals/rules";
+import { helpEntryHref } from "@/lib/content/help";
 
 export const metadata: Metadata = {
   title: "Refer a friend",
@@ -45,6 +46,9 @@ export const metadata: Metadata = {
 // place themselves: the link (top of the rail), the main column (spanning
 // both rail rows) and the rest of the rail.
 // ---------------------------------------------------------------------------
+
+/** The help centre's answers about referrals (its first one's anchor). */
+const REFERRAL_HELP_HREF = helpEntryHref("how-referrals-work") ?? "/help";
 
 const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "gold" | "outline" | "danger"> = {
   signed_up: "outline",
@@ -220,6 +224,11 @@ export default async function ReferralsPage() {
                   {` ${friendGets} go into their bank, and you get your next step on the ladder. Nobody has to start a plan or add a card to earn it.`}
                 </li>
               </ol>
+              <p className="text-sm text-muted">
+                <Link href={REFERRAL_HELP_HREF} className="text-primary-bright underline-offset-4 hover:underline">
+                  Questions and answers about referrals
+                </Link>
+              </p>
             </SurfaceCard>
           ) : null}
 
