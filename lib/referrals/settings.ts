@@ -14,13 +14,15 @@ import { z } from "zod";
 //               nothing, and a qualified friend rewards nobody until it is
 //               on again (the row waits). Rewards already given stay.
 //   activation  what a friend must do for the referral to QUALIFY: save
-//               `cardsRequired` cards within `windowDays` of signing up AND
-//               start a plan with a card on file (their first checkout —
-//               lib/referrals/server.ts; the card is the fraud bar).
+//               `cardsRequired` cards WITH ARTWORK within `windowDays` of
+//               signing up — and nothing else (owner 2026-11-11: no plan,
+//               no card; lib/referrals/server.ts). The card used to be the
+//               fraud bar; the friends cap below is what bounds made-up
+//               friends now.
 //   friend      days BANKED for the friend when the referral qualifies
-//               (lib/billing/day-bank.ts: applied with their first checkout
-//               when that is the qualifying moment, else waiting in their
-//               bank). 0 = nothing.
+//               (lib/billing/day-bank.ts: applied when they start a plan,
+//               or from their billing page on a plan already live).
+//               0 = nothing.
 //   ladder      the referrer's reward per QUALIFIED referral, by count:
 //               step 1 for the first, step 2 for the second … — days into
 //               their bank, AI credits at once, or nothing. Past the ladder

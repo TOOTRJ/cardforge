@@ -61,6 +61,10 @@ describe("ReferralLinkBox", () => {
     });
     expect(writeText).toHaveBeenCalledWith(body);
     expect(body).toContain("30 free days of Plus");
+    // The friend earns them for their CARDS (owner 2026-11-11): no plan is a
+    // condition, so the message promises none.
+    expect(body).toContain("you get 30 free days of Plus toward a plan once you've saved your first cards.");
+    expect(body).not.toMatch(/started one|start a plan|card on file/);
     expect(body.endsWith(LINK)).toBe(true);
     expect(toast.success).toHaveBeenCalledWith("The message and your link are copied — paste them into any email or chat.");
     expect(screen.getByRole("button", { name: "Message copied" })).toBeTruthy();

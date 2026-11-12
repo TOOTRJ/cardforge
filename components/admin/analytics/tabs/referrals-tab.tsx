@@ -21,8 +21,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // ---------------------------------------------------------------------------
 // /admin/analytics — the Referrals tab. Top to bottom:
 //   1. the period's four numbers against the period before: friends
-//      referred, saved the cards, card on file, rewarded — each counted by
-//      its own date;
+//      referred, saved the cards, rewarded — and started a plan, which is
+//      what came of the referral, not a step toward its reward (owner
+//      2026-11-11) — each counted by its own date;
 //   2. friends referred per day;
 //   3. WHO WAS REFERRED, with their data (owner 2026-11-10) — a page of 50,
 //      each row saying what both sides were given or why a side has
@@ -90,7 +91,7 @@ export function ReferralsTabView({
     <div className="flex flex-col gap-6">
       <Section
         title={`Referrals in ${periodLabel(params.days)}`}
-        description={`A referral rewards both sides once the friend has saved ${cards} within ${windowDays} days of joining and started a plan with a card on file. Each number counts the friends who reached that step in the period, whenever they joined.`}
+        description={`A referral rewards both sides once the friend has saved ${cards} with artwork within ${windowDays} days of joining. No plan is needed for the reward; "Started a plan" counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.`}
       >
         {stats ? (
           <KpiRow className="md:grid-cols-4 xl:grid-cols-4">
@@ -108,15 +109,7 @@ export function ReferralsTabView({
               current={stats.current.cardsSaved}
               previous={stats.previous.cardsSaved}
               previousLabel={before}
-              hint={`Within ${windowDays} days of joining`}
-            />
-            <KpiTile
-              label="Card on file"
-              value={formatCount(stats.current.cardOnFile)}
-              current={stats.current.cardOnFile}
-              previous={stats.previous.cardOnFile}
-              previousLabel={before}
-              hint="Started a plan"
+              hint={`With artwork, within ${windowDays} days of joining`}
             />
             <KpiTile
               label="Rewarded"
@@ -125,6 +118,14 @@ export function ReferralsTabView({
               previous={stats.previous.rewarded}
               previousLabel={before}
               hint="Both sides got their reward"
+            />
+            <KpiTile
+              label="Started a plan"
+              value={formatCount(stats.current.cardOnFile)}
+              current={stats.current.cardOnFile}
+              previous={stats.previous.cardOnFile}
+              previousLabel={before}
+              hint="Became a subscriber — not needed for the reward"
             />
           </KpiRow>
         ) : (

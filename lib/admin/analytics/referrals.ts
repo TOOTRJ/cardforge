@@ -10,10 +10,11 @@ import { countByDay, type DayPoint } from "@/lib/admin/analytics/series";
 // /admin/analytics — the Referrals tab's own data (2026-11).
 //
 // Two reads beside the panel's (lib/admin/referral-queries.ts):
-//   - the PERIOD's numbers: friends referred, saved the cards, card on file,
-//     rewarded — for the period and the one before it, each counted by ITS
-//     OWN timestamp on the `referrals` rows (a friend who signed up last
-//     month and started a plan this week is this week's "card on file").
+//   - the PERIOD's numbers: friends referred, saved the cards, rewarded, and
+//     started a plan (a fact since 2026-11-11: a referral rewards on the
+//     cards alone) — for the period and the one before it, each counted by
+//     ITS OWN timestamp on the `referrals` rows (a friend who signed up last
+//     month and started a plan this week is this week's "started a plan").
 //     admin_referral_stats' per-day list covers 30 days only, so the rows
 //     are read directly, every one of them (selectAllRows);
 //   - WHO WAS REFERRED (owner 2026-11-10): 0202's admin_referred_friends, a
@@ -39,7 +40,8 @@ export type ReferralStepCounts = {
   signedUp: number;
   /** Friends who saved the cards the program asks for. */
   cardsSaved: number;
-  /** Friends who started a plan with a card on file. */
+  /** Friends who started a plan with a card on file — what came of the
+   *  referral, not a step toward its reward. */
   cardOnFile: number;
   /** Referrals that rewarded both sides. */
   rewarded: number;
@@ -140,8 +142,6 @@ export type RewardSideFacts = {
   step: number | null;
   /** Why the side got nothing (a 'none' side's detail). */
   reason: string | null;
-  /** The friend's pre-banked days were already used by their checkout. */
-  spent: boolean;
 };
 
 export type ReferralRewardFacts = {
@@ -152,8 +152,12 @@ export type ReferralRewardFacts = {
   /** Null = unknown (the account is gone). */
   friendEmailConfirmed: boolean | null;
   referrerEmailConfirmed: boolean | null;
-  /** The friend holds a subscription Stripe only gives with a card. */
+  /** The friend holds a subscription Stripe only gives with a card — a fact
+   *  since 2026-11-11, no longer a condition of the reward. */
   friendHasPlan: boolean | null;
+  /** The friend's cards WITH ARTWORK: the ones a referral counts (0208).
+   *  Null on a database before 0208 — the page then reads every card. */
+  friendQualifyingCards: number | null;
 };
 
 export type ReferredFriendsPage = {
@@ -180,7 +184,6 @@ function sideFacts(kind: unknown, detail: unknown): RewardSideFacts {
     credits: positive(d.credits),
     step: positive(d.step),
     reason: text(d.reason),
-    spent: d.spent === true,
   };
 }
 
@@ -195,6 +198,7 @@ function rewardFacts(o: Record<string, unknown>): ReferralRewardFacts | null {
     friendEmailConfirmed: flag(o.referee_email_confirmed),
     referrerEmailConfirmed: flag(o.referrer_email_confirmed),
     friendHasPlan: flag(o.referee_has_plan),
+    friendQualifyingCards: "referee_art_cards" in o ? num(o.referee_art_cards) : null,
   };
 }
 
@@ -252,6 +256,8 @@ export function referralStandingText(status: string, blockReason: string | null,
     case "signed_up":
       return "Signed up";
     case "cards_saved":
+      // Qualified since 2026-11-11 (no plan is waited for): a row still
+      // here is waiting for the claim — the Rewards column says on what.
       return `Saved ${cardsRequired} ${cardsRequired === 1 ? "card" : "cards"}`;
     case "first_card":
       // 0177's bar: one card.

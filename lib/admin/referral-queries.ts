@@ -6,7 +6,8 @@ import { requireAdminClient } from "./users-queries";
 // The admin Referrals panel's data (the Referrals tab of /admin/analytics):
 // 0180's admin_referral_stats() for the last 30 days and all time, parsed
 // defensively (it is jsonb) by parseReferralStats — pure, unit-tested. The
-// v2 shape adds the second bar (card on file), the per-day chain, the
+// v2 shape adds "started a plan" (card on file — a fact since 2026-11-11,
+// when a referral came to qualify on the cards alone), the per-day chain, the
 // ladder's distribution and credits, and the days bank (owner 2026-11-06:
 // "good detailed stats and analytics for the admin on the referrals and
 // days banked").
@@ -189,7 +190,9 @@ export function activationRate(w: Pick<ReferralStatsWindow, "signedUp" | "cardsS
   return w.signedUp > 0 ? Math.round((w.cardsSaved / w.signedUp) * 100) : null;
 }
 
-/** Signups that went on to qualify (cards + a card on file), as a whole percent. */
+/** Signups that went on to START A PLAN, as a whole percent — what came of
+ *  the referrals. Not "qualified" any more (owner 2026-11-11): a referral
+ *  qualifies on the cards, which is activationRate. */
 export function qualificationRate(w: Pick<ReferralStatsWindow, "signedUp" | "cardOnFile">): number | null {
   return w.signedUp > 0 ? Math.round((w.cardOnFile / w.signedUp) * 100) : null;
 }

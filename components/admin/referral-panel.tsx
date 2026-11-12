@@ -33,12 +33,12 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
   const rows: Array<{ label: string; d30: number; all: number }> = [
     { label: "Signed up through a link", d30: last30.signedUp, all: allTime.signedUp },
     { label: "Saved the cards", d30: last30.cardsSaved, all: allTime.cardsSaved },
-    { label: "Started a plan (card on file)", d30: last30.cardOnFile, all: allTime.cardOnFile },
     { label: "Rewarded (both sides)", d30: last30.rewarded, all: allTime.rewarded },
+    { label: "Started a plan (not needed for the reward)", d30: last30.cardOnFile, all: allTime.cardOnFile },
     { label: "Capped (friends a month)", d30: last30.capped, all: allTime.capped },
     { label: "Blocked", d30: last30.blocked, all: allTime.blocked },
     { label: "Expired (no cards in the window)", d30: last30.expired, all: allTime.expired },
-    { label: "Waiting (cards saved, no plan or email yet)", d30: last30.waiting, all: allTime.waiting },
+    { label: "Waiting (cards saved, reward not given yet)", d30: last30.waiting, all: allTime.waiting },
     { label: "Rewards granted (both sides)", d30: last30.rewardsGranted, all: allTime.rewardsGranted },
     { label: "AI credits through the ladder", d30: last30.ladderCredits, all: allTime.ladderCredits },
   ];
@@ -56,8 +56,8 @@ export function ReferralPanel({ summary, settings }: { summary: ReferralStatsSum
           <h2 className="font-display text-base font-semibold text-foreground">Referrals and the days bank</h2>
         </div>
         <span className="text-xs text-muted">
-          Signup windows: last 30 days and all time · 30d cards saved {rate30 == null ? "—" : `${rate30}%`} · qualified{" "}
-          {qual30 == null ? "—" : `${qual30}%`}
+          Signup windows: last 30 days and all time · 30d cards saved {rate30 == null ? "—" : `${rate30}%`} · went on to a
+          plan {qual30 == null ? "—" : `${qual30}%`}
         </span>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

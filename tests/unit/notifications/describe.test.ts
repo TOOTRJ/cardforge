@@ -76,23 +76,32 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     const d = (type: string, payload: Record<string, unknown>) =>
       describeNotification({ type, actor, card: null, threadId: null, payload }, { isAdmin: false });
     // referral_signup is sent ONLY when a qualified friend earned the
-    // referrer no reward — never a fraud reason, never a promise.
+    // referrer no reward — never a fraud reason, never a promise. A friend
+    // qualifies on their cards alone (owner 2026-11-11): no plan is named.
     expect(d("referral_signup", { referralId: "r1", outcome: "not_eligible" })).toMatchObject({
-      body: "joined PipGlyph with your referral link and qualified (cards saved, a plan started). This referral isn't eligible for a reward.",
+      body: "joined PipGlyph with your referral link and saved their first cards. This referral isn't eligible for a reward.",
       href: "/dashboard/referrals",
     });
-    expect(d("referral_signup", { referralId: "r1", outcome: "capped_friends" }).body).toContain("no reward on either side");
+    expect(d("referral_signup", { referralId: "r1", outcome: "capped_friends" }).body).toBe(
+      "joined PipGlyph with your referral link and saved their first cards. You've reached this month's limit of rewarded friends, so this one earns no reward on either side.",
+    );
     // v2 (0180): days into the bank, the referrer's ladder step named.
     expect(d("referral_reward", { side: "referrer", reward: "banked_days", days: 7, step: 3 })).toMatchObject({
-      body: "saved their first cards and started a plan — referral #3 — 7 free days are in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!",
+      body: "saved their first cards — referral #3 — 7 free days are in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!",
       href: "/dashboard/referrals",
     });
+    // One day is "is", on both sides.
+    expect(d("referral_reward", { side: "referrer", reward: "banked_days", days: 1, step: 1 }).body).toBe(
+      "saved their first cards — referral #1 — 1 free day is in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!",
+    );
+    expect(d("referral_reward", { side: "referee", reward: "banked_days", days: 1 }).body).toMatch(/^invited you to PipGlyph — 1 free day is in your bank for saving your first cards\./);
+    // The friend's days are for the cards; a plan is how they are USED.
     expect(d("referral_reward", { side: "referee", reward: "banked_days", days: 7 })).toMatchObject({
-      body: "invited you to PipGlyph — 7 free days are in your bank for saving your first cards and starting a plan. They're your plan's free time; apply them any time from your billing page.",
+      body: "invited you to PipGlyph — 7 free days are in your bank for saving your first cards. They're a plan's free time: starting a plan applies them, or apply them any time from your billing page.",
       href: "/dashboard/billing#banked-days",
     });
     expect(d("referral_reward", { side: "referrer", reward: "credits", credits: 5, step: 2 }).body).toBe(
-      "saved their first cards and started a plan — referral #2 — you've earned 5 AI credits. Thanks for spreading the word!",
+      "saved their first cards — referral #2 — you've earned 5 AI credits. Thanks for spreading the word!",
     );
     // The 0177 shapes still read.
     expect(d("referral_reward", { side: "referrer", reward: "free_days", tier: "pro", days: 30, until: "2027-01-04T09:00:00Z", holdEndsAt: "2027-01-04T09:00:00Z" }).body).toBe(
@@ -105,6 +114,33 @@ describe("describeNotification — one copy source for bell, page and toast", ()
     for (const body of [d("referral_signup", { outcome: "capped_friends" }).body, d("referral_reward", { side: "referee", reward: "banked_days", days: 30 }).body]) {
       expect(body).not.toMatch(/free month/);
     }
+  });
+
+  it("no referral notification makes a plan a condition: the friend's cards are what earned it", () => {
+    const d = (type: string, payload: Record<string, unknown>) =>
+      describeNotification({ type, actor, card: null, threadId: null, payload }, { isAdmin: false }).body;
+    const bodies = [
+      ...["not_eligible", "capped_month", "capped_lifetime", "capped_friends", "something_new"].map((outcome) => d("referral_signup", { referralId: "r1", outcome })),
+      d("referral_signup", {}),
+      d("referral_reward", { side: "referrer", reward: "banked_days", days: 7, step: 1 }),
+      d("referral_reward", { side: "referrer", reward: "banked_days", days: 1 }),
+      d("referral_reward", { side: "referee", reward: "banked_days", days: 7 }),
+      d("referral_reward", { side: "referee", reward: "banked_days", days: 1 }),
+      d("referral_reward", { side: "referrer", reward: "credits", credits: 5, step: 2 }),
+      d("referral_reward", { side: "referrer", reward: "credits", credits: 1, step: 4 }),
+    ];
+    for (const body of bodies) {
+      expect(body).not.toMatch(/started a plan|starting a plan and|and start(?:ed|ing)? |a plan started|qualified \(|card on file/);
+      expect(body).not.toMatch(/free month/);
+      expect(body).toMatch(/first cards/);
+    }
+    // Every referral_signup opens on the same words, whatever its reason.
+    for (const body of bodies.slice(0, 6)) {
+      expect(body.startsWith("joined PipGlyph with your referral link and saved their first cards. ")).toBe(true);
+    }
+    // A plan is named only as where banked days go: the way to use them.
+    expect(d("referral_reward", { side: "referee", reward: "banked_days", days: 7 })).toContain("starting a plan applies them");
+    expect(d("referral_reward", { side: "referrer", reward: "banked_days", days: 7, step: 1 })).toContain("Apply them to a plan any time");
   });
 
   it("describes card limit overrides and resets", () => {

@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // /admin/analytics — the Referrals tab as the admin reads it: the period's
-// four numbers against the period before, friends per day with its table
+// four numbers against the period before (friends referred, saved the
+// cards, rewarded — then "Started a plan", what came of the referral and no
+// step toward its reward since 2026-11-11), friends per day with its table
 // twin, WHO WAS REFERRED with their data (the owner's ask) and what each
 // side was given or why it has nothing yet (the owner's second ask), the
 // program's panel and settings under it — and an honest "couldn't load" per
@@ -69,7 +71,7 @@ const rewardContext: RewardContext = {
   now: new Date("2026-11-10T15:00:00Z"),
 };
 
-const side = (over: Partial<RewardSideFacts> = {}): RewardSideFacts => ({ kind: null, days: null, credits: null, step: null, reason: null, spent: false, ...over });
+const side = (over: Partial<RewardSideFacts> = {}): RewardSideFacts => ({ kind: null, days: null, credits: null, step: null, reason: null, ...over });
 /** A row's reward facts: both sides still owed, both emails confirmed. */
 const owed = (over: Partial<NonNullable<ReferredFriend["rewards"]>> = {}): NonNullable<ReferredFriend["rewards"]> => ({
   friend: side(),
@@ -78,6 +80,7 @@ const owed = (over: Partial<NonNullable<ReferredFriend["rewards"]>> = {}): NonNu
   friendEmailConfirmed: true,
   referrerEmailConfirmed: true,
   friendHasPlan: false,
+  friendQualifyingCards: 0,
   ...over,
 });
 
@@ -137,9 +140,11 @@ describe("ReferredFriendsTable", () => {
   const rowOf = (text: string) => out.split("</tr>").find((row) => row.includes(text)) ?? "";
 
   it("names every column the owner asked for", () => {
-    for (const heading of ["Friend", "Referred by", "Joined", "Where they are", "Rewards", "Cards", "Last card", "Plan", "Card on file", "Rewarded", "Days banked"]) {
-      expect(out).toContain(`>${heading}</th>`);
-    }
+    const headings = [...out.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+    expect(headings).toEqual(["Friend", "Referred by", "Joined", "Where they are", "Rewards", "Cards", "Last card", "Plan", "Started a plan", "Rewarded", "Days banked"]);
+    // The plan's date is what came of the referral: it is not headed as a
+    // condition ("Card on file") any more.
+    expect(out).not.toContain("Card on file");
     expect(out).toMatch(/<caption[^>]*>Referred friends, newest referral first<\/caption>/);
   });
 
@@ -157,7 +162,7 @@ describe("ReferredFriendsTable", () => {
     expect(row).toContain("Nov 9, 2026 UTC"); // last card
     expect(row).toContain("Plus");
     expect(row).toContain("Nov 2, 2026 UTC"); // joined
-    expect(row.match(/Nov 4, 2026 UTC/g)).toHaveLength(2); // card on file + rewarded
+    expect(row.match(/Nov 4, 2026 UTC/g)).toHaveLength(2); // started a plan + rewarded
     expect(row).toMatch(/>7<\/td>/);
   });
 
@@ -177,7 +182,7 @@ describe("ReferredFriendsTable", () => {
     expect(row).toContain("Signed up");
     expect(row).toContain("0 · 0 public");
     expect(row).toContain("Free");
-    expect(row.match(/>—<\/td>/g)).toHaveLength(3); // last card, card on file, rewarded
+    expect(row.match(/>—<\/td>/g)).toHaveLength(3); // last card, started a plan, rewarded
   });
 
   it("Rewards says what each side was given on a rewarded row", () => {
@@ -187,13 +192,59 @@ describe("ReferredFriendsTable", () => {
     expect(row).not.toContain("Both sides");
   });
 
-  it("Rewards says why nobody has a reward yet — once, for both sides", () => {
+  it("Rewards says why nobody has a reward yet — once, for both sides, and it is the cards alone", () => {
     const row = rowOf("@new_friend");
-    expect(row).toContain(
-      "Both sides:</span> not yet — the friend has saved 0 of 5 cards (until Dec 2, 2026 UTC), and the friend has not started a plan with a card on file",
-    );
+    // The whole line: the cards, and no plan after them.
+    expect(row).toContain("Both sides:</span> not yet — the friend has saved 0 of 5 cards (until Dec 2, 2026 UTC)</li>");
+    expect(row).not.toMatch(/plan with a card on file|card on file|checkout/);
     expect(row).not.toContain("Friend:</span>");
     expect(row).not.toContain("Referrer:</span>");
+  });
+
+  it("Rewards counts the cards with artwork, and says how many of the friend's cards do not count", () => {
+    const some = html(
+      <ReferredFriendsTable
+        page={pageOf([
+          friend({ referralId: "r4", refereeUsername: "half_art", status: "signed_up", cardsSavedAt: null, cardOnFileAt: null, rewardedAt: null, tier: "free", cards: 5, publicCards: 0, bankedDays: 0, ladderStep: null, rewards: owed({ friendQualifyingCards: 3 }) }),
+          friend({ referralId: "r5", refereeUsername: "one_short", status: "signed_up", cardsSavedAt: null, cardOnFileAt: null, rewardedAt: null, tier: "free", cards: 5, publicCards: 0, bankedDays: 0, ladderStep: null, rewards: owed({ friendQualifyingCards: 4 }) }),
+        ])}
+        params={params}
+        rewardContext={rewardContext}
+      />,
+    );
+    const rowIn = (text: string) => some.split("</tr>").find((row) => row.includes(text)) ?? "";
+    expect(rowIn("@half_art")).toContain(
+      "Both sides:</span> not yet — the friend has saved 3 of 5 cards (until Dec 2, 2026 UTC); 2 cards more have no artwork and do not count</li>",
+    );
+    expect(rowIn("@one_short")).toContain(
+      "Both sides:</span> not yet — the friend has saved 4 of 5 cards (until Dec 2, 2026 UTC); 1 card more has no artwork and does not count</li>",
+    );
+    // The Cards column still counts every card the friend has.
+    expect(rowIn("@half_art")).toContain("5 · 0 public");
+  });
+
+  it("a friend whose cards are saved and who never started a plan is waiting for nothing but the hourly check", () => {
+    const qualified = friend({
+      referralId: "r6",
+      refereeUsername: "cards_only",
+      status: "cards_saved",
+      cardsSavedAt: "2026-11-10T14:30:00Z", // half an hour before the page was read
+      cardOnFileAt: null,
+      rewardedAt: null,
+      tier: "free",
+      cards: 5,
+      bankedDays: 0,
+      ladderStep: null,
+      rewards: owed({ friendQualifyingCards: 5 }),
+    });
+    const row = html(<ReferredFriendsTable page={pageOf([qualified])} params={params} rewardContext={rewardContext} />)
+      .split("</tr>")
+      .find((r) => r.includes("@cards_only"))!;
+    expect(row).toContain("Saved 5 cards");
+    expect(row).toContain("Both sides:</span> not yet — everything is in place; the hourly check gives the reward</li>");
+    expect(row).not.toMatch(/plan with a card on file|card on file/);
+    // "Started a plan" and "Rewarded" are both still a dash.
+    expect(row.match(/>—<\/td>/g)).toHaveLength(2);
   });
 
   it("Rewards says why a blocked referral gave nothing", () => {
@@ -244,14 +295,39 @@ describe("ReferralsTabView", () => {
 
   it("leads with the period's four numbers, each against the period before", () => {
     const tiles = [...out.matchAll(/<dt[^>]*>([^<]*)<\/dt><dd[^>]*>([^<]*)<\/dd>/g)].map((m) => [m[1], m[2]]);
+    // The reward's own steps first; the plan last — it is what came of the
+    // referral, not a step toward its reward.
     expect(tiles).toEqual([
       ["Friends referred", "3"],
       ["Saved their 5 cards", "1"],
-      ["Card on file", "1"],
       ["Rewarded", "1"],
+      ["Started a plan", "1"],
     ]);
     expect(out.match(/vs the previous 30 days/g)).toHaveLength(4);
     expect(out).toContain("Referrals in the last 30 days");
+  });
+
+  it("each number says what it counts: the cards carry artwork, and the plan is not needed for the reward", () => {
+    /** A tile's last line (its hint), by its label. */
+    const hintOf = (label: string) => {
+      const tile = out.slice(out.indexOf(`>${label}</dt>`));
+      const lines = [...tile.slice(0, tile.indexOf("</div>")).matchAll(/<dd class="text-xs text-subtle">([^<]*)<\/dd>/g)].map((m) => m[1]);
+      return lines.at(-1);
+    };
+    expect(hintOf("Friends referred")).toBe("Signed up through a link");
+    expect(hintOf("Saved their 5 cards")).toBe("With artwork, within 30 days of joining");
+    expect(hintOf("Rewarded")).toBe("Both sides got their reward");
+    expect(hintOf("Started a plan")).toBe("Became a subscriber — not needed for the reward");
+  });
+
+  it("says the rule above the numbers: the cards with artwork, and no plan", () => {
+    expect(out).toContain(
+      "A referral rewards both sides once the friend has saved 5 cards with artwork within 30 days of joining. No plan is needed for the reward; &quot;Started a plan&quot; counts the friends who went on to subscribe. Each number counts the friends who reached that point in the period, whenever they joined.",
+    );
+    // Nothing above the per-day chart makes a card on file a condition.
+    const numbers = out.slice(0, out.indexOf("Friends referred per day"));
+    expect(numbers).not.toMatch(/card on file/i);
+    expect(numbers).not.toContain("and started a plan");
   });
 
   it("charts friends per day in the one chart hue, with a table twin holding the same numbers", () => {
@@ -284,7 +360,8 @@ describe("ReferralsTabView", () => {
       />,
     );
     expect(custom).toContain("Saved their 3 cards");
-    expect(custom).toContain("has saved 3 cards within 14 days of joining");
+    expect(custom).toContain("has saved 3 cards with artwork within 14 days of joining");
+    expect(custom).toContain("With artwork, within 14 days of joining");
     expect(custom).toContain("Saved 3 cards");
   });
 

@@ -234,16 +234,20 @@ export function describeNotification(
               : "This referral isn't eligible for a reward.";
       return {
         subject: actorName,
-        body: `joined PipGlyph with your referral link and qualified (cards saved, a plan started). ${why}`,
+        body: `joined PipGlyph with your referral link and saved their first cards. ${why}`,
         href: "/dashboard/referrals",
       };
     }
     case "referral_reward": {
       // One reward, either side of a referral (lib/referrals/server.ts).
-      // Since 0180: DAYS INTO THE BANK (lib/billing/day-bank.ts — applied at
-      // the friend's qualifying checkout, or by the user from their billing
-      // page) or AI credits; the referrer's carries their ladder step. The
-      // older shape (free days of a tier, 0177) still reads.
+      // Since 0180: DAYS INTO THE BANK (lib/billing/day-bank.ts — applied
+      // when a plan is started, or by the user from their billing page) or
+      // AI credits; the referrer's carries their ladder step. Since
+      // 2026-11-11 a referral rewards on the friend's cards alone, so the
+      // words name the cards and no plan (worded when read: every such
+      // notification sent before that date was for cards AND a plan, and
+      // "saved their first cards" is true of those too). The older shape
+      // (free days of a tier, 0177) still reads.
       const side = str(payload.side);
       const reward = str(payload.reward);
       const until = str(payload.until);
@@ -255,15 +259,16 @@ export function describeNotification(
       const nth = step != null ? ` — referral #${step}` : "";
       if (reward === "banked_days") {
         const d = `${days ?? 0} free day${days === 1 ? "" : "s"}`;
+        const are = days === 1 ? "is" : "are";
         return side === "referee"
           ? {
               subject: actorName,
-              body: `invited you to PipGlyph — ${d} are in your bank for saving your first cards and starting a plan. They're your plan's free time; apply them any time from your billing page.`,
+              body: `invited you to PipGlyph — ${d} ${are} in your bank for saving your first cards. They're a plan's free time: starting a plan applies them, or apply them any time from your billing page.`,
               href: "/dashboard/billing#banked-days",
             }
           : {
               subject: actorName,
-              body: `saved their first cards and started a plan${nth} — ${d} are in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!`,
+              body: `saved their first cards${nth} — ${d} ${are} in your bank. Apply them to a plan any time from your billing page. Thanks for spreading the word!`,
               href: "/dashboard/referrals",
             };
       }
@@ -282,7 +287,7 @@ export function describeNotification(
         : {
             subject: actorName,
             body: step != null
-              ? `saved their first cards and started a plan${nth} — you've earned ${what}. Thanks for spreading the word!`
+              ? `saved their first cards${nth} — you've earned ${what}. Thanks for spreading the word!`
               : `saved their first card — you've earned ${what}. Thanks for spreading the word!`,
             href: "/dashboard/referrals",
           };

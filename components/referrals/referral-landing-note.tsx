@@ -40,7 +40,7 @@ export function ReferralLandingNote() {
       <Gift className="h-4 w-4 shrink-0 text-primary-bright" aria-hidden />
       <span>
         Made on PipGlyph. Your friend&apos;s link gets you {friendGets} toward a plan once you&apos;ve saved your first
-        cards and started one.
+        cards.
       </span>
       <Link href="/signup" className="font-medium text-primary-bright underline-offset-4 hover:underline">
         Create your own card

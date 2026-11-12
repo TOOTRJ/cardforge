@@ -295,28 +295,54 @@ describe("parseReferredFriends", () => {
     });
   });
 
-  it("reads 0206's reward facts: each side's recorded reward and detail, the attempts, the emails, the plan", () => {
-    const [row] = parseReferredFriends([
-      {
-        ...raw,
-        referrer_reward: "credits",
-        referee_reward: "banked_days",
-        referrer_reward_detail: { kind: "credits", credits: "5", step: 2 },
-        referee_reward_detail: { kind: "banked_days", days: 7, entryId: "e1" },
-        grant_attempts: "1",
-        referee_email_confirmed: true,
-        referrer_email_confirmed: false,
-        referee_has_plan: true,
-      },
-    ]).rows;
+  /** 0206's eight columns, as a rewarded row carries them. */
+  const rewardColumns = {
+    referrer_reward: "credits",
+    referee_reward: "banked_days",
+    referrer_reward_detail: { kind: "credits", credits: "5", step: 2 },
+    referee_reward_detail: { kind: "banked_days", days: 7, entryId: "e1" },
+    grant_attempts: "1",
+    referee_email_confirmed: true,
+    referrer_email_confirmed: false,
+    referee_has_plan: true,
+  };
+
+  it("reads 0206's reward facts: each side's recorded reward and detail, the attempts, the emails, the plan — and 0208's cards with artwork", () => {
+    const [row] = parseReferredFriends([{ ...raw, ...rewardColumns, referee_art_cards: "12" }]).rows;
     expect(row.rewards).toEqual({
-      friend: { kind: "banked_days", days: 7, credits: null, step: null, reason: null, spent: false },
-      referrer: { kind: "credits", days: null, credits: 5, step: 2, reason: null, spent: false },
+      friend: { kind: "banked_days", days: 7, credits: null, step: null, reason: null },
+      referrer: { kind: "credits", days: null, credits: 5, step: 2, reason: null },
       grantAttempts: 1,
       friendEmailConfirmed: true,
       referrerEmailConfirmed: false,
       friendHasPlan: true,
+      friendQualifyingCards: 12,
     });
+    // Every card the friend has is still the row's own count.
+    expect(row.cards).toBe(18);
+  });
+
+  it("referee_art_cards: a number or a string count, zero as zero — the cards a referral counts", () => {
+    const art = (value: unknown) => parseReferredFriends([{ ...raw, ...rewardColumns, referee_art_cards: value }]).rows[0].rewards?.friendQualifyingCards;
+    expect(art(3)).toBe(3);
+    expect(art("3")).toBe(3);
+    // No card with artwork is a count of none — never "unknown", which the
+    // page would read as every card counting.
+    expect(art(0)).toBe(0);
+    expect(art("0")).toBe(0);
+  });
+
+  it("no referee_art_cards column (a database before 0208): the count is unknown, never zero", () => {
+    const [row] = parseReferredFriends([{ ...raw, ...rewardColumns }]).rows;
+    expect(row.rewards).not.toBeNull();
+    expect(row.rewards?.friendQualifyingCards).toBeNull();
+    // The rest of 0206's facts read as they did.
+    expect(row.rewards).toMatchObject({ grantAttempts: 1, friendHasPlan: true, friend: { kind: "banked_days", days: 7 } });
+  });
+
+  it("the artwork count alone (no reward columns) is no reward facts: the row says nothing about rewards", () => {
+    const [row] = parseReferredFriends([{ ...raw, referee_art_cards: 4 }]).rows;
+    expect(row.rewards).toBeNull();
   });
 
   it("a side still owed, a 'none' with its reason, and facts the database could not tell", () => {
@@ -331,16 +357,22 @@ describe("parseReferredFriends", () => {
         referee_email_confirmed: null,
         referrer_email_confirmed: null,
         referee_has_plan: null,
+        referee_art_cards: 0,
       },
     ]).rows;
     expect(row.rewards).toEqual({
-      friend: { kind: "none", days: null, credits: null, step: null, reason: "email_reused", spent: true },
-      referrer: { kind: null, days: null, credits: null, step: null, reason: null, spent: false },
+      // The detail's `spent` (days banked ahead of a checkout and used by
+      // it — a step the reward no longer has) is not read any more.
+      friend: { kind: "none", days: null, credits: null, step: null, reason: "email_reused" },
+      referrer: { kind: null, days: null, credits: null, step: null, reason: null },
       grantAttempts: 0,
       friendEmailConfirmed: null,
       referrerEmailConfirmed: null,
       friendHasPlan: null,
+      friendQualifyingCards: 0,
     });
+    expect(row.rewards?.friend).not.toHaveProperty("spent");
+    expect(row.rewards?.referrer).not.toHaveProperty("spent");
   });
 
   it("reads 0177's reward in 30-day units as days", () => {
@@ -354,7 +386,7 @@ describe("parseReferredFriends", () => {
   it("a detail that is not an object reads as no detail, never a throw", () => {
     for (const detail of [null, "x", 7, ["days", 7]]) {
       const [row] = parseReferredFriends([{ ...raw, referrer_reward: "banked_days", referee_reward: "banked_days", referrer_reward_detail: detail, referee_reward_detail: detail }]).rows;
-      expect(row.rewards?.friend).toEqual({ kind: "banked_days", days: null, credits: null, step: null, reason: null, spent: false });
+      expect(row.rewards?.friend).toEqual({ kind: "banked_days", days: null, credits: null, step: null, reason: null });
     }
   });
 

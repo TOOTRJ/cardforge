@@ -97,7 +97,7 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
   function save() {
     const summary = [
       `Program: ${draft.enabled ? "ON" : "OFF"}`,
-      `Qualifies: ${draft.activation.cardsRequired} cards within ${draft.activation.windowDays} days + a card on file`,
+      `Qualifies: ${draft.activation.cardsRequired} cards with artwork within ${draft.activation.windowDays} days`,
       `Friend gets: ${friendRewardPhrase(draft)}`,
       `Ladder: ${draft.ladder.map((s, i) => `${i + 1}: ${rewardStepPhrase(s)}`).join(", ")}; then ${rewardStepPhrase(draft.tail)} each`,
       `Cap: ${draft.caps.friendsPerMonth} rewarded friends a month`,
@@ -139,12 +139,14 @@ export function ReferralSettingsForm({ initial }: { initial: ReferralSettings })
         </label>
       </div>
       <p className="text-xs leading-5 text-muted">
-        A referral qualifies when the friend has saved the cards below within the window AND started a plan with a card
-        on file (their banked days make it free). Rewards are DAYS INTO THE BANK (tier-less, no AI credits; the user
-        applies them with a card on file) or AI credits at once — changed here, never with a deploy. The referrer climbs
-        the ladder by qualified referral; past its last step every further referral earns the tail. OFF pauses new
-        signups and rewards (a friend who qualifies meanwhile waits, up to 30 days); what was already given stays. A
-        friends cap of 0 means nobody is rewarded.
+        A referral qualifies when the friend has saved the cards below within the window. Only cards with artwork
+        count, and no plan is needed. Rewards are DAYS INTO THE BANK (tier-less, no AI credits; using them takes a plan
+        with a card on file) or AI credits at once — changed here, never with a deploy. The referrer climbs the ladder
+        by qualified referral; past its last step every further referral earns the tail. OFF pauses new signups and
+        rewards (a friend who qualifies meanwhile waits, up to 30 days); what was already given stays. The friends cap
+        counts every rewarded referral in a month; 0 means nobody is rewarded. There is no card check any more, so the
+        cap is what limits made-up friends: five a month at the tail&apos;s days is the most plan time one account can
+        earn.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
