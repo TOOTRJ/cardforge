@@ -91,6 +91,11 @@ type ShareTargetsProps = {
   /** The viewer's referral, when the caller already knows it (tests; a
    *  surface that read it). Undefined = the dialog reads it when it opens. */
   referral?: ReferralShareInfo | null;
+  /** The person sharing MADE this card (the creator's post-save prompt):
+   *  the message may say "I forged". Anywhere else the viewer may be sharing
+   *  someone else's card — the page is static and does not know — so the
+   *  message claims nothing. */
+  own?: boolean;
 };
 
 export function ShareTargets({
@@ -106,6 +111,7 @@ export function ShareTargets({
   description,
   picture,
   referral: referralProp,
+  own = false,
 }: ShareTargetsProps) {
   // The viewer's referral: read once the dialog is open (never on a page
   // view), unless the caller handed it in. Until it arrives the links are
@@ -131,7 +137,9 @@ export function ShareTargets({
   const cardText =
     entity === "deck"
       ? `${title} — a Magic deck with custom cards on PipGlyph`
-      : `${title} — a custom Magic card I forged on PipGlyph`;
+      : own
+        ? `${title} — a custom Magic card I forged on PipGlyph`
+        : `${title} — a custom Magic card on PipGlyph`;
   // The card first; the friend's gift second, only on a referral link.
   const shareText = friendGets ? `${cardText}\n${referralShareLine(friendGets)}` : cardText;
 
@@ -190,7 +198,9 @@ export function ShareTargets({
     },
   ];
 
-  const discordMessage = `**${title}** — a custom Magic ${entity} I made on PipGlyph\n${withVia(url, "discord")}${
+  // "I made" only where the sharer did (`own`): on a card or deck page the
+  // viewer may be passing on someone else's work.
+  const discordMessage = `**${title}** — a custom Magic ${entity}${own ? " I made" : ""} on PipGlyph\n${withVia(url, "discord")}${
     friendGets ? `\n${referralShareLine(friendGets)}` : ""
   }`;
 
@@ -220,7 +230,7 @@ export function ShareTargets({
               <>
                 {" "}
                 These links carry your referral link: a friend who joins through one gets {friendGets} toward a plan once
-                they save their first cards and start one — and so do you.
+                they save their first cards, and you earn your next reward.
                 {/* SG4: the viewer's rung and what the next referral earns. */}
                 {referral?.ladder ? ` ${ladderProgressLine(referral.ladder)}` : null}
               </>

@@ -16,7 +16,10 @@ const s = vi.hoisted(() => ({
   admin: true,
   afterTasks: [] as Array<() => Promise<void>>,
   signup: vi.fn<(admin: unknown, input: { userId: string; props: Record<string, unknown> }) => Promise<string>>(async () => "enriched"),
+  /** recordReferralSignup: what the claim of the account's referral answers. */
+  claim: vi.fn<(admin: unknown, input: { refereeId: string; code: unknown }) => Promise<ClaimAnswer>>(async () => ({ ok: true, referralId: "ref-1" })),
 }));
+type ClaimAnswer = { ok: true; referralId: string } | { ok: false; reason: string };
 
 vi.mock("next/server", () => ({ after: (task: () => Promise<void>) => void s.afterTasks.push(task) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -35,7 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ marker: "admin" }), isAdminConfigured: () => s.admin }));
 vi.mock("@/lib/analytics/funnel-server", () => ({ recordSignup: s.signup }));
-vi.mock("@/lib/referrals/server", () => ({ recordReferralSignup: vi.fn() }));
+vi.mock("@/lib/referrals/server", () => ({ recordReferralSignup: s.claim }));
 vi.mock("@/lib/billing/day-bank", () => ({ ensureSignupBankEntry: vi.fn() }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => false }));
 vi.mock("@/lib/email/send", () => ({ isEmailConfigured: () => false, sendEmail: vi.fn() }));
@@ -54,6 +57,7 @@ beforeEach(() => {
   s.admin = true;
   s.afterTasks = [];
   s.signup.mockClear();
+  s.claim.mockReset().mockResolvedValue({ ok: true, referralId: "ref-1" });
 });
 
 describe("completeOnboardingAction — the signup funnel row", () => {
@@ -148,5 +152,92 @@ describe("completeOnboardingAction — the signup funnel row", () => {
     expect(await completeOnboardingAction({ attribution: { referrer: "x".repeat(200) } })).toEqual({ ok: true });
     await runDeferred();
     expect(s.signup.mock.calls[0][1].props).toEqual({ referrer: "x".repeat(48), method: "google" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The referral the account arrived with is claimed HERE (the first step with
+// a confirmed email) and nowhere else. A claim that failed on a READ
+// (`reason: "error"`) is tried exactly ONCE more (owner 2026-11-11: nothing
+// else retries it, and a friend's link lost here is lost for good); every
+// other answer is final. Onboarding goes on whatever the claim says.
+// ---------------------------------------------------------------------------
+describe("completeOnboardingAction — the referral claim", () => {
+  const CODE = "abcd2345";
+  const claimCalls = () => s.claim.mock.calls.map((call) => call[1]);
+
+  it("claims once, with the service role, for this account and the tab's code", async () => {
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    expect(s.claim.mock.calls).toEqual([[{ marker: "admin" }, { refereeId: "user-1", code: CODE }]]);
+  });
+
+  it("the code the signup put on the account (app_metadata, the server's) wins over the tab's", async () => {
+    s.user = { id: "user-1", app_metadata: { provider: "email", referral_code: "0000aaaa" } };
+    await completeOnboardingAction({ referralCode: CODE });
+    expect(claimCalls()).toEqual([{ refereeId: "user-1", code: "0000aaaa" }]);
+    // A malformed value on the account is no code: the tab's is used.
+    s.claim.mockClear();
+    s.user = { id: "user-1", app_metadata: { provider: "email", referral_code: "not-a-code" } };
+    await completeOnboardingAction({ referralCode: CODE });
+    expect(claimCalls()).toEqual([{ refereeId: "user-1", code: CODE }]);
+  });
+
+  it("a claim that FAILED (error) is tried once more — error then ok: two calls, the same claim", async () => {
+    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "error" }).mockResolvedValue({ ok: true, referralId: "ref-1" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    expect(s.claim.mock.calls).toEqual([
+      [{ marker: "admin" }, { refereeId: "user-1", code: CODE }],
+      [{ marker: "admin" }, { refereeId: "user-1", code: CODE }],
+    ]);
+    // The second try landed: nothing to report.
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("error twice: exactly two calls — never a third — it is logged, and onboarding still completes (funnel row included)", async () => {
+    s.claim.mockReset().mockResolvedValue({ ok: false, reason: "error" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    expect(s.claim).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledTimes(1);
+    // The log names the account, never the code.
+    expect(String(error.mock.calls[0][0])).toContain("user-1");
+    expect(JSON.stringify(error.mock.calls)).not.toContain(CODE);
+    error.mockRestore();
+    await runDeferred();
+    expect(s.signup).toHaveBeenCalledTimes(1);
+    expect(s.signup.mock.calls[0][1].props).toEqual({ referred: true, method: "google" });
+  });
+
+  it.each(["exists", "not_new", "program_off", "reciprocal", "self", "unknown_code", "bad_code"])(
+    "a final answer (%s) is not retried: one call, onboarding completes",
+    async (reason) => {
+      s.claim.mockReset().mockResolvedValue({ ok: false, reason });
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+      expect(s.claim).toHaveBeenCalledTimes(1);
+      expect(error).not.toHaveBeenCalled();
+      error.mockRestore();
+    },
+  );
+
+  it("error, then a final answer on the retry (the first try landed after all: exists): two calls, nothing logged", async () => {
+    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "error" }).mockResolvedValue({ ok: false, reason: "exists" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    expect(s.claim).toHaveBeenCalledTimes(2);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("no code, a signed-out caller or no service role: no claim at all", async () => {
+    await completeOnboardingAction({});
+    s.admin = false;
+    await completeOnboardingAction({ referralCode: CODE });
+    s.admin = true;
+    s.user = null;
+    await completeOnboardingAction({ referralCode: CODE });
+    expect(s.claim).not.toHaveBeenCalled();
   });
 });

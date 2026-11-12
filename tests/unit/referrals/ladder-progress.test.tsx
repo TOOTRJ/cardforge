@@ -20,7 +20,6 @@ const row = (id: string, status: "rewarded" | "signed_up") => ({
   status,
   signedUpAt: "2026-11-01T00:00:00.000Z",
   cardsSavedAt: null,
-  cardOnFileAt: null,
   rewardedAt: status === "rewarded" ? "2026-11-02T00:00:00.000Z" : null,
   ladderStep: null,
   reward: null,

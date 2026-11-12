@@ -22,7 +22,7 @@ import { REFERRAL_STATUS_LABELS, type ReferralStatus } from "@/lib/referrals/rul
 
 export const metadata: Metadata = {
   title: "Refer a friend",
-  description: "Share your referral link: a friend who saves their first cards and starts a plan earns you both free days.",
+  description: "Share your referral link: when a friend joins and saves their first cards, you both earn a reward.",
   robots: { index: false, follow: false },
 };
 
@@ -43,12 +43,13 @@ const STATUS_BADGE: Record<ReferralStatus, "default" | "primary" | "accent" | "g
   expired: "default",
 };
 
-/** The reward cell when nothing was recorded for the viewer. */
-function noRewardText(status: ReferralStatus, cardOnFile: boolean): string {
+/** The reward cell when nothing was recorded for the viewer. A friend whose
+ *  cards are saved has qualified (owner 2026-11-11: no plan is waited for)
+ *  and the reward is being checked — "pending", not a promise: the check
+ *  can still find the referral not eligible. */
+function noRewardText(status: ReferralStatus): string {
   if (status === "signed_up") return "Waiting for their cards";
-  if (status === "first_card" || status === "cards_saved") {
-    return cardOnFile ? "Pending — waiting on a confirmed email" : "Cards saved — waiting for a plan with a card on file";
-  }
+  if (status === "first_card" || status === "cards_saved") return "Cards saved — reward pending";
   if (status === "capped") return "None — this month's limit of rewarded friends was reached";
   return "—";
 }
@@ -92,30 +93,27 @@ export default async function ReferralsPage() {
           )}
           {settings.enabled ? (
             <>
-              <ol className="grid gap-3 text-sm text-muted sm:grid-cols-2">
+              <ol className="grid gap-3 text-sm text-muted sm:grid-cols-3">
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">1. Share your link.</span> A friend opens it and creates
                   an account.
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">{`2. They save ${cardsRequired} cards`}</span>
-                  {` within ${windowDays} days of signing up.`}
+                  {`, each with its own artwork, within ${windowDays} days of signing up.`}
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">3. They start a plan with a card on file.</span> Their
-                  banked days make it free — they can cancel any time before the days end and nothing is charged.
-                </li>
-                <li className="rounded-lg border border-border/60 bg-background/40 p-3">
-                  <span className="font-semibold text-foreground">4. You both get your reward</span>
-                  {` once you've both confirmed your email: ${friendGets} in their bank, and your next step on the ladder below.`}
+                  <span className="font-semibold text-foreground">3. You both get your reward.</span>
+                  {` ${friendGets} go into their bank, and you get your next step on the ladder below. Nobody has to start a plan or add a card to earn it.`}
                 </li>
               </ol>
               <p className="text-xs leading-5 text-subtle">
-                Banked days are a plan&apos;s free time: your first checkout applies them all, and days earned later are
-                applied from your billing page whenever you like — a card on file is needed, and the plan bills at its
-                usual price when the days end unless you cancel. Up to {summary.friendsPerMonth} rewarded friends a
-                month; past that, the extra friends that month earn nobody a reward. New accounts only, and one reward
-                per email address.
+                Banked days are a plan&apos;s free time. Starting a plan applies them all — that is when a card is
+                asked for — and days earned later are applied from your billing page whenever you like. The plan bills
+                at its usual price when the days end unless you cancel. A friend&apos;s card counts when it has artwork
+                of its own; the same picture on several cards counts once. Up to {summary.friendsPerMonth} rewarded
+                friends a month; past that, the extra friends that month earn nobody a reward. New accounts only, and
+                one reward per email address.
               </p>
             </>
           ) : null}
@@ -177,7 +175,7 @@ export default async function ReferralsPage() {
         <dl className="grid gap-3 sm:grid-cols-4">
           <Stat label="Friends joined" value={String(summary.joined)} />
           <Stat label="Saved their cards" value={String(summary.cardsSaved)} />
-          <Stat label="Started a plan" value={String(summary.cardOnFile)} />
+          <Stat label="Rewards earned" value={String(summary.rewardsEarned)} />
           <Stat label="Rewarded this month" value={`${summary.friendsThisMonth} of ${summary.friendsPerMonth}`} />
         </dl>
       </section>
@@ -263,11 +261,9 @@ export default async function ReferralsPage() {
         <p className="mt-6 text-sm text-muted">
           You joined through {joinedThrough.username ? `@${joinedThrough.username}` : "a friend"}&apos;s link
           {joinedThrough.status === "signed_up"
-            ? ` — save ${cardsRequired} cards and start a plan with a card on file to get ${friendGets}.`
+            ? ` — save ${cardsRequired} cards, each with its own artwork, to get ${friendGets}.`
             : joinedThrough.status === "first_card" || joinedThrough.status === "cards_saved"
-              ? joinedThrough.cardOnFile
-                ? " — your reward is on its way once both of you have confirmed your email."
-                : ` — your cards are saved; start a plan with a card on file to get ${friendGets}.`
+              ? " — your cards are saved, and your reward is being checked."
               : joinedThrough.rewarded === true
                 ? " — your free days are in your bank."
                 : joinedThrough.rewarded == null && (joinedThrough.status === "rewarded" || joinedThrough.status === "capped" || joinedThrough.status === "blocked")
@@ -280,7 +276,7 @@ export default async function ReferralsPage() {
 }
 
 function RewardText({ row }: { row: ReferralRow }) {
-  if (!row.reward) return <>{noRewardText(row.status, row.cardOnFileAt != null)}</>;
+  if (!row.reward) return <>{noRewardText(row.status)}</>;
   const label =
     row.reward === "credits" ? "AI credits" : row.reward === "banked_days" ? "Free days (banked)" : "Free days";
   return (

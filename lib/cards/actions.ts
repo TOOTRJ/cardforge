@@ -1382,6 +1382,24 @@ export async function updateCardAction(
   // of its ISR window. The static card page was left out of the request's
   // revalidation (`cardPageAfterBake`), so its path IS executed here — after
   // the bake, failed or not. Never rely on it for correctness.
+  //
+  // A NEW PICTURE put on a card by an edit can be the one that meets a
+  // referral's bar (only cards with artwork of their own count,
+  // lib/referrals/server.ts): the creation hook above never sees it, and
+  // the hourly sweep would be late for a friend near the end of their
+  // window. One indexed read when the maker has no open referral.
+  if (isAdminConfigured() && !previewCard && update.art_url && update.art_url !== existing.art_url) {
+    const refereeId = user.id;
+    after(async () => {
+      try {
+        await qualifyReferral(createAdminClient(), refereeId, {
+          stripe: isStripeConfigured() ? getStripe() : null,
+        });
+      } catch (error) {
+        console.error(`[referrals] qualify after an edit failed for ${refereeId}:`, error);
+      }
+    });
+  }
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);

@@ -48,5 +48,5 @@ export function cleanShareUrl(url: string): string {
  *  (the settings' words — never a hard-coded "30 days"), the reason they'll
  *  click. The share text stays about the card; this follows it. */
 export function referralShareLine(friendGets: string): string {
-  return `Join with my link and you get ${friendGets} toward a plan once you've saved your first cards and started one.`;
+  return `Join with my link and you get ${friendGets} toward a plan once you've saved your first cards.`;
 }

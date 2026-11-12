@@ -95,7 +95,7 @@ export function ReferredFriendsTable({
           { label: "Cards" },
           { label: "Last card" },
           { label: "Plan" },
-          { label: "Card on file" },
+          { label: "Started a plan" },
           { label: "Rewarded" },
           { label: "Days banked", kind: "number" },
         ]}

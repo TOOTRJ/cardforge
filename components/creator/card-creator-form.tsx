@@ -5942,6 +5942,8 @@ export function CardCreatorForm({
                 if (replace) router.replace(cardPath);
                 else router.push(cardPath);
               }}
+              // The maker's own card, just published: "I forged" is theirs to say.
+              own
               title={postSaveShare.title}
               url={`${window.location.origin}${postSaveShare.cardPath}`}
               entity="card"

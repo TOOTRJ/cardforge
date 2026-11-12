@@ -11,8 +11,9 @@ import { readBank, type Bank } from "@/lib/billing/day-bank";
 // ---------------------------------------------------------------------------
 // The referral dashboard's one read (/dashboard/referrals) — the viewer's own
 // session, through 0177 / 0180's RLS and COLUMN grants: the code (minted on
-// first ask), the friends they referred (status, the two stamps and the
-// ladder step — never a fraud reason or a Stripe detail), the referral that
+// first ask), the friends they referred (status, the cards stamp and the
+// ladder step — never a fraud reason, a Stripe detail or whether a friend
+// went on to subscribe), the referral that
 // brought THEM, if any, and their days bank. Usernames come from the public
 // profile columns.
 // ---------------------------------------------------------------------------
@@ -32,14 +33,13 @@ export type ReferralDashboard = {
     username: string | null;
     status: ReferralStatus;
     cardsSaved: boolean;
-    cardOnFile: boolean;
     rewarded: boolean | null;
   } | null;
 };
 
 /** The columns 0177 + 0180 grant a signed-in user — `select *` is refused. */
 const REFERRAL_COLUMNS =
-  "id, referrer_id, referee_id, status, signed_up_at, first_card_at, cards_saved_at, card_on_file_at, ladder_step, rewarded_at, referrer_reward";
+  "id, referrer_id, referee_id, status, signed_up_at, first_card_at, cards_saved_at, ladder_step, rewarded_at, referrer_reward";
 
 export async function getMyReferralDashboard(now: Date = new Date()): Promise<ReferralDashboard | null> {
   const user = await getCurrentUser();
@@ -58,7 +58,7 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
     // The friend's own row: their side only — never the referrer's reward.
     supabase
       .from("referrals")
-      .select("id, referrer_id, status, cards_saved_at, first_card_at, card_on_file_at, referee_reward")
+      .select("id, referrer_id, status, cards_saved_at, first_card_at, referee_reward")
       .eq("referee_id", user.id)
       .maybeSingle(),
     readBank(supabase, user.id),
@@ -87,7 +87,6 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
       status: r.status as ReferralStatus,
       signedUpAt: r.signed_up_at,
       cardsSavedAt: r.cards_saved_at ?? r.first_card_at,
-      cardOnFileAt: r.card_on_file_at,
       rewardedAt: r.rewarded_at,
       ladderStep: r.ladder_step,
       reward:
@@ -109,7 +108,6 @@ export async function getMyReferralDashboard(now: Date = new Date()): Promise<Re
             username: names.get(mine.referrer_id) ?? null,
             status: mine.status,
             cardsSaved: (mine.cards_saved_at ?? mine.first_card_at) != null,
-            cardOnFile: mine.card_on_file_at != null,
             rewarded:
               mine.referee_reward == null
                 ? null

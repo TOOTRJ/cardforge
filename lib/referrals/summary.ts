@@ -15,10 +15,9 @@ export type ReferralRow = {
   accountDeleted?: boolean;
   status: ReferralStatus;
   signedUpAt: string;
-  /** The friend saved the required cards. */
+  /** The friend saved the required cards — the referral qualified (owner
+   *  2026-11-11: on the cards alone; a plan is no condition). */
   cardsSavedAt: string | null;
-  /** The friend started a plan with a card on file. */
-  cardOnFileAt: string | null;
   rewardedAt: string | null;
   /** The ladder step this referral gave the viewer (rewarded rows). */
   ladderStep: number | null;
@@ -30,8 +29,6 @@ export type ReferralSummary = {
   joined: number;
   /** Friends who saved the required cards. */
   cardsSaved: number;
-  /** Friends who also put a card on file (a plan started). */
-  cardOnFile: number;
   /** Rewarded referrals — the viewer's rung on the ladder. */
   rewardsEarned: number;
   /** Friends rewarded this UTC month, against the friends cap. */
@@ -59,7 +56,6 @@ export function buildReferralSummary(
   return {
     joined: rows.length,
     cardsSaved: rows.filter((r) => r.cardsSavedAt != null).length,
-    cardOnFile: rows.filter((r) => r.cardOnFileAt != null).length,
     rewardsEarned,
     // As the claim counts it: rows whose FRIEND was rewarded this month —
     // rewarded, and blocked-for-the-referrer-only (same domain); a capped

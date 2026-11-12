@@ -82,7 +82,6 @@ export async function GET() {
       status: r.status as ReferralRow["status"],
       signedUpAt: "",
       cardsSavedAt: null,
-      cardOnFileAt: null,
       rewardedAt: null,
       ladderStep: null,
       reward: null,
