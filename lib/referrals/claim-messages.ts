@@ -37,21 +37,32 @@ export function referralClaimError(reason: Refusal): string {
   }
 }
 
-/** Onboarding, when a code the person TYPED was not taken and the link the
- *  account arrived with was claimed in its place: an account has one
- *  referral, so there is nothing left to add later — it says what happened. */
-export const REFERRAL_LINK_COUNTED_INSTEAD =
-  "The referral code you typed wasn't taken, so the friend's link you opened before was counted instead.";
+/** Too many codes tried in a short time (both places share one counter). */
+export const REFERRAL_CODE_TOO_MANY_TRIES = "That's a lot of tries. Wait a minute and try again.";
 
-/** What onboarding's toast says about a code that was sent and not taken.
- *  `linkCounted`: the note already says the whole of it (above); otherwise
- *  the code can still be typed on the Refer a friend page. */
-export function onboardingReferralToast(note: string, linkCounted: boolean): string {
-  return linkCounted ? note : `${note} You can add it later from Refer a friend.`;
+/** Onboarding: a code the person TYPED could not be saved (the database did
+ *  not answer, twice). The account is finished all the same. */
+export const REFERRAL_CODE_NOT_SAVED = "We couldn't add your referral code just now.";
+
+/** ONBOARDING, a code the person TYPED that cannot be used (no code in it,
+ *  nobody has it, their own, too many tries): said while they are still on
+ *  the step, so they can fix it — an account has ONE referral, so guessing
+ *  for them (crediting the link the browser remembered instead) could never
+ *  be undone. The field is optional: emptying it is always a way on. */
+export function onboardingCodeError(sentence: string): string {
+  return `${sentence} You can also clear the field and finish without a code.`;
 }
 
-/** The refusals worth telling someone who typed a code at ONBOARDING, which
- *  goes on whatever the claim says: only what they can fix by retyping. */
+/** What onboarding's toast says about a code that was sent and not taken
+ *  once the account is finished: the sentence, then where it can still be
+ *  typed (the Refer a friend page's form, open while no referral exists). */
+export function onboardingReferralToast(note: string): string {
+  return `${note} You can add it later from Refer a friend.`;
+}
+
+/** The refusals a person can fix by retyping. At ONBOARDING a code they
+ *  TYPED stops the step with these words (onboardingCodeError); the link an
+ *  account merely arrived with never stops anything — it is a toast. */
 export function onboardingReferralNote(reason: Refusal): string | null {
   return reason === "bad_code" || reason === "unknown_code" || reason === "self" ? referralClaimError(reason) : null;
 }

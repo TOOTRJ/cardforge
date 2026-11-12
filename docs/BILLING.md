@@ -1368,12 +1368,16 @@ that clear the query keep a valid `ref` (`referralSearch`). And a new
 account can TYPE it: "Have a referral code?" on onboarding's last step
 (shown unless THIS visit followed a link — a code only kept from an earlier
 visit may be somebody else's, so the field stays — labelled "A different
-friend's referral code?" then, since the remembered link already counts —
-and what is typed wins, over the sign-up's own code too; a code nobody has
-is said in a toast and never blocks onboarding, and when a link came with
-the account that link is claimed in its place and the toast says so: a typo
-must not cost the friend whose link was followed; "Skip" is never held up
-by text in the field) and "Joined because of a friend?" on
+friend's referral code?" then — and what is typed wins, over the sign-up's
+own code too. A typed code that cannot be used — no code in the text,
+nobody has it, their own, too many tries — STOPS the step with its words,
+on "Finish" and "Skip" alike, the field shown, marked and focused; emptying
+the field is always a way on. It is never answered by claiming the
+remembered link instead: an account has one referral for good, so a typo
+must not credit somebody else. The LINK an account merely arrived with
+never stops anything — a refusal of it is a toast after the account is
+finished. The field is offered only while the program is on) and "Joined
+because of a friend?" on
 the Refer a friend page while the account is inside the 14-day window and
 has no referral and never started a plan (`claimReferralCodeAction`: 5
 tries a minute, 20 an hour — one counter with onboarding's claim; the

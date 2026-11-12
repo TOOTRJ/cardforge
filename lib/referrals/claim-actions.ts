@@ -9,7 +9,12 @@ import { hitKeyedLimit } from "@/lib/api/keyed-limit";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { extractReferralCode } from "@/lib/referrals/rules";
 import { advanceReferral, recordReferralSignup } from "@/lib/referrals/server";
-import { REFERRAL_CODE_UNREADABLE, referralClaimError, type ClaimReferralResult } from "@/lib/referrals/claim-messages";
+import {
+  REFERRAL_CODE_TOO_MANY_TRIES,
+  REFERRAL_CODE_UNREADABLE,
+  referralClaimError,
+  type ClaimReferralResult,
+} from "@/lib/referrals/claim-messages";
 
 // ---------------------------------------------------------------------------
 // "Have a referral code?" on the Refer a friend page (owner 2026-11-11): a
@@ -35,7 +40,7 @@ export async function claimReferralCodeAction(input: unknown): Promise<ClaimRefe
     subject: user.id,
     perMinute: 5,
     perHour: 20,
-    message: "That's a lot of tries. Wait a minute and try again.",
+    message: REFERRAL_CODE_TOO_MANY_TRIES,
   });
   if (!limit.ok) return { ok: false, error: limit.message };
 

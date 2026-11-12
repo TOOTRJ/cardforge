@@ -1841,10 +1841,14 @@ Rules and gotchas:
   limited, one counter with onboarding's claim): the same
   `recordReferralSignup`, the same rules — the account at most
   `REFERRAL_CLAIM_WINDOW_DAYS` (14) old and never subscribed, whatever cards
-  it has. A typed code wins over a remembered one — and one nobody can be
-  credited for (nobody has it, their own) falls back to the link the account
-  arrived with, said in the toast (`REFERRAL_LINK_COUNTED_INSTEAD`), never
-  silently. Never for an established
+  it has. A typed code wins over a remembered one, and one that cannot be
+  used (no code in it, nobody has it, their own, too many tries) STOPS the
+  onboarding step with its words (`onboardingCodeError`,
+  `referralCodeRefused`: the field shown, marked and focused; "Finish" and
+  "Skip" alike; emptying it is always a way on) — NEVER a fallback to the
+  link the browser remembered: an account has one referral for good, so a
+  typo must not credit somebody else. The onboarding field shows only while
+  the program is on. Never for an established
   account (it has its cards: both sides would be rewarded for bringing in
   nobody) — and the account's AGE is `auth.users.created_at`, never
   `profiles.created_at`: a user can update their own profile row and that

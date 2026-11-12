@@ -11,7 +11,9 @@ import { renderToString } from "react-dom/server";
 // from an earlier visit (storedReferralCode). Two things were added:
 //
 //   * "Have a referral code?" — an OPTIONAL field on the last step, offered
-//     unless THIS visit followed a friend's link (referralCodeSource() ===
+//     while the referral program is ON (a code typed while it is off could
+//     do nothing) unless THIS visit followed a friend's link
+//     (referralCodeSource() ===
 //     "link": the tab holds the code, or it is on the address). A code the
 //     browser only KEPT from an earlier visit — up to 30 days old, possibly
 //     not the friend this person has in mind — leaves the field open, and
@@ -21,19 +23,23 @@ import { renderToString } from "react-dom/server";
 //   * Finish sends `referralCode` — the visit's code, the kept one included,
 //     as before — AND, when the person typed something that reads as a code
 //     (a code, or a pasted link), `typedReferralCode`: the code read out of
-//     it, never the text itself. The server takes the typed one first. Text
-//     that is no code is said before anything is saved and nothing is sent —
-//     a kept code beside it changes nothing — on FINISH only: "Skip" is
-//     never held up by an optional field (unreadable text is left behind).
+//     it, never the text itself. The server takes the typed one first. A
+//     typed code that CANNOT BE USED stops the step — text that is no code
+//     before anything is sent, a code the server refuses (nobody has it,
+//     their own, too many tries) when it answers — on "Finish" and "Skip"
+//     alike: an account has one referral for good, so the link the browser
+//     remembered is never claimed in a typed code's place. The step shows
+//     the field, marks it and focuses it; emptying it is always a way on.
 //     With the field hidden, nothing typed is ever sent.
 //
 // After a finish that lands, the code kept in the browser is forgotten (the
 // next person to sign up here did not follow that link), and a code that was
-// sent and not taken — where retyping could help — is said once, in a toast.
-// A finish that fails forgets nothing.
+// sent and not taken once the account is finished (the LINK's code belongs
+// to nobody; a typed one could not be saved) is said once, in a toast, with
+// where it can still be added. A finish that fails forgets nothing.
 // ---------------------------------------------------------------------------
 
-type Result = { ok: true; referralNote?: string; referralLinkCounted?: true } | { ok: false; error: string };
+type Result = { ok: true; referralNote?: string } | { ok: false; error: string; referralCodeRefused?: true };
 type Sent = {
   preferences?: Record<string, boolean>;
   referralCode?: string;
@@ -43,8 +49,10 @@ type Sent = {
 
 const m = vi.hoisted(() => ({
   complete: vi.fn<
-    (input: Record<string, unknown>) => Promise<{ ok: true; referralNote?: string; referralLinkCounted?: true } | { ok: false; error: string }>
+    (input: Record<string, unknown>) => Promise<{ ok: true; referralNote?: string } | { ok: false; error: string; referralCodeRefused?: true }>
   >(),
+  /** /api/referrals/share, as the page reads it: is the program on? */
+  share: vi.fn<() => Promise<{ enabled: boolean } | null>>(),
   saveIdentity: vi.fn(),
   checkUsername: vi.fn(),
   push: vi.fn(),
@@ -57,6 +65,7 @@ vi.mock("@/lib/onboarding/actions", () => ({
   saveOnboardingIdentityAction: m.saveIdentity,
   checkUsernameAction: m.checkUsername,
 }));
+vi.mock("@/lib/sharing/referral-share-client", () => ({ readReferralShareInfo: m.share }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: m.push, refresh: m.refresh }) }));
 vi.mock("sonner", () => ({ toast: m.toast }));
 // Step 2's uploaders and the "You joined through a friend's link" line have
@@ -75,7 +84,10 @@ import {
   keptReferralCode,
   referralCodeToKeep,
 } from "@/lib/analytics/attribution";
-import { REFERRAL_CODE_UNREADABLE, REFERRAL_LINK_COUNTED_INSTEAD } from "@/lib/referrals/claim-messages";
+import { REFERRAL_CODE_UNREADABLE, onboardingCodeError } from "@/lib/referrals/claim-messages";
+
+/** What the step says about text that is no code: the sentence, and the way on. */
+const UNREADABLE = onboardingCodeError(REFERRAL_CODE_UNREADABLE);
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 11, 12, 0, 0);
@@ -137,6 +149,7 @@ beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
   setAddress("/onboarding");
   m.complete.mockReset().mockResolvedValue({ ok: true });
+  m.share.mockReset().mockResolvedValue({ enabled: true });
   m.saveIdentity.mockReset().mockResolvedValue({ ok: true });
   m.checkUsername.mockReset().mockResolvedValue({ status: "available" });
   m.push.mockReset();
@@ -209,8 +222,10 @@ describe("\"Have a referral code?\" — offered unless THIS visit followed a fri
     expect(screen.queryByLabelText(PLAIN_LABEL)).toBeNull();
     expect(screen.getByText("(optional)")).toBeTruthy();
     expect(document.getElementById(field.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-      "This browser remembers a friend's link you opened before, and it counts. If someone else told you about PipGlyph, paste their code or link here instead.",
+      "This browser remembers a friend's link you opened before. If someone else told you about PipGlyph, paste their code or link here instead.",
     );
+    // It promises nothing about that link: whether it is taken is the claim's to say.
+    expect(document.getElementById(field.getAttribute("aria-describedby") ?? "")?.textContent).not.toMatch(/counts/);
     cleanup();
     // A kept code past its 30 days is no remembered link.
     setKept(KEPT, NOW - 30 * DAY - 1);
@@ -218,6 +233,29 @@ describe("\"Have a referral code?\" — offered unless THIS visit followed a fri
     await toLastStep();
     expect(screen.getByLabelText(PLAIN_LABEL)).toBe(codeField());
     expect(screen.queryByLabelText(OTHER_FRIEND_LABEL)).toBeNull();
+  });
+
+  it.each([
+    ["the program is off (or billing is)", () => m.share.mockResolvedValue({ enabled: false })],
+    ["the program's state could not be read", () => m.share.mockResolvedValue(null)],
+  ])("no field while a code could do nothing — %s — and nothing typed before is sent", async (_name, arrange) => {
+    arrange();
+    setKept(KEPT, NOW - DAY);
+    wizard();
+    await toLastStep();
+    expect(codeField()).toBeNull();
+    expect(screen.queryByText(FIELD)).toBeNull();
+    await finish();
+    // The link the visit arrived with still travels: the claim is the server's to refuse.
+    expect(sent()).toEqual([{ preferences: EMAIL, referralCode: KEPT }]);
+  });
+
+  it("the program's state is asked for ONCE, however often the wizard re-renders", async () => {
+    wizard();
+    await toLastStep();
+    type(TYPED);
+    type("");
+    expect(m.share).toHaveBeenCalledTimes(1);
   });
 
   it("the server's render reads no browser store (the link lives in the browser: it is read after hydration)", () => {
@@ -330,7 +368,7 @@ describe("Finish — which codes are sent", () => {
       await toLastStep();
       type(typed);
       await finish();
-      expect(screen.getByRole("alert").textContent, typed).toBe(REFERRAL_CODE_UNREADABLE);
+      expect(screen.getByRole("alert").textContent, typed).toBe(UNREADABLE);
       expect(m.complete, typed).not.toHaveBeenCalled();
       expect(m.push, typed).not.toHaveBeenCalled();
       expect(m.refresh, typed).not.toHaveBeenCalled();
@@ -340,7 +378,9 @@ describe("Finish — which codes are sent", () => {
       expect((screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement).disabled, typed).toBe(false);
       cleanup();
     }
-    expect(REFERRAL_CODE_UNREADABLE).toBe("That doesn't look like a referral code or link. Check it and try again.");
+    expect(UNREADABLE).toBe(
+      "That doesn't look like a referral code or link. Check it and try again. You can also clear the field and finish without a code.",
+    );
   });
 
   it("…also when the browser KEPT a code: what was typed is not quietly dropped for the kept one — it is said, nothing is sent, and the kept code is not forgotten", async () => {
@@ -349,7 +389,7 @@ describe("Finish — which codes are sent", () => {
     await toLastStep();
     type("not a code");
     await finish();
-    expect(screen.getByRole("alert").textContent).toBe(REFERRAL_CODE_UNREADABLE);
+    expect(screen.getByRole("alert").textContent).toBe(UNREADABLE);
     expect(m.complete).not.toHaveBeenCalled();
     expect(m.push).not.toHaveBeenCalled();
     expect(kept()).toBe(KEPT);
@@ -364,7 +404,7 @@ describe("Finish — which codes are sent", () => {
     await toLastStep();
     type("not a code");
     await finish();
-    expect(screen.getByRole("alert").textContent).toBe(REFERRAL_CODE_UNREADABLE);
+    expect(screen.getByRole("alert").textContent).toBe(UNREADABLE);
     type(TYPED);
     await finish();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -427,43 +467,100 @@ describe("Finish — which codes are sent", () => {
   });
 });
 
-describe("\"Skip\" is never held up by the optional field", () => {
-  it("text that is NO code: Skip goes through — no alert, the typed text left behind, the account finished", async () => {
-    for (const typed of ["hello there", "dddd444", "https://pipglyph.com/?ref=nope"]) {
-      m.complete.mockClear();
-      m.push.mockClear();
-      wizard();
-      await toLastStep();
-      type(typed);
-      await skip();
-      expect(screen.queryByRole("alert"), typed).toBeNull();
-      expect(sent(), typed).toEqual([{}]);
-      expect(m.push.mock.calls, typed).toEqual([["/dashboard"]]);
-      cleanup();
-    }
-  });
-
-  it("…and the link the browser remembered still travels with it", async () => {
+describe("a typed code that cannot be used stops the step — \"Skip\" as \"Finish\"", () => {
+  it("text that is NO code: Skip is stopped like Finish — said, nothing sent, the kept link neither claimed nor forgotten", async () => {
     setKept(KEPT, NOW - DAY);
     wizard();
     await toLastStep();
     type("not a code");
     await skip();
+    expect(screen.getByRole("alert").textContent).toBe(UNREADABLE);
+    expect(m.complete).not.toHaveBeenCalled();
+    expect(m.push).not.toHaveBeenCalled();
+    expect(kept()).toBe(KEPT);
+    // Emptied, Skip goes through — with the link the visit arrived with.
+    type("");
+    await skip();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(sent()).toEqual([{ referralCode: KEPT }]);
+    expect(m.push).toHaveBeenCalledTimes(1);
   });
 
-  it("after a Finish that was stopped for the same text, Skip still goes through and the message clears", async () => {
+  it("the field is marked invalid and FOCUSED; typing in it clears the mark", async () => {
+    wizard();
+    await toLastStep();
+    expect(codeField()!.getAttribute("aria-invalid")).toBeNull();
+    type("not a code");
+    await finish();
+    expect(codeField()!.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(codeField());
+    type("still not");
+    expect(codeField()!.getAttribute("aria-invalid")).toBeNull();
+  });
+
+  it("stopped from ANOTHER step (typed on the last step, then Back, then Skip): the wizard goes to the field's step", async () => {
     wizard();
     await toLastStep();
     type("not a code");
-    await finish();
-    expect(screen.getByRole("alert").textContent).toBe(REFERRAL_CODE_UNREADABLE);
-    expect(m.complete).not.toHaveBeenCalled();
+    await click("Back");
+    expect(codeField()).toBeNull();
     await skip();
+    expect(m.complete).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Stay in the loop" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe(UNREADABLE);
+    expect(codeField()!.value).toBe("not a code");
+    expect(document.activeElement).toBe(codeField());
+  });
+
+  it.each([
+    "Nobody has that referral code. Check it with your friend and try again. You can also clear the field and finish without a code.",
+    "That is your own code. Enter the code of the friend who told you about PipGlyph. You can also clear the field and finish without a code.",
+    "That's a lot of tries. Wait a minute and try again. You can also clear the field and finish without a code.",
+  ])("a code the SERVER refuses (%s): the same — said in the alert, the field marked and focused, nobody sent anywhere, the kept link not forgotten", async (words) => {
+    setKept(KEPT, NOW - DAY);
+    m.complete.mockResolvedValueOnce({ ok: false, error: words, referralCodeRefused: true });
+    wizard();
+    await toLastStep();
+    type(TYPED);
+    await finish();
+    expect(sent()).toEqual([{ preferences: EMAIL, referralCode: KEPT, typedReferralCode: TYPED }]);
+    expect(screen.getByRole("alert").textContent).toBe(words);
+    expect(codeField()!.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(codeField());
+    expect(codeField()!.value).toBe(TYPED);
+    expect(m.push).not.toHaveBeenCalled();
+    expect(m.toast.message).not.toHaveBeenCalled();
+    expect(kept()).toBe(KEPT);
+    // Emptied: the account is finished with the link the visit arrived with.
+    type("");
+    await finish();
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(sent()).toEqual([{}]);
+    expect(sent()[1]).toEqual({ preferences: EMAIL, referralCode: KEPT });
     expect(m.push).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(REFERRAL_CODE_STORAGE_KEY)).toBeNull();
+  });
+
+  it("…from another step too: a Skip the server stops lands on the field's step", async () => {
+    m.complete.mockResolvedValueOnce({ ok: false, error: "Nobody has that referral code.", referralCodeRefused: true });
+    wizard();
+    await toLastStep();
+    type(TYPED);
+    await click("Back");
+    await skip();
+    expect(sent()).toEqual([{ typedReferralCode: TYPED }]);
+    expect(screen.getByRole("heading", { name: "Stay in the loop" })).toBeTruthy();
+    expect(document.activeElement).toBe(codeField());
+  });
+
+  it("any OTHER failure of the finish is not the field's: no mark, no jump", async () => {
+    m.complete.mockResolvedValueOnce({ ok: false, error: "Couldn't finish setting up. Please try again." });
+    wizard();
+    await toLastStep();
+    type(TYPED);
+    await click("Back");
+    await skip();
+    expect(screen.getByRole("alert").textContent).toBe("Couldn't finish setting up. Please try again.");
+    expect(screen.queryByRole("heading", { name: "Stay in the loop" })).toBeNull();
   });
 });
 
@@ -540,20 +637,6 @@ describe("after Finish", () => {
     expect(m.toast.error).not.toHaveBeenCalled();
     expect(m.push.mock.calls).toEqual([["/dashboard"]]);
     expect(m.refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it("a typed code not taken and the remembered LINK counted in its place: the toast says exactly that — and never \"add it later\" (an account has one referral)", async () => {
-    setKept(KEPT, NOW - DAY);
-    m.complete.mockResolvedValue({ ok: true, referralNote: REFERRAL_LINK_COUNTED_INSTEAD, referralLinkCounted: true });
-    wizard();
-    await toLastStep();
-    type(TYPED);
-    await finish();
-    expect(sent()).toEqual([{ preferences: EMAIL, referralCode: KEPT, typedReferralCode: TYPED }]);
-    expect(m.toast.message.mock.calls).toEqual([[REFERRAL_LINK_COUNTED_INSTEAD]]);
-    expect(String(m.toast.message.mock.calls[0][0])).not.toMatch(/later/i);
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(m.push.mock.calls).toEqual([["/dashboard"]]);
   });
 
   it("no note in the answer: no toast at all", async () => {

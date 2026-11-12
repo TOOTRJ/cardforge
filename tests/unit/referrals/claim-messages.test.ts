@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  REFERRAL_CODE_NOT_SAVED,
+  REFERRAL_CODE_TOO_MANY_TRIES,
   REFERRAL_CODE_UNREADABLE,
-  REFERRAL_LINK_COUNTED_INSTEAD,
+  onboardingCodeError,
   onboardingReferralNote,
   onboardingReferralToast,
   referralClaimError,
@@ -105,18 +107,25 @@ describe("onboardingReferralNote", () => {
   });
 });
 
-describe("onboardingReferralToast", () => {
-  it("a code that was not taken can still be typed on the Refer a friend page: the note, then where", () => {
-    expect(onboardingReferralToast(referralClaimError("unknown_code"), false)).toBe(
-      "Nobody has that referral code. Check it with your friend and try again. You can add it later from Refer a friend.",
+describe("onboarding's words about a code", () => {
+  it("a TYPED code that cannot be used: the claim's sentence, then the way on — the field is optional", () => {
+    expect(onboardingCodeError(referralClaimError("unknown_code"))).toBe(
+      "Nobody has that referral code. Check it with your friend and try again. You can also clear the field and finish without a code.",
+    );
+    expect(onboardingCodeError(REFERRAL_CODE_UNREADABLE)).toBe(
+      "That doesn't look like a referral code or link. Check it and try again. You can also clear the field and finish without a code.",
+    );
+    expect(onboardingCodeError(REFERRAL_CODE_TOO_MANY_TRIES)).toBe(
+      "That's a lot of tries. Wait a minute and try again. You can also clear the field and finish without a code.",
     );
   });
 
-  it("the link counted in its place: the sentence alone — an account has one referral, so nothing can be added later", () => {
-    expect(onboardingReferralToast(REFERRAL_LINK_COUNTED_INSTEAD, true)).toBe(REFERRAL_LINK_COUNTED_INSTEAD);
-    expect(REFERRAL_LINK_COUNTED_INSTEAD).toBe(
-      "The referral code you typed wasn't taken, so the friend's link you opened before was counted instead.",
+  it("a code not taken once the account is finished: the note, then where it can still be typed", () => {
+    expect(onboardingReferralToast(referralClaimError("unknown_code"))).toBe(
+      "Nobody has that referral code. Check it with your friend and try again. You can add it later from Refer a friend.",
     );
-    expect(REFERRAL_LINK_COUNTED_INSTEAD).not.toMatch(/later|try again/i);
+    expect(onboardingReferralToast(REFERRAL_CODE_NOT_SAVED)).toBe(
+      "We couldn't add your referral code just now. You can add it later from Refer a friend.",
+    );
   });
 });

@@ -22,6 +22,8 @@ const s = vi.hoisted(() => ({
   limit: vi.fn<(input: Record<string, unknown>) => Promise<LimitAnswer>>(async () => ({ ok: true })),
   /** The limit and the claim, in the order they were asked. */
   order: [] as string[],
+  /** How often the profile's `onboarded_at` write was made: the account FINISHED. */
+  finishes: 0,
 }));
 type ClaimAnswer = { ok: true; referralId: string } | { ok: false; reason: string };
 type LimitAnswer = { ok: true } | { ok: false; retryAfterSeconds: number; message: string };
@@ -34,7 +36,10 @@ vi.mock("@/lib/supabase/server", () => ({
     from: () => {
       const chain: Record<string, unknown> = {};
       for (const method of ["update", "eq", "is"]) chain[method] = () => chain;
-      chain.select = async () => ({ data: s.finished, error: null });
+      chain.select = async () => {
+        s.finishes += 1;
+        return { data: s.finished, error: null };
+      };
       // email_preferences.update(...).eq(...) is awaited directly.
       chain.then = (resolve: (value: { error: null }) => void) => resolve({ error: null });
       return chain;
@@ -52,7 +57,13 @@ vi.mock("@/lib/email/preferences", () => ({ getRecipientFor: vi.fn() }));
 vi.mock("@/lib/email/messages", () => ({ welcomeEmail: vi.fn() }));
 
 import { completeOnboardingAction } from "@/lib/onboarding/actions";
-import { REFERRAL_CODE_UNREADABLE, REFERRAL_LINK_COUNTED_INSTEAD, onboardingReferralNote } from "@/lib/referrals/claim-messages";
+import {
+  REFERRAL_CODE_NOT_SAVED,
+  REFERRAL_CODE_TOO_MANY_TRIES,
+  REFERRAL_CODE_UNREADABLE,
+  onboardingCodeError,
+  onboardingReferralNote,
+} from "@/lib/referrals/claim-messages";
 
 const runDeferred = async () => {
   for (const task of s.afterTasks.splice(0)) await task();
@@ -65,6 +76,7 @@ beforeEach(() => {
   s.afterTasks = [];
   s.signup.mockClear();
   s.order = [];
+  s.finishes = 0;
   s.claim.mockReset().mockImplementation(async () => {
     s.order.push("claim");
     return { ok: true, referralId: "ref-1" };
@@ -355,104 +367,119 @@ describe("completeOnboardingAction — the referral claim", () => {
     expect(s.limit).not.toHaveBeenCalled();
   });
 
-  it("a typed code that is refused with NO link behind it carries its note like any other — one claim, nothing claimed in its place", async () => {
-    s.claim.mockReset().mockResolvedValue({ ok: false, reason: "unknown_code" });
-    const result = await completeOnboardingAction({ typedReferralCode: "dddd4444" });
-    expect(result).toEqual({ ok: true, referralNote: "Nobody has that referral code. Check it with your friend and try again." });
-    expect("referralLinkCounted" in result).toBe(false);
-    expect(claimCalls()).toEqual([{ refereeId: "user-1", code: "dddd4444" }]);
-    // The same code typed AND arrived with: there is nothing else to fall back to.
-    s.claim.mockClear();
-    await completeOnboardingAction({ referralCode: "dddd4444", typedReferralCode: "DDDD4444" });
-    expect(claimCalls()).toEqual([{ refereeId: "user-1", code: "dddd4444" }]);
-  });
-
-  it.each(["unknown_code", "self"] as const)(
-    "a typed code nobody can be credited for (%s) falls back to the link the account ARRIVED with — claimed in its place, and said so",
-    async (reason) => {
-      // The link the browser remembered.
-      s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason }).mockResolvedValue({ ok: true, referralId: "ref-1" });
-      expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toEqual({
-        ok: true,
-        referralNote: REFERRAL_LINK_COUNTED_INSTEAD,
-        referralLinkCounted: true,
-      });
-      expect(claimCalls()).toEqual([
-        { refereeId: "user-1", code: "dddd4444" },
-        { refereeId: "user-1", code: CODE },
-      ]);
-      // The code the signup put on the account goes before the browser's.
-      s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason }).mockResolvedValue({ ok: true, referralId: "ref-1" });
-      s.user = { id: "user-1", app_metadata: { provider: "email", referral_code: "0000aaaa" } };
-      await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" });
-      expect(claimCalls()).toEqual([
-        { refereeId: "user-1", code: "dddd4444" },
-        { refereeId: "user-1", code: "0000aaaa" },
-      ]);
-      // Still ONE hit of the limit for the finish.
-      expect(s.limit).toHaveBeenCalledTimes(2);
+  it.each([
+    ["unknown_code", "Nobody has that referral code. Check it with your friend and try again."],
+    ["self", "That is your own code. Enter the code of the friend who told you about PipGlyph."],
+  ] as const)(
+    "a TYPED code nobody can be credited for (%s) STOPS the step with the claim's own words — nothing is finished, and the link is never claimed in its place",
+    async (reason, sentence) => {
+      s.claim.mockReset().mockResolvedValue({ ok: false, reason });
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      for (const [input, metadata] of [
+        // No link behind it.
+        [{ typedReferralCode: "dddd4444" }, {}],
+        // The link the browser remembered.
+        [{ referralCode: CODE, typedReferralCode: "dddd4444" }, {}],
+        // The code the signup put on the account.
+        [{ typedReferralCode: "dddd4444" }, { referral_code: "0000aaaa" }],
+        // "Finish" (preferences sent) is stopped the same way as "Skip" (the three above).
+        [{ referralCode: CODE, typedReferralCode: "dddd4444", preferences: { account: true, activity: true, newsletter: false } }, { referral_code: "0000aaaa" }],
+      ] as const) {
+        s.claim.mockClear();
+        s.finishes = 0;
+        s.user = { id: "user-1", app_metadata: { provider: "email", ...metadata } };
+        const result = await completeOnboardingAction(input);
+        expect(result).toEqual({ ok: false, error: `${sentence} You can also clear the field and finish without a code.`, referralCodeRefused: true });
+        expect(result).toEqual({ ok: false, error: onboardingCodeError(sentence), referralCodeRefused: true });
+        // ONE claim, the typed code's: an account has one referral for good,
+        // so a typo is never answered by crediting somebody else.
+        expect(claimCalls()).toEqual([{ refereeId: "user-1", code: "dddd4444" }]);
+        // The account is NOT finished: no onboarded_at, no funnel row.
+        expect(s.finishes).toBe(0);
+        await runDeferred();
+        expect(s.signup).not.toHaveBeenCalled();
+      }
+      expect(error).not.toHaveBeenCalled();
+      error.mockRestore();
     },
   );
 
-  it("the sentence says what happened, and promises nothing that can no longer be done", () => {
-    expect(REFERRAL_LINK_COUNTED_INSTEAD).toBe(
-      "The referral code you typed wasn't taken, so the friend's link you opened before was counted instead.",
-    );
-    expect(REFERRAL_LINK_COUNTED_INSTEAD).not.toMatch(/later|try again/i);
+  it("the field emptied after that: the next finish claims the link the account arrived with, and the account is finished", async () => {
+    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "unknown_code" }).mockResolvedValue({ ok: true, referralId: "ref-1" });
+    expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toMatchObject({ ok: false, referralCodeRefused: true });
+    expect(s.finishes).toBe(0);
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    expect(claimCalls()).toEqual([
+      { refereeId: "user-1", code: "dddd4444" },
+      { refereeId: "user-1", code: CODE },
+    ]);
+    expect(s.finishes).toBe(1);
   });
 
-  it("a link that is not taken either leaves the TYPED code's own note — and no claim of a counted link", async () => {
-    for (const second of ["unknown_code", "exists", "not_new", "program_off", "reciprocal"] as const) {
-      s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "unknown_code" }).mockResolvedValue({ ok: false, reason: second });
-      const result = await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" });
-      expect(result, second).toEqual({ ok: true, referralNote: "Nobody has that referral code. Check it with your friend and try again." });
-      expect("referralLinkCounted" in result, second).toBe(false);
-      expect(s.claim, second).toHaveBeenCalledTimes(2);
+  it("the same refusals of a LINK (nothing typed) never stop anything: the account is finished and the note is a toast's", async () => {
+    for (const reason of ["unknown_code", "self", "bad_code"] as const) {
+      s.claim.mockReset().mockResolvedValue({ ok: false, reason });
+      s.finishes = 0;
+      const result = await completeOnboardingAction({ referralCode: CODE });
+      expect(result, reason).toEqual({ ok: true, referralNote: onboardingReferralNote(reason) });
+      expect("referralCodeRefused" in result, reason).toBe(false);
+      expect(s.finishes, reason).toBe(1);
     }
   });
 
-  it("a typed code with a FINAL answer that retyping cannot change (exists, not_new, program_off, reciprocal) is not replaced by the link", async () => {
+  it("a typed code with a FINAL answer that retyping cannot change (exists, not_new, program_off, reciprocal) stops nothing and claims nothing else: one claim, the account finished, no note", async () => {
     for (const reason of ["exists", "not_new", "program_off", "reciprocal"] as const) {
       s.claim.mockReset().mockResolvedValue({ ok: false, reason });
+      s.finishes = 0;
       expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" }), reason).toEqual({ ok: true });
       expect(claimCalls(), reason).toEqual([{ refereeId: "user-1", code: "dddd4444" }]);
+      expect(s.finishes, reason).toBe(1);
     }
   });
 
-  it("a typed code whose claim FAILED twice is not replaced by the link either: the failure is the database's, not the code's", async () => {
+  it("a typed code the database could not save (error twice): the account is finished, the link is NOT claimed in its place, and the note says it can be added later", async () => {
     s.claim.mockReset().mockResolvedValue({ ok: false, reason: "error" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toEqual({
+      ok: true,
+      referralNote: REFERRAL_CODE_NOT_SAVED,
+    });
+    expect(REFERRAL_CODE_NOT_SAVED).toBe("We couldn't add your referral code just now.");
+    expect(claimCalls()).toEqual([
+      { refereeId: "user-1", code: "dddd4444" },
+      { refereeId: "user-1", code: "dddd4444" },
+    ]);
+    expect(s.finishes).toBe(1);
+    expect(error).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+    // A LINK that failed twice says nothing: nobody typed anything to be told about.
+    s.claim.mockClear();
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await completeOnboardingAction({ referralCode: CODE })).toEqual({ ok: true });
+    quiet.mockRestore();
+  });
+
+  it("a typed claim whose first try FAILED and whose retry says the row is there (exists): two calls, both the typed code — never the link's, and no note", async () => {
+    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "error" }).mockResolvedValue({ ok: false, reason: "exists" });
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toEqual({ ok: true });
     expect(claimCalls()).toEqual([
       { refereeId: "user-1", code: "dddd4444" },
       { refereeId: "user-1", code: "dddd4444" },
     ]);
+    expect(error).not.toHaveBeenCalled();
     error.mockRestore();
   });
 
-  it("the link's claim is retried once on a failed read like any other, and a link that fails twice is logged — the typed code's note stands", async () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    s.claim
-      .mockReset()
-      .mockResolvedValueOnce({ ok: false, reason: "unknown_code" })
-      .mockResolvedValueOnce({ ok: false, reason: "error" })
-      .mockResolvedValue({ ok: true, referralId: "ref-1" });
-    expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toEqual({
-      ok: true,
-      referralNote: REFERRAL_LINK_COUNTED_INSTEAD,
-      referralLinkCounted: true,
+  it("a typed claim whose retry answers unknown_code (error, then nobody has it) stops the step like a first answer", async () => {
+    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "error" }).mockResolvedValue({ ok: false, reason: "unknown_code" });
+    expect(await completeOnboardingAction({ typedReferralCode: "dddd4444" })).toEqual({
+      ok: false,
+      error: onboardingCodeError("Nobody has that referral code. Check it with your friend and try again."),
+      referralCodeRefused: true,
     });
-    expect(s.claim).toHaveBeenCalledTimes(3);
-    expect(error).not.toHaveBeenCalled();
-
-    s.claim.mockReset().mockResolvedValueOnce({ ok: false, reason: "unknown_code" }).mockResolvedValue({ ok: false, reason: "error" });
-    expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "dddd4444" })).toEqual({
-      ok: true,
-      referralNote: "Nobody has that referral code. Check it with your friend and try again.",
-    });
-    expect(s.claim).toHaveBeenCalledTimes(3);
-    expect(error).toHaveBeenCalledTimes(1);
-    error.mockRestore();
+    expect(s.claim).toHaveBeenCalledTimes(2);
+    expect(s.finishes).toBe(0);
   });
 
   it("the claim is counted against the code-entry limit BEFORE it is made: one hit per finish, for this user — 5 a minute, 20 an hour", async () => {
@@ -481,24 +508,48 @@ describe("completeOnboardingAction — the referral claim", () => {
     error.mockRestore();
   });
 
-  it("past the limit the code is NOT looked at: no claim, no note — and onboarding completes all the same (funnel row included)", async () => {
+  it("past the limit a LINK is not looked at: no claim, no note — and onboarding completes all the same (funnel row included)", async () => {
     s.limit.mockReset().mockResolvedValue({ ok: false, retryAfterSeconds: 42, message: "" });
     // A claim that WOULD have answered with a note, had it been made.
     s.claim.mockReset().mockResolvedValue({ ok: false, reason: "unknown_code" });
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    for (const input of [{ referralCode: CODE }, { typedReferralCode: "dddd4444" }, { referralCode: CODE, typedReferralCode: "dddd4444" }]) {
+    for (const metadata of [{}, { referral_code: "0000aaaa" }]) {
       s.signup.mockClear();
-      const result = await completeOnboardingAction(input);
+      s.user = { id: "user-1", app_metadata: { provider: "google", ...metadata } };
+      const result = await completeOnboardingAction({ referralCode: CODE });
       expect(result).toEqual({ ok: true });
       expect(Object.keys(result)).toEqual(["ok"]);
       // The account is finished: its funnel row is written as for any other.
       await runDeferred();
       expect(s.signup).toHaveBeenCalledTimes(1);
     }
-    expect(s.limit).toHaveBeenCalledTimes(3);
+    expect(s.limit).toHaveBeenCalledTimes(2);
     expect(s.claim).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     error.mockRestore();
+  });
+
+  it("past the limit a TYPED code is told to wait — it is somebody trying codes: no claim, nothing finished, and the code is not quietly dropped", async () => {
+    s.limit.mockReset().mockResolvedValue({ ok: false, retryAfterSeconds: 42, message: "" });
+    for (const input of [{ typedReferralCode: "dddd4444" }, { referralCode: CODE, typedReferralCode: "dddd4444" }]) {
+      s.finishes = 0;
+      expect(await completeOnboardingAction(input)).toEqual({
+        ok: false,
+        error: "That's a lot of tries. Wait a minute and try again. You can also clear the field and finish without a code.",
+        referralCodeRefused: true,
+      });
+      expect(s.finishes).toBe(0);
+      await runDeferred();
+      expect(s.signup).not.toHaveBeenCalled();
+    }
+    expect(onboardingCodeError(REFERRAL_CODE_TOO_MANY_TRIES)).toBe(
+      "That's a lot of tries. Wait a minute and try again. You can also clear the field and finish without a code.",
+    );
+    expect(s.claim).not.toHaveBeenCalled();
+    // …while a typed value that is NO code is nobody's word: the link's rule applies.
+    s.finishes = 0;
+    expect(await completeOnboardingAction({ referralCode: CODE, typedReferralCode: "nope" })).toEqual({ ok: true });
+    expect(s.finishes).toBe(1);
   });
 
   it("no code at all — or no service role — never touches the limiter", async () => {
