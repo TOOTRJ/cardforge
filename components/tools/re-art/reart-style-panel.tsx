@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -32,6 +32,7 @@ export function ReartStylePanel({
   saved,
   saving,
   onSave,
+  onReset,
   problem,
   saveError,
   paintedInSaved,
@@ -44,6 +45,10 @@ export function ReartStylePanel({
   saved: boolean;
   saving: boolean;
   onSave: () => void;
+  /** Puts the form back to the deck's saved style (offered while the form
+   *  differs from it): one card is painted in the saved style only, so an
+   *  edit made by mistake needs a way back that doesn't save a new look. */
+  onReset?: () => void;
   problem: string | null;
   saveError: string | null;
   /** Cards painted in the saved style (a new style starts a new look). */
@@ -51,6 +56,7 @@ export function ReartStylePanel({
 }) {
   const themeId = useId();
   const blockId = useId();
+  const themeRef = useRef<HTMLTextAreaElement>(null);
   return (
     <section aria-labelledby="reart-style" className="flex flex-col gap-4 rounded-frame border border-border/60 bg-surface/50 p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -86,6 +92,7 @@ export function ReartStylePanel({
       >
         <textarea
           id={themeId}
+          ref={themeRef}
           value={style.theme}
           maxLength={REART_THEME_MAX}
           rows={3}
@@ -145,6 +152,20 @@ export function ReartStylePanel({
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           Save style
         </Button>
+        {saved && dirty && onReset ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              onReset();
+              // The button removes itself: the focus goes to the words it
+              // put back.
+              requestAnimationFrame(() => themeRef.current?.focus());
+            }}
+          >
+            Undo changes
+          </Button>
+        ) : null}
         {problem ? (
           <p id={`${themeId}-problem`} className="text-xs text-muted">
             {problem}

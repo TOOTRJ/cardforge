@@ -7,17 +7,21 @@ import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-lim
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rowHasBakedBack } from "@/lib/cards/faces";
+import { discardGeneratedArt } from "@/lib/ai/random-art";
 import { isUuid } from "@/lib/ids";
 import type { Json } from "@/types/supabase";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard } from "@/lib/tools/bulk-customize/planner";
 import { fetchBulkPrintings, importPatchOf } from "@/lib/tools/bulk-customize/server";
 import {
+  REART_CHANGED_COPY,
   REART_CREDITS_PER_FACE,
   REART_MAX_CARDS,
   REART_SKIP_COPY,
   classifyReartEntry,
   normalizeReartStyle,
+  reartEntryState,
+  reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
   scopeTakes,
@@ -121,6 +125,11 @@ export type PaintedCard = {
   previousArtistCredit: string | null;
   previousBackArtistCredit: string | null;
   paintedAt: string;
+  /** The run whose step wrote the row last (null: the tool's own write —
+   *  "old art back" — or a pruned run). A step that finds its OWN run's row
+   *  for a picture the card doesn't show is finishing a paint that never
+   *  landed (step.ts). */
+  jobId: string | null;
 };
 
 type PaintedRow = {
@@ -137,10 +146,11 @@ type PaintedRow = {
   previous_artist_credit: string | null;
   previous_back_artist_credit: string | null;
   painted_at: string;
+  job_id?: string | null;
 };
 
 const PAINTED_COLUMNS =
-  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at";
+  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at, job_id";
 
 function paintedOf(row: PaintedRow): PaintedCard {
   return {
@@ -157,6 +167,7 @@ function paintedOf(row: PaintedRow): PaintedCard {
     previousArtistCredit: row.previous_artist_credit,
     previousBackArtistCredit: row.previous_back_artist_credit,
     paintedAt: row.painted_at,
+    jobId: row.job_id ?? null,
   };
 }
 
@@ -213,7 +224,7 @@ export async function writePaintedCard(
   userId: string,
   deckId: string,
   jobId: string | null,
-  painted: Omit<PaintedCard, "paintedAt">,
+  painted: Omit<PaintedCard, "paintedAt" | "jobId">,
 ): Promise<boolean> {
   if (!isAdminConfigured()) return false;
   const { error } = await createAdminClient()
@@ -241,6 +252,142 @@ export async function writePaintedCard(
     );
   if (error) console.warn(`[re-art] painted card ${painted.cardId} on deck ${deckId} not recorded: ${error.message}`);
   return !error;
+}
+
+/**
+ * A paint's row put back to what it said before the paint (the step writes
+ * the row first, then edits the card: an edit that was refused must not
+ * leave a row for a paint that never landed). `before` null: there was no
+ * row. Best effort — a row left behind reads "has other art now", which a
+ * re-roll clears.
+ */
+export async function revertPaintedCard(
+  userId: string,
+  deckId: string,
+  cardId: string,
+  before: PaintedCard | null,
+): Promise<void> {
+  if (before) {
+    await writePaintedCard(userId, deckId, before.jobId, before);
+    return;
+  }
+  if (!isAdminConfigured()) return;
+  const { error } = await createAdminClient()
+    .from("deck_reart_cards")
+    .delete()
+    .eq("deck_id", deckId)
+    .eq("card_id", cardId)
+    .eq("owner_id", userId);
+  if (error) console.warn(`[re-art] row of an unsaved paint (card ${cardId}, deck ${deckId}) not removed: ${error.message}`);
+}
+
+/** How many card ids one read names (a deck holds up to 500 entries). */
+const PICTURE_READ_CHUNK = 100;
+
+/**
+ * Every picture Re-art has on record for these cards, from ANY of the
+ * caller's decks (their session: their own rows), by card id — the studio
+ * says "this replaces the picture Re-art painted" for a card another deck's
+ * run painted too. `complete` is false when a read failed: the studio then
+ * promises nothing about a picture it couldn't ask about.
+ */
+export async function readReartPicturesByCard(
+  cardIds: ReadonlyArray<string>,
+): Promise<{ pictures: Map<string, string[]>; complete: boolean }> {
+  const pictures = new Map<string, string[]>();
+  const ids = [...new Set(cardIds)];
+  if (ids.length === 0) return { pictures, complete: true };
+  const supabase = await createClient();
+  const chunks: string[][] = [];
+  for (let at = 0; at < ids.length; at += PICTURE_READ_CHUNK) chunks.push(ids.slice(at, at + PICTURE_READ_CHUNK));
+  const reads = await Promise.all(
+    chunks.map((chunk) => supabase.from("deck_reart_cards").select("card_id, art_url").in("card_id", chunk).not("art_url", "is", null)),
+  );
+  let complete = true;
+  for (const { data, error } of reads) {
+    if (error || !data) {
+      complete = false;
+      continue;
+    }
+    for (const row of data as Array<{ card_id: string; art_url: string | null }>) {
+      if (!row.art_url) continue;
+      pictures.set(row.card_id, [...(pictures.get(row.card_id) ?? []), row.art_url]);
+    }
+  }
+  return { pictures, complete };
+}
+
+// ---------------------------------------------------------------------------
+// Removing a picture Re-art painted
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether anything of the caller's still shows, or keeps, the picture at
+ * `url`: one of their cards (front or back face — a remix of their OWN card
+ * shares its parent's art file, lib/cards/remix-media.ts, and a card can be
+ * in several decks), or a Re-art row that holds it as the art to put back.
+ *
+ * Read with the service role and the owner named in every statement (as the
+ * step's other reads of these rows): the caller's own read of
+ * deck_reart_cards is gated on the tool being open to them (0191), and a
+ * count a policy emptied would read as "nothing holds it". FAIL CLOSED:
+ * no service role, an error or a count that didn't come back all answer
+ * "in use" — the picture stays, and a leftover is the storage orphan
+ * sweep's.
+ *
+ * The cards are asked BEFORE the rows, never together: a paint writes its
+ * row (the art to put back) before it edits the card (step.ts), so a
+ * picture another step is taking off a card is named by that card until
+ * after its row names it — asked in this order, no moment misses both.
+ */
+async function reartArtInUse(userId: string, url: string): Promise<boolean> {
+  if (!isAdminConfigured()) return true;
+  const admin = createAdminClient();
+  const held = (results: Array<{ count: number | null; error: unknown }>) =>
+    results.some((result) => Boolean(result.error) || !Number.isFinite(result.count) || (result.count as number) > 0);
+  const onCards = await Promise.all([
+    admin.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
+    admin
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .filter("back_face->>art_url", "eq", url),
+  ]);
+  if (held(onCards)) return true;
+  const kept = await Promise.all([
+    admin
+      .from("deck_reart_cards")
+      .select("card_id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .eq("previous_art_url", url),
+    admin
+      .from("deck_reart_cards")
+      .select("card_id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .eq("previous_back_art_url", url),
+  ]);
+  return held(kept);
+}
+
+/**
+ * Removes a picture Re-art painted that the tool has just taken OFF a card
+ * (a re-roll replaced it, "Put the old art back" replaced it) — only when
+ * nothing else of the caller's shows or keeps it. It used to be removed
+ * unasked, which left a remix of the card (the same art file) and any other
+ * card holding the picture with a dead link. True when it was removed.
+ * Never throws; call it AFTER the card's edit landed, so the card itself no
+ * longer counts.
+ */
+export async function discardReartArtIfUnused(userId: string, url: string | null | undefined): Promise<boolean> {
+  if (!url) return false;
+  try {
+    if (await reartArtInUse(userId, url)) return false;
+  } catch (error) {
+    console.warn("[re-art] couldn't tell whether a replaced picture is still used; keeping it:", error);
+    return false;
+  }
+  await discardGeneratedArt(userId, url);
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -351,8 +498,16 @@ export async function planReartRun(
       if (seenCards.has(card.id)) continue;
       seenCards.add(card.id);
       const done = painted.get(card.id);
-      if (!explicit && !styleChanged && done?.styleVersion === version) {
-        inStyle += 1;
+      // In the style only while it still SHOWS the style's picture: a record
+      // of a paint is not the paint. A run over the deck leaves a settled
+      // card as it is (in the style, given its own art back, or showing
+      // other art now — someone's later choice; a re-roll paints it).
+      const state = reartEntryState({ painted: done, styleVersion: version, cardArtUrl: card.art_url });
+      if (!explicit && !styleChanged && reartStateIsSettled(state)) {
+        // A card that shows other art now is not "in this style", and the
+        // run says why it leaves it (the confirm's list).
+        if (state === "changed") skipped.push({ name: card.title || entry.name, reason: REART_CHANGED_COPY });
+        else inStyle += 1;
         continue;
       }
       const twoFaces = rowHasBakedBack(card);

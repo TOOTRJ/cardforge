@@ -9,7 +9,13 @@ import { PrintingPicture } from "@/components/tools/collection/printing-tile";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { CARD_GRID_COMPACT_CLASS, DASHBOARD_COMPACT_GRID_SIZES } from "@/components/cards/card-grid";
 import { cn } from "@/lib/utils";
-import { REART_SAMPLE_MAX, reartStateLabel, type ReartStudioEntry } from "@/lib/tools/re-art/model";
+import {
+  REART_SAMPLE_MAX,
+  reartStateCountsInStyle,
+  reartStateIsSettled,
+  reartStateLabel,
+  type ReartStudioEntry,
+} from "@/lib/tools/re-art/model";
 
 export type ReartGridFilter = "all" | "todo" | "done" | "skipped";
 
@@ -22,7 +28,10 @@ const FILTER_LABELS: Record<ReartGridFilter, string> = {
 
 export function gridFilterOf(entry: ReartStudioEntry): Exclude<ReartGridFilter, "all"> {
   if (entry.kind === "skip") return "skipped";
-  return entry.state === "in_style" || entry.state === "kept" ? "done" : "todo";
+  if (reartStateCountsInStyle(entry.state)) return "done";
+  // A card that shows other art now is left as it is by a run over the
+  // deck (a re-roll paints it): never "in this style", never "to paint".
+  return reartStateIsSettled(entry.state) ? "skipped" : "todo";
 }
 
 /**
@@ -40,6 +49,7 @@ export function ReartCardGrid({
   onToggleSample,
   busy,
   locked,
+  paintBlocked = null,
   onPaintOne,
   onRestore,
 }: {
@@ -53,6 +63,10 @@ export function ReartCardGrid({
   busy: string | null;
   /** A run is going: one-card actions wait. */
   locked: boolean;
+  /** Why one card can't be painted right now (no saved style, or the form
+   *  shows a style that isn't saved), or null. Said above the cards; the
+   *  studio says it again when a paint link is pressed. */
+  paintBlocked?: string | null;
   onPaintOne: (entry: ReartStudioEntry) => void;
   onRestore: (entry: ReartStudioEntry) => void;
 }) {
@@ -73,6 +87,11 @@ export function ReartCardGrid({
         </h2>
         <ChipGroup ariaLabel="Show" keepCase size="sm" options={options} value={filter} onChange={onFilter} />
       </div>
+      {paintBlocked ? (
+        <p id="reart-paint-blocked" className="text-xs text-warning">
+          {paintBlocked}
+        </p>
+      ) : null}
       {shown.length === 0 ? (
         <p className="rounded-lg border border-border/50 p-6 text-center text-sm text-muted">No cards here.</p>
       ) : (
@@ -126,6 +145,7 @@ export function ReartCardGrid({
                   <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                     {entry.state === "in_style" ? <Badge variant="primary">In this style</Badge> : null}
                     {entry.state === "kept" ? <Badge variant="outline">Kept its own art</Badge> : null}
+                    {entry.state === "changed" ? <Badge variant="outline">Has other art now</Badge> : null}
                     {entry.state === "earlier" ? <Badge variant="gold">Earlier style</Badge> : null}
                     {entry.board === "commander" ? <Badge variant="accent">Commander</Badge> : null}
                     {entry.state === null || entry.kind === "skip" ? <span>{reartStateLabel(entry)}</span> : null}
@@ -154,25 +174,28 @@ export function ReartCardGrid({
                         <span className="sr-only">: {entry.name}</span>
                         {sampleFull && !inSample ? <span className="sr-only"> — the sample holds {REART_SAMPLE_MAX} cards</span> : null}
                       </label>
+                      {/* Opens the confirm (priced there; nothing is charged
+                          before its Paint). While one card can't be painted
+                          the link says why when pressed, and is described by
+                          the note above the cards. */}
                       <button
                         type="button"
                         onClick={() => {
                           if (!locked && !busy) onPaintOne(entry);
                         }}
-                        aria-disabled={locked || Boolean(busy) ? true : undefined}
+                        aria-disabled={locked || Boolean(busy) || Boolean(paintBlocked) ? true : undefined}
+                        aria-describedby={paintBlocked ? "reart-paint-blocked" : undefined}
                         className={cn(
                           "inline-flex items-center gap-1 rounded-sm text-xs text-primary-bright underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
-                          locked || busy ? "cursor-not-allowed opacity-60" : "hover:underline",
+                          locked || busy || paintBlocked ? "cursor-not-allowed opacity-60" : "hover:underline",
                         )}
                       >
-                        {working ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                        ) : entry.state ? (
+                        {entry.state ? (
                           <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                         ) : (
                           <Wand2 className="h-3.5 w-3.5" aria-hidden />
                         )}
-                        {entry.state ? "Re-roll" : entry.kind === "printing" ? "Paint this one…" : "Paint this one"}
+                        {entry.state ? "Re-roll…" : "Paint this one…"}
                         {entry.kind === "own" ? (
                           <span className="text-muted">
                             · {entry.credits} credit{entry.credits === 1 ? "" : "s"}
@@ -192,7 +215,11 @@ export function ReartCardGrid({
                             locked || busy ? "cursor-not-allowed opacity-60" : "hover:text-foreground hover:underline",
                           )}
                         >
-                          <Undo2 className="h-3.5 w-3.5" aria-hidden />
+                          {working ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Undo2 className="h-3.5 w-3.5" aria-hidden />
+                          )}
                           Old art back
                           <span className="sr-only"> — {entry.name}</span>
                         </button>

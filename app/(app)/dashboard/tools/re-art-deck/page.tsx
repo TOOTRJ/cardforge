@@ -11,10 +11,18 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { rowHasBakedBack } from "@/lib/cards/faces";
-import { getOwnedDeck, listReartRuns, readDeckStyle, readPaintedCards, bucketOfItem } from "@/lib/tools/re-art/server";
+import {
+  getOwnedDeck,
+  listReartRuns,
+  readDeckStyle,
+  readPaintedCards,
+  readReartPicturesByCard,
+  bucketOfItem,
+} from "@/lib/tools/re-art/server";
 import {
   REART_CREDITS_PER_FACE,
   classifyReartEntry,
+  reartCardFacts,
   type ReartStudioEntry,
 } from "@/lib/tools/re-art/model";
 import { isUuid } from "@/lib/ids";
@@ -116,6 +124,12 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     getFreshCreditBalance(),
   ]);
 
+  // Re-art's pictures on these cards from ANY of the maker's decks (a card
+  // can be in several): what the one-card confirm says a paint replaces.
+  const reartPictures = await readReartPicturesByCard(
+    items.flatMap(({ card }) => (card && card.owner_id === entry.userId ? [card.id] : [])),
+  );
+
   const entries: ReartStudioEntry[] = items.map(({ entry: e, card }) => {
     const classified = classifyReartEntry({
       board: e.board,
@@ -127,13 +141,15 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     });
     const done = card ? painted.get(card.id) : undefined;
     const own = classified.kind === "own" ? card : null;
-    const state: ReartStudioEntry["state"] = !done
-      ? null
-      : style && done.styleVersion === style.version
-        ? done.artUrl
-          ? "in_style"
-          : "kept"
-        : "earlier";
+    // "In this style" only while Re-art's picture is still on the card;
+    // "Put the old art back" only while it can work.
+    const facts = reartCardFacts({
+      painted: done,
+      styleVersion: style?.version ?? null,
+      cardArtUrl: card?.art_url,
+      reartPictures: card ? (reartPictures.pictures.get(card.id) ?? []) : [],
+      reartPicturesKnown: reartPictures.complete,
+    });
     return {
       id: e.id,
       name: card?.title || e.name,
@@ -145,8 +161,9 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       skipMessage: classified.kind === "skip" ? classified.message : null,
       card: own,
       bucket: bucketOfItem({ entry: e, card, cardOwner: null }),
-      state,
-      canRestore: Boolean(done && !done.made && done.artUrl && done.previousArtUrl),
+      state: facts.state,
+      canRestore: facts.canRestore,
+      artNow: facts.artNow,
       credits: own ? REART_CREDITS_PER_FACE * (rowHasBakedBack(own) ? 2 : 1) : REART_CREDITS_PER_FACE,
     };
   });

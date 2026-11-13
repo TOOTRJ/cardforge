@@ -9,7 +9,6 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import { DECK_CARDS_DAILY_LIMIT, checkDailyActionLimit, getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { OWNER_JOB_COLUMNS } from "@/lib/ai/job-privacy";
-import { discardGeneratedArt } from "@/lib/ai/random-art";
 import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { updateCardAction } from "@/lib/cards/actions";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
@@ -33,6 +32,7 @@ import {
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
+  discardReartArtIfUnused,
   getOwnedDeck,
   planLines,
   planReartRun,
@@ -211,9 +211,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     return {
       ok: false,
       error:
-        plan.inStyle > 0
-          ? "Every card of this run is in the deck's style already."
-          : (plan.skipped[0]?.reason ?? "None of these cards can be re-arted."),
+        plan.skipped.length === 0
+          ? plan.inStyle > 0
+            ? "Every card of this run is in the deck's style already."
+            : "None of these cards can be re-arted."
+          : plan.inStyle > 0 || plan.skipped.length > 1
+            ? "No card of this run is waiting to be painted."
+            : plan.skipped[0].reason,
     };
   }
 
@@ -418,10 +422,11 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     track(access, "restore_failed", { reason: "save_failed" });
     return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't put the old art back." };
   }
-  // The painted pictures no card holds any more go; the row says "kept its
-  // own art" in this style (a full run leaves it alone, a re-roll paints it).
-  await discardGeneratedArt(access.userId, painted.artUrl);
-  if (restoreBack && painted.backArtUrl) await discardGeneratedArt(access.userId, painted.backArtUrl);
+  // The painted pictures go once nothing else of the maker's shows them (a
+  // remix of this card shares its art file); the row says "kept its own
+  // art" in this style (a full run leaves it alone, a re-roll paints it).
+  await discardReartArtIfUnused(access.userId, painted.artUrl);
+  if (restoreBack && painted.backArtUrl) await discardReartArtIfUnused(access.userId, painted.backArtUrl);
   await writePaintedCard(access.userId, deck.id, null, {
     cardId: card.id,
     entryId: painted.entryId,
