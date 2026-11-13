@@ -519,15 +519,18 @@ describe("/dashboard/referrals — the page", () => {
   /** The page's markup with its tags taken out: the words as they read. */
   const wordsOf = (html: string) => html.replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'");
 
-  it("explains the program in THREE steps: share, cards each with its own artwork inside the window, both rewarded — no plan, no card", async () => {
+  it("explains the program in THREE steps: share, cards each with its own artwork inside the window, both rewarded — and no step about a plan", async () => {
     const html = await page();
     const steps = /<ol class="flex flex-col gap-3 text-sm text-muted">([\s\S]*?)<\/ol>/.exec(html)?.[1] ?? "";
     const items = steps.split("</li>").filter((li) => li.includes("<li")).map(wordsOf);
     expect(items).toEqual([
       "1. Share your link. A friend opens it and creates an account.",
       "2. They save 5 cards, each with its own artwork, within 30 days of signing up.",
-      "3. You both get your reward. 7 free days go into their bank, and you get your next step on the ladder. Nobody has to start a plan or add a card to earn it.",
+      "3. You both get your reward. 7 free days go into their bank, and you get your next step on the ladder.",
     ]);
+    // Step 3 ends there (owner 2026-11-13: the "Nobody has to start a plan or
+    // add a card to earn it." sentence was taken out of this step).
+    expect(steps).not.toMatch(/Nobody has to start a plan/);
     expect(html).not.toContain("4. You both get your reward");
     expect(html).not.toMatch(/They start a plan/);
     // The step's own heading is the count alone; the rest is its sentence.
@@ -556,11 +559,12 @@ describe("/dashboard/referrals — the page", () => {
       "Banked days are a plan's free time. Starting a plan applies them all — that is when a card is asked for — and days earned later are applied from your billing page whenever you like. The plan bills at its usual price when the days end unless you cancel. A friend's card counts when it has artwork of its own; the same picture on several cards counts once. Up to 5 rewarded friends a month; past that, the extra friends that month earn nobody a reward. New accounts only, and one reward per email address.",
     );
     expect(words).not.toContain("Only cards with artwork count");
-    // "A card" is spoken of twice on the whole page: not needed to earn the
-    // reward (step 3), asked for when a plan is started (the fine print).
-    expect(words.match(/\b(?:a|the|their|your) card\b[^.—]*/gi)).toEqual(["a card to earn it", "a card is asked for "]);
-    // …and starting a plan the same two times — never as something to wait for.
-    expect(words.match(/start(?:s|ed|ing)? a plan/gi)).toEqual(["start a plan", "Starting a plan"]);
+    // "A card" is spoken of ONCE on the whole page: asked for when a plan is
+    // started (the fine print). Step 3 no longer says it is not needed to
+    // earn the reward (owner 2026-11-13: that sentence was taken out).
+    expect(words.match(/\b(?:a|the|their|your) card\b[^.—]*/gi)).toEqual(["a card is asked for "]);
+    // …and starting a plan the same one time — never as something to wait for.
+    expect(words.match(/start(?:s|ed|ing)? a plan/gi)).toEqual(["Starting a plan"]);
     expect(words).not.toMatch(/waiting for a plan|waiting on a confirmed email/i);
   });
 

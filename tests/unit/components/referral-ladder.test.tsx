@@ -99,6 +99,15 @@ describe("ReferralLadder", () => {
     expect(out).toContain("--ladder-steps:10");
   });
 
+  it("the staircase has room above it: the tallest step's label sits ABOVE its column, so it must not touch the figures (owner 2026-11-13)", () => {
+    const list = /<ol[^>]*aria-label="Rewards by referral"[^>]*>/.exec(html(0))?.[0] ?? "";
+    // Only at the staircase's size: the phone's rows keep their own spacing.
+    expect(list).toMatch(/class="[^"]*@lg:pt-7[^"]*"/);
+    expect(list).not.toMatch(/class="[^"]*(?:^|\s)pt-\d/);
+    // The label is placed over its column's top, so the last step's is over the box's.
+    expect(html(0)).toContain("bottom:calc(100% + 0.25rem)");
+  });
+
   it("the gain above a column is an icon and a number — days and credits by their own icon, never colour alone", () => {
     const out = html(0);
     expect(out.match(/lucide-calendar-days/g)).toHaveLength(6);

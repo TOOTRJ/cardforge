@@ -221,7 +221,7 @@ export default async function ReferralsPage() {
                 </li>
                 <li className="rounded-lg border border-border/60 bg-background/40 p-3">
                   <span className="font-semibold text-foreground">3. You both get your reward.</span>
-                  {` ${friendGets} go into their bank, and you get your next step on the ladder. Nobody has to start a plan or add a card to earn it.`}
+                  {` ${friendGets} go into their bank, and you get your next step on the ladder.`}
                 </li>
               </ol>
               <p className="text-sm text-muted">
