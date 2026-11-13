@@ -136,7 +136,9 @@ export function ReferralLadder({ view, progress }: { view: LadderView; progress:
       <ol
         aria-label="Rewards by referral"
         style={{ "--ladder-steps": count } as CSSProperties}
-        className="grid grid-cols-2 gap-2 @lg:grid-cols-[repeat(var(--ladder-steps),minmax(0,1fr))_minmax(0,1fr)] @lg:items-start @lg:gap-1.5"
+        // Room above the staircase: the tallest step's label sits ABOVE its
+        // column, so without it the last step's number touches the figures.
+        className="grid grid-cols-2 gap-2 @lg:grid-cols-[repeat(var(--ladder-steps),minmax(0,1fr))_minmax(0,1fr)] @lg:items-start @lg:gap-1.5 @lg:pt-7"
       >
         {view.steps.map((step) => (
           <Step key={step.n} step={step} />

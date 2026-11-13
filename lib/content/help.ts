@@ -418,9 +418,9 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
     slug: "sharing-and-community",
     title: "Sharing & community",
     description:
-      "Public, unlisted and private cards, sharing a card with your playgroup, design challenges, and how trending works.",
+      "Public, unlisted and private cards, sharing with your playgroup, design challenges, trending, and free days for referring a friend.",
     intro:
-      "Every card is private, unlisted or public — only public cards reach the gallery and your profile. Share a card's page and it unfurls with its picture; enter a design challenge and the community decides the spotlight.",
+      "Every card is private, unlisted or public — only public cards reach the gallery and your profile. Share a card's page and it unfurls with its picture; enter a design challenge and the community decides the spotlight. Bring a friend in with your referral link and you both earn free days.",
     groups: [
       {
         id: "sharing",
@@ -431,6 +431,18 @@ export const HELP_SECTIONS: readonly HelpSection[] = [
         id: "challenges",
         title: "Challenges & trending",
         entryIds: ["design-challenges", "enter-a-challenge", "how-trending-works"],
+      },
+      {
+        id: "refer-a-friend",
+        title: "Refer a friend",
+        entryIds: [
+          "how-referrals-work",
+          "referral-rewards",
+          "when-a-referral-counts",
+          "use-free-days",
+          "referral-limits",
+          "add-a-referral-code",
+        ],
       },
     ],
   },
