@@ -289,6 +289,20 @@ describe("where a card stands against the deck's style", () => {
     it("a card with no art has nothing to put back", () => {
       expect(facts({ painted: null, cardArtUrl: null, reartPictures: [] })).toEqual({ state: null, canRestore: false, artNow: "none" });
     });
+
+    it("this deck's own row is enough to know the picture is Re-art's — whatever the other read says", () => {
+      // The read of the other decks came back empty, or failed: a re-roll of
+      // an in-style card must still say its picture can't be brought back.
+      expect(facts({ reartPictures: [] }).artNow).toBe("reart");
+      expect(facts({ reartPictures: [], reartPicturesKnown: false }).artNow).toBe("reart");
+    });
+
+    it("when the other decks couldn't be asked, nothing is promised about a picture this deck didn't paint", () => {
+      expect(facts({ painted: null, cardArtUrl: ART("mine.png"), reartPictures: [], reartPicturesKnown: false }).artNow).toBe("unknown");
+      expect(facts({ cardArtUrl: ART("hand.png"), reartPictures: [], reartPicturesKnown: false }).artNow).toBe("unknown");
+      // No art is no art either way.
+      expect(facts({ painted: null, cardArtUrl: null, reartPictures: [], reartPicturesKnown: false }).artNow).toBe("none");
+    });
   });
 
   it("the picture on the card is Re-art's only when the two addresses are the same", () => {

@@ -147,7 +147,8 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       painted: done,
       styleVersion: style?.version ?? null,
       cardArtUrl: card?.art_url,
-      reartPictures: card ? (reartPictures.get(card.id) ?? []) : [],
+      reartPictures: card ? (reartPictures.pictures.get(card.id) ?? []) : [],
+      reartPicturesKnown: reartPictures.complete,
     });
     return {
       id: e.id,

@@ -125,6 +125,11 @@ export type PaintedCard = {
   previousArtistCredit: string | null;
   previousBackArtistCredit: string | null;
   paintedAt: string;
+  /** The run whose step wrote the row last (null: the tool's own write —
+   *  "old art back" — or a pruned run). A step that finds its OWN run's row
+   *  for a picture the card doesn't show is finishing a paint that never
+   *  landed (step.ts). */
+  jobId: string | null;
 };
 
 type PaintedRow = {
@@ -141,10 +146,11 @@ type PaintedRow = {
   previous_artist_credit: string | null;
   previous_back_artist_credit: string | null;
   painted_at: string;
+  job_id?: string | null;
 };
 
 const PAINTED_COLUMNS =
-  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at";
+  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at, job_id";
 
 function paintedOf(row: PaintedRow): PaintedCard {
   return {
@@ -161,6 +167,7 @@ function paintedOf(row: PaintedRow): PaintedCard {
     previousArtistCredit: row.previous_artist_credit,
     previousBackArtistCredit: row.previous_back_artist_credit,
     paintedAt: row.painted_at,
+    jobId: row.job_id ?? null,
   };
 }
 
@@ -217,7 +224,7 @@ export async function writePaintedCard(
   userId: string,
   deckId: string,
   jobId: string | null,
-  painted: Omit<PaintedCard, "paintedAt">,
+  painted: Omit<PaintedCard, "paintedAt" | "jobId">,
 ): Promise<boolean> {
   if (!isAdminConfigured()) return false;
   const { error } = await createAdminClient()
@@ -261,7 +268,7 @@ export async function revertPaintedCard(
   before: PaintedCard | null,
 ): Promise<void> {
   if (before) {
-    await writePaintedCard(userId, deckId, null, before);
+    await writePaintedCard(userId, deckId, before.jobId, before);
     return;
   }
   if (!isAdminConfigured()) return;
@@ -281,25 +288,33 @@ const PICTURE_READ_CHUNK = 100;
  * Every picture Re-art has on record for these cards, from ANY of the
  * caller's decks (their session: their own rows), by card id — the studio
  * says "this replaces the picture Re-art painted" for a card another deck's
- * run painted too.
+ * run painted too. `complete` is false when a read failed: the studio then
+ * promises nothing about a picture it couldn't ask about.
  */
-export async function readReartPicturesByCard(cardIds: ReadonlyArray<string>): Promise<Map<string, string[]>> {
+export async function readReartPicturesByCard(
+  cardIds: ReadonlyArray<string>,
+): Promise<{ pictures: Map<string, string[]>; complete: boolean }> {
   const pictures = new Map<string, string[]>();
   const ids = [...new Set(cardIds)];
-  if (ids.length === 0) return pictures;
+  if (ids.length === 0) return { pictures, complete: true };
   const supabase = await createClient();
   const chunks: string[][] = [];
   for (let at = 0; at < ids.length; at += PICTURE_READ_CHUNK) chunks.push(ids.slice(at, at + PICTURE_READ_CHUNK));
   const reads = await Promise.all(
     chunks.map((chunk) => supabase.from("deck_reart_cards").select("card_id, art_url").in("card_id", chunk).not("art_url", "is", null)),
   );
-  for (const { data } of reads) {
-    for (const row of (data ?? []) as Array<{ card_id: string; art_url: string | null }>) {
+  let complete = true;
+  for (const { data, error } of reads) {
+    if (error || !data) {
+      complete = false;
+      continue;
+    }
+    for (const row of data as Array<{ card_id: string; art_url: string | null }>) {
       if (!row.art_url) continue;
       pictures.set(row.card_id, [...(pictures.get(row.card_id) ?? []), row.art_url]);
     }
   }
-  return pictures;
+  return { pictures, complete };
 }
 
 // ---------------------------------------------------------------------------
@@ -329,7 +344,7 @@ async function reartArtInUse(userId: string, url: string): Promise<boolean> {
   if (!isAdminConfigured()) return true;
   const admin = createAdminClient();
   const held = (results: Array<{ count: number | null; error: unknown }>) =>
-    results.some((result) => Boolean(result.error) || typeof result.count !== "number" || result.count > 0);
+    results.some((result) => Boolean(result.error) || !Number.isFinite(result.count) || (result.count as number) > 0);
   const onCards = await Promise.all([
     admin.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
     admin

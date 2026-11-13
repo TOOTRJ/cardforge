@@ -107,7 +107,10 @@ export function ReartStudio({
     () =>
       new Set(
         suggestReartSample(
-          paintable.map((entry) => ({ id: entry.id, board: entry.board, bucket: entry.bucket, inStyle: entry.state === "in_style" })),
+          // Settled cards last: a sample is a named paint, and a card that
+          // was given its own art back — or other art since — is someone's
+          // choice, never a default pick.
+          paintable.map((entry) => ({ id: entry.id, board: entry.board, bucket: entry.bucket, inStyle: reartStateIsSettled(entry.state) })),
         ),
       ),
   );
@@ -124,6 +127,12 @@ export function ReartStudio({
 
   // A sample entry that left the deck drops out of the sample.
   const sampleIds = useMemo(() => [...sample].filter((id) => paintable.some((entry) => entry.id === id)), [sample, paintable]);
+  /** A sample card that shows a picture Re-art painted: painting it again
+   *  replaces that picture for good (the sample's confirm says so). */
+  const sampleReplacesReart = useMemo(
+    () => paintable.some((entry) => entry.artNow === "reart" && sampleIds.includes(entry.id)),
+    [paintable, sampleIds],
+  );
   /** A sample that holds a real card MAKES a card of the maker's own. */
   const sampleMakesCards = useMemo(
     () => paintable.some((entry) => entry.kind === "printing" && sampleIds.includes(entry.id)),
@@ -135,6 +144,9 @@ export function ReartStudio({
    *  leaves them as they are (a re-roll paints one). */
   const otherArtNow = paintable.filter((entry) => scopeTakes(scope, entry.kind) && entry.state === "changed").length;
   const paintedInSaved = paintable.filter((entry) => entry.state === "in_style").length;
+  /** As the list's "Left as they are" filter counts them: the cards a run
+   *  never paints, and the ones that show other art now. */
+  const leftAsTheyAre = entries.length - paintable.length + paintable.filter((entry) => entry.state === "changed").length;
   const toPaint = dirty
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
     : paintable.filter((entry) => scopeTakes(scope, entry.kind) && !reartStateIsSettled(entry.state)).length;
@@ -266,7 +278,9 @@ export function ReartStudio({
           ? "This replaces the picture Re-art painted on it, and that picture can't be brought back."
           : entry.artNow === "own"
             ? "Your card gets new art in the deck's saved style. The art it has now can be put back from this page."
-            : "Your card gets new art in the deck's saved style.";
+            : // No art, or not known (the other decks couldn't be asked):
+              // nothing is promised either way.
+              "Your card gets new art in the deck's saved style.";
     openConfirm({
       title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
       description: `${description} Nothing is charged until you press Paint.`,
@@ -336,7 +350,7 @@ export function ReartStudio({
             {/* One string: the JSX text after the plural lost its leading
                 space ("7 cardsin the deck's style"). */}
             {`${inStyle} of ${paintable.length} card${paintable.length === 1 ? "" : "s"} in the deck's style`}
-            {entries.length > paintable.length ? ` · ${entries.length - paintable.length} left as they are` : ""}
+            {leftAsTheyAre > 0 ? ` · ${leftAsTheyAre} left as ${leftAsTheyAre === 1 ? "it is" : "they are"}` : ""}
           </p>
         </div>
         <Link
@@ -433,7 +447,9 @@ export function ReartStudio({
                   if (sampleBlocked || lockedReason) return;
                   openConfirm({
                     title: `Paint ${sampleIds.length} sample card${sampleIds.length === 1 ? "" : "s"}`,
-                    description: "The deck's style is saved as it is now. Nothing is charged until you press Paint.",
+                    description: `The deck's style is saved as it is now.${
+                      sampleReplacesReart ? " A picture Re-art painted on a sample card is replaced and can't be brought back." : ""
+                    } Nothing is charged until you press Paint.`,
                     input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility },
                   });
                 }}

@@ -105,9 +105,11 @@ export function ReartConfirmDialog({
     : !planned.aiAvailable
       ? "AI art isn't available right now — try again later."
       : planned.lines.length === 0
-        ? planned.inStyle > 0
-          ? "Every card here is in the deck's style already."
-          : "None of these cards can be re-arted."
+        ? planned.skipped.length > 0
+          ? "No card here is waiting to be painted. The list above says why each is left as it is."
+          : planned.inStyle > 0
+            ? "Every card here is in the deck's style already."
+            : "None of these cards can be re-arted."
         : overCapacity
           ? (capacityMessage?.message ?? "Not enough card slots left for the real cards.")
           : shortOfCredits

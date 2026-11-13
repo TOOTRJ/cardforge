@@ -364,6 +364,39 @@ describe("the maker's own card", () => {
     expect(m.discardUnused).not.toHaveBeenCalled();
   });
 
+  it("an edit that THROWS is undone the same way, and the throw goes on to the credit wrapper", async () => {
+    m.update.mockRejectedValue(new Error("boom"));
+    await expect(run(planOf())).rejects.toThrow("boom");
+    expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-new.jpg"));
+    expect(m.revert).toHaveBeenCalledWith("u1", DECK, "card-1", null);
+    expect(m.discardUnused).not.toHaveBeenCalled();
+  });
+
+  it("finishes a paint of its OWN run that never reached the card (the function was killed after the row)", async () => {
+    // The row says this run painted ai-lost.jpg; the card still shows the
+    // maker's art. Read as "has other art now" it was reported done with
+    // the card never painted.
+    const lost = ROW({ artUrl: ART("ai-lost.jpg"), jobId: "job-1" });
+    m.paintedAdmin.mockResolvedValue(lost);
+    m.paintedRows.mockResolvedValue([lost]);
+    const result = await run(planOf());
+    expect(result).toMatchObject({ status: "done", card_id: "card-1" });
+    expect(m.credited).toHaveBeenCalledTimes(1);
+    expect(m.update.mock.calls[0][1].art_url).toBe(ART("ai-new.jpg"));
+    // The art to put back is the card's own; the lost try's picture goes.
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: ART("ai-new.jpg"), previousArtUrl: ART("mine.png") });
+    expect(m.discardUnused).toHaveBeenCalledWith("u1", ART("ai-lost.jpg"));
+  });
+
+  it("the same row from ANOTHER run is someone's later choice: left as it is", async () => {
+    m.paintedAdmin.mockResolvedValue(ROW({ artUrl: ART("ai-lost.jpg"), jobId: "job-0" }));
+    const other = await run(planOf());
+    expect(other.note).toMatch(/has other art now/);
+    m.paintedAdmin.mockResolvedValue(ROW({ artUrl: ART("ai-lost.jpg"), jobId: null }));
+    expect((await run(planOf())).note).toMatch(/has other art now/);
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
   it("a row that couldn't be written is not reverted; the edit still goes ahead, with a note", async () => {
     m.writePainted.mockResolvedValue(false);
     const result = await run(planOf());

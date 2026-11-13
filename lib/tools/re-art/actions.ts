@@ -211,9 +211,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     return {
       ok: false,
       error:
-        plan.inStyle > 0
-          ? "Every card of this run is in the deck's style already."
-          : (plan.skipped[0]?.reason ?? "None of these cards can be re-arted."),
+        plan.skipped.length === 0
+          ? plan.inStyle > 0
+            ? "Every card of this run is in the deck's style already."
+            : "None of these cards can be re-arted."
+          : plan.inStyle > 0 || plan.skipped.length > 1
+            ? "No card of this run is waiting to be painted."
+            : plan.skipped[0].reason,
     };
   }
 

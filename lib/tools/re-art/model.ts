@@ -444,8 +444,9 @@ export const REART_CHANGED_COPY = "Has other art now — re-roll it to paint it 
 /** What the card shows now, for the one-card confirm's words: a picture
  *  Re-art painted — from ANY of the maker's decks: painting it again
  *  replaces that picture for good — the maker's own art (it can be put
- *  back), or none. */
-export type ReartArtNow = "reart" | "own" | "none";
+ *  back), none, or "unknown" (the other decks couldn't be asked: the
+ *  confirm promises nothing either way). */
+export type ReartArtNow = "reart" | "own" | "none" | "unknown";
 
 /**
  * What the studio says about one of the maker's own cards — pure, so the
@@ -465,12 +466,22 @@ export function reartCardFacts(input: {
   /** Every picture Re-art has on record for the card, from any of the
    *  maker's decks (a card can be in several). */
   reartPictures: ReadonlyArray<string>;
+  /** False when that read failed (default: it is known). */
+  reartPicturesKnown?: boolean;
 }): { state: ReartEntryState; canRestore: boolean; artNow: ReartArtNow } {
   const { painted, cardArtUrl } = input;
+  const onCard = reartArtIsOnCard(painted, cardArtUrl);
   return {
     state: reartEntryState({ painted, styleVersion: input.styleVersion, cardArtUrl }),
-    canRestore: Boolean(painted && !painted.made && painted.previousArtUrl && reartArtIsOnCard(painted, cardArtUrl)),
-    artNow: !cardArtUrl ? "none" : input.reartPictures.includes(cardArtUrl) ? "reart" : "own",
+    canRestore: Boolean(painted && !painted.made && painted.previousArtUrl && onCard),
+    artNow: !cardArtUrl
+      ? "none"
+      : // This deck's own row is enough to know (never the other read alone).
+        onCard || input.reartPictures.includes(cardArtUrl)
+        ? "reart"
+        : input.reartPicturesKnown === false
+          ? "unknown"
+          : "own",
   };
 }
 

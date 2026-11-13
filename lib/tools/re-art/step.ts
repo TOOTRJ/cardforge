@@ -291,7 +291,13 @@ async function paintOwnCard(
   // its art after — is left as it is, with nothing charged, unless the plan
   // named it to be painted again (a sample, a re-roll).
   const state = reartEntryState({ painted, styleVersion: version, cardArtUrl: card.art_url });
-  if (!repaint && reartStateIsSettled(state)) {
+  // THIS run's own row for a picture the card doesn't show: an earlier try
+  // of this step wrote the row (it is written before the card's edit) and
+  // never reached the edit — the function was killed. That is a paint to
+  // finish, not a card someone gave other art; left as "settled" it was
+  // reported done with the card never painted.
+  const unfinished = state === "changed" && Boolean(painted?.jobId) && painted?.jobId === jobId;
+  if (!repaint && reartStateIsSettled(state) && !unfinished) {
     return {
       ...step,
       ...CLEARED,
@@ -425,20 +431,38 @@ async function paintOwnCard(
     // The edit: the art, its fit and the AI's credit — nothing else (a
     // two-faced card's back is resent as stored with only those changed).
     const aiCredit = await deps.artistCredit();
-    const result = await updateCardAction(card.id, {
-      art_url: front.url,
-      art_position: fitArtToWindow(),
-      artist_credit: aiCredit ?? null,
-      ...(backUrl && back
-        ? { back_face: withBackArt(back, backUrl, fitArtToWindow() as unknown as Json, aiCredit ?? null) }
-        : {}),
-    });
-    if (!result.ok) {
+    // The paint never landed: its pictures go, and its row says what it
+    // said before (a row left for a picture the card doesn't show reads
+    // "has other art now").
+    const undo = async () => {
       await discard();
-      // The paint never landed: its row says what it said before.
       if (recorded) await revertPaintedCard(userId, plan.deck_id, card.id, painted);
+    };
+    let result: Awaited<ReturnType<typeof updateCardAction>>;
+    try {
+      result = await updateCardAction(card.id, {
+        art_url: front.url,
+        art_position: fitArtToWindow(),
+        artist_credit: aiCredit ?? null,
+        ...(backUrl && back
+          ? { back_face: withBackArt(back, backUrl, fitArtToWindow() as unknown as Json, aiCredit ?? null) }
+          : {}),
+      });
+    } catch (error) {
+      // A throw is a failed step too (the credit wrapper refunds and the
+      // step door reports it): undone the same way, then handed on.
+      await undo().catch(() => undefined);
+      throw error;
+    }
+    if (!result.ok) {
+      await undo();
       const error = result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "The card's new art couldn't be saved.";
       return { ...failed(step, error), failure: "save_failed", attempts: attempt };
+    }
+    // The picture(s) of the try that never landed: no card ever showed them.
+    if (unfinished) {
+      await discardReartArtIfUnused(userId, painted?.artUrl);
+      await discardReartArtIfUnused(userId, painted?.backArtUrl);
     }
     // The picture(s) this one replaced, when Re-art painted them: removed
     // once nothing else shows them (never the maker's own earlier art,

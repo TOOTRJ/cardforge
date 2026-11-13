@@ -533,9 +533,23 @@ describe("one card at a time — priced first, in the saved style, never by a st
     render(studio(null, { entry: { state: "in_style", artNow: "reart" } }));
     expect(screen.getByText("1 of 1 card in the deck's style")).toBeTruthy();
     cleanup();
-    // A card that shows other art now is never counted as in the style.
+    // A card that shows other art now is never counted as in the style: it
+    // is one of the cards left as they are, as the list's filter counts it.
     render(studio(null, { entry: { state: "changed" } }));
-    expect(screen.getByText("0 of 1 card in the deck's style")).toBeTruthy();
+    expect(screen.getByText("0 of 1 card in the deck's style · 1 left as it is")).toBeTruthy();
+  });
+
+  it("the sample's confirm says when it replaces a picture Re-art painted", async () => {
+    // The one card is the default sample.
+    const { unmount } = render(studio(null, { entry: { state: "earlier", artNow: "reart" } }));
+    await press("Paint the sample…");
+    expect(screen.getByRole("dialog").textContent).toContain("A picture Re-art painted on a sample card is replaced and can't be brought back.");
+    unmount();
+    render(studio());
+    await press("Paint the sample…");
+    const plain = screen.getByRole("dialog").textContent ?? "";
+    expect(plain).not.toMatch(/brought back/);
+    expect(plain).toContain("Nothing is charged until you press Paint.");
   });
 
   it("a deck with no saved style asks for one first", async () => {

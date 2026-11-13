@@ -194,6 +194,7 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
   /** How many rows hold the picture, by `table.column` (null: the count
    *  didn't come back). */
   function holders(counts: Record<string, number | null | "error"> = {}) {
+    // (NaN is a `number` to TypeScript: the guard must not take it for 0.)
     m.admin.mockImplementation(async (call: Call): Promise<Result> => {
       const key = `${call.table}.${columnOf(call)}`;
       const answer = key in counts ? counts[key] : 0;
@@ -265,6 +266,7 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
     ["an error on the rows", "deck_reart_cards.previous_art_url", "error" as const],
     ["a count that didn't come back (no error either)", "cards.back_face->>art_url", null],
     ["a rows count that didn't come back", "deck_reart_cards.previous_back_art_url", null],
+    ["a count that is no number", "cards.art_url", Number.NaN],
   ])("fails closed on %s: the picture stays", async (_name, holder, answer) => {
     holders({ [holder]: answer });
     expect(await discardReartArtIfUnused(ME, PICTURE)).toBe(false);
@@ -304,9 +306,10 @@ describe("a paint's row is put back when its edit was refused", () => {
     previousArtistCredit: "Jane Painter",
     previousBackArtistCredit: null,
     paintedAt: "2026-11-01T00:00:00Z",
+    jobId: "job-earlier",
   };
 
-  it("an earlier row is written back as it was", async () => {
+  it("an earlier row is written back as it was — the run that painted it included", async () => {
     m.admin.mockResolvedValue({ error: null });
     await revertPaintedCard(ME, DECK, CARD, before);
     const [call] = m.admin.mock.calls.map(([c]) => c as Call);
@@ -321,6 +324,7 @@ describe("a paint's row is put back when its edit was refused", () => {
       previous_art_url: ART("mine.png"),
       previous_artist_credit: "Jane Painter",
       made: false,
+      job_id: "job-earlier",
     });
   });
 
@@ -356,7 +360,8 @@ describe("Re-art's pictures on a card, from every deck of the maker's", () => {
         { card_id: "bare", art_url: null },
       ],
     });
-    const pictures = await readReartPicturesByCard([CARD, "other", CARD]);
+    const { pictures, complete } = await readReartPicturesByCard([CARD, "other", CARD]);
+    expect(complete).toBe(true);
     expect(pictures.get(CARD)).toEqual([ART("ai-a.jpg"), ART("ai-b.jpg")]);
     expect(pictures.get("other")).toEqual([ART("ai-c.jpg")]);
     expect(pictures.has("bare")).toBe(false);
@@ -368,10 +373,23 @@ describe("Re-art's pictures on a card, from every deck of the maker's", () => {
   });
 
   it("no cards: no read; a long deck is read a hundred cards at a time", async () => {
-    expect((await readReartPicturesByCard([])).size).toBe(0);
+    expect(await readReartPicturesByCard([])).toEqual({ pictures: new Map(), complete: true });
     expect(m.query).not.toHaveBeenCalled();
     m.query.mockResolvedValue({ data: [] });
     await readReartPicturesByCard(Array.from({ length: 250 }, (_, i) => `card-${i}`));
     expect(m.query.mock.calls.map(([c]) => ((c as Call).filters[0][1] as string[]).length)).toEqual([100, 100, 50]);
+  });
+
+  it("a read that failed is said, never passed off as “no pictures”", async () => {
+    m.query.mockResolvedValue({ data: null, error: { message: "boom" } });
+    expect(await readReartPicturesByCard([CARD])).toEqual({ pictures: new Map(), complete: false });
+    // One chunk of several: what was read is kept, and it is still incomplete.
+    m.query.mockReset();
+    m.query
+      .mockResolvedValueOnce({ data: [{ card_id: "card-0", art_url: ART("ai-a.jpg") }], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    const partial = await readReartPicturesByCard(Array.from({ length: 150 }, (_, i) => `card-${i}`));
+    expect(partial.complete).toBe(false);
+    expect(partial.pictures.get("card-0")).toEqual([ART("ai-a.jpg")]);
   });
 });
