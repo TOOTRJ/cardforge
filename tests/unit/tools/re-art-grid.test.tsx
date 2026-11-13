@@ -26,6 +26,7 @@ vi.mock("@/components/tools/collection/printing-tile", () => ({
 }));
 
 import { ReartCardGrid, gridFilterOf } from "@/components/tools/re-art/reart-card-grid";
+import { ReartStylePanel } from "@/components/tools/re-art/reart-style-panel";
 import { BulkProgress } from "@/components/tools/bulk-customize/bulk-progress";
 
 const entry = (over: Partial<ReartStudioEntry> = {}): ReartStudioEntry => ({
@@ -41,7 +42,7 @@ const entry = (over: Partial<ReartStudioEntry> = {}): ReartStudioEntry => ({
   bucket: "creature",
   state: null,
   canRestore: false,
-  hasReartArt: false,
+  artNow: "own",
   credits: 1,
   ...over,
 });
@@ -67,11 +68,13 @@ function grid(entries: ReartStudioEntry[], over: { paintBlocked?: string | null;
 afterEach(cleanup);
 
 describe("the studio's card list", () => {
-  it("a card showing other art now says so and is to paint, never in the style", () => {
+  it("a card showing other art now says so: never in the style, and left as it is by a run", () => {
     grid([entry({ state: "changed" })]);
     expect(screen.getByText("Has other art now")).toBeTruthy();
     expect(screen.queryByText("In this style")).toBeNull();
-    expect(gridFilterOf(entry({ state: "changed" }))).toBe("todo");
+    // Still paintable on its own.
+    expect(screen.getByRole("button", { name: /Re-roll…/ })).toBeTruthy();
+    expect(gridFilterOf(entry({ state: "changed" }))).toBe("skipped");
     expect(gridFilterOf(entry({ state: "earlier" }))).toBe("todo");
     expect(gridFilterOf(entry({ state: null }))).toBe("todo");
     expect(gridFilterOf(entry({ state: "in_style" }))).toBe("done");
@@ -87,13 +90,13 @@ describe("the studio's card list", () => {
     fireEvent.click(paint);
     expect(onPaintOne).toHaveBeenCalledWith(fresh);
     unmount();
-    grid([entry({ state: "in_style", hasReartArt: true })]);
+    grid([entry({ state: "in_style", artNow: "reart" })]);
     expect(screen.getByRole("button", { name: /Re-roll…/ })).toBeTruthy();
   });
 
   it("while one card can't be painted the links are off and described by the reason above the cards", () => {
     const onPaintOne = vi.fn();
-    const reason = "You changed the style. Save it first: one card is painted in the deck's saved style.";
+    const reason = "You changed the style. Save it or undo your changes first: one card is painted in the deck's saved style.";
     grid([entry()], { paintBlocked: reason, onPaintOne });
     const note = screen.getByText(reason);
     const paint = screen.getByRole("button", { name: /Paint this one…/ });
@@ -102,6 +105,49 @@ describe("the studio's card list", () => {
     // Reachable, and pressing it lets the studio say why (it starts nothing).
     fireEvent.click(paint);
     expect(onPaintOne).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the style form — a way back that saves no new look", () => {
+  const panel = (over: { dirty?: boolean; saved?: boolean; onReset?: () => void } = {}) =>
+    render(
+      <ReartStylePanel
+        style={{ preset: "watercolor", theme: "a neon harbour" }}
+        onChange={() => undefined}
+        dirty={over.dirty ?? true}
+        saved={over.saved ?? true}
+        saving={false}
+        onSave={() => undefined}
+        onReset={over.onReset}
+        problem={null}
+        saveError={null}
+        paintedInSaved={0}
+      />,
+    );
+
+  it("offers “Undo changes” while the form differs from the saved style, and hands the focus to the words", () => {
+    vi.stubGlobal("requestAnimationFrame", (run: () => void) => {
+      run();
+      return 0;
+    });
+    const onReset = vi.fn();
+    panel({ onReset });
+    fireEvent.click(screen.getByRole("button", { name: "Undo changes" }));
+    expect(onReset).toHaveBeenCalledTimes(1);
+    // The button removes itself once the form matches: the focus isn't lost.
+    expect(document.activeElement).toBe(screen.getByRole("textbox"));
+    vi.unstubAllGlobals();
+  });
+
+  it("offers none with nothing to go back to", () => {
+    panel({ dirty: false, onReset: () => undefined });
+    expect(screen.queryByRole("button", { name: "Undo changes" })).toBeNull();
+    cleanup();
+    panel({ saved: false, onReset: () => undefined });
+    expect(screen.queryByRole("button", { name: "Undo changes" })).toBeNull();
+    cleanup();
+    panel({});
+    expect(screen.queryByRole("button", { name: "Undo changes" })).toBeNull();
   });
 });
 

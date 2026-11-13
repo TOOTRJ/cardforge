@@ -25,9 +25,10 @@ import {
   REART_SKIP_COPY,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
-  reartArtIsOnCard,
   reartArtPrompt,
+  reartEntryState,
   reartLadderStyle,
+  reartStateIsSettled,
   reartStepKey,
   reartStyleSchema,
   sameReartStyle,
@@ -41,6 +42,7 @@ import {
   readPaintedCardAdmin,
   readPaintedRowsForCardAdmin,
   reartBulkChoices,
+  revertPaintedCard,
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
@@ -284,10 +286,12 @@ async function paintOwnCard(
   if (card.card_type === "emblem") return failed(step, REART_SKIP_COPY.emblem);
 
   const painted = await readPaintedCardAdmin(userId, plan.deck_id, card.id);
-  if (!repaint && painted?.styleVersion === version && reartArtIsOnCard(painted, card.art_url)) {
-    // Painted in this style by another run AND still showing it: nothing
-    // to do, nothing charged. A card whose art changed since is painted
-    // (the plan priced it: lib/tools/re-art/server.ts planReartRun).
+  // The plan's own answer (planReartRun), asked again now: a card painted
+  // in this style since the plan — by another run, and whatever happened to
+  // its art after — is left as it is, with nothing charged, unless the plan
+  // named it to be painted again (a sample, a re-roll).
+  const state = reartEntryState({ painted, styleVersion: version, cardArtUrl: card.art_url });
+  if (!repaint && reartStateIsSettled(state)) {
     return {
       ...step,
       ...CLEARED,
@@ -295,7 +299,12 @@ async function paintOwnCard(
       error: undefined,
       card_id: card.id,
       label: card.title,
-      note: "Already in this style — nothing was charged.",
+      note:
+        state === "in_style"
+          ? "Already in this style — nothing was charged."
+          : state === "kept"
+            ? "It keeps its own art — nothing was charged."
+            : "It has other art now and was left as it is — nothing was charged.",
     };
   }
 
@@ -397,6 +406,22 @@ async function paintOwnCard(
       backUrl = paintedBack.url;
     }
 
+    // The row FIRST, then the card's edit: the row names the art the card
+    // shows now as the art to put back, and that picture must be named
+    // there before the card stops showing it. A run paints two cards at a
+    // time, and another step's guarded discard (discardReartArtIfUnused: it
+    // asks the cards, then the rows) would otherwise find a picture nothing
+    // names in the moment between the two writes — a remix shares its
+    // parent's art file.
+    const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
+      cardId: card.id,
+      entryId: painted?.entryId ?? null,
+      styleVersion: version,
+      artUrl: front.url,
+      backArtUrl: backUrl,
+      ...previous,
+    });
+
     // The edit: the art, its fit and the AI's credit — nothing else (a
     // two-faced card's back is resent as stored with only those changed).
     const aiCredit = await deps.artistCredit();
@@ -410,18 +435,11 @@ async function paintOwnCard(
     });
     if (!result.ok) {
       await discard();
+      // The paint never landed: its row says what it said before.
+      if (recorded) await revertPaintedCard(userId, plan.deck_id, card.id, painted);
       const error = result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "The card's new art couldn't be saved.";
       return { ...failed(step, error), failure: "save_failed", attempts: attempt };
     }
-
-    const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
-      cardId: card.id,
-      entryId: painted?.entryId ?? null,
-      styleVersion: version,
-      artUrl: front.url,
-      backArtUrl: backUrl,
-      ...previous,
-    });
     // The picture(s) this one replaced, when Re-art painted them: removed
     // once nothing else shows them (never the maker's own earlier art,
     // which is kept — and never a picture another card of theirs still

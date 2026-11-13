@@ -247,7 +247,7 @@ const ENTRY: ReartStudioEntry = {
   bucket: "creature",
   state: null,
   canRestore: false,
-  hasReartArt: false,
+  artNow: "own",
   credits: 1,
 };
 
@@ -469,8 +469,8 @@ describe("one card at a time — priced first, in the saved style, never by a st
     h.job = job([step(0)], { sample: false, reroll: true });
     render(studio());
     await press("paint one");
-    // Its own card used to be charged the moment the link was pressed.
-    expect(h.start).not.toHaveBeenCalled();
+    // Its own card used to be charged the moment the link was pressed: now
+    // nothing runs until the confirm's Paint.
     expect(screen.queryByText("panel stop")).toBeNull();
     const dialog = screen.getByRole("dialog", { name: "Paint Thornback Wyrm" });
     expect(dialog.textContent).toContain("The art it has now can be put back from this page.");
@@ -487,11 +487,26 @@ describe("one card at a time — priced first, in the saved style, never by a st
   });
 
   it("a re-roll says the picture it replaces can't be brought back", async () => {
-    render(studio(null, { entry: { state: "in_style", hasReartArt: true } }));
+    render(studio(null, { entry: { state: "in_style", artNow: "reart" } }));
     await press("paint one");
     const dialog = screen.getByRole("dialog", { name: "Re-roll Thornback Wyrm" });
     expect(dialog.textContent).toContain("can't be brought back");
     expect(dialog.textContent).toContain("Nothing is charged until you press Paint.");
+  });
+
+  it("says the same of a picture another deck's run painted, and promises no put-back to a card with no art", async () => {
+    // Never painted on THIS deck, but the art on it is Re-art's (deck B's).
+    const { unmount } = render(studio(null, { entry: { state: null, artNow: "reart" } }));
+    await press("paint one");
+    const other = screen.getByRole("dialog", { name: "Paint Thornback Wyrm" });
+    expect(other.textContent).toContain("can't be brought back");
+    expect(other.textContent).not.toContain("can be put back");
+    unmount();
+    render(studio(null, { entry: { state: null, artNow: "none" } }));
+    await press("paint one");
+    const bare = screen.getByRole("dialog", { name: "Paint Thornback Wyrm" });
+    expect(bare.textContent).toContain("Your card gets new art in the deck's saved style.");
+    expect(bare.textContent).not.toMatch(/put back|brought back/);
   });
 
   it("a real card's confirm says it becomes the maker's own", async () => {
@@ -505,13 +520,22 @@ describe("one card at a time — priced first, in the saved style, never by a st
     expect(screen.queryByTestId("grid-blocked")).toBeNull();
     await press("change style");
     // Said above the cards…
-    expect(screen.getByTestId("grid-blocked").textContent).toMatch(/You changed the style\. Save it first/);
+    expect(screen.getByTestId("grid-blocked").textContent).toMatch(/You changed the style\. Save it or undo your changes first/);
     // …and again where the link is pressed. It used to paint in the SAVED
     // style without a word.
     await press("paint one");
-    expect(h.toastError).toHaveBeenCalledWith(expect.stringMatching(/You changed the style\. Save it first/));
+    expect(h.toastError).toHaveBeenCalledWith(expect.stringMatching(/You changed the style\. Save it or undo your changes first/));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(h.start).not.toHaveBeenCalled();
+    expect(screen.queryByText("panel stop")).toBeNull();
+  });
+
+  it("the header reads as a sentence (it lost a space: “7 cardsin the deck's style”)", () => {
+    render(studio(null, { entry: { state: "in_style", artNow: "reart" } }));
+    expect(screen.getByText("1 of 1 card in the deck's style")).toBeTruthy();
+    cleanup();
+    // A card that shows other art now is never counted as in the style.
+    render(studio(null, { entry: { state: "changed" } }));
+    expect(screen.getByText("0 of 1 card in the deck's style")).toBeTruthy();
   });
 
   it("a deck with no saved style asks for one first", async () => {

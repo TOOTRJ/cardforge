@@ -387,9 +387,9 @@ export function reartStepKey(index: number): string {
 
 /** Where an entry stands against the deck's saved style: painted in it,
  *  painted and then given its own art back ("kept"), painted in it but
- *  showing OTHER art now ("changed": the maker's editor, or a run of
- *  another deck that holds the card), painted in an earlier style, or never
- *  painted (null). */
+ *  showing OTHER art now ("changed": the maker's editor, a run of another
+ *  deck that holds the card, or that deck's "old art back"), painted in an
+ *  earlier style, or never painted (null). */
 export type ReartEntryState = "in_style" | "kept" | "changed" | "earlier" | null;
 
 /** The picture Re-art painted is the one the card shows now (its front).
@@ -406,8 +406,9 @@ export function reartArtIsOnCard(
  * An own card's state against the style version a run paints in — the ONE
  * answer the studio's list, the plan and the step read. "In this style" is
  * said only while Re-art's picture is still on the card; a card painted in
- * this version that shows other art now is "changed" and is painted again
- * by a run over the deck (its art of the moment is kept to put back).
+ * this version that shows other art now is "changed": it is never called
+ * in the style, and a run over the deck leaves it as it is (the art on it
+ * is someone's later choice — a re-roll paints it).
  */
 export function reartEntryState(input: {
   painted: { styleVersion: number; artUrl: string | null } | null | undefined;
@@ -423,10 +424,54 @@ export function reartEntryState(input: {
   return reartArtIsOnCard(painted, input.cardArtUrl) ? "in_style" : "changed";
 }
 
-/** A run over the deck leaves the card as it is: painted in this style and
- *  still showing it, or given its own art back from the tool. */
+/** A run over the deck leaves the card as it is — and charges nothing for
+ *  it: painted in this style and still showing it, given its own art back
+ *  from the tool ("kept"), or painted in this style and given other art
+ *  since ("changed"). Only a NAMED paint (a sample, a re-roll) paints one. */
 export function reartStateIsSettled(state: ReartEntryState): boolean {
+  return state === "in_style" || state === "kept" || state === "changed";
+}
+
+/** Counted as in the deck's style (the studio's header and its "In this
+ *  style" filter): never a card that shows other art now. */
+export function reartStateCountsInStyle(state: ReartEntryState): boolean {
   return state === "in_style" || state === "kept";
+}
+
+/** Why a run over the deck leaves a "changed" card (the confirm's list). */
+export const REART_CHANGED_COPY = "Has other art now — re-roll it to paint it in this style.";
+
+/** What the card shows now, for the one-card confirm's words: a picture
+ *  Re-art painted — from ANY of the maker's decks: painting it again
+ *  replaces that picture for good — the maker's own art (it can be put
+ *  back), or none. */
+export type ReartArtNow = "reart" | "own" | "none";
+
+/**
+ * What the studio says about one of the maker's own cards — pure, so the
+ * page's reading is tested: its state against the style, whether "Put the
+ * old art back" can work (the action refuses a card Re-art made, one with
+ * no earlier art, and one that shows other art now), and what it shows now.
+ */
+export function reartCardFacts(input: {
+  /** THIS deck's row for the card. */
+  painted:
+    | { styleVersion: number; artUrl: string | null; made: boolean; previousArtUrl: string | null }
+    | null
+    | undefined;
+  /** The deck's style version (null: no style saved). */
+  styleVersion: number | null;
+  cardArtUrl: string | null | undefined;
+  /** Every picture Re-art has on record for the card, from any of the
+   *  maker's decks (a card can be in several). */
+  reartPictures: ReadonlyArray<string>;
+}): { state: ReartEntryState; canRestore: boolean; artNow: ReartArtNow } {
+  const { painted, cardArtUrl } = input;
+  return {
+    state: reartEntryState({ painted, styleVersion: input.styleVersion, cardArtUrl }),
+    canRestore: Boolean(painted && !painted.made && painted.previousArtUrl && reartArtIsOnCard(painted, cardArtUrl)),
+    artNow: !cardArtUrl ? "none" : input.reartPictures.includes(cardArtUrl) ? "reart" : "own",
+  };
 }
 
 export type ReartStudioEntry = {
@@ -445,9 +490,8 @@ export type ReartStudioEntry = {
   state: ReartEntryState;
   /** "Put the old art back" is offered. */
   canRestore: boolean;
-  /** The art the card shows now is a picture Re-art painted: painting it
-   *  again replaces that picture for good (the confirm says so). */
-  hasReartArt: boolean;
+  /** What the card shows now (the one-card confirm's words). */
+  artNow: ReartArtNow;
   /** What painting it costs (a real card's is confirmed at plan time). */
   credits: number;
 };

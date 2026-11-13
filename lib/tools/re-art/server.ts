@@ -14,6 +14,7 @@ import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customi
 import { planCustomizedCard } from "@/lib/tools/bulk-customize/planner";
 import { fetchBulkPrintings, importPatchOf } from "@/lib/tools/bulk-customize/server";
 import {
+  REART_CHANGED_COPY,
   REART_CREDITS_PER_FACE,
   REART_MAX_CARDS,
   REART_SKIP_COPY,
@@ -246,6 +247,61 @@ export async function writePaintedCard(
   return !error;
 }
 
+/**
+ * A paint's row put back to what it said before the paint (the step writes
+ * the row first, then edits the card: an edit that was refused must not
+ * leave a row for a paint that never landed). `before` null: there was no
+ * row. Best effort — a row left behind reads "has other art now", which a
+ * re-roll clears.
+ */
+export async function revertPaintedCard(
+  userId: string,
+  deckId: string,
+  cardId: string,
+  before: PaintedCard | null,
+): Promise<void> {
+  if (before) {
+    await writePaintedCard(userId, deckId, null, before);
+    return;
+  }
+  if (!isAdminConfigured()) return;
+  const { error } = await createAdminClient()
+    .from("deck_reart_cards")
+    .delete()
+    .eq("deck_id", deckId)
+    .eq("card_id", cardId)
+    .eq("owner_id", userId);
+  if (error) console.warn(`[re-art] row of an unsaved paint (card ${cardId}, deck ${deckId}) not removed: ${error.message}`);
+}
+
+/** How many card ids one read names (a deck holds up to 500 entries). */
+const PICTURE_READ_CHUNK = 100;
+
+/**
+ * Every picture Re-art has on record for these cards, from ANY of the
+ * caller's decks (their session: their own rows), by card id — the studio
+ * says "this replaces the picture Re-art painted" for a card another deck's
+ * run painted too.
+ */
+export async function readReartPicturesByCard(cardIds: ReadonlyArray<string>): Promise<Map<string, string[]>> {
+  const pictures = new Map<string, string[]>();
+  const ids = [...new Set(cardIds)];
+  if (ids.length === 0) return pictures;
+  const supabase = await createClient();
+  const chunks: string[][] = [];
+  for (let at = 0; at < ids.length; at += PICTURE_READ_CHUNK) chunks.push(ids.slice(at, at + PICTURE_READ_CHUNK));
+  const reads = await Promise.all(
+    chunks.map((chunk) => supabase.from("deck_reart_cards").select("card_id, art_url").in("card_id", chunk).not("art_url", "is", null)),
+  );
+  for (const { data } of reads) {
+    for (const row of (data ?? []) as Array<{ card_id: string; art_url: string | null }>) {
+      if (!row.art_url) continue;
+      pictures.set(row.card_id, [...(pictures.get(row.card_id) ?? []), row.art_url]);
+    }
+  }
+  return pictures;
+}
+
 // ---------------------------------------------------------------------------
 // Removing a picture Re-art painted
 // ---------------------------------------------------------------------------
@@ -255,30 +311,47 @@ export async function writePaintedCard(
  * `url`: one of their cards (front or back face — a remix of their OWN card
  * shares its parent's art file, lib/cards/remix-media.ts, and a card can be
  * in several decks), or a Re-art row that holds it as the art to put back.
- * A read that fails answers "in use": the picture stays, and a leftover is
- * the storage orphan sweep's.
+ *
+ * Read with the service role and the owner named in every statement (as the
+ * step's other reads of these rows): the caller's own read of
+ * deck_reart_cards is gated on the tool being open to them (0191), and a
+ * count a policy emptied would read as "nothing holds it". FAIL CLOSED:
+ * no service role, an error or a count that didn't come back all answer
+ * "in use" — the picture stays, and a leftover is the storage orphan
+ * sweep's.
+ *
+ * The cards are asked BEFORE the rows, never together: a paint writes its
+ * row (the art to put back) before it edits the card (step.ts), so a
+ * picture another step is taking off a card is named by that card until
+ * after its row names it — asked in this order, no moment misses both.
  */
 async function reartArtInUse(userId: string, url: string): Promise<boolean> {
-  const supabase = await createClient();
-  const results = await Promise.all([
-    supabase.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
-    supabase
+  if (!isAdminConfigured()) return true;
+  const admin = createAdminClient();
+  const held = (results: Array<{ count: number | null; error: unknown }>) =>
+    results.some((result) => Boolean(result.error) || typeof result.count !== "number" || result.count > 0);
+  const onCards = await Promise.all([
+    admin.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
+    admin
       .from("cards")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", userId)
       .filter("back_face->>art_url", "eq", url),
-    supabase
+  ]);
+  if (held(onCards)) return true;
+  const kept = await Promise.all([
+    admin
       .from("deck_reart_cards")
       .select("card_id", { count: "exact", head: true })
       .eq("owner_id", userId)
       .eq("previous_art_url", url),
-    supabase
+    admin
       .from("deck_reart_cards")
       .select("card_id", { count: "exact", head: true })
       .eq("owner_id", userId)
       .eq("previous_back_art_url", url),
   ]);
-  return results.some((result) => Boolean(result.error) || (result.count ?? 0) > 0);
+  return held(kept);
 }
 
 /**
@@ -410,13 +483,16 @@ export async function planReartRun(
       if (seenCards.has(card.id)) continue;
       seenCards.add(card.id);
       const done = painted.get(card.id);
-      // Left as it is only while it still SHOWS the style's picture (or was
-      // given its own art back from the tool): a record of a paint is not
-      // the paint — art changed in the editor, or by a run of another deck
-      // that holds the card, is painted again.
+      // In the style only while it still SHOWS the style's picture: a record
+      // of a paint is not the paint. A run over the deck leaves a settled
+      // card as it is (in the style, given its own art back, or showing
+      // other art now — someone's later choice; a re-roll paints it).
       const state = reartEntryState({ painted: done, styleVersion: version, cardArtUrl: card.art_url });
       if (!explicit && !styleChanged && reartStateIsSettled(state)) {
-        inStyle += 1;
+        // A card that shows other art now is not "in this style", and the
+        // run says why it leaves it (the confirm's list).
+        if (state === "changed") skipped.push({ name: card.title || entry.name, reason: REART_CHANGED_COPY });
+        else inStyle += 1;
         continue;
       }
       const twoFaces = rowHasBakedBack(card);

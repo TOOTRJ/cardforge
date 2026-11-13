@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  REART_CHANGED_COPY,
   REART_DEFAULT_VISIBILITY,
   REART_SAMPLE_MAX,
   classifyReartEntry,
   cleanReartTheme,
   reartArtIsOnCard,
   reartArtPrompt,
+  reartCardFacts,
   reartCostDetail,
   reartCostLine,
   reartEntryState,
   reartRunSchema,
+  reartStateCountsInStyle,
   reartStateIsSettled,
   reartStateLabel,
   reartStyleBlock,
@@ -222,12 +225,70 @@ describe("where a card stands against the deck's style", () => {
     expect(reartEntryState({ painted: null, styleVersion: 3, cardArtUrl: null })).toBeNull();
   });
 
-  it("a run over the deck leaves alone what is in the style or kept — and paints the rest", () => {
+  it("a run over the deck leaves a settled card as it is — in the style, kept, or showing other art now", () => {
     expect(reartStateIsSettled("in_style")).toBe(true);
     expect(reartStateIsSettled("kept")).toBe(true);
-    expect(reartStateIsSettled("changed")).toBe(false);
+    // Someone's later choice stands (and nothing is charged for it): only a
+    // re-roll paints it.
+    expect(reartStateIsSettled("changed")).toBe(true);
     expect(reartStateIsSettled("earlier")).toBe(false);
     expect(reartStateIsSettled(null)).toBe(false);
+    expect(REART_CHANGED_COPY).toMatch(/re-roll it/);
+  });
+
+  it("a card that shows other art now is never counted as in the deck's style", () => {
+    expect(reartStateCountsInStyle("in_style")).toBe(true);
+    expect(reartStateCountsInStyle("kept")).toBe(true);
+    expect(reartStateCountsInStyle("changed")).toBe(false);
+    expect(reartStateCountsInStyle("earlier")).toBe(false);
+    expect(reartStateCountsInStyle(null)).toBe(false);
+  });
+
+  describe("what the studio says about one of the maker's cards", () => {
+    const row = (over: Record<string, unknown> = {}) => ({
+      styleVersion: 3,
+      artUrl: ART("ai-1.jpg") as string | null,
+      made: false,
+      previousArtUrl: ART("mine.png") as string | null,
+      ...over,
+    });
+    const facts = (over: Partial<Parameters<typeof reartCardFacts>[0]> = {}) =>
+      reartCardFacts({ painted: row(), styleVersion: 3, cardArtUrl: ART("ai-1.jpg"), reartPictures: [ART("ai-1.jpg")], ...over });
+
+    it("painted here and still showing it: in the style, its old art can be put back, a re-roll replaces Re-art's picture", () => {
+      expect(facts()).toEqual({ state: "in_style", canRestore: true, artNow: "reart" });
+    });
+
+    it("\"Put the old art back\" is offered only while it can work", () => {
+      // The action refuses a card Re-art made, one with no earlier art, and
+      // one that shows other art now.
+      expect(facts({ painted: row({ made: true, previousArtUrl: null }) }).canRestore).toBe(false);
+      expect(facts({ painted: row({ previousArtUrl: null }) }).canRestore).toBe(false);
+      expect(facts({ cardArtUrl: ART("hand.png"), reartPictures: [ART("ai-1.jpg")] })).toEqual({
+        state: "changed",
+        canRestore: false,
+        artNow: "own",
+      });
+      expect(facts({ painted: null, cardArtUrl: ART("mine.png"), reartPictures: [] })).toEqual({ state: null, canRestore: false, artNow: "own" });
+    });
+
+    it("a picture ANOTHER deck's run painted is Re-art's too: painting here replaces it for good", () => {
+      // This deck has no row (or an older one); the card shows deck B's picture.
+      expect(facts({ painted: null, cardArtUrl: ART("ai-b.jpg"), reartPictures: [ART("ai-b.jpg")] })).toEqual({
+        state: null,
+        canRestore: false,
+        artNow: "reart",
+      });
+      expect(facts({ cardArtUrl: ART("ai-b.jpg"), reartPictures: [ART("ai-1.jpg"), ART("ai-b.jpg")] })).toEqual({
+        state: "changed",
+        canRestore: false,
+        artNow: "reart",
+      });
+    });
+
+    it("a card with no art has nothing to put back", () => {
+      expect(facts({ painted: null, cardArtUrl: null, reartPictures: [] })).toEqual({ state: null, canRestore: false, artNow: "none" });
+    });
   });
 
   it("the picture on the card is Re-art's only when the two addresses are the same", () => {

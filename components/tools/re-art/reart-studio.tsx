@@ -27,6 +27,7 @@ import {
   normalizeReartStyle,
   reartRunMode,
   reartRunOutcome,
+  reartStateCountsInStyle,
   reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
@@ -129,7 +130,10 @@ export function ReartStudio({
     [paintable, sampleIds],
   );
 
-  const inStyle = paintable.filter((entry) => reartStateIsSettled(entry.state)).length;
+  const inStyle = paintable.filter((entry) => reartStateCountsInStyle(entry.state)).length;
+  /** Painted in this style and showing other art now: a run over the deck
+   *  leaves them as they are (a re-roll paints one). */
+  const otherArtNow = paintable.filter((entry) => scopeTakes(scope, entry.kind) && entry.state === "changed").length;
   const paintedInSaved = paintable.filter((entry) => entry.state === "in_style").length;
   const toPaint = dirty
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
@@ -224,7 +228,13 @@ export function ReartStudio({
   };
 
   const sampleBlocked = problem ?? (sampleIds.length === 0 ? "Tick “In the sample” on a card or two first." : null);
-  const deckBlocked = problem ?? (toPaint === 0 ? "Every card here is in the deck's style already." : null);
+  const deckBlocked =
+    problem ??
+    (toPaint === 0
+      ? otherArtNow > 0
+        ? "No card is waiting to be painted. A card that has other art now is left as it is: re-roll it to paint it."
+        : "Every card here is in the deck's style already."
+      : null);
   const lockedReason = running ? "Wait for the run to finish." : null;
 
   // One card is painted in the deck's SAVED style (a one-card run names no
@@ -235,7 +245,7 @@ export function ReartStudio({
   const paintBlocked = !savedStyle
     ? "Save the deck's style first: one card is painted in the saved style."
     : dirty
-      ? "You changed the style. Save it first: one card is painted in the deck's saved style."
+      ? "You changed the style. Save it or undo your changes first: one card is painted in the deck's saved style."
       : null;
 
   const paintOne = (entry: ReartStudioEntry) => {
@@ -252,9 +262,11 @@ export function ReartStudio({
     const description =
       entry.kind === "printing"
         ? "It becomes your own card, painted in the deck's saved style."
-        : entry.hasReartArt
+        : entry.artNow === "reart"
           ? "This replaces the picture Re-art painted on it, and that picture can't be brought back."
-          : "Your card gets new art in the deck's saved style. The art it has now can be put back from this page.";
+          : entry.artNow === "own"
+            ? "Your card gets new art in the deck's saved style. The art it has now can be put back from this page."
+            : "Your card gets new art in the deck's saved style.";
     openConfirm({
       title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
       description: `${description} Nothing is charged until you press Paint.`,
@@ -321,7 +333,9 @@ export function ReartStudio({
           </Link>
           <h2 className="truncate font-display text-xl font-semibold text-foreground sm:text-2xl">{deck.title}</h2>
           <p className="text-sm tabular-nums text-muted">
-            {inStyle} of {paintable.length} card{paintable.length === 1 ? "" : "s"} in the deck&apos;s style
+            {/* One string: the JSX text after the plural lost its leading
+                space ("7 cardsin the deck's style"). */}
+            {`${inStyle} of ${paintable.length} card${paintable.length === 1 ? "" : "s"} in the deck's style`}
             {entries.length > paintable.length ? ` · ${entries.length - paintable.length} left as they are` : ""}
           </p>
         </div>
@@ -348,6 +362,14 @@ export function ReartStudio({
             saved={Boolean(savedStyle)}
             saving={saving}
             onSave={saveStyle}
+            onReset={
+              savedStyle
+                ? () => {
+                    setStyle({ preset: savedStyle.preset, theme: savedStyle.theme });
+                    setSaveError(null);
+                  }
+                : undefined
+            }
             problem={problem}
             saveError={saveError}
             paintedInSaved={paintedInSaved}
@@ -471,6 +493,7 @@ export function ReartStudio({
             <p className="text-sm tabular-nums text-foreground">
               {toPaint} card{toPaint === 1 ? "" : "s"} to paint
               {!dirty && inStyle > 0 ? ` · ${inStyle} in this style already` : ""}
+              {!dirty && otherArtNow > 0 ? ` · ${otherArtNow} with other art now, left as ${otherArtNow === 1 ? "it is" : "they are"}` : ""}
               {slots !== null ? ` · ${slots} card slot${slots === 1 ? "" : "s"} left` : ""}
               {balance !== null ? ` · ${balance} credit${balance === 1 ? "" : "s"}` : ""}
             </p>

@@ -9,7 +9,13 @@ import { PrintingPicture } from "@/components/tools/collection/printing-tile";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { CARD_GRID_COMPACT_CLASS, DASHBOARD_COMPACT_GRID_SIZES } from "@/components/cards/card-grid";
 import { cn } from "@/lib/utils";
-import { REART_SAMPLE_MAX, reartStateIsSettled, reartStateLabel, type ReartStudioEntry } from "@/lib/tools/re-art/model";
+import {
+  REART_SAMPLE_MAX,
+  reartStateCountsInStyle,
+  reartStateIsSettled,
+  reartStateLabel,
+  type ReartStudioEntry,
+} from "@/lib/tools/re-art/model";
 
 export type ReartGridFilter = "all" | "todo" | "done" | "skipped";
 
@@ -22,7 +28,10 @@ const FILTER_LABELS: Record<ReartGridFilter, string> = {
 
 export function gridFilterOf(entry: ReartStudioEntry): Exclude<ReartGridFilter, "all"> {
   if (entry.kind === "skip") return "skipped";
-  return reartStateIsSettled(entry.state) ? "done" : "todo";
+  if (reartStateCountsInStyle(entry.state)) return "done";
+  // A card that shows other art now is left as it is by a run over the
+  // deck (a re-roll paints it): never "in this style", never "to paint".
+  return reartStateIsSettled(entry.state) ? "skipped" : "todo";
 }
 
 /**
