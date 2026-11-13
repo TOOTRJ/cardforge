@@ -7,6 +7,7 @@ import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-lim
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rowHasBakedBack } from "@/lib/cards/faces";
+import { discardGeneratedArt } from "@/lib/ai/random-art";
 import { isUuid } from "@/lib/ids";
 import type { Json } from "@/types/supabase";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
@@ -18,6 +19,8 @@ import {
   REART_SKIP_COPY,
   classifyReartEntry,
   normalizeReartStyle,
+  reartEntryState,
+  reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
   scopeTakes,
@@ -244,6 +247,62 @@ export async function writePaintedCard(
 }
 
 // ---------------------------------------------------------------------------
+// Removing a picture Re-art painted
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether anything of the caller's still shows, or keeps, the picture at
+ * `url`: one of their cards (front or back face — a remix of their OWN card
+ * shares its parent's art file, lib/cards/remix-media.ts, and a card can be
+ * in several decks), or a Re-art row that holds it as the art to put back.
+ * A read that fails answers "in use": the picture stays, and a leftover is
+ * the storage orphan sweep's.
+ */
+async function reartArtInUse(userId: string, url: string): Promise<boolean> {
+  const supabase = await createClient();
+  const results = await Promise.all([
+    supabase.from("cards").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
+    supabase
+      .from("cards")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .filter("back_face->>art_url", "eq", url),
+    supabase
+      .from("deck_reart_cards")
+      .select("card_id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .eq("previous_art_url", url),
+    supabase
+      .from("deck_reart_cards")
+      .select("card_id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .eq("previous_back_art_url", url),
+  ]);
+  return results.some((result) => Boolean(result.error) || (result.count ?? 0) > 0);
+}
+
+/**
+ * Removes a picture Re-art painted that the tool has just taken OFF a card
+ * (a re-roll replaced it, "Put the old art back" replaced it) — only when
+ * nothing else of the caller's shows or keeps it. It used to be removed
+ * unasked, which left a remix of the card (the same art file) and any other
+ * card holding the picture with a dead link. True when it was removed.
+ * Never throws; call it AFTER the card's edit landed, so the card itself no
+ * longer counts.
+ */
+export async function discardReartArtIfUnused(userId: string, url: string | null | undefined): Promise<boolean> {
+  if (!url) return false;
+  try {
+    if (await reartArtInUse(userId, url)) return false;
+  } catch (error) {
+    console.warn("[re-art] couldn't tell whether a replaced picture is still used; keeping it:", error);
+    return false;
+  }
+  await discardGeneratedArt(userId, url);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Planning a run
 // ---------------------------------------------------------------------------
 
@@ -351,7 +410,12 @@ export async function planReartRun(
       if (seenCards.has(card.id)) continue;
       seenCards.add(card.id);
       const done = painted.get(card.id);
-      if (!explicit && !styleChanged && done?.styleVersion === version) {
+      // Left as it is only while it still SHOWS the style's picture (or was
+      // given its own art back from the tool): a record of a paint is not
+      // the paint — art changed in the editor, or by a run of another deck
+      // that holds the card, is painted again.
+      const state = reartEntryState({ painted: done, styleVersion: version, cardArtUrl: card.art_url });
+      if (!explicit && !styleChanged && reartStateIsSettled(state)) {
         inStyle += 1;
         continue;
       }

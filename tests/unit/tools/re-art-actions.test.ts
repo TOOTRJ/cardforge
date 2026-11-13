@@ -31,6 +31,7 @@ const m = vi.hoisted(() => ({
   update: vi.fn(),
   writePainted: vi.fn(),
   discard: vi.fn(),
+  discardUnused: vi.fn(),
   card: vi.fn(),
 }));
 
@@ -80,6 +81,7 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   getOwnedDeck: m.deck,
   readPaintedCards: m.painted,
   writePaintedCard: m.writePainted,
+  discardReartArtIfUnused: m.discardUnused,
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
@@ -357,7 +359,15 @@ describe("restoreReartArtAction", () => {
     const payload = m.update.mock.calls[0][1];
     expect(payload).toMatchObject({ art_url: ART("mine.png"), artist_credit: "Jane Painter" });
     expect(payload.back_face).toEqual({ title: "Back", card_type: "creature", subtypes: [] });
-    expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-front.jpg"));
+    // The pictures taken off go to the guarded discard (never removed
+    // outright: a remix of the card can still show them), both faces, after
+    // the card's edit landed.
+    expect(m.discardUnused.mock.calls).toEqual([
+      ["u1", ART("ai-front.jpg")],
+      ["u1", ART("ai-back.jpg")],
+    ]);
+    expect(m.discard).not.toHaveBeenCalled();
+    expect(m.update.mock.invocationCallOrder[0]).toBeLessThan(m.discardUnused.mock.invocationCallOrder[0]);
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: null, previousArtUrl: null, styleVersion: 2 });
     expect(logged()).toEqual([["restore", { faces: 2 }]]);
   });

@@ -4,10 +4,14 @@ import {
   REART_SAMPLE_MAX,
   classifyReartEntry,
   cleanReartTheme,
+  reartArtIsOnCard,
   reartArtPrompt,
   reartCostDetail,
   reartCostLine,
+  reartEntryState,
   reartRunSchema,
+  reartStateIsSettled,
+  reartStateLabel,
   reartStyleBlock,
   reartStyleProblem,
   sameReartStyle,
@@ -194,5 +198,52 @@ describe("a back face resent with new art", () => {
     const id = "00000000-0000-4000-8000-000000000001";
     expect(reartRunSchema.safeParse({ deckId: id, sample: true, entryIds: [id, id, id, id] }).success).toBe(false);
     expect(reartRunSchema.safeParse({ deckId: id, sample: true }).success).toBe(false);
+  });
+});
+
+describe("where a card stands against the deck's style", () => {
+  const ART = (n: string) => `https://x.supabase.co/storage/v1/object/public/card-art/u1/${n}`;
+  const painted = { styleVersion: 3, artUrl: ART("ai-1.jpg") };
+
+  it("is in the style only while Re-art's picture is still on the card", () => {
+    expect(reartEntryState({ painted, styleVersion: 3, cardArtUrl: ART("ai-1.jpg") })).toBe("in_style");
+    // The maker changed its art in the editor, or a run of another deck
+    // that holds the card repainted it: a record of a paint is not the paint.
+    expect(reartEntryState({ painted, styleVersion: 3, cardArtUrl: ART("hand.png") })).toBe("changed");
+    expect(reartEntryState({ painted, styleVersion: 3, cardArtUrl: ART("ai-other-deck.jpg") })).toBe("changed");
+    expect(reartEntryState({ painted, styleVersion: 3, cardArtUrl: null })).toBe("changed");
+  });
+
+  it("a card given its own art back is kept; an older version is an earlier style; no record is never painted", () => {
+    expect(reartEntryState({ painted: { styleVersion: 3, artUrl: null }, styleVersion: 3, cardArtUrl: ART("mine.png") })).toBe("kept");
+    expect(reartEntryState({ painted, styleVersion: 4, cardArtUrl: ART("ai-1.jpg") })).toBe("earlier");
+    expect(reartEntryState({ painted, styleVersion: null, cardArtUrl: ART("ai-1.jpg") })).toBe("earlier");
+    expect(reartEntryState({ painted: undefined, styleVersion: 3, cardArtUrl: ART("mine.png") })).toBeNull();
+    expect(reartEntryState({ painted: null, styleVersion: 3, cardArtUrl: null })).toBeNull();
+  });
+
+  it("a run over the deck leaves alone what is in the style or kept — and paints the rest", () => {
+    expect(reartStateIsSettled("in_style")).toBe(true);
+    expect(reartStateIsSettled("kept")).toBe(true);
+    expect(reartStateIsSettled("changed")).toBe(false);
+    expect(reartStateIsSettled("earlier")).toBe(false);
+    expect(reartStateIsSettled(null)).toBe(false);
+  });
+
+  it("the picture on the card is Re-art's only when the two addresses are the same", () => {
+    expect(reartArtIsOnCard(painted, ART("ai-1.jpg"))).toBe(true);
+    expect(reartArtIsOnCard(painted, ART("ai-2.jpg"))).toBe(false);
+    expect(reartArtIsOnCard({ artUrl: null }, null)).toBe(false);
+    expect(reartArtIsOnCard(null, ART("ai-1.jpg"))).toBe(false);
+    expect(reartArtIsOnCard(undefined, undefined)).toBe(false);
+  });
+
+  it("each state has its own words", () => {
+    const label = (state: Parameters<typeof reartStateLabel>[0]["state"]) => reartStateLabel({ kind: "own", state, skipMessage: null });
+    expect(label("in_style")).toBe("In this style");
+    expect(label("kept")).toBe("Kept its own art");
+    expect(label("changed")).toBe("Has other art now");
+    expect(label("earlier")).toBe("Painted in an earlier style");
+    expect(label(null)).toBe("Your card — not painted yet");
   });
 });

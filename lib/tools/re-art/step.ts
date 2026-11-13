@@ -25,6 +25,7 @@ import {
   REART_SKIP_COPY,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
+  reartArtIsOnCard,
   reartArtPrompt,
   reartLadderStyle,
   reartStepKey,
@@ -34,6 +35,7 @@ import {
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
+  discardReartArtIfUnused,
   readDeckStyleAdmin,
   readMadeForEntryAdmin,
   readPaintedCardAdmin,
@@ -282,8 +284,10 @@ async function paintOwnCard(
   if (card.card_type === "emblem") return failed(step, REART_SKIP_COPY.emblem);
 
   const painted = await readPaintedCardAdmin(userId, plan.deck_id, card.id);
-  if (!repaint && painted?.styleVersion === version && painted.artUrl) {
-    // Painted in this style by another run: nothing to do, nothing charged.
+  if (!repaint && painted?.styleVersion === version && reartArtIsOnCard(painted, card.art_url)) {
+    // Painted in this style by another run AND still showing it: nothing
+    // to do, nothing charged. A card whose art changed since is painted
+    // (the plan priced it: lib/tools/re-art/server.ts planReartRun).
     return {
       ...step,
       ...CLEARED,
@@ -418,14 +422,16 @@ async function paintOwnCard(
       backArtUrl: backUrl,
       ...previous,
     });
-    // The picture(s) this one replaced, when Re-art painted them: no card
-    // holds them any more (never the maker's own earlier art, which is kept).
+    // The picture(s) this one replaced, when Re-art painted them: removed
+    // once nothing else shows them (never the maker's own earlier art,
+    // which is kept — and never a picture another card of theirs still
+    // holds: a remix of this card shares its art file).
     if (source?.artUrl && source.artUrl !== previous.previousArtUrl) {
-      await discardGeneratedArt(userId, source.artUrl);
+      await discardReartArtIfUnused(userId, source.artUrl);
     }
     const replacedBack = twoFaces ? (back?.art_url ?? null) : null;
     if (replacedBack && rows.some((row) => row.backArtUrl === replacedBack) && replacedBack !== previous.previousBackArtUrl) {
-      await discardGeneratedArt(userId, replacedBack);
+      await discardReartArtIfUnused(userId, replacedBack);
     }
     return {
       ...step,

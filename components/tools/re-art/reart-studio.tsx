@@ -27,6 +27,7 @@ import {
   normalizeReartStyle,
   reartRunMode,
   reartRunOutcome,
+  reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
   scopeTakes,
@@ -37,7 +38,7 @@ import {
   type ReartStyle,
   type ReartVisibility,
 } from "@/lib/tools/re-art/model";
-import { restoreReartArtAction, saveReartStyleAction, startReartAction } from "@/lib/tools/re-art/actions";
+import { restoreReartArtAction, saveReartStyleAction } from "@/lib/tools/re-art/actions";
 import type { ReartRun, StoredReartStyle } from "@/lib/tools/re-art/server";
 import { ReartStylePanel } from "./reart-style-panel";
 import { ReartConfirmDialog } from "./reart-confirm-dialog";
@@ -128,11 +129,11 @@ export function ReartStudio({
     [paintable, sampleIds],
   );
 
-  const inStyle = paintable.filter((entry) => entry.state === "in_style" || entry.state === "kept").length;
+  const inStyle = paintable.filter((entry) => reartStateIsSettled(entry.state)).length;
   const paintedInSaved = paintable.filter((entry) => entry.state === "in_style").length;
   const toPaint = dirty
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
-    : paintable.filter((entry) => scopeTakes(scope, entry.kind) && entry.state !== "in_style" && entry.state !== "kept").length;
+    : paintable.filter((entry) => scopeTakes(scope, entry.kind) && !reartStateIsSettled(entry.state)).length;
   const slots = capacity ? remainingCapacity(capacity) : null;
 
   const doneCount = runner.steps.filter((s) => s.status === "done").length;
@@ -226,35 +227,39 @@ export function ReartStudio({
   const deckBlocked = problem ?? (toPaint === 0 ? "Every card here is in the deck's style already." : null);
   const lockedReason = running ? "Wait for the run to finish." : null;
 
+  // One card is painted in the deck's SAVED style (a one-card run names no
+  // style: sending the form's would make it the deck's and put every other
+  // card out of style). So while the form shows a style that isn't saved,
+  // one-card paints wait — they used to paint in the saved one without a
+  // word.
+  const paintBlocked = !savedStyle
+    ? "Save the deck's style first: one card is painted in the saved style."
+    : dirty
+      ? "You changed the style. Save it first: one card is painted in the deck's saved style."
+      : null;
+
   const paintOne = (entry: ReartStudioEntry) => {
     if (running || busy) return;
-    if (!savedStyle) {
-      toast.error("Save the deck's style first.");
+    if (paintBlocked) {
+      toast.error(paintBlocked);
       return;
     }
-    // A real card's price (and its card slot) is only known once its
-    // printing is read: it goes through the confirm, which prices it.
-    if (entry.kind === "printing") {
-      openConfirm({
-        title: `Paint ${entry.name}`,
-        description: "It becomes your own card, painted in the deck's saved style. Nothing is charged until you press Paint.",
-        input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility },
-      });
-      return;
-    }
-    setBusy(entry.id);
-    void startReartAction({ deckId: deck.id, entryIds: [entry.id], scope: "all", visibility })
-      .then((result) => {
-        if (!result.ok) {
-          toast.error(result.error);
-          if (result.code === "CARD_CAPACITY") upgrade.open("capacity", "reart_deck");
-          if (result.code === "INSUFFICIENT_CREDITS") upgrade.open("credits", "reart_deck");
-          return;
-        }
-        begin(result.job, result.skipped);
-      })
-      .catch(() => toast.error("We couldn't reach PipGlyph — try again."))
-      .finally(() => setBusy(null));
+    // EVERY one-card paint goes through the confirm, which prices it and
+    // charges nothing until Paint is pressed. A real card's price (and its
+    // card slot) is only known once its printing is read; the maker's own
+    // card used to be charged the moment its link was pressed — and a
+    // re-roll replaces a picture that can't be brought back.
+    const description =
+      entry.kind === "printing"
+        ? "It becomes your own card, painted in the deck's saved style."
+        : entry.hasReartArt
+          ? "This replaces the picture Re-art painted on it, and that picture can't be brought back."
+          : "Your card gets new art in the deck's saved style. The art it has now can be put back from this page.";
+    openConfirm({
+      title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
+      description: `${description} Nothing is charged until you press Paint.`,
+      input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility },
+    });
   };
 
   const restore = (entry: ReartStudioEntry) => {
@@ -523,6 +528,7 @@ export function ReartStudio({
                 skipped={skipped}
                 noun="painted"
                 doing="Painting"
+                unit="run"
                 pausedNote="You can continue it later from this page; the cards painted so far are saved."
                 finishedAction={
                   <Button variant="secondary" onClick={() => setJob(null)}>
@@ -552,6 +558,7 @@ export function ReartStudio({
           }
           busy={busy}
           locked={running}
+          paintBlocked={running ? null : paintBlocked}
           onPaintOne={paintOne}
           onRestore={restore}
         />

@@ -23,6 +23,7 @@ export function BulkProgress({
   finishedAction,
   noun = "made",
   doing = "Making",
+  unit = "batch",
   pausedNote = "Closing ends this batch; the cards made so far stay saved.",
 }: {
   runner: ReturnType<typeof useBulkRunner>;
@@ -38,6 +39,8 @@ export function BulkProgress({
   noun?: string;
   /** The present tense ("Making", "Painting"). */
   doing?: string;
+  /** What the whole thing is called ("batch", "run"). */
+  unit?: string;
   /** What a paused batch says about leaving it. */
   pausedNote?: string;
 }) {
@@ -48,6 +51,9 @@ export function BulkProgress({
     return () => clearInterval(timer);
   }, [runner.waitingUntil]);
   const waitSeconds = runner.waitingUntil ? Math.max(0, Math.ceil((runner.waitingUntil - now) / 1000)) : 0;
+  // The panel's words follow the tool's own (Re-art PAINTS cards in a RUN;
+  // it said "made" and "batch" there).
+  const done = `${noun.charAt(0).toUpperCase()}${noun.slice(1)}`;
 
   return (
     <div className="flex flex-col gap-4">
@@ -59,13 +65,17 @@ export function BulkProgress({
               : `${doing} ${doneCount + failedCount + 1 > total ? total : doneCount + failedCount + 1} of ${total}…`}
           </span>
           {waitSeconds > 0 ? (
-            <span className="text-xs text-muted">Waiting {waitSeconds}s for Scryfall&apos;s art limit…</span>
+            // Any of the per-minute limits a step can meet (Scryfall's
+            // lookups or art, uploads, the AI calls): the runner knows the
+            // wait, not which one — it used to name Scryfall's art limit
+            // for all of them.
+            <span className="text-xs text-muted">Waiting {waitSeconds}s for a per-minute limit to clear…</span>
           ) : null}
         </div>
         <div
           className="mt-2 h-2 overflow-hidden rounded-full bg-elevated"
           role="progressbar"
-          aria-label="Cards made"
+          aria-label={`Cards ${noun}`}
           aria-valuemin={0}
           aria-valuemax={total}
           aria-valuenow={doneCount}
@@ -83,8 +93,8 @@ export function BulkProgress({
         <p role="alert" className="flex items-center gap-2 text-sm text-warning">
           <AlertTriangle className="h-4 w-4" aria-hidden />
           {runner.stoppedBy === "CARD_CAPACITY"
-            ? "Your card limit is full — the batch stopped. The cards made so far are saved."
-            : "You're out of credits — the batch stopped. The cards made so far are saved."}
+            ? `Your card limit is full — the ${unit} stopped. The cards ${noun} so far are saved.`
+            : `You're out of credits — the ${unit} stopped. The cards ${noun} so far are saved.`}
         </p>
       ) : null}
 
@@ -92,9 +102,9 @@ export function BulkProgress({
         {runner.steps.map((step) => (
           <li key={step.key} className="flex items-start gap-2 text-sm">
             {step.status === "done" ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-label="Made" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-label={done} />
             ) : step.status === "failed" ? (
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-label="Didn't make it" />
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-label={`Not ${noun}`} />
             ) : step.status === "running" ? (
               <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted" aria-label={doing} />
             ) : (
@@ -125,7 +135,7 @@ export function BulkProgress({
       {runner.running ? (
         <div className="flex justify-end">
           <Button variant="outline" onClick={runner.stop}>
-            Stop after the cards being made
+            Stop after the cards being {noun}
           </Button>
         </div>
       ) : settled || paused ? (
@@ -136,7 +146,7 @@ export function BulkProgress({
           {paused ? (
             <Button variant="outline" onClick={runner.retryFailed}>
               <RotateCcw className="h-4 w-4" aria-hidden />
-              Continue the batch
+              Continue the {unit}
             </Button>
           ) : failedCount > 0 ? (
             <Button variant="outline" onClick={runner.retryFailed}>

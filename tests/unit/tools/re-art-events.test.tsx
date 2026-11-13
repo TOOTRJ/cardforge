@@ -14,6 +14,11 @@ import type { ReartStudioEntry } from "@/lib/tools/re-art/model";
 // waiting, and why it stopped — and the maker's `stop`, `continue` and
 // `retry`. Numbers and codes only: never a card's or a deck's name.
 // (What the server's actions log is re-art-actions.test.ts.)
+//
+// And ONE card at a time: every one-card paint is priced in the confirm
+// first (pressing its link charges nothing), a re-roll says the picture it
+// replaces can't be brought back, and no card is painted while the style
+// form shows a style that isn't saved.
 // ---------------------------------------------------------------------------
 
 type Runner = {
@@ -33,7 +38,10 @@ const h = vi.hoisted(() => ({
   stop: vi.fn(),
   retry: vi.fn(),
   upgrade: vi.fn(),
+  toastError: vi.fn(),
   runner: null as unknown as Runner,
+  /** What the confirm's Paint starts (the server's answer to the start). */
+  job: null as unknown as GenerationJobView,
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: h.refresh, push: vi.fn() }) }));
@@ -44,7 +52,7 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: h.toastError, success: vi.fn() } }));
 vi.mock("@/components/billing/upgrade-modal-provider", () => ({ useUpgradeModal: () => ({ open: h.upgrade }) }));
 vi.mock("@/components/ai/use-leave-warning", () => ({ useLeaveWarning: () => undefined }));
 vi.mock("@/lib/tools/track-client", () => ({ trackToolEvent: h.track }));
@@ -73,14 +81,57 @@ vi.mock("@/components/tools/bulk-customize/bulk-progress", () => ({
     </div>
   ),
 }));
-vi.mock("@/components/tools/re-art/reart-style-panel", () => ({ ReartStylePanel: () => null }));
-vi.mock("@/components/tools/re-art/reart-confirm-dialog", () => ({ ReartConfirmDialog: () => null }));
+// The style form as a button that changes it (the form is then not saved).
+vi.mock("@/components/tools/re-art/reart-style-panel", () => ({
+  ReartStylePanel: ({ onChange }: { onChange: (next: { preset: string; theme: string }) => void }) => (
+    <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour" })}>
+      change style
+    </button>
+  ),
+}));
+// The confirm as the studio opens it: its words, the run it would start, and
+// a Paint that starts it (the real dialog plans, prices and calls the start:
+// its own business).
+vi.mock("@/components/tools/re-art/reart-confirm-dialog", () => ({
+  ReartConfirmDialog: ({
+    open,
+    title,
+    description,
+    input,
+    onStarted,
+  }: {
+    open: boolean;
+    title: string;
+    description: string;
+    input: unknown;
+    onStarted: (job: GenerationJobView, skipped: Array<{ name: string; reason: string }>, version: number) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label={title} data-input={JSON.stringify(input)}>
+        <p>{description}</p>
+        <button type="button" onClick={() => onStarted(h.job, [], 1)}>
+          confirm paint
+        </button>
+      </div>
+    ) : null,
+}));
 vi.mock("@/components/tools/re-art/reart-run-list", () => ({ ReartRunList: () => null }));
 vi.mock("@/components/tools/re-art/reart-card-grid", () => ({
-  ReartCardGrid: ({ entries, onPaintOne }: { entries: ReartStudioEntry[]; onPaintOne: (entry: ReartStudioEntry) => void }) => (
-    <button type="button" onClick={() => onPaintOne(entries[0])}>
-      paint one
-    </button>
+  ReartCardGrid: ({
+    entries,
+    paintBlocked,
+    onPaintOne,
+  }: {
+    entries: ReartStudioEntry[];
+    paintBlocked?: string | null;
+    onPaintOne: (entry: ReartStudioEntry) => void;
+  }) => (
+    <div>
+      {paintBlocked ? <p data-testid="grid-blocked">{paintBlocked}</p> : null}
+      <button type="button" onClick={() => onPaintOne(entries[0])}>
+        paint one
+      </button>
+    </div>
   ),
 }));
 
@@ -196,6 +247,7 @@ const ENTRY: ReartStudioEntry = {
   bucket: "creature",
   state: null,
   canRestore: false,
+  hasReartArt: false,
   credits: 1,
 };
 
@@ -210,12 +262,17 @@ const job = (steps: JobStep[], request: Record<string, unknown> = { sample: fals
   error: null,
 });
 
-function studio(pausedRunId: string | null = null) {
+const SAVED_STYLE = { preset: "watercolor", theme: "a haunted fen", version: 1 };
+
+function studio(
+  pausedRunId: string | null = null,
+  over: { entry?: Partial<ReartStudioEntry>; storedStyle?: typeof SAVED_STYLE | null } = {},
+) {
   return (
     <ReartStudio
       deck={{ id: "00000000-0000-4000-8000-0000000000d1", slug: "embers", title: "Embers of the Fen" }}
-      storedStyle={{ preset: "watercolor", theme: "a haunted fen", version: 1 }}
-      entries={[ENTRY]}
+      storedStyle={over.storedStyle === undefined ? SAVED_STYLE : over.storedStyle}
+      entries={[{ ...ENTRY, ...over.entry }]}
       username="dev_free"
       capacity={null}
       balance={20}
@@ -236,13 +293,18 @@ const running = (steps: JobStep[]): Runner => ({
   runsEnded: 0,
 });
 
-/** The studio with a run under way (started from one card's "Paint this one"). */
+/** The studio with a run under way: one card's "Paint this one…", then the
+ *  confirm's Paint (nothing starts before it). */
 async function begin(steps: JobStep[], request?: Record<string, unknown>) {
   h.runner = running(steps);
-  h.start.mockResolvedValue({ ok: true, job: job(steps, request), skipped: [], credits: steps.length, version: 1 });
+  h.job = job(steps, request);
   const view = render(studio());
   await act(async () => {
     fireEvent.click(screen.getByText("paint one"));
+  });
+  expect(screen.queryByText("panel stop")).toBeNull();
+  await act(async () => {
+    fireEvent.click(screen.getByText("confirm paint"));
   });
   expect(screen.getByText("panel stop")).toBeTruthy();
   return view;
@@ -257,7 +319,7 @@ function runnerSays(view: ReturnType<typeof render>, next: Partial<Runner>, paus
 const events = (name: string) => h.track.mock.calls.filter((call) => call[1] === name).map((call) => call[2]);
 
 beforeEach(() => {
-  for (const fn of [h.track, h.start, h.refresh, h.stop, h.retry, h.upgrade]) fn.mockReset();
+  for (const fn of [h.track, h.start, h.refresh, h.stop, h.retry, h.upgrade, h.toastError]) fn.mockReset();
   vi.stubGlobal("requestAnimationFrame", (run: () => void) => {
     run();
     return 0;
@@ -392,5 +454,71 @@ describe("the studio — `run_finished`, once each time the runner ends", () => 
         resumed: true,
       },
     ]);
+  });
+});
+
+describe("one card at a time — priced first, in the saved style, never by a stray press", () => {
+  const press = async (text: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByText(text));
+    });
+  };
+
+  it("pressing a card's paint link opens the confirm and charges nothing by itself", async () => {
+    h.runner = running([step(0)]);
+    h.job = job([step(0)], { sample: false, reroll: true });
+    render(studio());
+    await press("paint one");
+    // Its own card used to be charged the moment the link was pressed.
+    expect(h.start).not.toHaveBeenCalled();
+    expect(screen.queryByText("panel stop")).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "Paint Thornback Wyrm" });
+    expect(dialog.textContent).toContain("The art it has now can be put back from this page.");
+    expect(dialog.textContent).toContain("Nothing is charged until you press Paint.");
+    // One named card, in the deck's SAVED style: the run names no style.
+    expect(JSON.parse(dialog.getAttribute("data-input")!)).toEqual({
+      deckId: "00000000-0000-4000-8000-0000000000d1",
+      entryIds: [ENTRY.id],
+      scope: "all",
+      visibility: "private",
+    });
+    await press("confirm paint");
+    expect(screen.getByText("panel stop")).toBeTruthy();
+  });
+
+  it("a re-roll says the picture it replaces can't be brought back", async () => {
+    render(studio(null, { entry: { state: "in_style", hasReartArt: true } }));
+    await press("paint one");
+    const dialog = screen.getByRole("dialog", { name: "Re-roll Thornback Wyrm" });
+    expect(dialog.textContent).toContain("can't be brought back");
+    expect(dialog.textContent).toContain("Nothing is charged until you press Paint.");
+  });
+
+  it("a real card's confirm says it becomes the maker's own", async () => {
+    render(studio(null, { entry: { kind: "printing" } }));
+    await press("paint one");
+    expect(screen.getByRole("dialog", { name: "Paint Thornback Wyrm" }).textContent).toContain("It becomes your own card");
+  });
+
+  it("no card is painted while the form shows a style that isn't saved — it says why", async () => {
+    render(studio());
+    expect(screen.queryByTestId("grid-blocked")).toBeNull();
+    await press("change style");
+    // Said above the cards…
+    expect(screen.getByTestId("grid-blocked").textContent).toMatch(/You changed the style\. Save it first/);
+    // …and again where the link is pressed. It used to paint in the SAVED
+    // style without a word.
+    await press("paint one");
+    expect(h.toastError).toHaveBeenCalledWith(expect.stringMatching(/You changed the style\. Save it first/));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(h.start).not.toHaveBeenCalled();
+  });
+
+  it("a deck with no saved style asks for one first", async () => {
+    render(studio(null, { storedStyle: null }));
+    expect(screen.getByTestId("grid-blocked").textContent).toMatch(/Save the deck's style first/);
+    await press("paint one");
+    expect(h.toastError).toHaveBeenCalledWith(expect.stringMatching(/Save the deck's style first/));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -15,6 +15,8 @@ import { getOwnedDeck, listReartRuns, readDeckStyle, readPaintedCards, bucketOfI
 import {
   REART_CREDITS_PER_FACE,
   classifyReartEntry,
+  reartArtIsOnCard,
+  reartEntryState,
   type ReartStudioEntry,
 } from "@/lib/tools/re-art/model";
 import { isUuid } from "@/lib/ids";
@@ -127,13 +129,9 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     });
     const done = card ? painted.get(card.id) : undefined;
     const own = classified.kind === "own" ? card : null;
-    const state: ReartStudioEntry["state"] = !done
-      ? null
-      : style && done.styleVersion === style.version
-        ? done.artUrl
-          ? "in_style"
-          : "kept"
-        : "earlier";
+    // "In this style" only while Re-art's picture is still on the card.
+    const state = reartEntryState({ painted: done, styleVersion: style?.version ?? null, cardArtUrl: card?.art_url });
+    const hasReartArt = reartArtIsOnCard(done, card?.art_url);
     return {
       id: e.id,
       name: card?.title || e.name,
@@ -146,7 +144,10 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       card: own,
       bucket: bucketOfItem({ entry: e, card, cardOwner: null }),
       state,
-      canRestore: Boolean(done && !done.made && done.artUrl && done.previousArtUrl),
+      // Offered only while the picture to take off is still the card's (the
+      // action refuses otherwise: "This card has other art now").
+      canRestore: Boolean(done && !done.made && done.previousArtUrl && hasReartArt),
+      hasReartArt,
       credits: own ? REART_CREDITS_PER_FACE * (rowHasBakedBack(own) ? 2 : 1) : REART_CREDITS_PER_FACE,
     };
   });
