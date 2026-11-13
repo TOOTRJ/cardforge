@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Check, Copy, Link2, Loader2, Printer, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { useLeaveWarning } from "@/components/ai/use-leave-warning";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
 import { publishCredits } from "@/components/billing/credits-bus";
 import { trackToolEvent } from "@/lib/tools/track-client";
+import { readReferralShareInfo } from "@/lib/sharing/referral-share-client";
+import { referralUrlFor } from "@/lib/sharing/share-url";
 import { saveTableSheetAction, setTableSheetSharedAction } from "@/lib/tools/rule0/actions";
 import { RULE0_TOOL_SLUG, type TableSheetRow } from "@/lib/tools/rule0/model";
 import type { TableSheetFacts } from "@/lib/tools/rule0/sheet";
@@ -129,9 +131,28 @@ export function TableSheetEditor({
     });
   };
 
+  // The copied link carries the sharer's referral code, as every other
+  // share does (owner 2026-11-11). It is read when the editor opens, never
+  // in the click: a browser lets a page write the clipboard only straight
+  // from the press, and Safari refuses after a network read was awaited.
+  // No code — the program off, the read failed or not back yet — and the
+  // link is the plain one.
+  const referralCode = useRef<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void readReferralShareInfo()
+      .then((info) => {
+        if (live) referralCode.current = info?.enabled ? (info.code ?? null) : null;
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(referralUrlFor(shareUrl, referralCode.current));
       toast.success("Link copied.");
       trackToolEvent(RULE0_TOOL_SLUG, "copy_link");
     } catch {

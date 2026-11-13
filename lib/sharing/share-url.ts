@@ -31,6 +31,20 @@ export function shareUrlFor(url: string, { via, ref }: ShareLinkOptions): string
   }
 }
 
+/** `url` with the viewer's referral code and nothing else added — for a
+ *  plain "Copy link" (no network to name in `via`). No code: the url as it
+ *  was. */
+export function referralUrlFor(url: string, ref: string | null | undefined): string {
+  if (!ref) return url;
+  try {
+    const next = new URL(url);
+    next.searchParams.set("ref", ref);
+    return next.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** The url without any share tag — what the share dialog SHOWS beside Copy
  *  link (the clipboard gets the tagged one). */
 export function cleanShareUrl(url: string): string {

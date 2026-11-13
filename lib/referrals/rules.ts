@@ -23,9 +23,12 @@ export const REFERRAL_SWEEP_BATCH = 100;
 export const REFERRAL_ACTIVATION_WINDOW_DAYS = 30;
 /** DEFAULT cards a friend must save (the settings' `activation.cardsRequired`). */
 export const REFERRAL_ACTIVATION_CARDS = 5;
-/** A referral claimed after signup (the Google sign-in path claims it at
- *  onboarding) counts only for an account this young with no saved card. */
-export const REFERRAL_CLAIM_WINDOW_DAYS = 7;
+/** A referral can be claimed for an account this young that never started a
+ *  plan — at onboarding (the link the tab arrived with) or typed in later
+ *  on the Refer a friend page (owner 2026-11-11: code entry for NEW
+ *  accounts only; it recovers a link the browser lost). Past it the account
+ *  is not new: nobody brought it in. */
+export const REFERRAL_CLAIM_WINDOW_DAYS = 14;
 
 /** my_referral_code(): 8 lowercase hex characters (0177). */
 export const REFERRAL_CODE_RE = /^[a-f0-9]{8}$/;
@@ -37,6 +40,43 @@ export function normalizeReferralCode(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const code = value.trim().toLowerCase();
   return REFERRAL_CODE_RE.test(code) ? code : null;
+}
+
+/**
+ * A code as a person TYPES or pastes it: the code alone, or any link that
+ * carries it (`…/?ref=<code>`, with or without the scheme). Null when
+ * nothing in it reads as a code.
+ */
+export function extractReferralCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const typed = value.trim();
+  if (!typed) return null;
+  const plain = normalizeReferralCode(typed);
+  if (plain) return plain;
+  const carried = new RegExp(`[?&]${REFERRAL_PARAM}=([^&#\\s]+)`, "i").exec(typed)?.[1];
+  if (!carried) return null;
+  try {
+    return normalizeReferralCode(decodeURIComponent(carried));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `search` for a redirect that would otherwise DROP the query: empty, or
+ * `?ref=<code>` when the address being left carried a referral code. A
+ * friend's link that lands on an address we redirect (an old card address,
+ * a renamed deck, a retired page, a page that needs a sign-in) must still
+ * arrive with its code. Only the code is carried — never the rest of the
+ * query.
+ */
+export function referralSearch(params: { get(name: string): string | null } | Record<string, unknown> | null | undefined): string {
+  if (!params) return "";
+  const raw = typeof (params as { get?: unknown }).get === "function"
+    ? (params as { get(name: string): string | null }).get(REFERRAL_PARAM)
+    : (params as Record<string, unknown>)[REFERRAL_PARAM];
+  const code = normalizeReferralCode(Array.isArray(raw) ? raw[0] : raw);
+  return code ? `?${REFERRAL_PARAM}=${code}` : "";
 }
 
 /** The link a user shares: the home page, which explains the product. */

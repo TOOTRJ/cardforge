@@ -13,6 +13,10 @@ import { NextRequest, NextResponse } from "next/server";
 //     which reuses the cached static tree for same-path query changes;
 //   * the guide tag hubs that became /learn categories 308 to them, and
 //     /faq to the help centre (/help);
+//   * those 308s and the removed /sets, /set/<slug> DROP the query — all but
+//     a friend's referral code (owner 2026-11-11): a valid `?ref=<code>`
+//     arrives at the new address, alone; every other parameter and a value
+//     that is no code are dropped as before;
 //   * a signed-in /pricing is rewritten to the dynamic pricing-member twin
 //     (server-rendered buttons, no anonymous flash); the internal path 308s;
 //   * a signed-in card page (/card/<user>/<slug>) is rewritten to the
@@ -199,6 +203,90 @@ describe("proxy", () => {
     for (const path of ["/help", "/help/printing"]) {
       expect(locationOf(await proxy(request(path))), path).toBeNull();
     }
+  });
+
+  // Owner 2026-11-11: a friend's link that lands on an address we redirect
+  // must still arrive with its code — these three cleared the whole query.
+  describe("a friend's referral code survives the query-dropping 308s", () => {
+    const CODE = "ab12cd34";
+    const HOST = "http://localhost:3000";
+    /** Every address whose 308 clears the query, with where it lands. */
+    const dropping: Array<[string, string]> = [
+      ["/faq", "/help"],
+      ["/sets", "/decks"],
+      ["/set/alpha", "/decks"],
+      ["/set/alpha/extra", "/decks"],
+      ["/articles/tag/templating", "/articles/tag/oracle-text"],
+      ["/articles/tag/abilities", "/articles/tag/oracle-text"],
+      ["/articles/tag/proxies", "/articles/tag/printing"],
+      ...ARTICLE_CATEGORIES.map((category): [string, string] => [`/articles/tag/${category.tagSlug}`, `/learn/${category.slug}`]),
+    ];
+
+    it("a valid ?ref= arrives at the new address — the code ALONE, every other parameter dropped", async () => {
+      for (const [from, to] of dropping) {
+        for (const query of [`?ref=${CODE}`, `?utm_source=newsletter&ref=${CODE}&q=alpha&via=copy`, `?q=alpha&page=2&ref=${CODE}`]) {
+          const response = await proxy(request(`${from}${query}`));
+          expect(response.status, from + query).toBe(308);
+          expect(locationOf(response), from + query).toBe(`${HOST}${to}?ref=${CODE}`);
+          expect(rewriteOf(response), from + query).toBeNull();
+        }
+      }
+      expect(s.updateSession).not.toHaveBeenCalled();
+    });
+
+    it("the code is carried in its own shape: capitals are the same code, lowercased", async () => {
+      for (const [from, to] of dropping) {
+        expect(locationOf(await proxy(request(`${from}?ref=AB12CD34`))), from).toBe(`${HOST}${to}?ref=${CODE}`);
+      }
+    });
+
+    it("no code, or a value that is not one: the query is dropped whole, as before", async () => {
+      for (const [from, to] of dropping) {
+        for (const query of [
+          "",
+          "?utm_source=newsletter",
+          "?q=alpha&page=2",
+          "?ref=",
+          "?ref=nope",
+          "?ref=ab12cd3",
+          "?ref=ab12cd345",
+          "?ref=zzzzzzzz",
+          "?ref=%3Cscript%3E&q=1",
+          `?xref=${CODE}`,
+          // A value that would smuggle a second parameter is no code.
+          `?ref=${CODE}%26admin%3D1`,
+        ]) {
+          const response = await proxy(request(`${from}${query}`));
+          expect(response.status, from + query).toBe(308);
+          expect(locationOf(response), from + query).toBe(`${HOST}${to}`);
+        }
+      }
+    });
+
+    it("two codes on the address: the first one is the one carried", async () => {
+      expect(locationOf(await proxy(request(`/faq?ref=${CODE}&ref=11111111`)))).toBe(`${HOST}/help?ref=${CODE}`);
+    });
+
+    it("the redirects that keep the WHOLE query still do — the code rides with the rest", async () => {
+      // /preview → /create, the internal twins, and a landing's filter 308.
+      expect(locationOf(await proxy(request(`/preview?ref=${CODE}&step=art`)))).toBe(`${HOST}/create?ref=${CODE}&step=art`);
+      expect(locationOf(await proxy(request(`/pricing-member?ref=${CODE}`)))).toBe(`${HOST}/pricing?ref=${CODE}`);
+      expect(locationOf(await proxy(request(`/card-member/dev_pro/archivist?face=back&ref=${CODE}`)))).toBe(
+        `${HOST}/card/dev_pro/archivist?face=back&ref=${CODE}`,
+      );
+      expect(locationOf(await proxy(request(`/gallery?type=creature&ref=${CODE}`)))).toBe(`${HOST}/gallery/browse?type=creature&ref=${CODE}`);
+    });
+
+    it("a landing with ONLY the code is no redirect at all: the page is served, the address intact", async () => {
+      for (const path of [`/?ref=${CODE}`, `/gallery?ref=${CODE}`, `/decks?ref=${CODE}`, `/help?ref=${CODE}`, `/card/dev_pro/archivist?ref=${CODE}`]) {
+        const response = await proxy(request(path));
+        expect(response.status, path).toBe(200);
+        expect(locationOf(response), path).toBeNull();
+        expect(rewriteOf(response), path).toBeNull();
+      }
+      // The guest creator's rewrite keeps it too (the visible address is /create?ref=…).
+      expect(rewriteOf(await proxy(request(`/create?ref=${CODE}`)))).toBe(`${HOST}/create-guest?ref=${CODE}`);
+    });
   });
 
   it("never clobbers a redirect that updateSession issued", async () => {

@@ -255,11 +255,26 @@ describe("0208 — the app and the database count the same cards: ONE function",
     // constant and its two filters are gone, and nothing reads art_url.
     expect(serverCode).not.toContain("QUALIFYING_CARD");
     expect(serverCode).not.toContain("art_url");
-    // The `cards` table is read once in the module — the "is this account
-    // new" check at signup, which counts EVERY card — never for the bar.
-    expect(serverCode.match(/\.from\("cards"\)/g)).toHaveLength(1);
-    const notNew = serverCode.slice(serverCode.indexOf("export async function recordReferralSignup"), serverCode.indexOf("export type GrantedReward"));
-    expect(notNew).toContain('.from("cards")');
+    // The `cards` table is read NOWHERE in the module (owner 2026-11-11,
+    // code entry for new accounts): the bar's count is the database's
+    // function, and "is this account new" at the claim is the account's age
+    // and its plan history — it counted EVERY card until then, which refused
+    // exactly the friends who type their code after making their cards.
+    expect(serverCode.match(/\.from\("cards"\)/g)).toBeNull();
+    expect(serverCode).not.toMatch(/from\(\s*["'`]cards["'`]\s*\)/);
+    const claim = serverCode.slice(serverCode.indexOf("export async function recordReferralSignup"), serverCode.indexOf("export type GrantedReward"));
+    expect(claim.length).toBeGreaterThan(500);
+    // What the claim does read about the account: its plan history from the
+    // profile, and WHEN IT WAS MADE from the sign-in record — never the
+    // profile row's own created_at, which its owner can rewrite.
+    expect(claim).toContain('.select("subscription_status")');
+    expect(claim).toContain("authUserOf(admin, input.refereeId)");
+    expect(claim).not.toContain("created_at");
+    expect(claim).toContain("REFERRAL_CLAIM_WINDOW_DAYS");
+    // …and nothing about its cards: no table, no count, no settings' bar.
+    expect(claim).not.toMatch(/cards/i);
+    expect(claim).not.toMatch(/\bcount\b/);
+    expect(claim).not.toContain(COUNT);
   });
 
   it("types/supabase.ts declares it as the database defines it: one owner in, a number out", () => {

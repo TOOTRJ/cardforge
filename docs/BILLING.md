@@ -1353,6 +1353,41 @@ ten steps), then the tail — 5 friends a month at 7 days is 35 days a month.
 The cap and the tail are settings (`/admin/analytics` → Referrals): lower
 the tail to 5 days and five friends a month can never cover a whole month.
 
+**How a friend's code reaches the claim** (owner 2026-11-11). The link's
+`?ref=` is captured on ANY page (`AttributionCapture`, root layout) into the
+tab (sessionStorage, the first code a tab sees wins) AND kept in the
+browser for 30 days (`localStorage` key `pg_referral_code_v1`: the code and
+the day, nothing else; first link wins; forgotten once the account is
+onboarded) — the tab's copy alone was lost whenever the tab was closed or
+the account made in another tab. (It does not reach another browser: a link
+opened in an app's built-in browser and an account made in the real one
+share no storage — the typed code below is for that.) `storedReferralCode()`
+reads the tab, then the address, then the kept code; the sign-up form's
+hidden field and onboarding ask it. Redirects
+that clear the query keep a valid `ref` (`referralSearch`). And a new
+account can TYPE it: "Have a referral code?" on onboarding's last step
+(shown unless THIS visit followed a link — a code only kept from an earlier
+visit may be somebody else's, so the field stays — labelled "A different
+friend's referral code?" then — and what is typed wins, over the sign-up's
+own code too. A typed code that cannot be used — no code in the text,
+nobody has it, their own, too many tries — STOPS the step with its words,
+on "Finish" and "Skip" alike, the field shown, marked and focused; emptying
+the field is always a way on. It is never answered by claiming the
+remembered link instead: an account has one referral for good, so a typo
+must not credit somebody else. The LINK an account merely arrived with
+never stops anything — a refusal of it is a toast after the account is
+finished. The field is offered only while the program is on) and "Joined
+because of a friend?" on
+the Refer a friend page while the account is inside the 14-day window and
+has no referral and never started a plan (`claimReferralCodeAction`: 5
+tries a minute, 20 an hour — one counter with onboarding's claim; the
+reward step runs right after, since the cards are often saved already).
+Established accounts are refused (`not_new`): they already have their
+cards, so a code typed later would reward both sides for bringing in nobody.
+The account's age is read from its SIGN-IN record (`auth.users.created_at`),
+never `profiles.created_at` — a user can update their own profile row, and
+that column is not pinned.
+
 **The claim (`claim_referral_reward_v2`)**: the friends cap only
 (`caps.friendsPerMonth`, 5: this UTC month's rewarded rows — whatever the
 friend's own side came to — and referrer-blocked rows whose friend was
@@ -1464,7 +1499,8 @@ else the tab's for a Google sign-up, which posts no signup form). Never at
 signup: GoTrue hands an existing unconfirmed address the same user id, so a
 row written then let anyone claim a referral on an inbox they don't own
 (the independent check's P1). Either way the account must be NEW — under
-`REFERRAL_CLAIM_WINDOW_DAYS` (7) old, never subscribed, no saved card — and
+`REFERRAL_CLAIM_WINDOW_DAYS` (14 since 2026-11-11; 7 before) old and never
+subscribed — how many cards it has saved is no test any more — and
 the first claim wins (`referee_id` is unique). Nobody is notified at signup:
 nothing is earned yet.
 

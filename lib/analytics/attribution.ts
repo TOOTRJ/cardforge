@@ -15,6 +15,39 @@ import { REFERRAL_PARAM, normalizeReferralCode } from "@/lib/referrals/rules";
 
 export const ATTRIBUTION_STORAGE_KEY = "pg_attribution_v1";
 
+/** The referral code alone, kept in the browser PAST the tab (owner
+ *  2026-11-11): localStorage, for REFERRAL_CODE_KEEP_DAYS. sessionStorage
+ *  dies with the tab — the tab closed and the site opened again later, the
+ *  account made in another tab — and the code died with it. (It does NOT
+ *  reach another browser: a link opened inside an app's built-in browser
+ *  and an account made in the real one share no storage; that case is what
+ *  the typed code is for.) Not a cookie: it is never
+ *  sent anywhere by itself; the sign-up form and onboarding read it. It
+ *  holds the code and the day it was kept, nothing else. */
+export const REFERRAL_CODE_STORAGE_KEY = "pg_referral_code_v1";
+export const REFERRAL_CODE_KEEP_DAYS = 30;
+
+/** What is written under REFERRAL_CODE_STORAGE_KEY for a code kept `now`. */
+export function referralCodeToKeep(code: string, now: number): string {
+  return JSON.stringify({ code, at: now });
+}
+
+/** The code a stored value still holds at `now`: undefined when there is
+ *  none, it is not a code, or it was kept longer ago than the keep days. */
+export function keptReferralCode(raw: string | null | undefined, now: number): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const stored = JSON.parse(raw) as { code?: unknown; at?: unknown };
+    const code = normalizeReferralCode(stored.code);
+    const at = typeof stored.at === "number" && Number.isFinite(stored.at) ? stored.at : null;
+    if (!code || at == null) return undefined;
+    const age = now - at;
+    return age >= 0 && age <= REFERRAL_CODE_KEEP_DAYS * 86_400_000 ? code : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type Attribution = {
   referrer?: string;
   utmSource?: string;

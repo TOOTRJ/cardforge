@@ -31,8 +31,8 @@ export function ReferralJoinNote({ where }: { where: "signup" | "onboarding" }) 
   if (!info) return null;
   const { friendGets, signupDays } = info;
   // Short on purpose (owner 2026-11-06): the signup days and the referral's
-  // extra; what earns the extra (the cards, a plan with a card on file) is
-  // explained after sign-up, on the Refer-a-friend page.
+  // extra; what earns the extra (the first cards, each with its own
+  // artwork) is explained after sign-up, on the Refer-a-friend page.
   return (
     <p
       data-testid="referral-join-note"

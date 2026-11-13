@@ -1,3 +1,4 @@
+import { referralSearch } from "@/lib/referrals/rules";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { resolveLegacyCardSlug } from "@/lib/cards/queries";
@@ -41,8 +42,10 @@ export const metadata: Metadata = {
 
 export default async function LegacyCardSlugPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // The URL is /card/<slug>; the file-system param is `username` per the
   // note above. We treat the value as a slug for resolution.
@@ -59,5 +62,6 @@ export default async function LegacyCardSlugPage({
 
   // 301 permanent — the new URL is the canonical home. Browsers and
   // search crawlers will update their cached references.
-  permanentRedirect(`/card/${resolved.username}/${resolved.slug}`);
+  // …and a friend's referral code on the old address goes with it.
+  permanentRedirect(`/card/${resolved.username}/${resolved.slug}${referralSearch(await searchParams)}`);
 }

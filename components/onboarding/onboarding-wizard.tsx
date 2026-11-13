@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { guestCardWaiting, onboardingFinishPath } from "@/lib/creator/guest-draft";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { inputClass } from "@/components/ui/field-classes";
 import { Stepper } from "@/components/ui/stepper";
 import { ProfileMediaField } from "@/components/profile/profile-media-field";
 import {
@@ -18,7 +20,10 @@ import {
   type UsernameCheck,
 } from "@/lib/onboarding/actions";
 import { isGeneratedUsername } from "@/lib/auth/usernames";
-import { storedAttribution, storedReferralCode } from "@/lib/analytics/attribution-client";
+import { forgetReferralCode, referralCodeSource, storedAttribution, storedReferralCode } from "@/lib/analytics/attribution-client";
+import { extractReferralCode } from "@/lib/referrals/rules";
+import { REFERRAL_CODE_UNREADABLE, onboardingCodeError, onboardingReferralToast } from "@/lib/referrals/claim-messages";
+import { readReferralShareInfo } from "@/lib/sharing/referral-share-client";
 import { ReferralJoinNote } from "@/components/referrals/referral-join-note";
 import { cn } from "@/lib/utils";
 
@@ -49,10 +54,53 @@ type OnboardingWizardProps = {
   next: string;
 };
 
+const noStore = () => () => {};
+
 export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
+  // "Have a referral code?" (owner 2026-11-11) — offered unless THIS visit
+  // followed a friend's link, and only while the referral program is on (a
+  // code typed while it is off could do nothing). A code the browser only
+  // kept from an earlier visit (up to 30 days) may not be the friend this
+  // person has in mind, so the field stays open and what they type wins.
+  // The link lives in the browser's stores, so it is read after hydration:
+  // the server render and the first client render agree on "no field".
+  const [typedCode, setTypedCode] = useState("");
+  const noLinkThisVisit = useSyncExternalStore(
+    noStore,
+    () => referralCodeSource() !== "link",
+    () => false,
+  );
+  // The same read the join note above the steps makes (one shared request).
+  const [programOn, setProgramOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void readReferralShareInfo().then((info) => {
+      if (live && info?.enabled) setProgramOn(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const showCodeField = noLinkThisVisit && programOn;
+  // The browser remembers a link from an earlier visit (the note above the
+  // steps says so): the field then asks about a DIFFERENT friend.
+  const rememberedLink = useSyncExternalStore(
+    noStore,
+    () => referralCodeSource() === "kept",
+    () => false,
+  );
+  // A typed code that cannot be used stops the step: the field is marked,
+  // shown (it lives on the last step) and focused, so it can be fixed.
+  const [codeRefused, setCodeRefused] = useState(false);
+  const codeInput = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  // …once the finish is over: the field is disabled while it runs, and a
+  // disabled field takes no focus.
+  useEffect(() => {
+    if (codeRefused && step === 2 && !pending) codeInput.current?.focus();
+  }, [codeRefused, step, pending]);
   const [error, setError] = useState<string | null>(null);
 
   // Step 1
@@ -113,17 +161,45 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
   const finish = (withPreferences: boolean) =>
     startTransition(async () => {
       setError(null);
+      // The link this visitor arrived with, else a code they typed here (a
+      // friend's link the browser lost). Something typed that cannot be
+      // used is said before the account is finished — on "Finish" and on
+      // "Skip" alike — so it can be fixed or cleared: an account has one
+      // referral for good, and guessing who was meant could not be undone.
+      const refuseCode = (message: string) => {
+        setError(message);
+        setCodeRefused(true);
+        setStep(2);
+      };
+      const typed = showCodeField ? typedCode.trim() : "";
+      const typedReferralCode = extractReferralCode(typed) ?? undefined;
+      if (typed && !typedReferralCode) {
+        refuseCode(onboardingCodeError(REFERRAL_CODE_UNREADABLE));
+        return;
+      }
+      setCodeRefused(false);
       const referralCode = storedReferralCode();
       const attribution = storedAttribution();
       const result = await completeOnboardingAction({
         ...(withPreferences ? { preferences: email } : {}),
         ...(referralCode ? { referralCode } : {}),
+        // What the person typed is their own word for who brought them: the
+        // server takes it over the link the browser remembered.
+        ...(typedReferralCode ? { typedReferralCode } : {}),
         ...(Object.keys(attribution).length > 0 ? { attribution } : {}),
       });
       if (!result.ok) {
-        setError(result.error);
+        if (result.referralCodeRefused) refuseCode(result.error);
+        else setError(result.error);
         return;
       }
+      // The account is made: the link kept in this browser was for it, not
+      // for whoever signs up here next.
+      forgetReferralCode();
+      // A code that was sent and not taken (the link's code belongs to
+      // nobody; a typed one could not be saved): said once, with where it
+      // can still be added.
+      if (result.referralNote) toast.message(onboardingReferralToast(result.referralNote));
       // A card built in the guest creator waits in this browser: finish
       // on /create, where it comes back (TODO HM3).
       router.push(onboardingFinishPath(next, guestCardWaiting()));
@@ -288,6 +364,38 @@ export function OnboardingWizard({ initial, next }: OnboardingWizardProps) {
             </p>
           </div>
           <EmailPreferenceFields values={email} onChange={setEmail} disabled={pending} />
+          {/* Only where no friend's link came with this visit (the note
+              above says so when one did). Optional: empty is fine. */}
+          {showCodeField ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="onboarding-referral-code" className="text-sm font-medium text-foreground">
+                {rememberedLink ? "A different friend's referral code?" : "Have a referral code?"}{" "}
+                <span className="font-normal text-muted">(optional)</span>
+              </label>
+              <input
+                id="onboarding-referral-code"
+                ref={codeInput}
+                value={typedCode}
+                onChange={(event) => {
+                  setTypedCode(event.target.value);
+                  setCodeRefused(false);
+                }}
+                aria-invalid={codeRefused || undefined}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={300}
+                disabled={pending}
+                aria-describedby="onboarding-referral-code-hint"
+                className={`${inputClass(false)} max-w-sm font-mono`}
+              />
+              <p id="onboarding-referral-code-hint" className="text-xs text-muted">
+                {rememberedLink
+                  ? "This browser remembers a friend's link you opened before. If someone else told you about PipGlyph, paste their code or link here instead."
+                  : "If a friend told you about PipGlyph, paste their code or link: you can both earn a reward once your first cards are saved."}
+              </p>
+            </div>
+          ) : null}
           <StepActions
             pending={pending}
             primaryLabel="Finish"

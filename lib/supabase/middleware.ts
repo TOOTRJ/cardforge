@@ -3,6 +3,7 @@ import { isSupabaseAuthCookieName } from "@/lib/supabase/session-cookie";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/supabase";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { REFERRAL_PARAM, normalizeReferralCode } from "@/lib/referrals/rules";
 import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 
 // /gallery and /decks are the PUBLIC community browses and are not
@@ -46,6 +47,11 @@ function loginRedirect(request: NextRequest) {
   redirectUrl.pathname = "/login";
   redirectUrl.search = "";
   redirectUrl.searchParams.set("redirectTo", destination);
+  // A friend's link to a page that needs a sign-in: the code is buried in
+  // `redirectTo`, where nothing reads it — the login page's own address
+  // carries it too, so it is captured there.
+  const code = normalizeReferralCode(request.nextUrl.searchParams.get(REFERRAL_PARAM));
+  if (code) redirectUrl.searchParams.set(REFERRAL_PARAM, code);
   return NextResponse.redirect(redirectUrl);
 }
 
