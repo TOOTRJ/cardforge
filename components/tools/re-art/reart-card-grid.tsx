@@ -154,6 +154,7 @@ export function ReartCardGrid({
                     {entry.words ? <Badge variant="outline">{entry.words.only ? "Only its own words" : "Own words"}</Badge> : null}
                     {entry.state === null || entry.kind === "skip" ? <span>{reartStateLabel(entry)}</span> : null}
                   </p>
+                  {entry.paintedBy ? <p className="text-xs text-subtle">Painted by {entry.paintedBy}</p> : null}
                   {paintable ? (
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                       <label

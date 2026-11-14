@@ -18,7 +18,9 @@ import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   EMPTY_REART_STYLE,
+  REART_DEFAULT_MODEL,
   REART_DEFAULT_VISIBILITY,
+  REART_MODELS,
   REART_SAMPLE_MAX,
   REART_SCOPE_HINTS,
   REART_SCOPE_LABELS,
@@ -27,6 +29,9 @@ import {
   REART_VISIBILITY_VALUES,
   buildReartPrompt,
   normalizeReartStyle,
+  reartBodyMaxOf,
+  reartModelLabel,
+  reartModelOf,
   reartRunMode,
   reartRunOutcome,
   reartStateCountsInStyle,
@@ -39,6 +44,7 @@ import {
   type ReartRunInput,
   type ReartScope,
   type NormalReartStyle,
+  type ReartModelId,
   type ReartStudioEntry,
   type ReartVisibility,
 } from "@/lib/tools/re-art/model";
@@ -91,6 +97,7 @@ export function ReartStudio({
   capacity,
   balance,
   aiAvailable,
+  canPickModel = false,
   pausedRunId,
   runs,
 }: {
@@ -101,6 +108,10 @@ export function ReartStudio({
   capacity: CardCapacity | null;
   balance: number | null;
   aiAvailable: boolean;
+  /** The viewer may name the model that paints (admins and testers —
+   *  canPickReartModel; the server holds the same rule). Absent: the picker
+   *  isn't shown and every run is Automatic. */
+  canPickModel?: boolean;
   pausedRunId: string | null;
   runs: ReartRun[];
 }) {
@@ -137,6 +148,12 @@ export function ReartStudio({
   );
   const [scope, setScope] = useState<ReartScope>("all");
   const [visibility, setVisibility] = useState<ReartVisibility>(REART_DEFAULT_VISIBILITY);
+  /** The model that paints the next run (for testing; 0211). Not part of
+   *  the deck's style: cards painted by any model are in the same style. */
+  const [pickedModel, setModel] = useState<ReartModelId>(REART_DEFAULT_MODEL);
+  const model: ReartModelId = canPickModel ? pickedModel : REART_DEFAULT_MODEL;
+  const picked = reartModelOf(model);
+  const bodyMax = reartBodyMaxOf(model);
   const [filter, setFilter] = useState<ReartGridFilter>("all");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -185,6 +202,9 @@ export function ReartStudio({
       { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
       style,
       card.words,
+      // In the wording the picked model is sent, held to what it reads.
+      picked.framing,
+      bodyMax,
     );
     return {
       name: card.name,
@@ -194,7 +214,7 @@ export function ReartStudio({
       // A real card's text isn't known here: it is read when it is painted.
       partial: card.kind === "printing",
     };
-  }, [paintable, style]);
+  }, [paintable, style, picked.framing, bodyMax]);
 
   const doneCount = runner.steps.filter((s) => s.status === "done").length;
   const failedCount = runner.steps.filter((s) => s.status === "failed").length;
@@ -247,6 +267,8 @@ export function ReartStudio({
       mode: reartRunMode(job.request),
       pass: runner.runsEnded,
       resumed: resumedRun.current,
+      // The model the run named (a code from the tool's own list; 0211).
+      ...(typeof job.request?.model === "string" ? { model: job.request.model } : {}),
     });
     // Only the end of a pass reports; the values are that render's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,7 +350,7 @@ export function ReartStudio({
     openConfirm({
       title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
       description: `${description} Nothing is charged until you press Paint.`,
-      input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility },
+      input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility, model },
     });
   };
 
@@ -429,11 +451,47 @@ export function ReartStudio({
                 : undefined
             }
             preview={promptPreview}
+            framing={picked.framing}
             problem={problem}
             saveError={saveError}
             // Only another LOOK repaints the cards painted in the saved one.
             paintedInSaved={lookChanged ? paintedInSaved : 0}
           />
+
+          {canPickModel ? (
+          <section aria-labelledby="reart-model" className="flex flex-col gap-3 rounded-frame border border-border/60 bg-surface/50 p-4 sm:p-5">
+            <h2 id="reart-model" className="font-display text-lg text-foreground">
+              Model <span className="text-sm text-muted">(for testing)</span>
+            </h2>
+            <FieldGroup
+              kind="control"
+              label="Painted by"
+              helper={`${picked.hint} One credit a picture, whichever model paints.`}
+            >
+              {(aria) => (
+                <ChipGroup
+                  ariaLabel="Painted by"
+                  ariaDescribedBy={aria["aria-describedby"]}
+                  keepCase
+                  size="sm"
+                  options={REART_MODELS.map((option) => ({ value: option.id, label: option.label, description: option.hint }))}
+                  value={model}
+                  onChange={setModel}
+                />
+              )}
+            </FieldGroup>
+            {picked.framing === "plain" ? (
+              <p className="text-xs text-subtle">
+                This model is sent the same prompt in plainer words: no quoted card name and a different closing line.
+                The other wording made it paint a card frame with the title in it.
+              </p>
+            ) : null}
+            <p className="text-xs text-subtle">
+              The choice is for the next run, the sample and single cards alike. It is not part of the deck&apos;s
+              style: each card says who painted it.
+            </p>
+          </section>
+          ) : null}
 
           <section aria-labelledby="reart-sample" className="flex flex-col gap-3 rounded-frame border border-border/60 bg-surface/50 p-4 sm:p-5">
             <h2 id="reart-sample" className="font-display text-lg text-foreground">
@@ -496,7 +554,7 @@ export function ReartStudio({
                     description: `The deck's style is saved as it is now.${
                       sampleReplacesReart ? " A picture Re-art painted on a sample card is replaced and can't be brought back." : ""
                     } Nothing is charged until you press Paint.`,
-                    input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility },
+                    input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility, model },
                   });
                 }}
                 aria-disabled={sampleBlocked || lockedReason ? true : undefined}
@@ -570,7 +628,7 @@ export function ReartStudio({
                   openConfirm({
                     title: `Re-art ${deck.title}`,
                     description: "The deck's style is saved as it is now. Nothing is charged until you press Paint.",
-                    input: { deckId: deck.id, style, scope, visibility },
+                    input: { deckId: deck.id, style, scope, visibility, model },
                   });
                 }}
                 aria-disabled={deckBlocked || lockedReason ? true : undefined}
@@ -614,6 +672,7 @@ export function ReartStudio({
                 noun="painted"
                 doing="Painting"
                 unit="run"
+                modelLabel={canPickModel ? reartModelLabel : undefined}
                 pausedNote="You can continue it later from this page; the cards painted so far are saved."
                 finishedAction={
                   <Button variant="secondary" onClick={() => setJob(null)}>
@@ -658,6 +717,8 @@ export function ReartStudio({
         <ReartCardWordsDialog
           open={wordsOpen}
           onOpenChange={setWordsOpen}
+          framing={picked.framing}
+          bodyMax={bodyMax}
           deckId={deck.id}
           entry={wordsEntry}
           style={style}

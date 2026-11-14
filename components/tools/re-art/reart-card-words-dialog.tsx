@@ -18,6 +18,7 @@ import {
   buildReartPrompt,
   reartStateIsSettled,
   type ReartCardWords,
+  type ReartFraming,
   type ReartStudioEntry,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
@@ -37,6 +38,8 @@ export function ReartCardWordsDialog({
   deckId,
   entry,
   style,
+  framing = "flux2",
+  bodyMax,
   onSaved,
 }: {
   open: boolean;
@@ -45,6 +48,11 @@ export function ReartCardWordsDialog({
   entry: ReartStudioEntry;
   /** The style the form shows (the preview's). */
   style: ReartStyle;
+  /** The wording the picked model is sent (the preview's). */
+  framing?: ReartFraming;
+  /** The most of a prompt's body the picked model reads (absent: the
+   *  tool's own limit). */
+  bodyMax?: number;
   onSaved: (words: ReartCardWords | null) => void;
 }) {
   const [text, setText] = useState(entry.words?.text ?? "");
@@ -72,6 +80,8 @@ export function ReartCardWordsDialog({
     { title: entry.name, typeLine: entry.typeLine, rulesText: entry.rulesText, flavorText: entry.flavorText },
     style,
     words,
+    framing,
+    bodyMax,
   );
   const changed = (entry.words?.text ?? "") !== text.trim() || (entry.words?.only ?? false) !== (words ? only : false);
 

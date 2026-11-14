@@ -23,8 +23,11 @@ import {
 } from "@/lib/tools/re-art/server";
 import {
   REART_CREDITS_PER_FACE,
+  canPickReartModel,
   classifyReartEntry,
+  reartArtIsOnCard,
   reartCardFacts,
+  reartModelLabel,
   type ReartStudioEntry,
 } from "@/lib/tools/re-art/model";
 import { isUuid } from "@/lib/ids";
@@ -47,6 +50,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ReartDeckPage({ searchParams }: { searchParams: Promise<{ deck?: string | string[] }> }) {
   const entry = await openTool("re-art-deck");
+  // The model picker is for admins and testers (the server holds the same
+  // rule at the start and at every step).
+  const canPickModel = canPickReartModel(entry);
   const params = await searchParams;
   const deckParam = typeof params.deck === "string" && isUuid(params.deck) ? params.deck : null;
   const deck = deckParam ? await getOwnedDeck(entry.userId, deckParam) : null;
@@ -173,6 +179,10 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       canRestore: facts.canRestore,
       artNow: facts.artNow,
       words: classified.kind === "skip" ? null : (words.get(e.id) ?? null),
+      // Who painted the picture Re-art put on the card — only while that
+      // picture is still the card's, and only for those who can pick the
+      // model (it is a testing aid).
+      paintedBy: canPickModel && done && reartArtIsOnCard(done, card?.art_url) ? reartModelLabel(done.imageModel) : null,
       // The prompt's preview fills {rules} / {flavor} from the maker's own
       // card; a real card's are read from its printing when it is painted.
       rulesText: own?.rules_text ?? null,
@@ -194,6 +204,7 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
         capacity={capacity}
         balance={balance}
         aiAvailable={isGatewayConfigured()}
+        canPickModel={canPickModel}
         pausedRunId={paused?.id ?? null}
         runs={runs}
       />

@@ -11,7 +11,7 @@ import { isGatewayConfigured } from "@/lib/ai/provider";
 import { autoOrientBytes } from "@/lib/media/orientation";
 import { imageWithoutMetadata } from "@/lib/media/upload-bytes";
 import { modelInputImage } from "@/lib/media/model-input";
-import type { ArtShape } from "@/lib/ai/art-aspect";
+import { ASPECT_RATIOS, type ArtShape } from "@/lib/ai/art-aspect";
 import { FULLY_CLOTHED_LINE } from "@/lib/ai/art-prompt-safety";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +54,16 @@ const IMAGE_CALL_TIMEOUT_MS = 100_000;
 export type ImageCallOptions = {
   /** Override the per-call abort budget (ms). */
   timeoutMs?: number;
+  /**
+   * Paint with THIS gateway model and no other: the default model and its
+   * backup are both left out, so the result's `model` is always the one
+   * named (Re-art deck's model picker — a tester has to know what painted;
+   * the caller validates the id against its own list, never a user's free
+   * text). The picture's shape is asked the way that model takes it
+   * (imageShapeArgs); a multimodal model that answers with an image file
+   * (Gemini) is called as one (isMultimodalImageModel).
+   */
+  model?: string;
 };
 
 export type PaintOptions = ImageCallOptions & {
@@ -153,6 +163,7 @@ export async function generateImageWithFallbacks(
     if (i > 0 && remaining < MIN_RUNG_MS) break;
     const result = await generatePlainImage(prompts[i], aspect, {
       timeoutMs: Math.min(options.timeoutMs ?? remaining, Math.max(remaining, 10_000)),
+      model: options.model,
       backup: !backupSpent,
       onBackupStarted: () => {
         backupSpent = true;
@@ -229,23 +240,66 @@ export function isSizedFluxModel(model: string): boolean {
   return /^bfl\/flux-2-/.test(model);
 }
 
+type Ratio = `${number}:${number}`;
+
+/** The ratios a ratio-only model takes when they are NOT art-aspect.ts's
+ *  ASPECT_RATIOS (which FLUX's ratio input takes whole): asked for one it
+ *  doesn't know, a model answers in its default shape or refuses the call.
+ *  From each provider's own list (AI SDK provider docs, 2026-11): Grok
+ *  Imagine has no 21 : 9 before 2.0 and no 9 : 21 at all; Gemini's image
+ *  models have neither 9 : 21 nor anything narrower than 9 : 16. */
+const MODEL_RATIOS: ReadonlyArray<{ match: RegExp; ratios: readonly Ratio[] }> = [
+  { match: /\/grok-imagine-image-2/, ratios: ["21:9", "20:9", "2:1", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "1:2", "9:20"] },
+  { match: /\/grok-imagine-image/, ratios: ["20:9", "2:1", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "1:2", "9:20"] },
+  { match: /^google\/gemini-.*image/, ratios: ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"] },
+];
+
+const ratioValue = (ratio: string) => {
+  const [w, h] = ratio.split(":").map(Number);
+  return w / h;
+};
+
+/** The ratio `model` is asked for a window of `aspect` (width ÷ height):
+ *  the nearest (on a log scale) of the ratios that model takes. */
+export function modelAspectRatio(model: string, aspect: number): Ratio {
+  const ratios: readonly Ratio[] = MODEL_RATIOS.find((entry) => entry.match.test(model))?.ratios ?? ASPECT_RATIOS;
+  let best = ratios[0];
+  let bestDistance = Infinity;
+  for (const ratio of ratios) {
+    const distance = Math.abs(Math.log(ratioValue(ratio) / aspect));
+    if (distance < bestDistance) {
+      best = ratio;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/** A multimodal gateway model that answers a text call with an image FILE
+ *  (Gemini's image models): painted through generateText, never
+ *  generateImage — the same call shape as the restyle below. */
+export function isMultimodalImageModel(model: string): boolean {
+  return /^google\/gemini-.*image/.test(model);
+}
+
 /** What the gateway is asked for one picture's shape: a FLUX.2 model gets
  *  the ArtShape's width × height — `size`, and the Black Forest Labs
  *  provider's own `width` / `height` options (which win over `size` there)
- *  — never an aspectRatio it would drop; any other model the nearest ratio.
- *  "square" / "wide" / "banner" are asked as they always were. */
+ *  — never an aspectRatio it would drop; any other model the nearest ratio
+ *  IT takes (modelAspectRatio). "square" / "wide" / "banner" are asked as
+ *  they always were. */
 export function imageShapeArgs(
   model: string,
   aspect: ImageAspect,
 ): {
-  aspectRatio?: `${number}:${number}`;
+  aspectRatio?: Ratio;
   size?: `${number}x${number}`;
   providerOptions?: { blackForestLabs: { width: number; height: number } };
 } {
   if (typeof aspect === "string") {
     return { aspectRatio: aspect === "banner" ? "21:9" : aspect === "wide" ? "16:9" : "1:1" };
   }
-  if (!isSizedFluxModel(model)) return { aspectRatio: aspect.aspectRatio };
+  if (!isSizedFluxModel(model)) return { aspectRatio: modelAspectRatio(model, aspect.windowAspect) };
   return {
     size: `${aspect.width}x${aspect.height}`,
     providerOptions: { blackForestLabs: { width: aspect.width, height: aspect.height } },
@@ -308,6 +362,7 @@ async function paintWith(
 ): Promise<PaintResult> {
   const started = Date.now();
   try {
+    if (isMultimodalImageModel(model)) return await paintViaText(model, prompt, aspect, timeoutMs, stop);
     const { image } = await generateImage({
       model,
       abortSignal: AbortSignal.any([AbortSignal.timeout(Math.max(1, timeoutMs)), stop]),
@@ -332,6 +387,40 @@ async function paintWith(
     const failure = imageFailure(`${detail} (after ${secondsSince(started)} s)`, model);
     return { ok: false, error: failure.error, failure: failure.kind };
   }
+}
+
+/** ONE gateway call to a multimodal model that answers with an image file
+ *  (isMultimodalImageModel). A refusal is `art_blocked`, so the ladder walks
+ *  to a softer prompt: the content filter as its finish reason, or WORDS in
+ *  place of the picture (these models decline in text: "I can't create…").
+ *  An answer with neither a picture nor a word is `art_failed`. Throws what
+ *  the gateway throws: paintWith reports it. */
+async function paintViaText(
+  model: string,
+  prompt: string,
+  aspect: ImageAspect,
+  timeoutMs: number,
+  stop: AbortSignal,
+): Promise<PaintResult> {
+  const { aspectRatio } = imageShapeArgs(model, aspect);
+  const result = await generateText({
+    model,
+    abortSignal: AbortSignal.any([AbortSignal.timeout(Math.max(1, timeoutMs)), stop]),
+    maxRetries: 1,
+    prompt,
+    providerOptions: {
+      google: { responseModalities: ["TEXT", "IMAGE"], ...(aspectRatio ? { imageConfig: { aspectRatio } } : {}) },
+    },
+  });
+  const file = result.files.find((f) => f.mediaType?.startsWith("image/"));
+  if (file) return { ok: true, bytes: file.uint8Array, contentType: file.mediaType ?? "image/png", model };
+  const said = typeof result.text === "string" && result.text.trim().length > 0;
+  const refused = result.finishReason === "content-filter" || said;
+  // Never the model's words in the log: they can quote the prompt.
+  console.warn(`[ai:image] ${model} returned no image (${result.finishReason ?? "no reason"}${said ? ", text only" : ""}).`);
+  return refused
+    ? { ok: false, error: AI_FAILURE_COPY.art_blocked, failure: "art_blocked" }
+    : { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
 }
 
 /** Both models failed on the same prompt. When EITHER refused, the prompt is
@@ -371,7 +460,10 @@ export async function generatePlainImage(
     return { ok: false, error: AI_FAILURE_COPY.ai_unavailable, failure: "ai_unavailable" };
   }
   const text = withFullyClothedLine(prompt, 4000);
-  const { primary, backup } = imageModels();
+  // A caller that names its model gets that model alone: no backup, so the
+  // result always says who painted (ImageCallOptions.model).
+  const pinned = options.model?.trim() || null;
+  const { primary, backup } = pinned ? { primary: pinned, backup: null } : imageModels();
   const timeoutMs = options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS;
   const started = Date.now();
   const deadline = started + timeoutMs;

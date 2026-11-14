@@ -229,6 +229,9 @@ export type PaintedCard = {
    *  for a picture the card doesn't show is finishing a paint that never
    *  landed (step.ts). */
   jobId: string | null;
+  /** The gateway model that painted the picture(s) (0211) — one id, or two
+   *  joined by " + ". Null: painted before 0211, or not known. */
+  imageModel: string | null;
 };
 
 type PaintedRow = {
@@ -246,10 +249,30 @@ type PaintedRow = {
   previous_back_artist_credit: string | null;
   painted_at: string;
   job_id?: string | null;
+  image_model?: string | null;
 };
 
-const PAINTED_COLUMNS =
+/** The row's columns before 0211 (which added `image_model`). */
+const PAINTED_COLUMNS_BEFORE_0211 =
   "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at, job_id";
+const PAINTED_COLUMNS = `${PAINTED_COLUMNS_BEFORE_0211}, image_model`;
+
+/** A column the database doesn't have yet: a select names it (42703), or a
+ *  write does (PostgREST's schema cache: PGRST204). */
+const unknownColumn = (error: { code?: string } | null | undefined) => error?.code === "42703" || error?.code === "PGRST204";
+
+/**
+ * A read of painted rows with 0211's column — and, on a database 0211
+ * hasn't reached (a deploy that lands before its migration), the same read
+ * without it: a failed read there showed every card as never painted.
+ * Remove once 0211 is on production and dev.
+ */
+async function readPainted<T extends { data: unknown; error: { code?: string } | null }>(
+  read: (columns: string) => PromiseLike<T>,
+): Promise<T> {
+  const first = await read(PAINTED_COLUMNS);
+  return unknownColumn(first.error) ? read(PAINTED_COLUMNS_BEFORE_0211) : first;
+}
 
 function paintedOf(row: PaintedRow): PaintedCard {
   return {
@@ -267,39 +290,37 @@ function paintedOf(row: PaintedRow): PaintedCard {
     previousBackArtistCredit: row.previous_back_artist_credit,
     paintedAt: row.painted_at,
     jobId: row.job_id ?? null,
+    imageModel: row.image_model ?? null,
   };
 }
 
 /** The deck's painted cards (the owner's session), by card id. */
 export async function readPaintedCards(deckId: string): Promise<Map<string, PaintedCard>> {
   const supabase = await createClient();
-  const { data } = await supabase.from("deck_reart_cards").select(PAINTED_COLUMNS).eq("deck_id", deckId);
-  return new Map(((data ?? []) as PaintedRow[]).map((row) => [row.card_id, paintedOf(row)]));
+  const { data } = await readPainted((columns) => supabase.from("deck_reart_cards").select(columns).eq("deck_id", deckId));
+  return new Map(((data ?? []) as unknown as PaintedRow[]).map((row) => [row.card_id, paintedOf(row)]));
 }
 
 /** One painted card as the server reads it (a step). */
 export async function readPaintedCardAdmin(userId: string, deckId: string, cardId: string): Promise<PaintedCard | null> {
   if (!isAdminConfigured()) return null;
-  const { data } = await createAdminClient()
-    .from("deck_reart_cards")
-    .select(`${PAINTED_COLUMNS}, owner_id`)
-    .eq("deck_id", deckId)
-    .eq("card_id", cardId)
-    .maybeSingle();
-  if (!data || (data as { owner_id: string }).owner_id !== userId) return null;
-  return paintedOf(data as PaintedRow);
+  const admin = createAdminClient();
+  const { data } = await readPainted((columns) =>
+    admin.from("deck_reart_cards").select(`${columns}, owner_id`).eq("deck_id", deckId).eq("card_id", cardId).maybeSingle(),
+  );
+  if (!data || (data as unknown as { owner_id: string }).owner_id !== userId) return null;
+  return paintedOf(data as unknown as PaintedRow);
 }
 
 /** Every deck's row for one of the caller's cards (a card can be in several
  *  decks): which pictures on it are Re-art's, and what was there before. */
 export async function readPaintedRowsForCardAdmin(userId: string, cardId: string): Promise<PaintedCard[]> {
   if (!isAdminConfigured()) return [];
-  const { data } = await createAdminClient()
-    .from("deck_reart_cards")
-    .select(PAINTED_COLUMNS)
-    .eq("card_id", cardId)
-    .eq("owner_id", userId);
-  return ((data ?? []) as PaintedRow[]).map(paintedOf);
+  const admin = createAdminClient();
+  const { data } = await readPainted((columns) =>
+    admin.from("deck_reart_cards").select(columns).eq("card_id", cardId).eq("owner_id", userId),
+  );
+  return ((data ?? []) as unknown as PaintedRow[]).map(paintedOf);
 }
 
 /** The card a Re-art run MADE from this deck entry, if any (a link that
@@ -326,29 +347,33 @@ export async function writePaintedCard(
   painted: Omit<PaintedCard, "paintedAt" | "jobId">,
 ): Promise<boolean> {
   if (!isAdminConfigured()) return false;
-  const { error } = await createAdminClient()
-    .from("deck_reart_cards")
-    .upsert(
-      {
-        deck_id: deckId,
-        card_id: painted.cardId,
-        owner_id: userId,
-        style_version: painted.styleVersion,
-        job_id: jobId,
-        entry_id: painted.entryId,
-        art_url: painted.artUrl,
-        back_art_url: painted.backArtUrl,
-        made: painted.made,
-        previous_art_url: painted.previousArtUrl,
-        previous_art_position: painted.previousArtPosition,
-        previous_back_art_url: painted.previousBackArtUrl,
-        previous_back_art_position: painted.previousBackArtPosition,
-        previous_artist_credit: painted.previousArtistCredit,
-        previous_back_artist_credit: painted.previousBackArtistCredit,
-        painted_at: new Date().toISOString(),
-      },
-      { onConflict: "deck_id,card_id" },
-    );
+  const row = {
+    deck_id: deckId,
+    card_id: painted.cardId,
+    owner_id: userId,
+    style_version: painted.styleVersion,
+    job_id: jobId,
+    entry_id: painted.entryId,
+    art_url: painted.artUrl,
+    back_art_url: painted.backArtUrl,
+    made: painted.made,
+    previous_art_url: painted.previousArtUrl,
+    previous_art_position: painted.previousArtPosition,
+    previous_back_art_url: painted.previousBackArtUrl,
+    previous_back_art_position: painted.previousBackArtPosition,
+    previous_artist_credit: painted.previousArtistCredit,
+    previous_back_artist_credit: painted.previousBackArtistCredit,
+    painted_at: new Date().toISOString(),
+  };
+  const admin = createAdminClient();
+  const write = (values: typeof row & { image_model?: string | null }) =>
+    admin.from("deck_reart_cards").upsert(values, { onConflict: "deck_id,card_id" });
+  // Who painted (0211) — clipped to the column's limit, never an empty
+  // text. On a database 0211 hasn't reached the row is written without it
+  // (the paint must still be recorded: it holds the art to put back).
+  const imageModel = painted.imageModel?.trim().slice(0, 200) || null;
+  let { error } = await write({ ...row, image_model: imageModel });
+  if (unknownColumn(error)) ({ error } = await write(row));
   if (error) console.warn(`[re-art] painted card ${painted.cardId} on deck ${deckId} not recorded: ${error.message}`);
   return !error;
 }

@@ -184,11 +184,62 @@ describe("startReartAction", () => {
           preset: "storybook",
           mode: "preset",
           own_words: 0,
+          model: "auto",
           style_changed: true,
           visibility: "private",
         },
       ],
     ]);
+    // A run that names no model is Automatic, in the plan and the request.
+    expect(row.plan.model).toBe("auto");
+    expect(row.request.model).toBe("auto");
+  });
+
+  it("a run that names a model carries it in the plan (what the step paints with), the request and the log", async () => {
+    const result = await startReartAction({ deckId: DECK, style: STYLE, model: "bfl/flux-kontext-pro" });
+    // The price is the same on any model: one credit a picture.
+    expect(result).toMatchObject({ ok: true, credits: 3 });
+    const row = m.insert.mock.calls[0][0];
+    expect(row.plan.model).toBe("bfl/flux-kontext-pro");
+    expect(row.request).toMatchObject({ model: "bfl/flux-kontext-pro", credits: 3 });
+    expect(row.steps).toEqual([
+      { key: "reart:0", label: "Card 0", status: "pending" },
+      { key: "reart:1", label: "Card 1", status: "pending", credits: 2 },
+    ]);
+    const [[event, props]] = logged();
+    expect(event).toBe("start");
+    expect(props).toMatchObject({ model: "bfl/flux-kontext-pro", credits: 3 });
+    // The log takes at most twelve props: a thirteenth would be dropped.
+    expect(Object.keys(props ?? {})).toHaveLength(12);
+  });
+
+  it("naming a model is for admins and testers: a plan's audience is refused before the plan, and told why", async () => {
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: null });
+    const refused = await startReartAction({ deckId: DECK, style: STYLE, model: "bfl/flux-kontext-pro" });
+    expect(refused.ok).toBe(false);
+    expect(!refused.ok && refused.error).toMatch(/testers/);
+    expect(m.plan).not.toHaveBeenCalled();
+    expect(m.saveStyle).not.toHaveBeenCalled();
+    expect(m.insert).not.toHaveBeenCalled();
+    expect(m.event.mock.calls.map(([input]) => [input.event, input.props?.reason, input.access])).toEqual([
+      ["start_failed", "model_not_allowed", "release"],
+    ]);
+    // Automatic is theirs as it always was…
+    expect((await startReartAction({ deckId: DECK, style: STYLE })).ok).toBe(true);
+    expect(m.insert.mock.calls[0][0].plan.model).toBe("auto");
+    // …and a tester of a released tool (still holding the grant) names one.
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: { grantedAt: "2026-11-01T00:00:00Z", expiresAt: null } });
+    expect((await startReartAction({ deckId: DECK, style: STYLE, model: "bfl/flux-kontext-pro" })).ok).toBe(true);
+    expect(m.insert.mock.calls[1][0].plan.model).toBe("bfl/flux-kontext-pro");
+  });
+
+  it("a model the tool doesn't list starts nothing: no plan, no job, nothing charged", async () => {
+    for (const model of ["openai/gpt-image-1", "xai/grok-imagine-image", "bfl/flux-2-flex", ""]) {
+      expect((await startReartAction({ deckId: DECK, style: STYLE, model })).ok).toBe(false);
+    }
+    expect(m.plan).not.toHaveBeenCalled();
+    expect(m.saveStyle).not.toHaveBeenCalled();
+    expect(m.insert).not.toHaveBeenCalled();
   });
 
   it("a run in the maker's own prompt carries it in the plan (never in the log), with how many cards have their own words", async () => {
@@ -403,7 +454,8 @@ describe("restoreReartArtAction", () => {
     ]);
     expect(m.discard).not.toHaveBeenCalled();
     expect(m.update.mock.invocationCallOrder[0]).toBeLessThan(m.discardUnused.mock.invocationCallOrder[0]);
-    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: null, previousArtUrl: null, styleVersion: 2 });
+    // …and names no model: nothing Re-art painted is on the card now.
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: null, previousArtUrl: null, styleVersion: 2, imageModel: null });
     expect(logged()).toEqual([["restore", { faces: 2 }]]);
   });
 

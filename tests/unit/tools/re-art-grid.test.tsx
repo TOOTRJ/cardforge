@@ -25,12 +25,26 @@ vi.mock("@/components/tools/collection/printing-tile", () => ({
   PrintingPicture: ({ name }: { name: string }) => <div data-testid="printing">{name}</div>,
 }));
 const saveWords = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/tools/re-art/actions", () => ({ saveReartCardWordsAction: saveWords }));
+const planRun = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/tools/re-art/actions", () => ({
+  saveReartCardWordsAction: saveWords,
+  planReartAction: planRun,
+  startReartAction: vi.fn(),
+}));
+vi.mock("@/components/billing/upgrade-modal-provider", () => ({ useUpgradeModal: () => ({ open: vi.fn() }) }));
 
 import { ReartCardGrid, gridFilterOf } from "@/components/tools/re-art/reart-card-grid";
 import { ReartStylePanel, starterPrompt } from "@/components/tools/re-art/reart-style-panel";
 import { ReartCardWordsDialog } from "@/components/tools/re-art/reart-card-words-dialog";
-import { REART_NO_FRAME_LINE, reartStyleBlock, type NormalReartStyle } from "@/lib/tools/re-art/model";
+import { ReartConfirmDialog } from "@/components/tools/re-art/reart-confirm-dialog";
+import {
+  REART_NO_FRAME_LINE,
+  REART_PLAIN_CLOSING_LINE,
+  reartModelLabel,
+  reartStyleBlock,
+  type NormalReartStyle,
+  type ReartRunInput,
+} from "@/lib/tools/re-art/model";
 import { act } from "@testing-library/react";
 import { BulkProgress } from "@/components/tools/bulk-customize/bulk-progress";
 
@@ -52,6 +66,7 @@ const entry = (over: Partial<ReartStudioEntry> = {}): ReartStudioEntry => ({
   rulesText: null,
   flavorText: null,
   credits: 1,
+  paintedBy: null,
   ...over,
 });
 
@@ -96,6 +111,14 @@ describe("the studio's card list", () => {
     expect(gridFilterOf(entry({ state: null }))).toBe("todo");
     expect(gridFilterOf(entry({ state: "in_style" }))).toBe("done");
     expect(gridFilterOf(entry({ state: "kept" }))).toBe("done");
+  });
+
+  it("says who painted a card where the page knows (0211) — and nothing where it doesn't", () => {
+    grid([entry({ state: "in_style", paintedBy: "FLUX.1 Kontext [pro]" })]);
+    expect(screen.getByText("Painted by FLUX.1 Kontext [pro]")).toBeTruthy();
+    cleanup();
+    grid([entry({ state: "in_style" })]);
+    expect(screen.queryByText(/Painted by/)).toBeNull();
   });
 
   it("a paint link opens the confirm: it ends in “…” for every card and hands the card on", () => {
@@ -202,7 +225,14 @@ describe("the style form — the maker's own prompt (0209)", () => {
   const TEMPLATE: NormalReartStyle = { preset: "watercolor", theme: "a drowned city", mode: "preset", prompt: "" };
   const OWN: NormalReartStyle = { ...TEMPLATE, mode: "custom", prompt: "An oil painting of {card}" };
 
-  function panel(style: NormalReartStyle, over: { onChange?: (next: NormalReartStyle) => void; preview?: Parameters<typeof ReartStylePanel>[0]["preview"] } = {}) {
+  function panel(
+    style: NormalReartStyle,
+    over: {
+      onChange?: (next: NormalReartStyle) => void;
+      preview?: Parameters<typeof ReartStylePanel>[0]["preview"];
+      framing?: Parameters<typeof ReartStylePanel>[0]["framing"];
+    } = {},
+  ) {
     return render(
       <ReartStylePanel
         style={style}
@@ -215,6 +245,7 @@ describe("the style form — the maker's own prompt (0209)", () => {
         saveError={null}
         paintedInSaved={0}
         preview={over.preview}
+        framing={over.framing}
       />,
     );
   }
@@ -224,6 +255,30 @@ describe("the style form — the maker's own prompt (0209)", () => {
     expect(screen.getByRole("radiogroup", { name: "Style" })).toBeTruthy();
     expect(screen.getByText(reartStyleBlock(TEMPLATE))).toBeTruthy();
     expect(screen.queryByLabelText("The deck's prompt")).toBeNull();
+  });
+
+  // The model picker (0211): a model other than FLUX.2 is sent plainer
+  // words — the panel shows the block, starts the maker's own prompt and
+  // names the closing line in THOSE words, never FLUX.2's.
+  it("shows the shared block in the wording the picked model is sent", () => {
+    panel(TEMPLATE, { framing: "plain" });
+    expect(screen.getByText(reartStyleBlock(TEMPLATE, "plain"))).toBeTruthy();
+    expect(screen.queryByText(reartStyleBlock(TEMPLATE))).toBeNull();
+    expect(reartStyleBlock(TEMPLATE, "plain")).not.toMatch(/deck|card/i);
+  });
+
+  it("starts the maker's own prompt, and names the line that is always added, in that wording too", () => {
+    const onChange = vi.fn();
+    panel(TEMPLATE, { onChange, framing: "plain" });
+    fireEvent.click(screen.getByRole("radio", { name: /Write my own prompt/ }));
+    expect(onChange).toHaveBeenCalledWith({ ...TEMPLATE, mode: "custom", prompt: `{card}. ${reartStyleBlock(TEMPLATE, "plain")}` });
+    cleanup();
+    // No card to preview: the panel names the closing line alone.
+    panel(OWN, { framing: "plain" });
+    expect(screen.getByText(`Your prompt, then: ${REART_PLAIN_CLOSING_LINE}`)).toBeTruthy();
+    cleanup();
+    panel(OWN);
+    expect(screen.getByText(`Your prompt, then: ${REART_NO_FRAME_LINE}`)).toBeTruthy();
   });
 
   it("“Write my own prompt” starts from the look the form shows, so switching loses nothing", () => {
@@ -304,6 +359,26 @@ describe("a card's own words — the dialog (0209)", () => {
     // Only these words: the deck's style is left out.
     fireEvent.click(screen.getByRole("checkbox", { name: /Use only these words for this card/ }));
     expect(preview()).toBe(`a wyrm coiled round a lighthouse. ${REART_NO_FRAME_LINE}`);
+  });
+
+  it("previews in the wording the picked model is sent (0211): the plain one ends on its own closing line", () => {
+    render(
+      <ReartCardWordsDialog
+        open
+        onOpenChange={() => undefined}
+        deckId={DECK}
+        entry={entry({ flavorText: "Scales like slate." })}
+        style={STYLE}
+        framing="plain"
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(preview().startsWith("Fantasy illustration of Thornback Wyrm, a Creature — Wyrm. Its mood: Scales like slate.")).toBe(true);
+    expect(preview()).toContain(reartStyleBlock(STYLE, "plain"));
+    expect(preview().endsWith(REART_PLAIN_CLOSING_LINE)).toBe(true);
+    fireEvent.change(box(), { target: { value: "a wyrm coiled round a lighthouse" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Use only these words for this card/ }));
+    expect(preview()).toBe(`a wyrm coiled round a lighthouse. ${REART_PLAIN_CLOSING_LINE}`);
   });
 
   it("previews in the maker's own deck prompt when that is the deck's", () => {
@@ -454,6 +529,27 @@ describe("the run's progress panel speaks the tool's words", () => {
     expect(document.body.textContent).not.toMatch(/batch|made/);
   });
 
+  it("names the model that painted each finished card when the tool says how (Re-art's picker, 0211) — else says nothing", () => {
+    const steps = [
+      { key: "reart:0", label: "Thornback Wyrm", status: "done", image_model: "bfl/flux-kontext-pro" },
+      { key: "reart:1", label: "Twin Wyrm", status: "done", image_model: "bfl/flux-2-flex + bfl/flux-2-pro" },
+      // Found in the style already: nothing was painted, nothing is named.
+      { key: "reart:2", label: "Old Wyrm", status: "done" },
+      // A failed step's model is not a painter.
+      { key: "reart:3", label: "Cinder Hound", status: "failed", error: "No picture.", image_model: "bfl/flux-kontext-pro" },
+    ];
+    panel({ steps }, { noun: "painted", doing: "Painting", unit: "run", modelLabel: reartModelLabel });
+    const lines = [...document.querySelectorAll("li")].map((li) => li.textContent);
+    expect(lines[0]).toBe("Thornback WyrmPainted by FLUX.1 Kontext [pro]");
+    expect(lines[1]).toBe("Twin WyrmPainted by FLUX.2 [flex] + FLUX.2 [pro]");
+    expect(lines[2]).toBe("Old Wyrm");
+    expect(lines[3]).not.toMatch(/Painted by/);
+    cleanup();
+    // Bulk Customize (and a Re-art viewer who can't pick) hands no namer.
+    panel({ steps });
+    expect(document.body.textContent).not.toMatch(/Painted by/);
+  });
+
   it("Bulk Customize keeps its own: made cards, a batch", () => {
     panel();
     expect(screen.getByRole("progressbar", { name: "Cards made" })).toBeTruthy();
@@ -463,5 +559,51 @@ describe("the run's progress panel speaks the tool's words", () => {
     panel({ running: false, paused: true, stoppedBy: "CARD_CAPACITY" }, { paused: true });
     expect(screen.getByRole("alert").textContent).toBe("Your card limit is full — the batch stopped. The cards made so far are saved.");
     expect(screen.getByRole("button", { name: "Continue the batch" })).toBeTruthy();
+  });
+});
+
+describe("the confirm says which model paints, before anything is charged (0211)", () => {
+  const DECK_ID = "00000000-0000-4000-8000-0000000000d1";
+  const planned = {
+    ok: true,
+    lines: [{ entryId: "00000000-0000-4000-8000-0000000000e1", name: "Thornback Wyrm", kind: "own", credits: 1, notes: [] }],
+    skipped: [],
+    inStyle: 0,
+    styleChanged: false,
+    cost: { cards: 1, makes: 0, credits: 1, slotsLeftAfter: null },
+    capacity: null,
+    balance: 20,
+    aiAvailable: true,
+  };
+  const confirm = async (input: ReartRunInput) => {
+    planRun.mockReset();
+    planRun.mockResolvedValue(planned);
+    await act(async () => {
+      render(
+        <ReartConfirmDialog
+          open
+          onOpenChange={() => undefined}
+          input={input}
+          title="Paint Thornback Wyrm"
+          description="Nothing is charged until you press Paint."
+          onStarted={() => undefined}
+        />,
+      );
+    });
+    return screen.getByRole("dialog").textContent ?? "";
+  };
+
+  it("a named model is said under the price — the same price", async () => {
+    const text = await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "spacexai/grok-imagine-image-2.0" });
+    expect(text).toContain("Re-arts 1 card · 1 credit");
+    expect(text).toContain("Painted by Grok Imagine 2.0.");
+    // The plan is asked for the run as it will be started.
+    expect(planRun.mock.calls[0][0]).toMatchObject({ model: "spacexai/grok-imagine-image-2.0" });
+  });
+
+  it("Automatic — or no model at all — says nothing about one", async () => {
+    expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "auto" })).not.toMatch(/Painted by/);
+    cleanup();
+    expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private" } as ReartRunInput)).not.toMatch(/Painted by/);
   });
 });

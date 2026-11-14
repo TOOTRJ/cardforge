@@ -70,8 +70,14 @@ vi.mock("@/components/tools/bulk-customize/use-bulk-runner", () => ({
       : { steps: [], running: false, waitingUntil: null, stoppedBy: null, error: null, paused: false, runsEnded: 0, stop: h.stop, retryFailed: h.retry },
 }));
 vi.mock("@/components/tools/bulk-customize/bulk-progress", () => ({
-  BulkProgress: ({ runner }: { runner: { stop: () => void; retryFailed: () => void } }) => (
-    <div>
+  BulkProgress: ({
+    runner,
+    modelLabel,
+  }: {
+    runner: { stop: () => void; retryFailed: () => void };
+    modelLabel?: (imageModel: string) => string | null;
+  }) => (
+    <div data-testid="progress" data-names-model={modelLabel ? (modelLabel("bfl/flux-kontext-pro") ?? "") : "no"}>
       <button type="button" onClick={runner.stop}>
         panel stop
       </button>
@@ -88,13 +94,15 @@ vi.mock("@/components/tools/re-art/reart-style-panel", () => ({
     preview,
     dirty,
     paintedInSaved,
+    framing,
   }: {
     onChange: (next: { preset: string; theme: string; mode: "preset" | "custom"; prompt: string }) => void;
     preview?: { name: string; prompt: string; partial: boolean } | null;
     dirty: boolean;
     paintedInSaved: number;
+    framing?: string;
   }) => (
-    <div>
+    <div data-testid="style-panel" data-framing={framing}>
       <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour", mode: "preset", prompt: "" })}>
         change style
       </button>
@@ -115,15 +123,19 @@ vi.mock("@/components/tools/re-art/reart-card-words-dialog", () => ({
     open,
     entry,
     style,
+    framing,
+    bodyMax,
     onSaved,
   }: {
     open: boolean;
     entry: ReartStudioEntry;
     style: { mode?: string };
+    framing?: string;
+    bodyMax?: number;
     onSaved: (words: { text: string; only: boolean } | null) => void;
   }) =>
     open ? (
-      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode}>
+      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode} data-framing={framing} data-body-max={bodyMax}>
         <button type="button" onClick={() => onSaved({ text: "a wyrm asleep", only: false })}>
           save words
         </button>
@@ -298,6 +310,7 @@ const ENTRY: ReartStudioEntry = {
   rulesText: null,
   flavorText: "Scales like slate.",
   credits: 1,
+  paintedBy: null,
 };
 
 const job = (steps: JobStep[], request: Record<string, unknown> = { sample: false, reroll: false }): GenerationJobView => ({
@@ -315,7 +328,7 @@ const SAVED_STYLE = { preset: "watercolor", theme: "a haunted fen", mode: "prese
 
 function studio(
   pausedRunId: string | null = null,
-  over: { entry?: Partial<ReartStudioEntry>; storedStyle?: typeof SAVED_STYLE | null } = {},
+  over: { entry?: Partial<ReartStudioEntry>; storedStyle?: typeof SAVED_STYLE | null; canPickModel?: boolean } = {},
 ) {
   return (
     <ReartStudio
@@ -326,6 +339,7 @@ function studio(
       capacity={null}
       balance={20}
       aiAvailable
+      canPickModel={over.canPickModel}
       pausedRunId={pausedRunId}
       runs={[]}
     />
@@ -530,6 +544,8 @@ describe("one card at a time — priced first, in the saved style, never by a st
       entryIds: [ENTRY.id],
       scope: "all",
       visibility: "private",
+      // No picker for this viewer: every run is Automatic.
+      model: "auto",
     });
     await press("confirm paint");
     expect(screen.getByText("panel stop")).toBeTruthy();
@@ -713,5 +729,134 @@ describe("the other mode's draft (0209) — something to save, never a new look"
     next.unmount();
     studioWith([onlyWords]);
     expect(screen.getByTestId("panel-preview").textContent).toMatch(/^Thornback Wyrm \| false \| a lighthouse in a storm\. NO frame/);
+  });
+});
+
+
+describe("the model picker (0211) — for admins and testers", () => {
+  const KONTEXT = "FLUX.1 Kontext [pro]";
+  const press = async (text: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByText(text));
+    });
+  };
+  const pick = async (label: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("radio", { name: new RegExp(`^${label.replace(/[.[\]]/g, "\\$&")}`) }));
+    });
+  };
+  const inputOf = () => JSON.parse(screen.getByRole("dialog").getAttribute("data-input")!) as Record<string, unknown>;
+
+  it("is not shown to a viewer who may not pick: every run is Automatic, and no card says who painted it", async () => {
+    render(studio());
+    expect(screen.queryByRole("radiogroup", { name: "Painted by" })).toBeNull();
+    expect(screen.queryByText(/for testing/)).toBeNull();
+    for (const open of ["paint one", "Paint the sample…", "Re-art the deck…"]) {
+      await press(open);
+      expect(inputOf().model).toBe("auto");
+      cleanup();
+      render(studio());
+    }
+    // A run's panel isn't handed a model's name either.
+    cleanup();
+    await begin([step(0)]);
+    expect(screen.getByTestId("progress").getAttribute("data-names-model")).toBe("no");
+  });
+
+  it("lists Automatic and the five models, Automatic picked, each one's line said as it is picked", async () => {
+    render(studio(null, { canPickModel: true }));
+    const group = screen.getByRole("radiogroup", { name: "Painted by" });
+    const chips = [...group.querySelectorAll("[role='radio']")];
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Automatic",
+      "FLUX.2 [pro]",
+      "FLUX.1 Kontext [pro]",
+      "Grok Imagine",
+      "Grok Imagine 2.0",
+      "Gemini 3.1 Flash Image",
+    ]);
+    expect(chips.map((chip) => chip.getAttribute("aria-checked"))).toEqual(["true", "false", "false", "false", "false", "false"]);
+    // The picked model's line describes the row, with the price.
+    const described = () => document.getElementById(group.getAttribute("aria-describedby")!)?.textContent ?? "";
+    expect(described()).toMatch(/What every other tool paints with/);
+    expect(described()).toMatch(/One credit a picture, whichever model paints\./);
+    await pick(KONTEXT);
+    expect(described()).toMatch(/editing model/);
+    expect(screen.getByText(/sent the same prompt in plainer words/)).toBeTruthy();
+    // FLUX.2's own wording needs no such note.
+    await pick("FLUX.2 [pro]");
+    expect(screen.queryByText(/plainer words/)).toBeNull();
+  });
+
+  it("the picked model goes with every run — one card, the sample, the deck — and is no part of the style", async () => {
+    for (const [open, extra] of [
+      ["paint one", { entryIds: [ENTRY.id] }],
+      ["Paint the sample…", { sample: true }],
+      ["Re-art the deck…", {}],
+    ] as const) {
+      render(studio(null, { canPickModel: true }));
+      await pick(KONTEXT);
+      // Picking a model leaves the style as saved: one card can still be painted.
+      expect(screen.getByTestId("panel-state").textContent).toBe("dirty:false repaint:0");
+      expect(screen.queryByTestId("grid-blocked")).toBeNull();
+      await press(open);
+      expect(inputOf()).toMatchObject({ model: "bfl/flux-kontext-pro", ...extra });
+      expect(JSON.stringify(inputOf().style ?? {})).not.toMatch(/kontext/);
+      cleanup();
+    }
+  });
+
+  it("the prompt shown is in the wording the picked model is sent — the style form's and the card's own words' alike", async () => {
+    render(studio(null, { canPickModel: true }));
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(/\| Trading-card illustration of "Thornback Wyrm", a Creature — Wyrm\./);
+    expect(screen.getByTestId("style-panel").getAttribute("data-framing")).toBe("flux2");
+    await press("edit words");
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-framing")).toBe("flux2");
+    cleanup();
+
+    render(studio(null, { canPickModel: true }));
+    await pick("Gemini 3.1 Flash Image");
+    const preview = screen.getByTestId("panel-preview").textContent ?? "";
+    expect(preview).toMatch(/\| Fantasy illustration of Thornback Wyrm, a Creature — Wyrm\. Its mood: Scales like slate\./);
+    expect(preview).toMatch(/no text, letters, signature, title or caption anywhere\.$/);
+    expect(preview).not.toMatch(/Trading-card|NO frame/);
+    expect(screen.getByTestId("style-panel").getAttribute("data-framing")).toBe("plain");
+    await press("edit words");
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-framing")).toBe("plain");
+    // Gemini reads the tool's whole body.
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-body-max")).toBe("3000");
+  });
+
+  it("a model that reads a shorter prompt: the previews are cut where the model's prompt is", async () => {
+    render(studio(null, { canPickModel: true }));
+    await pick("FLUX.1 Kontext [pro]");
+    await press("edit words");
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-body-max")).toBe("1400");
+  });
+
+  it("a run's panel names who painted each card, and its outcome says which model the run named", async () => {
+    h.runner = running([step(0)]);
+    h.job = job([step(0)], { sample: false, reroll: true, model: "bfl/flux-kontext-pro" });
+    const view = render(studio(null, { canPickModel: true }));
+    await press("paint one");
+    await press("confirm paint");
+    expect(screen.getByTestId("progress").getAttribute("data-names-model")).toBe(KONTEXT);
+    h.runner = { ...h.runner, steps: [done(0, { image_model: "bfl/flux-kontext-pro" })], running: false, runsEnded: 1 };
+    act(() => view.rerender(studio(null, { canPickModel: true })));
+    expect(events("run_finished")).toEqual([
+      {
+        cards: 1,
+        painted: 1,
+        failed: 0,
+        waiting: 0,
+        credits: 1,
+        stopped: "done",
+        mode: "cards",
+        pass: 1,
+        resumed: false,
+        model: "bfl/flux-kontext-pro",
+      },
+    ]);
+    expect(Object.keys(events("run_finished")[0] as object).length).toBeLessThanOrEqual(12);
   });
 });

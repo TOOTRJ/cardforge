@@ -16,7 +16,7 @@ import { publishCredits } from "@/components/billing/credits-bus";
 import { describeCapacity } from "@/lib/billing/capacity-copy";
 import { cn } from "@/lib/utils";
 import type { GenerationJobView } from "@/lib/ai/generation-jobs";
-import { reartCostDetail, reartCostLine, type ReartRunInput } from "@/lib/tools/re-art/model";
+import { REART_DEFAULT_MODEL, reartCostDetail, reartCostLine, reartModelOf, type ReartRunInput } from "@/lib/tools/re-art/model";
 import { planReartAction, startReartAction, type ReartPlanned } from "@/lib/tools/re-art/actions";
 
 // ---------------------------------------------------------------------------
@@ -152,6 +152,11 @@ export function ReartConfirmDialog({
             <div className="rounded-lg border border-border/60 bg-elevated/40 p-4">
               <p className="text-base font-semibold tabular-nums text-foreground">{reartCostLine(cost)}</p>
               {reartCostDetail(cost) ? <p className="mt-1 text-sm text-muted">{reartCostDetail(cost)}</p> : null}
+              {input.model && input.model !== REART_DEFAULT_MODEL ? (
+                // A named model (the studio's picker, for testing): said
+                // before anything is charged.
+                <p className="mt-1 text-sm text-muted">Painted by {reartModelOf(input.model).label}.</p>
+              ) : null}
               {planned.inStyle > 0 ? (
                 <p className="mt-1 text-sm text-muted">
                   {planned.inStyle} card{planned.inStyle === 1 ? " is" : "s are"} in this style already and left as{" "}

@@ -133,6 +133,7 @@ const ROW = (over: Record<string, unknown> = {}) => ({
   previousArtistCredit: "Jane Painter",
   previousBackArtistCredit: null,
   paintedAt: "",
+  imageModel: null,
   ...over,
 });
 
@@ -476,8 +477,17 @@ describe("a real card", () => {
   it("records the card it made as painted in the style, with nothing to put back", async () => {
     await run(planOf("printing"));
     const [, , , options] = m.customize.mock.calls[0];
-    await options.onSaved("made-1", { front: ART("ai-1.jpg"), back: null });
-    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ cardId: "made-1", styleVersion: 3, made: true, previousArtUrl: null });
+    await options.onSaved("made-1", { front: ART("ai-1.jpg"), back: null }, ["bfl/flux-2-flex"]);
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({
+      cardId: "made-1",
+      styleVersion: 3,
+      made: true,
+      previousArtUrl: null,
+      imageModel: "bfl/flux-2-flex",
+    });
+    // A card whose art no model painted (none was asked for) names none.
+    await options.onSaved("made-2", { front: null, back: null }, []);
+    expect(m.writePainted.mock.calls[1][3]).toMatchObject({ cardId: "made-2", imageModel: null });
   });
 
   it("a card an earlier run MADE whose link didn't land is linked again, never made twice", async () => {
@@ -613,5 +623,152 @@ describe("the maker's own prompts (0209)", () => {
     m.words.mockResolvedValue({ ok: true, words: null });
     await run(planOf("printing"));
     expect(m.customize.mock.calls[1][3].artPrompt(payload, "front").exact).toBe(false);
+  });
+});
+
+describe("the model that paints (0211)", () => {
+  const KONTEXT = "bfl/flux-kontext-pro";
+  const PLAIN_CLOSING =
+    "The painting covers the entire image from edge to edge: no white margin, paper edge, border or frame, and no text, letters, signature, title or caption anywhere.";
+  const planWith = (model: unknown, kind: "own" | "printing" = "own") => ({ ...planOf(kind), model });
+  const ladder = (call = 0): string[] => m.image.mock.calls[call][0];
+  const options = (call = 0): { budgetMs: number; model?: string } => m.image.mock.calls[call][2];
+
+  it("a plan that names none (every run before 0211) is Automatic: the image door's own default, the wording as it was", async () => {
+    await run(planOf());
+    expect(options().model).toBeUndefined();
+    expect(options().budgetMs).toBeGreaterThan(0);
+    expect(ladder()).toHaveLength(3);
+    expect(ladder()[0].startsWith('Trading-card illustration of "Archivist of Lost Hours", a Creature — Human Wizard.')).toBe(true);
+    // Automatic by name is the same run.
+    await run(planWith("auto"));
+    expect(options(1).model).toBeUndefined();
+    expect(ladder(1)).toEqual(ladder(0));
+  });
+
+  it("a named model paints alone, and the row says who painted", async () => {
+    m.image.mockResolvedValue({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: KONTEXT });
+    const result = await run(planWith(KONTEXT));
+    expect(result).toMatchObject({ status: "done", image_model: KONTEXT });
+    expect(options().model).toBe(KONTEXT);
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ cardId: "card-1", imageModel: KONTEXT });
+    // Still one credit, under the tool's own label.
+    expect(m.credited.mock.calls[0][2]).toBe(1);
+    expect(m.credited.mock.calls[0][3]).toBe("deck_reart_art");
+  });
+
+  it("FLUX.2 [pro] by name is sent FLUX.2's wording and its three rungs", async () => {
+    await run(planWith("bfl/flux-2-pro"));
+    expect(options().model).toBe("bfl/flux-2-pro");
+    expect(ladder()).toHaveLength(3);
+    expect(ladder()[0]).toContain("Trading-card illustration of");
+    expect(ladder()[0]).toContain("NO frame, NO borders");
+  });
+
+  it("any other model is sent the PLAIN wording: no quoted title, no “trading-card”, the edge-to-edge closing line", async () => {
+    await run(planWith(KONTEXT));
+    const [first] = ladder();
+    expect(first.startsWith("Fantasy illustration of Archivist of Lost Hours, a Creature — Human Wizard. Its mood: Every hour is filed.")).toBe(true);
+    expect(first).toContain("The world and look: a goblin warren.");
+    expect(first.endsWith(PLAIN_CLOSING)).toBe(true);
+    expect(first).not.toMatch(/Trading-card|"|NO frame|deck/);
+  });
+
+  it("…and is never swapped for the ladder's generic rung (FLUX.2's wording): dressed once, then the step fails", async () => {
+    await run(planWith("google/gemini-3.1-flash-image"));
+    expect(ladder()).toHaveLength(2);
+    expect(ladder().join(" ")).not.toMatch(/Symbolic fantasy|evoking|Trading-card/);
+    // The same two rungs on a retry.
+    await run(planWith("google/gemini-3.1-flash-image"), { ...STEP, attempts: 2 });
+    expect(ladder(1)).toEqual(ladder(0));
+  });
+
+  it("a model that reads a shorter prompt is sent a shorter one: the closing line stays inside what it reads", async () => {
+    const LONG = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 60 }, () => "{card} in thick oil paint, candle-lit").join(", ") };
+    m.styleAdmin.mockResolvedValue(LONG);
+    await run({ ...planWith(KONTEXT), style: LONG });
+    const [kontext] = ladder();
+    expect(kontext.endsWith(PLAIN_CLOSING)).toBe(true);
+    expect(kontext.length).toBeLessThanOrEqual(1400 + 2 + PLAIN_CLOSING.length);
+    // The same prompt on a model with no limit of its own is sent whole.
+    await run({ ...planWith("spacexai/grok-imagine-image-2.0"), style: LONG });
+    expect(ladder(1)[0].length).toBeGreaterThan(2400);
+    expect(ladder(1)[0].endsWith(PLAIN_CLOSING)).toBe(true);
+  });
+
+  it("the maker's own words go to a named model in its wording too", async () => {
+    m.words.mockResolvedValue({ ok: true, words: { text: "A lone lighthouse in a storm, woodcut", only: true } });
+    await run(planWith("spacexai/grok-imagine-image"));
+    expect(ladder()[0]).toBe(`A lone lighthouse in a storm, woodcut. ${PLAIN_CLOSING}`);
+  });
+
+  it("a model the tool doesn't list is refused before any read or charge — the plan is its owner's to write", async () => {
+    for (const model of ["openai/gpt-image-1", "xai/grok-imagine-image", "", 7, null]) {
+      expect((await run(planWith(model))).status).toBe("failed");
+    }
+    expect(m.styleAdmin).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+  });
+
+  it("naming a model is for admins and testers: a plan's audience is refused before any read or charge — and still paints on Automatic", async () => {
+    // The tool released to a plan: this maker came in through theirs.
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: null });
+    const refused = await run(planWith(KONTEXT));
+    expect(refused.status).toBe("failed");
+    expect(refused.error).toMatch(/testers/);
+    expect(m.styleAdmin).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    // A run that names none is theirs as it always was.
+    expect((await run(planOf())).status).toBe("done");
+    expect(options().model).toBeUndefined();
+    // A tester of a released tool still holds the grant: they may name one.
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: { grantedAt: "2026-11-01T00:00:00Z", expiresAt: null } });
+    expect((await run(planWith(KONTEXT))).status).toBe("done");
+    expect(options(1).model).toBe(KONTEXT);
+    // …and an admin.
+    m.access.mockResolvedValue({ userId: "u1", via: "admin", grant: null });
+    expect((await run(planWith(KONTEXT))).status).toBe("done");
+  });
+
+  it("a two-faced card says both models when two painted it, one when one did", async () => {
+    m.bakedBack.mockReturnValue(true);
+    m.rows.cards = {
+      ...OWN_CARD,
+      back_face: { title: "The Hour Unbound", card_type: "creature", subtypes: ["Spirit"], art_url: ART("back.png") },
+    };
+    // Automatic: the default painted the front, its backup the back.
+    m.image
+      .mockResolvedValueOnce({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: "bfl/flux-2-flex" })
+      .mockResolvedValueOnce({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: "bfl/flux-2-pro" });
+    await run(planOf());
+    expect(m.writePainted.mock.calls[0][3].imageModel).toBe("bfl/flux-2-flex + bfl/flux-2-pro");
+    // A named model painted both: said once.
+    m.image.mockResolvedValue({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: KONTEXT });
+    await run(planWith(KONTEXT));
+    expect(m.writePainted.mock.calls[1][3].imageModel).toBe(KONTEXT);
+    expect(options(2).model).toBe(KONTEXT);
+    expect(options(3).model).toBe(KONTEXT);
+  });
+
+  it("a real card is made by the named model, in its wording, and never on the bulk core's generic rung", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    await run(planWith(KONTEXT, "printing"));
+    const [, , , made] = m.customize.mock.calls[0];
+    expect(made.imageModel).toBe(KONTEXT);
+    const payload = { title: "Krenko, Mob Boss", subtypes: ["Goblin"], card_type: "creature" };
+    const front = made.artPrompt(payload, "front");
+    expect(front.exact).toBe(true);
+    expect(front.prompt.startsWith("Fantasy illustration of Krenko, Mob Boss, a Creature — Goblin.")).toBe(true);
+    expect(front.prompt.endsWith(PLAIN_CLOSING)).toBe(true);
+    await made.onSaved("made-1", { front: ART("ai-1.jpg"), back: ART("ai-2.jpg") }, [KONTEXT]);
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ cardId: "made-1", imageModel: KONTEXT });
+    // Automatic: no model named, the bulk core's own ladder.
+    await run(planOf("printing"));
+    const [, , , auto] = m.customize.mock.calls[1];
+    expect(auto.imageModel).toBeUndefined();
+    expect(auto.artPrompt(payload, "front").exact).toBe(false);
+    expect(auto.artPrompt(payload, "front").prompt).toContain('Trading-card illustration of "Krenko, Mob Boss"');
   });
 });

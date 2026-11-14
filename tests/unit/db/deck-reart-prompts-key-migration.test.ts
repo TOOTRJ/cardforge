@@ -36,8 +36,9 @@ const codeOf = (sql: string) =>
 const sql = file ? read(file) : "";
 const code = codeOf(sql);
 
-/** A table-level primary key over two or more columns. */
-const COMPOSITE_KEY = /primary\s+key\s*\(\s*[a-z_"]+\s*,/i;
+/** A table-level primary key over two or more columns — or one handed an
+ *  existing index (which may hold any number of columns). */
+const COMPOSITE_KEY = /primary\s+key\s*(\(\s*[a-z0-9_"]+\s*,|using\s+index)/i;
 const CHECKED = /^\s*--\s*api-junction:\s*checked\b/m;
 
 describe("0210 deck_reart_prompts — keyed on the entry alone", () => {
@@ -107,6 +108,8 @@ describe("a composite primary key is a many-to-many link to the API", () => {
   it("the check reads a key as the database would", () => {
     expect(COMPOSITE_KEY.test("primary key (deck_id, entry_id)")).toBe(true);
     expect(COMPOSITE_KEY.test("  PRIMARY KEY ( user_id ,card_id )")).toBe(true);
+    expect(COMPOSITE_KEY.test("primary key (deck2_id, entry_id)")).toBe(true);
+    expect(COMPOSITE_KEY.test("add constraint x_pkey primary key using index x_pair_idx")).toBe(true);
     expect(COMPOSITE_KEY.test("id uuid primary key default gen_random_uuid()")).toBe(false);
     expect(COMPOSITE_KEY.test("primary key (entry_id)")).toBe(false);
     expect(CHECKED.test("-- api-junction: checked — no other link between the two")).toBe(true);
