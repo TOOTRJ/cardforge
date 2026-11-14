@@ -24,12 +24,17 @@ import { REART_IP_NAME_MAX, cleanReartIpName, reartIpStatement, type NormalReart
 export function ReartLicenceFields({
   style,
   onChange,
+  onPatch,
   savedIpName,
   attested,
   onAttested,
 }: {
   style: NormalReartStyle;
   onChange: (next: NormalReartStyle) => void;
+  /** A change made to the form AS IT IS when the change lands — an upload
+   *  answers seconds after it began, and what the maker typed meanwhile
+   *  (another property's name, with its own tick) must not be put back. */
+  onPatch: (update: (current: NormalReartStyle) => NormalReartStyle) => void;
   /** The property the deck's SAVED style names ('' for none): that one
    *  needs no confirmation again. */
   savedIpName: string;
@@ -66,7 +71,7 @@ export function ReartLicenceFields({
         setUploadError(result.error);
         return;
       }
-      onChange({ ...style, referenceUrl: result.publicUrl });
+      onPatch((current) => ({ ...current, referenceUrl: result.publicUrl }));
       // The upload button is replaced by the picture: the focus goes to Remove.
       requestAnimationFrame(() => removeRef.current?.focus());
     } catch {

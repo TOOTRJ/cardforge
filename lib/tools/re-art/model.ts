@@ -296,7 +296,14 @@ export function reartIpStatement(ipName: string | null | undefined): string {
 
 /** What a save is told when the style names a property the deck doesn't
  *  name yet and the maker's confirmation didn't come with it. */
-export const REART_IP_NEEDS_CONFIRMATION = "Confirm that you hold the rights to this property before the deck names it.";
+export const REART_IP_NEEDS_CONFIRMATION =
+  "Confirm that you hold the rights to this property before the deck names it. If you see no box to tick, reload the page.";
+
+/** The most new confirmations one maker records in 24 hours: the record is
+ *  append-only, so nothing else bounds it (a save that names another
+ *  property each time adds a row each time). */
+export const REART_IP_CONFIRMATIONS_PER_DAY = 20;
+export const REART_IP_TOO_MANY = "You have confirmed a lot of properties today. Try again tomorrow, or keep the property the deck names now.";
 
 /** What a style whose reference picture isn't one of the maker's own
  *  stored pictures is told (the server fetches it for every picture). */
@@ -560,8 +567,9 @@ const letters = (text: string) => text.replace(/[^\p{L}]/gu, "").length;
  *  own prompt needs to be written. */
 export function reartStyleProblem(style: ReartStyle): string | null {
   const clean = normalizeReartStyle(style);
-  // A property that is named is named in letters ("X" is no name).
-  if (style.ipName?.trim() && letters(clean.ipName ?? "") < 2) return "Name the licensed property.";
+  // A property that is named is named in letters or digits ("1984", "300"
+  // — but "X" or "?" is no name).
+  if (style.ipName?.trim() && (clean.ipName ?? "").replace(/[^\p{L}\p{N}]/gu, "").length < 2) return "Name the licensed property.";
   if (clean.mode === "custom") {
     // The braces' names are not words of the maker's.
     return letters(clean.prompt.replace(PLACEHOLDER, " ")) < 10 ? "Write the deck's prompt first." : null;

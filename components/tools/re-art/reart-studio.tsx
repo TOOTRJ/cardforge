@@ -188,7 +188,9 @@ export function ReartStudio({
   const [pickedMethod, setMethod] = useState<ReartMethod>(REART_DEFAULT_METHOD);
   // One picture goes with a prompt: with a reference picture in the style
   // every picture starts from the prompt (the other chip is off, and says
-  // why).
+  // why) — and the pick is dropped, so removing the picture later never
+  // brings "the card's own art" back unasked (a reset during render).
+  if (hasReference && pickedMethod !== REART_DEFAULT_METHOD) setMethod(REART_DEFAULT_METHOD);
   const method: ReartMethod = canPickModel && !hasReference ? pickedMethod : REART_DEFAULT_METHOD;
   /** The wording the next run's prompts are in, and the most the model reads. */
   const { framing, bodyMax } = reartWordingOf(model, method, hasReference);
@@ -500,6 +502,7 @@ export function ReartStudio({
             savedIpName={savedStyle?.ipName ?? ""}
             attested={attested}
             onAttested={setAttested}
+            onPatch={setStyle}
             problem={problem}
             saveError={saveError}
             // Only another LOOK repaints the cards painted in the saved one.

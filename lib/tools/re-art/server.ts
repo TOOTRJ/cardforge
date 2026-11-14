@@ -18,7 +18,9 @@ import { fetchBulkPrintings, importPatchOf } from "@/lib/tools/bulk-customize/se
 import {
   REART_CHANGED_COPY,
   REART_CREDITS_PER_FACE,
+  REART_IP_CONFIRMATIONS_PER_DAY,
   REART_IP_NEEDS_CONFIRMATION,
+  REART_IP_TOO_MANY,
   REART_MAX_CARDS,
   REART_REFERENCE_NOT_YOURS,
   REART_REFERENCE_WITH_RESTYLE,
@@ -115,22 +117,33 @@ export async function readDeckStyle(deckId: string): Promise<StoredReartStyle | 
   return data ? storedStyleOf(data as unknown as StyleRow) : null;
 }
 
-/** The style row as the service role reads it, with its owner. */
-async function readStyleRowAdmin(deckId: string): Promise<StyleRow | null> {
+/**
+ * The style row as the service role reads it, with its owner. A read that
+ * FAILED is said as one (and logged) — never "the deck has no style": a
+ * save that took it for none wrote version 1 over the row and left out the
+ * columns it thought were empty, so a property the maker had just removed
+ * stayed on the deck while the save answered "saved".
+ */
+async function readStyleRowAdmin(deckId: string): Promise<{ ok: true; row: StyleRow | null } | { ok: false }> {
   const admin = createAdminClient();
   const read = (columns: string) => admin.from("deck_art_styles").select(`${columns}, owner_id`).eq("deck_id", deckId).maybeSingle();
   let { data, error } = await read(STYLE_COLUMNS);
   if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0214));
-  return (data as unknown as StyleRow | null) ?? null;
+  if (error) {
+    console.error(`[re-art] style of deck ${deckId} not read: ${error.code ?? ""} ${error.message}`);
+    return { ok: false };
+  }
+  return { ok: true, row: (data as unknown as StyleRow | null) ?? null };
 }
 
 /** The deck's style as the SERVER reads it (a step: the stored row is the
- *  authority on the version a run paints in). */
+ *  authority on the version a run paints in). Null too when it couldn't be
+ *  read: a step then stops before any charge. */
 export async function readDeckStyleAdmin(userId: string, deckId: string): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
-  const row = await readStyleRowAdmin(deckId);
-  if (!row || row.owner_id !== userId) return null;
-  return storedStyleOf(row);
+  const read = await readStyleRowAdmin(deckId);
+  if (!read.ok || !read.row || read.row.owner_id !== userId) return null;
+  return storedStyleOf(read.row);
 }
 
 /** A deck's reference picture is one of the caller's OWN stored pictures
@@ -162,6 +175,51 @@ export function styleLicenceProblem(userId: string, named: string | null | undef
   return null;
 }
 
+/** `style` names a property the deck (`named`) doesn't: saving it writes a
+ *  new record. */
+const namesNewProperty = (named: string | null | undefined, style: ReartStyle) => {
+  const name = normalizeReartStyle(style).ipName ?? "";
+  return name !== "" && name !== (named ?? "");
+};
+
+/**
+ * The caller has recorded as many confirmations in the last 24 hours as one
+ * maker may (REART_IP_CONFIRMATIONS_PER_DAY): the record is append-only, so
+ * this is its one bound. A count that didn't answer is NOT the limit (the
+ * bound is against abuse; the rule that matters — no property without its
+ * record — is the insert's).
+ */
+async function ipConfirmationLimitReached(userId: string): Promise<boolean> {
+  if (!isAdminConfigured()) return false;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await createAdminClient()
+    .from("deck_ip_attestations")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .gte("created_at", since);
+  if (error) {
+    console.error(`[re-art] confirmations of ${userId} not counted: ${error.code ?? ""} ${error.message}`);
+    return false;
+  }
+  return (count ?? 0) >= REART_IP_CONFIRMATIONS_PER_DAY;
+}
+
+/**
+ * styleLicenceProblem, and — for a style that would write a NEW record —
+ * the day's limit on them. What the planner, the save action and the save
+ * itself ask.
+ */
+export async function styleLicenceCheck(
+  userId: string,
+  named: string | null | undefined,
+  style: ReartStyle,
+  attested: boolean,
+): Promise<string | null> {
+  const problem = styleLicenceProblem(userId, named, style, attested);
+  if (problem) return problem;
+  return namesNewProperty(named, style) && (await ipConfirmationLimitReached(userId)) ? REART_IP_TOO_MANY : null;
+}
+
 /** What the maker confirmed, kept word for word (0214
  *  deck_ip_attestations: append-only). False when it couldn't be written —
  *  the style is then not saved with the property. */
@@ -183,7 +241,7 @@ export async function recordIpAttestation(userId: string, deckId: string, ipName
  * `attested`: the maker confirmed their rights to the property the style
  * names, in this request. A style that names a property the deck doesn't
  * name yet is saved ONLY with it — whoever the caller is (the actions ask
- * styleLicenceProblem first, for the words) — and the confirmation is
+ * styleLicenceCheck first, for the words) — and the confirmation is
  * recorded BEFORE the style is written: no deck names a property without
  * its record.
  */
@@ -195,11 +253,15 @@ export async function saveDeckStyle(
 ): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
   const clean = normalizeReartStyle(style);
-  const stored = await readStyleRowAdmin(deckId);
+  // A read that failed saves nothing: "no style yet" is only ever a row
+  // that isn't there.
+  const read = await readStyleRowAdmin(deckId);
+  if (!read.ok) return null;
+  const stored = read.row;
   if (stored && stored.owner_id !== userId) return null;
   const before = stored ? storedStyleOf(stored) : null;
-  if (styleLicenceProblem(userId, before?.ipName, clean, options.attested === true)) return null;
-  if (clean.ipName && clean.ipName !== (before?.ipName ?? "") && !(await recordIpAttestation(userId, deckId, clean.ipName))) return null;
+  if (await styleLicenceCheck(userId, before?.ipName, clean, options.attested === true)) return null;
+  if (namesNewProperty(before?.ipName, clean) && !(await recordIpAttestation(userId, deckId, clean.ipName ?? ""))) return null;
   // The same LOOK keeps its version (nothing a run paints changed). The
   // row is still written when the OTHER mode's draft changed — a prompt
   // written and then left for the template, or the other way: it was
@@ -692,7 +754,7 @@ export async function planReartRun(
   // and a reference picture is one of their own — said here, before a
   // Scryfall call or a charge. One picture goes with a prompt: the card's
   // own art or the deck's reference, never both.
-  const licence = styleLicenceProblem(userId, stored?.ipName, wanted, input.attested === true);
+  const licence = await styleLicenceCheck(userId, stored?.ipName, wanted, input.attested === true);
   if (licence) return { ok: false, error: licence };
   if (input.method === "restyle" && wanted.referenceUrl) return { ok: false, error: REART_REFERENCE_WITH_RESTYLE };
   const styleChanged = !stored || !sameReartStyle(stored, wanted);

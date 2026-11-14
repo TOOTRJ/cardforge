@@ -79,6 +79,10 @@ function clientOf(answerOf: (call: Call) => Promise<Result>) {
           return chain;
         },
         not: () => chain,
+        gte: (column: string, value: unknown) => {
+          call.filters.push([column, value]);
+          return chain;
+        },
         filter: (column: string, _operator: string, value: unknown) => {
           call.filters.push([column, value]);
           return chain;
@@ -119,13 +123,16 @@ import {
   revertPaintedCard,
   saveCardWords,
   saveDeckStyle,
+  styleLicenceCheck,
   styleLicenceProblem,
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
 import {
   REART_CHANGED_COPY,
+  REART_IP_CONFIRMATIONS_PER_DAY,
   REART_IP_NEEDS_CONFIRMATION,
+  REART_IP_TOO_MANY,
   REART_NO_ART_COPY,
   REART_REFERENCE_NOT_YOURS,
   REART_REFERENCE_WITH_RESTYLE,
@@ -911,7 +918,8 @@ describe("a licensed property and a reference picture (0214)", () => {
       const saved = await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" }, { attested: true });
       expect(saved).toMatchObject({ version: 5, ipName: "Emberfall Chronicles" });
       const order = m.admin.mock.calls.map(([call]) => `${(call as Call).op}:${(call as Call).table}`);
-      expect(order).toEqual(["select:deck_art_styles", "insert:deck_ip_attestations", "upsert:deck_art_styles"]);
+      // The stored style, the day's count of records, the record, the style.
+      expect(order).toEqual(["select:deck_art_styles", "select:deck_ip_attestations", "insert:deck_ip_attestations", "upsert:deck_art_styles"]);
       expect(writes("insert")[0].row).toEqual({
         owner_id: OWNER,
         deck_id: DECK,
@@ -982,6 +990,71 @@ describe("a licensed property and a reference picture (0214)", () => {
       expect(writes("upsert")).toEqual([]);
     });
 
+    it("a stored style that couldn't be READ saves nothing — never “no style yet” (a removal was reported saved while the row kept the property)", async () => {
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      m.admin.mockImplementation(async (call: Call): Promise<Result> =>
+        call.op === "select" ? { data: null, error: { message: "connection reset", code: "08006" } } : { error: null },
+      );
+      // The maker removes the property the deck names: with the read failed, nothing is written.
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen" })).toBeNull();
+      expect(writes("upsert")).toEqual([]);
+      expect(writes("insert")).toEqual([]);
+      expect(quiet).toHaveBeenCalledWith(expect.stringMatching(/style of deck .* not read: 08006 connection reset/));
+      // The step's read says "no style" for it too, and stops before any charge.
+      expect(await readDeckStyleAdmin(OWNER, DECK)).toBeNull();
+      // A row that simply isn't there is still a first style.
+      m.admin.mockClear();
+      stored(null);
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen" })).toMatchObject({ version: 1 });
+      quiet.mockRestore();
+    });
+
+    describe("the day's limit on new confirmations (the record is append-only: nothing else bounds it)", () => {
+      const named = { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" };
+      const counting = (count: number | null, error: Result["error"] = null) =>
+        m.admin.mockImplementation(async (call: Call): Promise<Result> =>
+          call.table === "deck_ip_attestations" && call.op === "select" ? { count, error } : call.op === "select" ? { data: BASE, error: null } : { error: null },
+        );
+
+      it("counts the maker's own records of the last 24 hours, reading no row", async () => {
+        counting(0);
+        expect(await styleLicenceCheck(OWNER, "", named, true)).toBeNull();
+        const [count] = m.admin.mock.calls.map(([call]) => call as Call);
+        expect(count).toMatchObject({ table: "deck_ip_attestations", op: "select", head: true });
+        expect(count.filters[0]).toEqual(["owner_id", OWNER]);
+        expect(count.filters[1][0]).toBe("created_at");
+        const since = Date.parse(String(count.filters[1][1]));
+        expect(Date.now() - since).toBeGreaterThan(23.9 * 3_600_000);
+        expect(Date.now() - since).toBeLessThan(24.1 * 3_600_000);
+      });
+
+      it("at the limit a NEW property is refused in words, nothing is recorded and nothing is saved", async () => {
+        counting(REART_IP_CONFIRMATIONS_PER_DAY);
+        expect(await styleLicenceCheck(OWNER, "", named, true)).toBe(REART_IP_TOO_MANY);
+        expect(await saveDeckStyle(OWNER, DECK, named, { attested: true })).toBeNull();
+        expect(writes("insert")).toEqual([]);
+        expect(writes("upsert")).toEqual([]);
+        counting(REART_IP_CONFIRMATIONS_PER_DAY - 1);
+        expect(await styleLicenceCheck(OWNER, "", named, true)).toBeNull();
+      });
+
+      it("is never asked for a style that writes no record: the property the deck names, none at all, or one not confirmed", async () => {
+        counting(REART_IP_CONFIRMATIONS_PER_DAY);
+        expect(await styleLicenceCheck(OWNER, "Emberfall Chronicles", named, false)).toBeNull();
+        expect(await styleLicenceCheck(OWNER, "Emberfall Chronicles", { preset: "watercolor", theme: "" }, false)).toBeNull();
+        // Not confirmed: that is what it is told, before any count.
+        expect(await styleLicenceCheck(OWNER, "", named, false)).toBe(REART_IP_NEEDS_CONFIRMATION);
+        expect(m.admin).not.toHaveBeenCalled();
+      });
+
+      it("a count that didn't answer is not the limit (the rule that matters is the record's own insert)", async () => {
+        const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+        counting(null, { message: "boom" });
+        expect(await styleLicenceCheck(OWNER, "", named, true)).toBeNull();
+        quiet.mockRestore();
+      });
+    });
+
     it("a style with neither — on a deck that never had one — writes neither column (it works before 0214 too)", async () => {
       stored(BASE);
       await saveDeckStyle(OWNER, DECK, { preset: "anime", theme: "a haunted fen" });
@@ -1005,6 +1078,8 @@ describe("a licensed property and a reference picture (0214)", () => {
     };
     const deckWith = (style: Record<string, unknown>) => {
       m.items.mockResolvedValue([item]);
+      // The day's count of the maker's records (the service role's read).
+      m.admin.mockResolvedValue({ count: 0, error: null });
       m.query.mockImplementation(async (call: Call): Promise<Result> => {
         if (call.table === "decks") return { data: { id: DECK, slug: "embers", title: "Embers", visibility: "private" } };
         if (call.table === "deck_art_styles") return { data: { ...BASE, ...style } };
@@ -1022,6 +1097,14 @@ describe("a licensed property and a reference picture (0214)", () => {
       expect(m.items).not.toHaveBeenCalled();
       const confirmed = await run({ style, attested: true });
       expect(confirmed).toMatchObject({ ok: true, styleChanged: true, version: 5, style: { ipName: "Emberfall Chronicles" } });
+    });
+
+    it("a maker at the day's limit of new confirmations is told so by the plan, before anything is read or charged", async () => {
+      deckWith({});
+      m.admin.mockResolvedValue({ count: REART_IP_CONFIRMATIONS_PER_DAY, error: null });
+      const style = { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" };
+      expect(await run({ style, attested: true })).toEqual({ ok: false, error: REART_IP_TOO_MANY });
+      expect(m.items).not.toHaveBeenCalled();
     });
 
     it("a deck that names it already plans with no confirmation: its saved style (one card) or the same one from the form", async () => {

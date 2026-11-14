@@ -63,6 +63,7 @@ export function ReartStylePanel({
   savedIpName = "",
   attested = false,
   onAttested,
+  onPatch,
 }: {
   style: NormalReartStyle;
   onChange: (next: NormalReartStyle) => void;
@@ -96,6 +97,8 @@ export function ReartStylePanel({
   /** The maker ticked the sentence for the property the form names. */
   attested?: boolean;
   onAttested?: (next: boolean) => void;
+  /** A change to the form as it is when it lands (a finished upload). */
+  onPatch?: (update: (current: NormalReartStyle) => NormalReartStyle) => void;
 }) {
   const themeId = useId();
   const blockId = useId();
@@ -307,8 +310,15 @@ export function ReartStylePanel({
         </>
       )}
 
-      {onAttested ? (
-        <ReartLicenceFields style={style} onChange={onChange} savedIpName={savedIpName} attested={attested} onAttested={onAttested} />
+      {onAttested && onPatch ? (
+        <ReartLicenceFields
+          style={style}
+          onChange={onChange}
+          onPatch={onPatch}
+          savedIpName={savedIpName}
+          attested={attested}
+          onAttested={onAttested}
+        />
       ) : null}
 
       {dirty && paintedInSaved > 0 ? (

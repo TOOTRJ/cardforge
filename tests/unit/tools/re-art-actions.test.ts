@@ -87,10 +87,11 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   discardReartArtIfUnused: m.discardUnused,
   saveCardWords: m.saveWords,
   readDeckStyleAdmin: m.storedStyle,
-  styleLicenceProblem: m.licence,
+  styleLicenceCheck: m.licence,
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
+import { REART_IP_NEEDS_CONFIRMATION, REART_IP_TOO_MANY, REART_REFERENCE_NOT_YOURS } from "@/lib/tools/re-art/model";
 import {
   planReartAction,
   restoreReartArtAction,
@@ -148,7 +149,7 @@ beforeEach(() => {
   m.capacity.mockResolvedValue({ used: 10, cap: 50, tier: "pro" });
   m.saveStyle.mockResolvedValue({ ...STYLE, version: 2 });
   m.storedStyle.mockResolvedValue(null);
-  m.licence.mockReturnValue(null);
+  m.licence.mockResolvedValue(null);
   m.open.mockReturnValue([]);
   m.plan.mockResolvedValue(planned([{ kind: "printing" }, { kind: "own", credits: 2 }]));
 });
@@ -499,17 +500,19 @@ describe("a licensed property and a reference picture (0214)", () => {
   });
 
   it("a style the rule refuses is not saved: the maker is told why, and the log says which rule", async () => {
-    m.licence.mockReturnValue("Confirm that you hold the rights to this property before the deck names it.");
-    expect(await saveReartStyleAction(DECK, NAMED)).toEqual({
-      ok: false,
-      error: "Confirm that you hold the rights to this property before the deck names it.",
-    });
+    m.licence.mockResolvedValue(REART_IP_NEEDS_CONFIRMATION);
+    expect(await saveReartStyleAction(DECK, NAMED)).toEqual({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
     expect(m.saveStyle).not.toHaveBeenCalled();
     expect(logged()).toEqual([["save_style_failed", { reason: "not_confirmed" }]]);
     m.event.mockClear();
-    m.licence.mockReturnValue("The reference picture has to be one you uploaded here — upload it again.");
+    m.licence.mockResolvedValue(REART_REFERENCE_NOT_YOURS);
     expect((await saveReartStyleAction(DECK, NAMED, { attested: true })).ok).toBe(false);
     expect(logged()).toEqual([["save_style_failed", { reason: "reference_not_own" }]]);
+    m.event.mockClear();
+    // The day's limit on new confirmations: the tools' one word for "too many".
+    m.licence.mockResolvedValue(REART_IP_TOO_MANY);
+    expect(await saveReartStyleAction(DECK, NAMED, { attested: true })).toEqual({ ok: false, error: REART_IP_TOO_MANY });
+    expect(logged()).toEqual([["save_style_failed", { reason: "rate_limited" }]]);
     expect(m.saveStyle).not.toHaveBeenCalled();
   });
 
@@ -532,9 +535,9 @@ describe("a licensed property and a reference picture (0214)", () => {
   });
 
   it("a run the plan refuses for want of the confirmation starts nothing and saves nothing", async () => {
-    m.plan.mockResolvedValue({ ok: false, error: "Confirm that you hold the rights to this property before the deck names it." });
+    m.plan.mockResolvedValue({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
     const refused = await startReartAction({ deckId: DECK, style: NAMED });
-    expect(refused).toMatchObject({ ok: false, error: "Confirm that you hold the rights to this property before the deck names it." });
+    expect(refused).toMatchObject({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
     expect(m.plan.mock.calls[0][1].attested).toBeUndefined();
     expect(m.saveStyle).not.toHaveBeenCalled();
     expect(m.insert).not.toHaveBeenCalled();

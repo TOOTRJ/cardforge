@@ -65,7 +65,9 @@ describe("the property's name", () => {
   });
 
   it("a name that says nothing is asked for again; no name is no problem", () => {
-    expect(reartStyleProblem({ ...STYLE, ipName: "?" })).toBe("Name the licensed property.");
+    for (const nothing of ["?", "X", "7", "— —"]) expect(reartStyleProblem({ ...STYLE, ipName: nothing }), nothing).toBe("Name the licensed property.");
+    // A name can be all digits ("1984", "300").
+    for (const name of ["1984", "300", "42", "2001: A Space Odyssey", "Ōkami"]) expect(reartStyleProblem({ ...STYLE, ipName: name }), name).toBeNull();
     expect(reartStyleProblem({ ...STYLE, ipName: "Emberfall Chronicles" })).toBeNull();
     expect(reartStyleProblem({ ...STYLE, ipName: "" })).toBeNull();
     expect(reartStyleProblem(STYLE)).toBeNull();

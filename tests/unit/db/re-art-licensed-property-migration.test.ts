@@ -121,6 +121,22 @@ describe("0214 re-art deck: a licensed property and a reference picture", () => 
     });
   });
 
+  it("its seed row is the app's own sentence for a made-up property, with no deck named — and no deck is made to name one", () => {
+    const seed = readFileSync(join(process.cwd(), "supabase/seeds/56_re_art_licensed_property.sql"), "utf8");
+    const rows = seed
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n");
+    // SQL doubles the apostrophe.
+    expect(rows).toContain(`'${reartIpStatement("Emberfall Chronicles").replaceAll("'", "''")}'`);
+    expect(rows).toMatch(/insert into public\.deck_ip_attestations \(id, owner_id, deck_id, ip_name, statement, created_at\)/);
+    expect(rows).toMatch(/on conflict \(id\) do nothing;/);
+    expect(rows).toMatch(/Refusing to seed dev data/);
+    // The sampler deck's style is 52's: nothing here writes a style.
+    expect(rows).not.toMatch(/deck_art_styles/);
+    expect(rows).not.toMatch(/\b(update|delete)\b/i);
+  });
+
   it("the generated types know the columns and the table", () => {
     const styles = types.slice(types.indexOf("deck_art_styles: {"));
     const block = styles.slice(0, styles.indexOf("Relationships:"));

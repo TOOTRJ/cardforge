@@ -248,6 +248,32 @@ describe("a reference picture", () => {
     expect(h.save.mock.calls[0][2]).toEqual({ attested: false });
   });
 
+  // An upload answers seconds after it began. It used to put the form back
+  // to what it was when it STARTED: a name typed meanwhile was undone, and
+  // the tick made for that name was left standing on the old one.
+  it("an upload that lands late keeps what was typed meanwhile — the name, and the tick made for it", async () => {
+    let land: (value: unknown) => void = () => undefined;
+    h.upload.mockReturnValue(new Promise((resolve) => (land = resolve)));
+    studio();
+    typeName("Emberfall Chronicles");
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+    // While it uploads: another name, and its own tick.
+    typeName("Tidewrights");
+    fireEvent.click(tick()!);
+    await act(async () => {
+      land({ ok: true, publicUrl: REFERENCE, path: "x", width: 800, height: 600 });
+    });
+    expect(nameField().value).toBe("Tidewrights");
+    expect(tick()?.checked).toBe(true);
+    expect(screen.getByText(reartIpStatement("Tidewrights"))).toBeTruthy();
+    expect(screen.getByRole("img", { name: "The deck's reference picture" })).toBeTruthy();
+    await press("Save style");
+    expect(h.save).toHaveBeenCalledWith(DECK, expect.objectContaining({ ipName: "Tidewrights", referenceUrl: REFERENCE }), { attested: true });
+  });
+
   it("an upload that is refused says why and changes nothing", async () => {
     h.upload.mockResolvedValue({ ok: false, error: "That image was flagged by our content filter and can't be uploaded." });
     studio();
@@ -293,6 +319,22 @@ describe("a reference picture", () => {
     await press(/Re-art the deck/);
     expect(inputOf("Re-art Embers of the Fen").method).toBe("paint");
     expect(screen.getByText(/Automatic paints with Gemini 2.5 Flash Image/)).toBeTruthy();
+  });
+
+  it("adding one drops an earlier pick of “the card's own art”: removing the picture later never brings it back unasked", async () => {
+    h.upload.mockResolvedValue({ ok: true, publicUrl: REFERENCE, path: "x", width: 800, height: 600 });
+    studio({ canPickModel: true });
+    const group = () => screen.getByRole("radiogroup", { name: "Each picture starts from" });
+    const picked = (name: RegExp) => within(group()).getByRole("radio", { name }).getAttribute("aria-checked");
+    fireEvent.click(within(group()).getByRole("radio", { name: /The card's own art/ }));
+    expect(picked(/The card's own art/)).toBe("true");
+    await choose();
+    expect(picked(/The prompt alone/)).toBe("true");
+    await press("Remove the reference picture");
+    expect(picked(/The prompt alone/)).toBe("true");
+    expect(picked(/The card's own art/)).toBe("false");
+    await press(/Re-art the deck/);
+    expect(inputOf("Re-art Embers of the Fen").method).toBe("paint");
   });
 
   it("without one both choices are on, as before", () => {

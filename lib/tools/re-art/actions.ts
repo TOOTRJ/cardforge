@@ -25,6 +25,7 @@ import {
   REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
   REART_IP_NEEDS_CONFIRMATION,
+  REART_IP_TOO_MANY,
   REART_MODEL_NOT_YOURS,
   REART_TOOL_SLUG,
   canPickReartModel,
@@ -49,7 +50,7 @@ import {
   readPaintedCards,
   saveCardWords,
   saveDeckStyle,
-  styleLicenceProblem,
+  styleLicenceCheck,
   writePaintedCard,
   type ReartPlanLine,
 } from "@/lib/tools/re-art/server";
@@ -128,9 +129,11 @@ export async function saveReartStyleAction(
   // A property the deck doesn't name yet waits for the confirmation; a
   // reference picture is one of the maker's own.
   const before = await readDeckStyleAdmin(access.userId, deck.id);
-  const licence = styleLicenceProblem(access.userId, before?.ipName, style.data, attested);
+  const licence = await styleLicenceCheck(access.userId, before?.ipName, style.data, attested);
   if (licence) {
-    track(access, "save_style_failed", { reason: licence === REART_IP_NEEDS_CONFIRMATION ? "not_confirmed" : "reference_not_own" });
+    track(access, "save_style_failed", {
+      reason: licence === REART_IP_NEEDS_CONFIRMATION ? "not_confirmed" : licence === REART_IP_TOO_MANY ? "rate_limited" : "reference_not_own",
+    });
     return { ok: false, error: licence };
   }
   const saved = await saveDeckStyle(access.userId, deck.id, style.data, { attested });
