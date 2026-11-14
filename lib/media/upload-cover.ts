@@ -2,8 +2,8 @@
 
 import { uploadCoverServerAction } from "@/lib/media/upload-cover-server";
 
-// Client entry point for deck-cover, card set-icon and article-image
-// uploads. The upload itself runs server-side (lib/media/upload-cover-
+// Client entry point for deck-cover, card set-icon, article-image and
+// Re-art reference-picture uploads. The upload itself runs server-side (lib/media/upload-cover-
 // server.ts) so every image passes the moderation scan; this wrapper only gives instant feedback on the
 // obvious rejections before the bytes leave the browser.
 
@@ -25,12 +25,14 @@ export type UploadCoverResult =
  * derives the owner from the session, never from the argument.
  * `purpose: "deck-cover"` stores it as the 16:9 cover standard (1600×900
  * WebP, lib/decks/cover-normalize.ts); `"article-image"` as WebP no larger
- * than ARTICLE_IMAGE_MAX_PX (the composer); a set icon is stored as uploaded.
+ * than ARTICLE_IMAGE_MAX_PX (the composer); `"reart-reference"` as WebP no
+ * larger than an image model is handed (Re-art deck's reference picture); a
+ * set icon is stored as uploaded.
  */
 export async function uploadCoverImage(
   _userId: string,
   file: File,
-  options: { purpose?: "deck-cover" | "article-image" } = {},
+  options: { purpose?: "deck-cover" | "article-image" | "reart-reference" } = {},
 ): Promise<UploadCoverResult> {
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
     return { ok: false, error: "Only PNG, JPEG, WebP, and GIF images are allowed." };

@@ -41,6 +41,18 @@
 // subject and pose, the deck's look and world. Same price, same record,
 // same "old art back". The method is not part of the deck's style.
 //
+// A licensed property (migration 0214; owner 2026-11-13: "the user
+// self-attests", by a prompt or an uploaded picture, and the pictures may
+// be public): a deck's style can NAME a property the maker holds the rights
+// to — every prompt of the deck then says so — after the maker confirms it
+// in words that are kept (deck_ip_attestations: who, when, which property,
+// the sentence itself). And a deck's style can hold a REFERENCE PICTURE the
+// maker uploads: each picture painted from the prompt is then painted WITH
+// it (its look, its designs, its characters). Both are part of the deck's
+// look: changing either starts a new version. Nothing here checks a
+// licence, and no provider offers a way to show one: a provider can still
+// decline a property's names and characters, and says so in its own words.
+//
 // Never touched: another creator's card (it keeps its art — a deck may hold
 // it, D3, but it is theirs), an emblem (owner rule for remixes: it prints
 // its walker's art), the maybeboard (not the deck).
@@ -76,6 +88,10 @@ export const REART_PROMPT_MAX = 1500;
 
 /** The longest words for one card (0209's CHECK on deck_reart_prompts). */
 export const REART_CARD_WORDS_MAX = 600;
+
+/** The longest name of a licensed property (0214's CHECK on
+ *  deck_art_styles.ip_name and deck_ip_attestations.ip_name). */
+export const REART_IP_NAME_MAX = 120;
 
 /** One credit per picture — two for a double-faced card (Bulk Customize's
  *  price, the AI deck remix's). */
@@ -244,17 +260,92 @@ export const REART_RESTYLE_LEAD =
  *  starts from the card's art and the card has no words of its own. */
 export const REART_RESTYLE_CARD = "the same subject";
 
+/** The lines a prompt opens with when the picture is painted WITH the
+ *  deck's reference picture (0214): the picture is the look — and the
+ *  characters, where the words name them — never the composition. Tried on
+ *  the dev key (2026-11-14) with a picture of our own as the reference: all
+ *  six models painted a NEW picture in its look. "Do not copy its
+ *  composition" alone was not enough where the deck's world IS the
+ *  reference's scene: the default model kept the reference's room and
+ *  swapped its subject — hence "a new scene from a new viewpoint". */
+export const REART_REFERENCE_LEAD =
+  "Paint a new picture in the visual style of the attached reference picture: its rendering, palette, lighting and designs — and its characters, where the words below name them. The reference shows the look only: compose a new scene from a new viewpoint, and do not reuse its composition or its background.";
+
+/** What a run is told when it asks for both: a restyle hands the model the
+ *  card's own art, and one picture is all every model is sure to take. */
+export const REART_REFERENCE_WITH_RESTYLE =
+  "A reference picture and “the card's own art” can't be used together yet: start each picture from the prompt, or remove the deck's reference picture.";
+
+/** The line every prompt of a deck that names a licensed property carries
+ *  (0214), before the closing line. */
+export function reartIpLine(ipName: string | null | undefined): string {
+  const name = cleanReartIpName(ipName);
+  return name ? `Licensed artwork for ${name}: set in its world and painted in its own visual style, with its characters and designs as they are known.` : "";
+}
+
+/**
+ * What the maker confirms before a deck names a licensed property — kept
+ * word for word with the name, the maker and the time
+ * (deck_ip_attestations). Nothing checks a licence: this sentence is the
+ * maker's own.
+ */
+export function reartIpStatement(ipName: string | null | undefined): string {
+  const name = cleanReartIpName(ipName) || "this property";
+  return `I hold the rights to ${name}, or its rights holder's permission, to make art of it with AI and to publish that art on PipGlyph. I am responsible for this, and PipGlyph may ask me for proof and remove the art.`;
+}
+
+/** What a save is told when the style names a property the deck doesn't
+ *  name yet and the maker's confirmation didn't come with it. */
+export const REART_IP_NEEDS_CONFIRMATION = "Confirm that you hold the rights to this property before the deck names it.";
+
+/** What a style whose reference picture isn't one of the maker's own
+ *  stored pictures is told (the server fetches it for every picture). */
+export const REART_REFERENCE_NOT_YOURS = "The reference picture has to be one you uploaded here — upload it again.";
+
+/** What a step is told when the deck's reference picture can't be read:
+ *  nothing is painted or charged. */
+export const REART_REFERENCE_UNREAD =
+  "The deck's reference picture couldn't be read — upload it again in the deck's style, or remove it. Nothing was charged.";
+
+/** What a picture a provider DECLINED is told on a deck that names a
+ *  licensed property: providers decline some properties' names and
+ *  characters whoever asks. */
+export const REART_IP_BLOCKED_COPY =
+  "The image service declined this picture. Image services decline some properties' names and characters whatever licence you hold: try another model, describe the look without the names, or add a reference picture.";
+/** The same on a picture that had a picture with it already (the deck's
+ *  reference, or the card's own art). */
+export const REART_IP_BLOCKED_WITH_PICTURE_COPY =
+  "The image service declined this picture. Image services decline some properties' names and characters whatever licence you hold: try another model, or describe the look without the names.";
+/** A picture painted with the deck's reference picture, declined, on a deck
+ *  that names no property. */
+export const REART_REFERENCE_BLOCKED_COPY =
+  "The image service declined to paint with the deck's reference picture. Try another model, or remove the reference picture.";
+
+/**
+ * What a picture the image service DECLINED is told, where the deck's style
+ * says more than the image door can know: a deck that names a property, or
+ * one painted with a reference picture. Null: the door's own sentence.
+ */
+export function reartBlockedCopy(style: ReartStyle, method: ReartMethod = "paint"): string | null {
+  const clean = normalizeReartStyle(style);
+  if (clean.ipName) return clean.referenceUrl || method === "restyle" ? REART_IP_BLOCKED_WITH_PICTURE_COPY : REART_IP_BLOCKED_COPY;
+  return clean.referenceUrl && method === "paint" ? REART_REFERENCE_BLOCKED_COPY : null;
+}
+
 /** The wording a picture's prompt is in and the most of its body the model
- *  reads: a restyle is always in the plain wording (no quoted name, no
- *  "trading-card"), and its opening line counts against the body. */
+ *  reads: a restyle — and a picture painted with the deck's reference
+ *  picture — is always in the plain wording (no quoted name, no
+ *  "trading-card"), and its opening lines count against the body. */
 export function reartWordingOf(
   modelId: string | null | undefined,
   method: ReartMethod = "paint",
+  /** The deck's style holds a reference picture. */
+  hasReference = false,
 ): { framing: ReartFraming; bodyMax: number } {
   const bodyMax = reartBodyMaxOf(modelId);
-  return method === "restyle"
-    ? { framing: "plain", bodyMax: Math.max(1, bodyMax - REART_RESTYLE_LEAD.length - 1) }
-    : { framing: reartModelOf(modelId).framing, bodyMax };
+  if (method === "restyle") return { framing: "plain", bodyMax: Math.max(1, bodyMax - REART_RESTYLE_LEAD.length - 1) };
+  if (hasReference) return { framing: "plain", bodyMax: Math.max(1, bodyMax - REART_REFERENCE_LEAD.length - 1) };
+  return { framing: reartModelOf(modelId).framing, bodyMax };
 }
 
 /**
@@ -305,15 +396,38 @@ export const reartStyleSchema = z
     mode: z.enum(REART_STYLE_MODES).default("preset"),
     /** The maker's own prompt (mode "custom"). */
     prompt: z.string().max(REART_PROMPT_MAX * 2).default(""),
+    /** The licensed property the deck's pictures are of (0214). Absent: none
+     *  — the key is left out of a style that names none, so every style and
+     *  plan from before it reads as it did. */
+    ipName: z.string().max(REART_IP_NAME_MAX * 2).optional(),
+    /** The deck's reference picture: the maker's own stored picture (0214).
+     *  Absent: none. */
+    referenceUrl: z.string().max(600).optional(),
   })
   .strict();
 
 /** A style as a form or a caller hands it (`mode` and `prompt` may be
- *  absent: the template). */
-export type ReartStyle = { preset: string; theme: string; mode?: ReartStyleMode; prompt?: string };
+ *  absent: the template; `ipName` and `referenceUrl` absent: none). */
+export type ReartStyle = {
+  preset: string;
+  theme: string;
+  mode?: ReartStyleMode;
+  prompt?: string;
+  ipName?: string;
+  referenceUrl?: string | null;
+};
 
-/** A style as it is stored and compared: every field present. */
-export type NormalReartStyle = Required<ReartStyle>;
+/** A style as it is stored and compared: the four fields present, and the
+ *  licensed property / the reference picture ONLY where the deck has one
+ *  (the keys are left out otherwise). */
+export type NormalReartStyle = {
+  preset: string;
+  theme: string;
+  mode: ReartStyleMode;
+  prompt: string;
+  ipName?: string;
+  referenceUrl?: string;
+};
 
 export const EMPTY_REART_STYLE: NormalReartStyle = { preset: SURPRISE_PRESET_ID, theme: "", mode: "preset", prompt: "" };
 
@@ -391,13 +505,31 @@ export function reartWordsSaySomething(text: string | null | undefined): boolean
  *  the mode named). */
 export function normalizeReartStyle(style: ReartStyle): NormalReartStyle {
   const preset = stylePresetById(style.preset) ? style.preset : SURPRISE_PRESET_ID;
+  const ipName = cleanReartIpName(style.ipName);
+  const referenceUrl = style.referenceUrl?.trim() ?? "";
   return {
     preset,
     theme: cleanReartTheme(style.theme),
     mode: style.mode === "custom" ? "custom" : "preset",
     prompt: cleanReartPrompt(style.prompt),
+    ...(ipName ? { ipName } : {}),
+    ...(referenceUrl ? { referenceUrl } : {}),
   };
 }
+
+/** A licensed property's name as it is stored and sent: one line, no
+ *  quotation marks (a quoted name reads to a model as words to write), no
+ *  control characters, REART_IP_NAME_MAX. */
+export function cleanReartIpName(name: string | null | undefined): string {
+  if (!name) return "";
+  const flat = name.replace(UNSAFE_CHARACTERS, " ").replace(/["“”„«»]/g, "").replace(/\s+/g, " ").trim();
+  return clipAt(flat, REART_IP_NAME_MAX).trim();
+}
+
+/** The two things a deck's look has besides its prompt: the licensed
+ *  property it names and the picture it is painted with. */
+const sameLicence = (x: NormalReartStyle, y: NormalReartStyle) =>
+  (x.ipName ?? "") === (y.ipName ?? "") && (x.referenceUrl ?? "") === (y.referenceUrl ?? "");
 
 /** The same look: the same mode, and what that mode paints with (the
  *  maker's prompt, or the preset and the deck's world). What the other mode
@@ -406,7 +538,7 @@ export function sameReartStyle(a: ReartStyle | null | undefined, b: ReartStyle |
   if (!a || !b) return false;
   const x = normalizeReartStyle(a);
   const y = normalizeReartStyle(b);
-  if (x.mode !== y.mode) return false;
+  if (x.mode !== y.mode || !sameLicence(x, y)) return false;
   return x.mode === "custom" ? x.prompt === y.prompt : x.preset === y.preset && x.theme === y.theme;
 }
 
@@ -418,7 +550,7 @@ export function sameReartStyleFields(a: ReartStyle | null | undefined, b: ReartS
   if (!a || !b) return false;
   const x = normalizeReartStyle(a);
   const y = normalizeReartStyle(b);
-  return x.mode === y.mode && x.prompt === y.prompt && x.preset === y.preset && x.theme === y.theme;
+  return x.mode === y.mode && x.prompt === y.prompt && x.preset === y.preset && x.theme === y.theme && sameLicence(x, y);
 }
 
 const letters = (text: string) => text.replace(/[^\p{L}]/gu, "").length;
@@ -428,6 +560,8 @@ const letters = (text: string) => text.replace(/[^\p{L}]/gu, "").length;
  *  own prompt needs to be written. */
 export function reartStyleProblem(style: ReartStyle): string | null {
   const clean = normalizeReartStyle(style);
+  // A property that is named is named in letters ("X" is no name).
+  if (style.ipName?.trim() && letters(clean.ipName ?? "") < 2) return "Name the licensed property.";
   if (clean.mode === "custom") {
     // The braces' names are not words of the maker's.
     return letters(clean.prompt.replace(PLACEHOLDER, " ")) < 10 ? "Write the deck's prompt first." : null;
@@ -661,6 +795,10 @@ export function buildReartPrompt(
 ): { prompt: string; cut: boolean } {
   const clean = normalizeReartStyle(style);
   const own = flatLine(cleanReartCardWords(words?.text));
+  // A deck that names a licensed property says so in every prompt, before
+  // the closing line; the line's room comes out of the body's.
+  const ipLine = reartIpLine(clean.ipName);
+  const ipRoom = ipLine ? ipLine.length + 1 : 0;
   if (method === "restyle") {
     // The picture IS the subject: the card's name, type and text are left
     // out (a famous name made a model redraw the character from memory).
@@ -675,21 +813,26 @@ export function buildReartPrompt(
         : clean.mode === "custom"
           ? fillDeckPrompt(flatLine(clean.prompt), subject, own, "plain", REART_RESTYLE_CARD)
           : [own ? withStop(own) : "", reartStyleBlock(clean, "plain")].filter(Boolean).join(" ");
-    const { text, cut } = clipBody(said, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX)));
+    const { text, cut } = clipBody(said, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX) - ipRoom));
     const ended = clean.mode === "custom" || own ? withStop(text) : text;
-    return { prompt: `${REART_RESTYLE_LEAD} ${ended} ${REART_PLAIN_CLOSING_LINE}`, cut };
+    return { prompt: [REART_RESTYLE_LEAD, ended, ipLine, REART_PLAIN_CLOSING_LINE].filter(Boolean).join(" "), cut };
   }
+  // Painted WITH the deck's reference picture: the plain wording, whatever
+  // the model (reartWordingOf says the same to every caller), and the
+  // opening lines that say what the picture is for.
+  const withReference = Boolean(clean.referenceUrl);
+  const wording: ReartFraming = withReference ? "plain" : framing;
   let body: string;
   if (own && words?.only) {
     body = own;
   } else if (clean.mode === "custom") {
-    body = fillDeckPrompt(flatLine(clean.prompt), subject, own, framing);
+    body = fillDeckPrompt(flatLine(clean.prompt), subject, own, wording);
   } else {
     const flavor = sceneWords(subject.flavorText, 200);
     const rules = flavor ? "" : sceneWords(subject.rulesText, 160);
     const title = subject.title.trim() || "an unnamed card";
     const subjectLines =
-      framing === "plain"
+      wording === "plain"
         ? [
             `Fantasy illustration of ${reartCardLine(subject, "plain")}.`,
             // No quotation marks, and no stray colon a removed symbol left;
@@ -706,13 +849,16 @@ export function buildReartPrompt(
             `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
             flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
           ];
-    body = [...(own ? [withStop(own)] : subjectLines), reartStyleBlock(clean, framing)].filter(Boolean).join(" ");
+    body = [...(own ? [withStop(own)] : subjectLines), reartStyleBlock(clean, wording)].filter(Boolean).join(" ");
   }
-  const { text, cut } = clipBody(body, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX)));
+  const { text, cut } = clipBody(body, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX) - ipRoom));
   // The template's own block ends as it always did; the maker's words get
   // a stop when they have none.
   const ended = clean.mode === "custom" || own ? withStop(text) : text;
-  return { prompt: `${ended} ${reartClosingLine(framing)}`, cut };
+  return {
+    prompt: [withReference ? REART_REFERENCE_LEAD : "", ended, ipLine, reartClosingLine(wording)].filter(Boolean).join(" "),
+    cut,
+  };
 }
 
 /** One picture's prompt (buildReartPrompt's). */
@@ -931,6 +1077,10 @@ export const reartRunSchema = z
     model: z.enum(REART_MODEL_IDS).default(REART_DEFAULT_MODEL),
     /** What each picture starts from (REART_METHODS; for testing). */
     method: z.enum(REART_METHODS).default(REART_DEFAULT_METHOD),
+    /** The maker confirmed, in this request, the sentence about the
+     *  licensed property the style names (reartIpStatement) — needed, and
+     *  recorded, only when the deck doesn't name that property yet. */
+    attested: z.boolean().optional(),
   })
   .strict()
   .refine((run) => !run.sample || (run.entryIds !== undefined && run.entryIds.length <= REART_SAMPLE_MAX), {

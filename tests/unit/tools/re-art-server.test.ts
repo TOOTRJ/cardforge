@@ -27,7 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Call = {
   table: string;
-  op: "select" | "delete" | "upsert";
+  op: "select" | "delete" | "upsert" | "insert";
   columns?: string;
   filters: Array<[string, unknown]>;
   head: boolean;
@@ -62,6 +62,11 @@ function clientOf(answerOf: (call: Call) => Promise<Result>) {
         },
         upsert: (row: unknown) => {
           call.op = "upsert";
+          call.row = row;
+          return answer();
+        },
+        insert: (row: unknown) => {
+          call.op = "insert";
           call.row = row;
           return answer();
         },
@@ -101,6 +106,7 @@ vi.mock("@/lib/tools/bulk-customize/server", () => ({ fetchBulkPrintings: vi.fn(
 
 import {
   discardReartArtIfUnused,
+  isOwnReferencePicture,
   planReartRun,
   readCardWords,
   readCardWordsAdmin,
@@ -113,10 +119,18 @@ import {
   revertPaintedCard,
   saveCardWords,
   saveDeckStyle,
+  styleLicenceProblem,
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
-import { REART_CHANGED_COPY, REART_NO_ART_COPY } from "@/lib/tools/re-art/model";
+import {
+  REART_CHANGED_COPY,
+  REART_IP_NEEDS_CONFIRMATION,
+  REART_NO_ART_COPY,
+  REART_REFERENCE_NOT_YOURS,
+  REART_REFERENCE_WITH_RESTYLE,
+  reartIpStatement,
+} from "@/lib/tools/re-art/model";
 
 const ME = "u1";
 const DECK = "00000000-0000-4000-8000-0000000000d1";
@@ -500,12 +514,15 @@ describe("the deck's style — the template or the maker's own prompt (0209)", (
     expect(await readDeckStyle(DECK)).toEqual({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 2 });
   });
 
-  it("a database 0209 hasn't reached is read again without its columns: every style there is the template", async () => {
+  it("a database 0214 hasn't reached is read again without its columns: no style there names a property or holds a reference picture", async () => {
     m.query
-      .mockResolvedValueOnce({ data: null, error: { message: "column deck_art_styles.mode does not exist", code: "42703" } })
-      .mockResolvedValueOnce({ data: { preset: "storybook", theme: "", version: 1 }, error: null });
+      .mockResolvedValueOnce({ data: null, error: { message: "column deck_art_styles.ip_name does not exist", code: "42703" } })
+      .mockResolvedValueOnce({ data: { preset: "storybook", theme: "", mode: "preset", prompt: "", version: 1 }, error: null });
     expect(await readDeckStyle(DECK)).toEqual({ preset: "storybook", theme: "", mode: "preset", prompt: "", version: 1 });
-    expect(m.query.mock.calls.map(([call]) => (call as Call).columns)).toEqual(["preset, theme, mode, prompt, version", "preset, theme, version"]);
+    expect(m.query.mock.calls.map(([call]) => (call as Call).columns)).toEqual([
+      "preset, theme, mode, prompt, ip_name, reference_url, version",
+      "preset, theme, mode, prompt, version",
+    ]);
     // The step's read falls back the same way, and still holds the row to its owner.
     m.admin
       .mockResolvedValueOnce({ data: null, error: { message: "nope", code: "42703" } })
@@ -792,5 +809,242 @@ describe("who painted a card, and how (0211 deck_reart_cards.image_model, 0212 .
     expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(false);
     expect(m.admin).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A deck that names a LICENSED PROPERTY, and a deck's REFERENCE PICTURE
+// (migration 0214; owner 2026-11-13: the maker self-attests, in words or
+// with a picture):
+//
+//   * a property is named only with the maker's confirmation in the same
+//     request, and the confirmation is RECORDED — the sentence word for
+//     word — before the style is written. No deck names a property without
+//     its record, whoever calls the save;
+//   * a reference picture is one of the maker's OWN stored pictures (the
+//     server fetches it for every paint): any other address is refused;
+//   * both are part of the look (a new version), read back with the style,
+//     and written only by a style that holds (or held) one — every other
+//     save is, column for column, what it was.
+// ---------------------------------------------------------------------------
+
+describe("a licensed property and a reference picture (0214)", () => {
+  /** A real user id: a stored picture is held to its owner's FOLDER. */
+  const OWNER = "11111111-1111-4111-8111-111111111111";
+  const OTHER = "22222222-2222-4222-8222-222222222222";
+  const REFERENCE = `https://x.supabase.co/storage/v1/object/public/set-covers/${OWNER}/33333333-3333-4333-8333-333333333333.webp`;
+  const BASE = { preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 4, owner_id: OWNER };
+
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const writes = (op: Call["op"]) => m.admin.mock.calls.map(([call]) => call as Call).filter((call) => call.op === op);
+  const stored = (row: unknown, write: Result = { error: null }) =>
+    m.admin.mockImplementation(async (call: Call): Promise<Result> => (call.op === "select" ? { data: row, error: null } : write));
+
+  it("are read with the style; a style with neither has neither key (it equals what it always was)", async () => {
+    m.query.mockResolvedValue({ data: { ...BASE, ip_name: "Emberfall Chronicles", reference_url: REFERENCE }, error: null });
+    expect(await readDeckStyle(DECK)).toEqual({
+      preset: "watercolor",
+      theme: "a haunted fen",
+      mode: "preset",
+      prompt: "",
+      ipName: "Emberfall Chronicles",
+      referenceUrl: REFERENCE,
+      version: 4,
+    });
+    m.query.mockResolvedValue({ data: { ...BASE, ip_name: "", reference_url: null }, error: null });
+    expect(await readDeckStyle(DECK)).toEqual({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 4 });
+  });
+
+  describe("a reference picture is one of the maker's own stored pictures", () => {
+    it("their own folder in set-covers or card-art, on the app's own storage — nothing else", () => {
+      expect(isOwnReferencePicture(REFERENCE, OWNER)).toBe(true);
+      expect(isOwnReferencePicture(REFERENCE.replace("set-covers", "card-art"), OWNER)).toBe(true);
+      for (const url of [
+        REFERENCE.replace(OWNER, OTHER), // someone else's folder
+        REFERENCE.replace("set-covers", "profile-media"),
+        REFERENCE.replace("set-covers", "card-renders"),
+        REFERENCE.replace("https://x.supabase.co", "https://elsewhere.example"),
+        "https://cards.scryfall.io/art_crop/front/a/b/abc.jpg",
+        "/defaults/deck-covers/cover-01.webp",
+        `${REFERENCE}/../../other.webp`,
+        "",
+        null,
+      ]) {
+        expect(isOwnReferencePicture(url, OWNER), String(url)).toBe(false);
+      }
+      // Never "any folder" for want of an owner.
+      expect(isOwnReferencePicture(REFERENCE, "")).toBe(false);
+    });
+  });
+
+  describe("what a style needs before it becomes the deck's", () => {
+    it("a property the deck doesn't name yet needs the confirmation; the one it names needs none again", () => {
+      const named = { preset: "anime", theme: "", ipName: "Emberfall Chronicles" };
+      expect(styleLicenceProblem(OWNER, "", named, false)).toBe(REART_IP_NEEDS_CONFIRMATION);
+      expect(styleLicenceProblem(OWNER, null, named, false)).toBe(REART_IP_NEEDS_CONFIRMATION);
+      expect(styleLicenceProblem(OWNER, "", named, true)).toBeNull();
+      expect(styleLicenceProblem(OWNER, "Emberfall Chronicles", named, false)).toBeNull();
+      // As the server cleans it: spaces and quotation marks never make it "another" property.
+      expect(styleLicenceProblem(OWNER, "Emberfall Chronicles", { ...named, ipName: '  "Emberfall   Chronicles" ' }, false)).toBeNull();
+      // Another property is another confirmation.
+      expect(styleLicenceProblem(OWNER, "Emberfall Chronicles", { ...named, ipName: "Tidewrights" }, false)).toBe(REART_IP_NEEDS_CONFIRMATION);
+      // No property: nothing to confirm (removing one included).
+      expect(styleLicenceProblem(OWNER, "Emberfall Chronicles", { preset: "anime", theme: "" }, false)).toBeNull();
+    });
+
+    it("a reference picture that isn't the maker's own is refused, confirmed or not", () => {
+      const theirs = { preset: "anime", theme: "", referenceUrl: REFERENCE.replace(OWNER, OTHER) };
+      expect(styleLicenceProblem(OWNER, "", theirs, true)).toBe(REART_REFERENCE_NOT_YOURS);
+      expect(styleLicenceProblem(OWNER, "", { preset: "anime", theme: "", referenceUrl: REFERENCE }, false)).toBeNull();
+    });
+  });
+
+  describe("saving", () => {
+    it("a property is named only with the confirmation — which is recorded, word for word, BEFORE the style is written", async () => {
+      stored(BASE);
+      const saved = await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" }, { attested: true });
+      expect(saved).toMatchObject({ version: 5, ipName: "Emberfall Chronicles" });
+      const order = m.admin.mock.calls.map(([call]) => `${(call as Call).op}:${(call as Call).table}`);
+      expect(order).toEqual(["select:deck_art_styles", "insert:deck_ip_attestations", "upsert:deck_art_styles"]);
+      expect(writes("insert")[0].row).toEqual({
+        owner_id: OWNER,
+        deck_id: DECK,
+        ip_name: "Emberfall Chronicles",
+        statement: reartIpStatement("Emberfall Chronicles"),
+      });
+      expect(writes("upsert")[0].row).toMatchObject({ ip_name: "Emberfall Chronicles", reference_url: null, version: 5 });
+    });
+
+    it("without the confirmation nothing is recorded and nothing is written — whoever calls", async () => {
+      stored(BASE);
+      for (const options of [{}, { attested: false }, { attested: undefined }]) {
+        expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" }, options)).toBeNull();
+      }
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" })).toBeNull();
+      expect(writes("insert")).toEqual([]);
+      expect(writes("upsert")).toEqual([]);
+    });
+
+    it("a confirmation that couldn't be recorded saves nothing", async () => {
+      m.admin.mockImplementation(async (call: Call): Promise<Result> =>
+        call.op === "select" ? { data: BASE, error: null } : call.op === "insert" ? { error: { message: "boom" } } : { error: null },
+      );
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" }, { attested: true })).toBeNull();
+      expect(writes("upsert")).toEqual([]);
+      quiet.mockRestore();
+    });
+
+    it("the property the deck names already is saved again with no new record — and no confirmation asked", async () => {
+      stored({ ...BASE, ip_name: "Emberfall Chronicles", reference_url: null });
+      // Another look (the theme) under the same property: a new version, no record.
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a sunken city", ipName: "Emberfall Chronicles" })).toMatchObject({
+        version: 5,
+        ipName: "Emberfall Chronicles",
+      });
+      expect(writes("insert")).toEqual([]);
+      expect(writes("upsert")[0].row).toMatchObject({ ip_name: "Emberfall Chronicles", theme: "a sunken city" });
+    });
+
+    it("another property is another record; removing one needs none, and clears the column", async () => {
+      stored({ ...BASE, ip_name: "Emberfall Chronicles", reference_url: null });
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Tidewrights" })).toBeNull();
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", ipName: "Tidewrights" }, { attested: true })).toMatchObject({
+        version: 5,
+        ipName: "Tidewrights",
+      });
+      expect(writes("insert").map((call) => (call.row as { ip_name: string }).ip_name)).toEqual(["Tidewrights"]);
+      m.admin.mockClear();
+      stored({ ...BASE, ip_name: "Emberfall Chronicles", reference_url: null });
+      const removed = await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen" });
+      expect(removed).toEqual({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 5 });
+      expect(writes("insert")).toEqual([]);
+      expect(writes("upsert")[0].row).toMatchObject({ ip_name: "", reference_url: null, version: 5 });
+    });
+
+    it("a reference picture is a new look, saved with the style; one that isn't the maker's own saves nothing", async () => {
+      stored(BASE);
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", referenceUrl: REFERENCE })).toMatchObject({
+        version: 5,
+        referenceUrl: REFERENCE,
+      });
+      expect(writes("upsert")[0].row).toMatchObject({ ip_name: "", reference_url: REFERENCE, version: 5 });
+      expect(writes("insert")).toEqual([]);
+      m.admin.mockClear();
+      stored(BASE);
+      expect(await saveDeckStyle(OWNER, DECK, { preset: "watercolor", theme: "a haunted fen", referenceUrl: REFERENCE.replace(OWNER, OTHER) })).toBeNull();
+      expect(writes("upsert")).toEqual([]);
+    });
+
+    it("a style with neither — on a deck that never had one — writes neither column (it works before 0214 too)", async () => {
+      stored(BASE);
+      await saveDeckStyle(OWNER, DECK, { preset: "anime", theme: "a haunted fen" });
+      expect(writes("upsert")[0].row).toEqual({
+        deck_id: DECK,
+        owner_id: OWNER,
+        preset: "anime",
+        theme: "a haunted fen",
+        mode: "preset",
+        prompt: "",
+        version: 5,
+      });
+    });
+  });
+
+  describe("the plan", () => {
+    const item = {
+      entry: { id: ENTRY, name: "Archivist", quantity: 1, board: "main", card_id: CARD, scryfall_id: null, type_line: "Creature — Human Wizard" },
+      card: { id: CARD, owner_id: OWNER, title: "Archivist of Lost Hours", card_type: "creature", art_url: ART("mine.png"), frame_style: { template: "m15" }, back_face: null },
+      cardOwner: null,
+    };
+    const deckWith = (style: Record<string, unknown>) => {
+      m.items.mockResolvedValue([item]);
+      m.query.mockImplementation(async (call: Call): Promise<Result> => {
+        if (call.table === "decks") return { data: { id: DECK, slug: "embers", title: "Embers", visibility: "private" } };
+        if (call.table === "deck_art_styles") return { data: { ...BASE, ...style } };
+        if (call.table === "deck_reart_cards" || call.table === "deck_reart_prompts") return { data: [] };
+        return { data: null };
+      });
+    };
+    const run = (extra: Record<string, unknown> = {}) =>
+      planReartRun(OWNER, { deckId: DECK, scope: "all", visibility: "private", ...extra }, "deck_import");
+
+    it("a run that names a property the deck doesn't name yet waits for the confirmation — before any card is read", async () => {
+      deckWith({});
+      const style = { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" };
+      expect(await run({ style })).toEqual({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
+      expect(m.items).not.toHaveBeenCalled();
+      const confirmed = await run({ style, attested: true });
+      expect(confirmed).toMatchObject({ ok: true, styleChanged: true, version: 5, style: { ipName: "Emberfall Chronicles" } });
+    });
+
+    it("a deck that names it already plans with no confirmation: its saved style (one card) or the same one from the form", async () => {
+      deckWith({ ip_name: "Emberfall Chronicles" });
+      expect(await run()).toMatchObject({ ok: true, styleChanged: false, version: 4, style: { ipName: "Emberfall Chronicles" } });
+      expect(await run({ style: { preset: "watercolor", theme: "a haunted fen", ipName: "Emberfall Chronicles" } })).toMatchObject({
+        ok: true,
+        styleChanged: false,
+      });
+    });
+
+    it("a reference picture that isn't the maker's own is refused", async () => {
+      deckWith({});
+      expect(await run({ style: { preset: "watercolor", theme: "a haunted fen", referenceUrl: REFERENCE.replace(OWNER, OTHER) } })).toEqual({
+        ok: false,
+        error: REART_REFERENCE_NOT_YOURS,
+      });
+    });
+
+    it("one picture goes with a prompt: a reference picture and “the card's own art” are refused together", async () => {
+      deckWith({ reference_url: REFERENCE });
+      expect(await run({ method: "restyle" })).toEqual({ ok: false, error: REART_REFERENCE_WITH_RESTYLE });
+      expect(await run({ method: "paint" })).toMatchObject({ ok: true, style: { referenceUrl: REFERENCE } });
+    });
   });
 });

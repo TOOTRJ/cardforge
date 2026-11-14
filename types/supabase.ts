@@ -702,6 +702,8 @@ export type Database = {
           theme: string;
           mode: string;
           prompt: string;
+          ip_name: string;
+          reference_url: string | null;
           version: number;
           created_at: string;
           updated_at: string;
@@ -713,6 +715,8 @@ export type Database = {
           theme?: string;
           mode?: string;
           prompt?: string;
+          ip_name?: string;
+          reference_url?: string | null;
           version?: number;
           created_at?: string;
           updated_at?: string;
@@ -724,9 +728,38 @@ export type Database = {
           theme?: string;
           mode?: string;
           prompt?: string;
+          ip_name?: string;
+          reference_url?: string | null;
           version?: number;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      deck_ip_attestations: {
+        Row: {
+          id: string;
+          owner_id: string;
+          deck_id: string | null;
+          ip_name: string;
+          statement: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          deck_id?: string | null;
+          ip_name: string;
+          statement: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          deck_id?: string | null;
+          ip_name?: string;
+          statement?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

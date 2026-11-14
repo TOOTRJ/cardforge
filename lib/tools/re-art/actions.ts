@@ -24,6 +24,7 @@ import {
   REART_CARD_WORDS_MAX,
   REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
+  REART_IP_NEEDS_CONFIRMATION,
   REART_MODEL_NOT_YOURS,
   REART_TOOL_SLUG,
   canPickReartModel,
@@ -44,9 +45,11 @@ import {
   getOwnedDeck,
   planLines,
   planReartRun,
+  readDeckStyleAdmin,
   readPaintedCards,
   saveCardWords,
   saveDeckStyle,
+  styleLicenceProblem,
   writePaintedCard,
   type ReartPlanLine,
 } from "@/lib/tools/re-art/server";
@@ -108,6 +111,10 @@ export type ReartFailure = {
 export async function saveReartStyleAction(
   deckId: unknown,
   styleInput: unknown,
+  /** `attested`: the maker ticked the sentence about the licensed property
+   *  the style names (reartIpStatement) — needed, and recorded, only when
+   *  the deck doesn't name that property yet. */
+  options: { attested?: unknown } = {},
 ): Promise<{ ok: true; style: NormalReartStyle; version: number } | ReartFailure> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
@@ -117,18 +124,31 @@ export async function saveReartStyleAction(
   if (problem) return { ok: false, error: problem };
   const deck = await getOwnedDeck(access.userId, deckId);
   if (!deck) return { ok: false, error: "That deck isn't one of yours." };
-  const saved = await saveDeckStyle(access.userId, deck.id, style.data);
+  const attested = options?.attested === true;
+  // A property the deck doesn't name yet waits for the confirmation; a
+  // reference picture is one of the maker's own.
+  const before = await readDeckStyleAdmin(access.userId, deck.id);
+  const licence = styleLicenceProblem(access.userId, before?.ipName, style.data, attested);
+  if (licence) {
+    track(access, "save_style_failed", { reason: licence === REART_IP_NEEDS_CONFIRMATION ? "not_confirmed" : "reference_not_own" });
+    return { ok: false, error: licence };
+  }
+  const saved = await saveDeckStyle(access.userId, deck.id, style.data, { attested });
   if (!saved) {
     track(access, "save_style_failed", { reason: "not_saved" });
     return { ok: false, error: "Couldn't save the style — try again." };
   }
-  // Never the words: how the prompt is made, and how long it is.
+  // Never the words (nor the property's name): how the prompt is made, how
+  // long it is, and whether the deck names a property or holds a reference
+  // picture.
   track(access, "save_style", {
     preset: saved.preset,
     theme_chars: saved.theme.length,
     mode: saved.mode,
     prompt_chars: saved.prompt.length,
     version: saved.version,
+    licensed: Boolean(saved.ipName),
+    reference: Boolean(saved.referenceUrl),
   });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   const { version, ...savedStyle } = saved;
@@ -374,8 +394,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
       .eq("owner_id", access.userId);
   }
 
-  // The style the run paints in becomes the deck's.
-  const saved = await saveDeckStyle(access.userId, plan.deck.id, plan.style);
+  // The style the run paints in becomes the deck's (a property it names
+  // for the first time: with the maker's confirmation, recorded — the plan
+  // above refused a run without it).
+  const saved = await saveDeckStyle(access.userId, plan.deck.id, plan.style, { attested: parsed.data.attested === true });
   if (!saved) {
     failed("style_not_saved");
     return { ok: false, error: "Couldn't save the deck's style — try again." };
@@ -383,7 +405,17 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
 
   const jobPlan: ReartJobPlan = {
     deck_id: plan.deck.id,
-    style: { preset: saved.preset, theme: saved.theme, mode: saved.mode, prompt: saved.prompt, version: saved.version },
+    style: {
+      preset: saved.preset,
+      theme: saved.theme,
+      mode: saved.mode,
+      prompt: saved.prompt,
+      version: saved.version,
+      // The property the deck names and its reference picture (0214): named
+      // only by a style that holds one — every other plan is what it was.
+      ...(saved.ipName ? { ipName: saved.ipName } : {}),
+      ...(saved.referenceUrl ? { referenceUrl: saved.referenceUrl } : {}),
+    },
     visibility: parsed.data.visibility ?? REART_DEFAULT_VISIBILITY,
     model: parsed.data.model ?? REART_DEFAULT_MODEL,
     method: parsed.data.method ?? REART_DEFAULT_METHOD,
@@ -422,6 +454,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
         // from.
         model: jobPlan.model,
         method: jobPlan.method,
+        // Whether the deck named a licensed property or painted with a
+        // reference picture (never the name or the address).
+        ...(saved.ipName ? { licensed: true } : {}),
+        ...(saved.referenceUrl ? { reference: true } : {}),
       },
       plan: jobPlan as unknown as Json,
       steps: steps as unknown as Json,

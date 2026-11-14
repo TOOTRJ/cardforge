@@ -100,6 +100,11 @@ export const URL_SOURCES = [
   { table: "forged_pips", columns: ["files"], note: "Pip Forge's current pip and its glyph (set-covers pip-<v>.png, glyph-<v>.png); an override is a copy in custom-pips" },
   { table: "set_symbols", columns: ["files"], note: "Set Symbol Studio's current version of each symbol (set-covers sym-<v>-*.png + source, card-art wm-sym-<v>.png); a card's set_icon_url / watermark keeps an older version" },
   {
+    table: "deck_art_styles",
+    columns: ["reference_url"],
+    note: "Re-art deck (0214): a deck's reference picture — the owner's own upload (set-covers), handed to the image model with every prompt of the deck; no card or deck row names it",
+  },
+  {
     table: "deck_reart_cards",
     columns: ["art_url", "back_art_url", "previous_art_url", "previous_back_art_url"],
     note: "Re-art deck (0191): the picture it painted on a card, and the card's own earlier art kept for \"Put the old art back\" (card-art) — no card holds that one any more",

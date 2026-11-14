@@ -44,6 +44,7 @@ const m = vi.hoisted(() => ({
   scryfallLog: vi.fn(),
   artCrop: vi.fn(),
   storedArt: vi.fn(),
+  ownReference: vi.fn(),
   rows: { deck_cards: null as unknown, cards: null as unknown },
   /** The API's own refusal of the entry's read, and what the step selected. */
   entry: { error: null as null | { code: string; message: string }, select: "" },
@@ -75,6 +76,7 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   discardReartArtIfUnused: m.discardUnused,
   revertPaintedCard: m.revert,
   readCardWordsAdmin: m.words,
+  isOwnReferencePicture: m.ownReference,
   reartBulkChoices: (style: { preset: string }, visibility: string) => ({ art: "ai", artStyle: style.preset, visibility }),
 }));
 vi.mock("@/lib/tools/bulk-customize/step", () => ({ customizeSourceStep: m.customize }));
@@ -175,6 +177,7 @@ beforeEach(() => {
   m.getCard.mockResolvedValue({ id: "sf-1", name: "Krenko, Mob Boss" });
   m.artCrop.mockResolvedValue({ ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" });
   m.storedArt.mockResolvedValue({ bytes: new Uint8Array([6]), contentType: "image/png" });
+  m.ownReference.mockReturnValue(true);
 });
 
 describe("the step trusts nothing in the plan", () => {
@@ -985,5 +988,181 @@ describe("a picture that starts from the card's own art (0212 restyle)", () => {
     expect(painted.restyle).toBe(false);
     await painted.onSaved("made-2", { front: ART("ai-2.jpg"), back: null }, ["bfl/flux-2-flex"]);
     expect(m.writePainted.mock.calls[1][3]).toMatchObject({ cardId: "made-2", method: "paint" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A deck that names a LICENSED PROPERTY, and a deck's REFERENCE PICTURE
+// (migration 0214). Both are the STORED style's — the plan is its owner's to
+// write, so a plan that names one the deck doesn't hold stops as "the style
+// changed". The property is one more line of every prompt; the reference
+// picture is read before anything is reserved (one of the maker's own
+// stored pictures — asked again here) and handed to the image door with the
+// prompt, in the plain wording. One picture goes with a prompt: never the
+// reference and the card's own art together.
+// ---------------------------------------------------------------------------
+
+describe("a licensed property and a reference picture (0214)", () => {
+  const REFERENCE = "https://x.supabase.co/storage/v1/object/public/set-covers/u1/reference.webp";
+  const IP_LINE =
+    "Licensed artwork for Emberfall Chronicles: set in its world and painted in its own visual style, with its characters and designs as they are known.";
+  const REFERENCE_LEAD = "Paint a new picture in the visual style of the attached reference picture";
+  const PLAIN_CLOSING =
+    "The painting covers the entire image from edge to edge: no white margin, paper edge, border or frame, and no text, letters, signature, title or caption anywhere.";
+  const NAMED = { ...STYLE, ipName: "Emberfall Chronicles" };
+  const PICTURED = { ...STYLE, referenceUrl: REFERENCE };
+  /** The deck holds `style`, and the run was planned in it. */
+  const deckIn = (style: typeof STYLE & { ipName?: string; referenceUrl?: string }, extra: Record<string, unknown> = {}, kind: "own" | "printing" = "own") => {
+    m.styleAdmin.mockResolvedValue(style);
+    return { ...planOf(kind), style, ...extra };
+  };
+
+  it("the property is the STORED style's: a plan that names one the deck doesn't stops before any charge", async () => {
+    expect(await run({ ...planOf(), style: NAMED })).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    m.styleAdmin.mockResolvedValue(NAMED);
+    // …and a plan priced before the deck named it, too.
+    expect(await run(planOf())).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    m.styleAdmin.mockResolvedValue(STYLE);
+    expect(await run({ ...planOf(), style: PICTURED })).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+  });
+
+  it("a deck that names a property says so in the prompt, before the closing line — painted from the prompt, as ever", async () => {
+    const result = await run(deckIn(NAMED));
+    expect(result).toMatchObject({ status: "done" });
+    expect(m.restyle).not.toHaveBeenCalled();
+    expect(m.storedArt).not.toHaveBeenCalled();
+    const [first]: string[] = m.image.mock.calls[0][0];
+    expect(first).toContain(`${IP_LINE} `);
+    expect(first.indexOf(IP_LINE)).toBeGreaterThan(first.indexOf("Rendered strictly in storybook style."));
+    expect(first).toMatch(/^Trading-card illustration of "Archivist of Lost Hours"/);
+  });
+
+  it("a declined picture on such a deck is told what that deck can try — and is not the image door's sentence", async () => {
+    m.image.mockResolvedValue({ ok: false, error: "The image service declined this prompt.", failure: "art_blocked", safetyBlocked: true });
+    const result = await run(deckIn(NAMED));
+    expect(result).toMatchObject({ status: "failed", failure: "art_blocked" });
+    expect(result.error).toMatch(/whatever licence you hold/);
+    expect(result.error).toMatch(/add a reference picture/);
+    // Any other failure keeps its own words.
+    m.image.mockResolvedValue({ ok: false, error: "The image service timed out.", failure: "art_timeout", safetyBlocked: false });
+    expect(await run(deckIn(NAMED))).toMatchObject({ status: "failed", error: "The image service timed out." });
+    // …and so does a declined picture on a deck that names nothing.
+    m.styleAdmin.mockResolvedValue(STYLE);
+    m.image.mockResolvedValue({ ok: false, error: "The image service declined this prompt.", failure: "art_blocked", safetyBlocked: true });
+    expect(await run(planOf())).toMatchObject({ status: "failed", error: "The image service declined this prompt." });
+  });
+
+  it("the reference picture is read — one of the maker's own, asked again — before anything is reserved, and goes to the model with the prompt", async () => {
+    const result = await run(deckIn(PICTURED));
+    expect(result).toMatchObject({ status: "done", image_model: "google/gemini-2.5-flash-image" });
+    expect(m.ownReference).toHaveBeenCalledWith(REFERENCE, "u1");
+    expect(m.storedArt).toHaveBeenCalledWith(REFERENCE);
+    // Read before the credit was reserved.
+    expect(m.storedArt.mock.invocationCallOrder[0]).toBeLessThan(m.credited.mock.invocationCallOrder[0]);
+    // Painted WITH it: the image door's picture call, never the prompt-only one.
+    expect(m.image).not.toHaveBeenCalled();
+    expect(m.restyle).toHaveBeenCalledTimes(1);
+    expect([...m.restyle.mock.calls[0][1].bytes]).toEqual([6]);
+    // Automatic names no model: the door's own model that can look at a picture.
+    expect(m.restyle.mock.calls[0][3].model).toBeUndefined();
+    // The row says "painted" (the method is what the picture STARTS from: the prompt).
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ method: "paint", imageModel: "google/gemini-2.5-flash-image" });
+    expect(result.note ?? null).toBeNull();
+  });
+
+  it("its prompt opens with what the picture is for, in plain words, as written — never the generic rung", async () => {
+    await run(deckIn({ ...PICTURED, ipName: "Emberfall Chronicles" }));
+    const ladder: string[] = m.restyle.mock.calls[0][0];
+    expect(ladder).toHaveLength(2);
+    const [first] = ladder;
+    expect(first.startsWith(REFERENCE_LEAD)).toBe(true);
+    expect(first).toContain("Fantasy illustration of Archivist of Lost Hours, a Creature — Human Wizard.");
+    expect(first.endsWith(`${IP_LINE} ${PLAIN_CLOSING}`)).toBe(true);
+    expect(ladder.join(" ")).not.toMatch(/Trading-card|"Archivist|Symbolic fantasy|evoking/);
+  });
+
+  it("a named model paints with the picture alone", async () => {
+    m.restyle.mockResolvedValue({ ok: true, bytes: new Uint8Array([2]), contentType: "image/png", model: "spacexai/grok-imagine-image-2.0", promptIndex: 0 });
+    await run(deckIn(PICTURED, { model: "spacexai/grok-imagine-image-2.0" }));
+    expect(m.restyle.mock.calls[0][3].model).toBe("spacexai/grok-imagine-image-2.0");
+    expect(m.image).not.toHaveBeenCalled();
+  });
+
+  it("a reference picture that can't be read — or isn't the maker's own — stops the step, and nothing is charged", async () => {
+    m.storedArt.mockResolvedValue(null);
+    let result = await run(deckIn(PICTURED));
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatch(/reference picture couldn't be read/);
+    expect(result.error).toMatch(/Nothing was charged/);
+    m.storedArt.mockResolvedValue({ bytes: new Uint8Array([6]), contentType: "image/png" });
+    m.storedArt.mockClear();
+    m.ownReference.mockReturnValue(false);
+    result = await run(deckIn(PICTURED));
+    expect(result.status).toBe("failed");
+    // Not their own: never fetched at all.
+    expect(m.storedArt).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.restyle).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect(m.writePainted).not.toHaveBeenCalled();
+  });
+
+  it("a card already in the style is done without reading the picture or a charge", async () => {
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg") };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    const result = await run(deckIn(PICTURED));
+    expect(result).toMatchObject({ status: "done", note: "Already in this style — nothing was charged." });
+    expect(m.storedArt).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  it("one picture goes with a prompt: a plan that asks for the card's own art on such a deck is refused before any read", async () => {
+    const result = await run(deckIn(PICTURED, { method: "restyle" }));
+    expect(result.status).toBe("failed");
+    expect(result.error).toMatch(/can't be used together/);
+    expect(m.storedArt).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  it("a declined picture painted with the reference says so (a deck that names no property)", async () => {
+    m.restyle.mockResolvedValue({ ok: false, error: "The image service declined to repaint this picture.", failure: "art_blocked", safetyBlocked: true });
+    const result = await run(deckIn(PICTURED));
+    expect(result).toMatchObject({ status: "failed", failure: "art_blocked" });
+    expect(result.error).toMatch(/declined to paint with the deck's reference picture/);
+  });
+
+  it("a REAL card is made through the one-card core with the picture and the deck's sentence for a declined one", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    await run(deckIn({ ...PICTURED, ipName: "Emberfall Chronicles" }, {}, "printing"));
+    expect(m.storedArt).toHaveBeenCalledWith(REFERENCE);
+    const options = m.customize.mock.calls[0][3];
+    expect([...options.reference.bytes]).toEqual([6]);
+    expect(options.restyle).toBe(false);
+    expect(options.blockedCopy).toMatch(/whatever licence you hold/);
+    expect(options.blockedCopy).not.toMatch(/add a reference picture/);
+    // Its prompt is the reference's, in plain words, never swapped.
+    const built = options.artPrompt(
+      { title: "Krenko, Mob Boss", card_type: "creature", supertype: "Legendary", subtypes: ["Goblin"], rules_text: "", flavor_text: "", frame_style: {}, color_identity: ["red"] },
+      "front",
+    );
+    expect(built.prompt.startsWith(REFERENCE_LEAD)).toBe(true);
+    expect(built.prompt.endsWith(`${IP_LINE} ${PLAIN_CLOSING}`)).toBe(true);
+    expect(built.exact).toBe(true);
+    // A reference picture that can't be read stops a real card too, before the core runs.
+    m.customize.mockClear();
+    m.storedArt.mockResolvedValue(null);
+    expect((await run(deckIn(PICTURED, {}, "printing"))).status).toBe("failed");
+    expect(m.customize).not.toHaveBeenCalled();
+  });
+
+  it("a deck with neither hands the core neither (what it was handed before)", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    await run(planOf("printing"));
+    const options = m.customize.mock.calls[0][3];
+    expect(Object.keys(options)).not.toContain("reference");
+    expect(Object.keys(options)).not.toContain("blockedCopy");
+    expect(m.storedArt).not.toHaveBeenCalled();
   });
 });

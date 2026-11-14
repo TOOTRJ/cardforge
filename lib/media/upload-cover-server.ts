@@ -17,7 +17,8 @@ import {
 
 // ---------------------------------------------------------------------------
 // Moderated upload for the `set-covers` bucket — deck covers, custom card
-// set icons and the composer's article images (the bucket keeps its
+// set icons, the composer's article images and Re-art deck's reference
+// pictures (the bucket keeps its
 // historical name; the sets feature itself was removed 2026-09-22). Mirrors lib/cards/upload-art-server.ts: the bytes are
 // validated with Sharp (never the client-declared MIME), stored under the
 // caller's own folder (service-role write, folder forced from the session —
@@ -44,6 +45,10 @@ const CONTENT_TYPE_BY_FORMAT: Record<string, string> = {
 /** The longest side an article image is stored at (the article column is
  *  48rem; 1600 px covers it at 2× and keeps the LCP picture light). */
 const ARTICLE_IMAGE_MAX_PX = 1600;
+
+/** The longest side a Re-art reference picture is stored at: what an image
+ *  model is handed at most (lib/ai/image-gen.ts modelInputImage). */
+const REART_REFERENCE_MAX_PX = 2048;
 
 export type UploadCoverServerResult =
   | {
@@ -123,6 +128,23 @@ export async function uploadCoverServerAction(
       stored = await sharp(stored)
         .resize({ width: ARTICLE_IMAGE_MAX_PX, height: ARTICLE_IMAGE_MAX_PX, fit: "inside", withoutEnlargement: true })
         .webp({ quality: 82 })
+        .toBuffer();
+      extension = "webp";
+      contentType = "image/webp";
+    } catch {
+      return { ok: false, error: "That doesn't look like an image." };
+    }
+  }
+
+  // A Re-art deck REFERENCE picture (migration 0214): the picture every
+  // paint of the deck is handed with its prompt — no larger than a model is
+  // given, as WebP, from the same upright, metadata-free bytes. Scanned
+  // like every other upload, below.
+  if (formData.get("purpose") === "reart-reference") {
+    try {
+      stored = await sharp(stored)
+        .resize({ width: REART_REFERENCE_MAX_PX, height: REART_REFERENCE_MAX_PX, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 90 })
         .toBuffer();
       extension = "webp";
       contentType = "image/webp";
