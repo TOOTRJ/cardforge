@@ -208,7 +208,7 @@ export function ReartStylePanel({
             </p>
             <p className="mt-1 text-xs leading-5 text-subtle">
               {method === "restyle"
-                ? "The first and last lines are always added: the card's own art is repainted, and the picture is art for a card, never a card."
+                ? "The first and last lines are always added: the card's own art is repainted, and the picture is art for a card, never a card. Here {card} stands for “the same subject” on a card with no words of its own: the picture shows it."
                 : "The last line is always added: the picture is art for a card, never a card."}
               {preview?.partial ? " A real card's flavour and rules text are read when it is painted." : ""}
             </p>

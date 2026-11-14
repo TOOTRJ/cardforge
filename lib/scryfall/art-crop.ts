@@ -13,9 +13,10 @@ import { logScryfallCall } from "@/lib/scryfall/rate-limit";
 // stored as the AI picture it is (lib/ai/random-art.ts).
 //
 // The caller has resolved the card from Scryfall ITSELF (by id, never a URL
-// from the browser) and has checked the `import_art` quota. Like
-// storeScryfallArt, the quota is charged only once a picture resolved, and
-// the fetch is host-locked (fetchScryfallImage).
+// from the browser) and has checked the `restyle_art` quota (its own
+// action: lib/scryfall/rate-limit.ts). The quota is charged only once the
+// picture is in hand — a printing with no art, or a download that failed,
+// spends nothing — and the fetch is host-locked (fetchScryfallImage).
 // ---------------------------------------------------------------------------
 
 /** Card art on Scryfall is far below this; a bigger answer is not art. */
@@ -37,9 +38,9 @@ export async function fetchScryfallArtCrop(
   const images = face === "back" ? (card.card_faces?.[1]?.image_uris ?? null) : (card.image_uris ?? card.card_faces?.[0]?.image_uris ?? null);
   const url = images?.art_crop ?? null;
   if (!url) return { ok: false, error: "Scryfall has no art for this card to restyle." };
-  await logScryfallCall(userId, "import_art");
   const fetched = await fetchScryfallImage(url);
   if (!fetched) return { ok: false, error: "Could not download the card's art from Scryfall — try it again." };
   if (fetched.blob.size === 0 || fetched.blob.size > MAX_BYTES) return { ok: false, error: "The card's art on Scryfall can't be used." };
+  await logScryfallCall(userId, "restyle_art");
   return { ok: true, bytes: new Uint8Array(await fetched.blob.arrayBuffer()), contentType: fetched.contentType };
 }

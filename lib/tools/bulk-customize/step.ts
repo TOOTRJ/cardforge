@@ -218,7 +218,7 @@ export type CustomizeSourceOptions = {
    *  image door's default and its backup. */
   imageModel?: string;
   /** Each AI picture starts from the printing's own ART (its art crop on
-   *  Scryfall, fetched on the caller's `import_art` quota and never stored)
+   *  Scryfall, fetched on the caller's `restyle_art` quota and never stored)
    *  and is repainted with the prompt — Re-art deck's "from the card's own
    *  art". A printing with no art to start from fails before any charge.
    *  The prompt is sent as written (dressed if refused, never swapped). */
@@ -390,10 +390,10 @@ export async function customizeSourceStep(
   }
 
   // ---- A restyle's pictures to start from, BEFORE anything is reserved:
-  //      the printing's own art, on Scryfall's art quota. ----
+  //      the printing's own art, on the restyle's own Scryfall quota. ----
   const sources: { front?: RestyleSource; back?: RestyleSource } = {};
   if (options.restyle) {
-    const quota = await checkScryfallRateLimit(userId, "import_art");
+    const quota = await checkScryfallRateLimit(userId, "restyle_art");
     if (!quota.ok) {
       if (quota.reason === "per_day") return failed(step, quota.message);
       return wait(quota.retryAfterSeconds);

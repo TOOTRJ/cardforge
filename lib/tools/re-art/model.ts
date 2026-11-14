@@ -240,6 +240,10 @@ export const REART_METHOD_HINTS: Record<ReartMethod, string> = {
 export const REART_RESTYLE_LEAD =
   "Repaint this exact picture in a new art style. Keep every character and object, their poses and the composition as they are, so it is clearly the same picture; change the rendering, the palette, the lighting and the look of the surroundings. Remove any signature, watermark or lettering that is in the picture.";
 
+/** What `{card}` stands for in the maker's own deck prompt when the picture
+ *  starts from the card's art and the card has no words of its own. */
+export const REART_RESTYLE_CARD = "the same subject";
+
 /** The wording a picture's prompt is in and the most of its body the model
  *  reads: a restyle is always in the plain wording (no quoted name, no
  *  "trading-card"), and its opening line counts against the body. */
@@ -255,10 +259,16 @@ export function reartWordingOf(
 
 /**
  * The picture a restyle of the maker's OWN card (one with no printing)
- * starts from: the art it had BEFORE Re-art — never a picture Re-art
- * painted, or a re-roll would restyle a restyle. While the card shows the
- * picture a row records, that is the row's "art to put back"; otherwise the
- * art on the card now. Null: no art to start from.
+ * starts from: the art it had BEFORE Re-art, so a re-roll doesn't restyle a
+ * restyle. While the card shows the picture a row records, that is the
+ * row's "art to put back"; otherwise the art on the card now (a Re-art
+ * picture no row records any more — its deck was deleted — is the card's
+ * own art by then). Null: no art to start from.
+ *
+ * The PLAN reads this deck's row; the step reads every deck's (a card can
+ * be in several): a card another deck's run painted last, with no art
+ * before Re-art, is planned and then stopped at its step — before any
+ * charge.
  */
 export function reartOwnSourceArt(
   cardArtUrl: string | null | undefined,
@@ -561,10 +571,20 @@ const EMPTY_SLOT = "\u0001";
  * the comma, colon or semicolon before it away with it — and nothing else
  * of the maker's punctuation is touched.
  */
-function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string, framing: ReartFraming): string {
+function fillDeckPrompt(
+  prompt: string,
+  subject: ReartSubject,
+  own: string,
+  framing: ReartFraming,
+  /** What `{card}` stands for on a card with no words of its own (default:
+   *  its name and type). A restyle says "the same subject": the picture is
+   *  the subject, and a famous name made a model redraw the character from
+   *  memory. */
+  cardLine: string = reartCardLine(subject, framing),
+): string {
   const text = (value: string) => (framing === "plain" ? unquoted(value) : value);
   const values: Record<string, string> = {
-    card: own ? withoutStop(own) : reartCardLine(subject, framing),
+    card: own ? withoutStop(own) : cardLine,
     name: text(subject.title.trim()) || "an unnamed card",
     type: subject.typeLine?.trim() ?? "",
     flavor: text(braceWords(sceneWords(subject.flavorText, 200))),
@@ -646,12 +666,14 @@ export function buildReartPrompt(
     // out (a famous name made a model redraw the character from memory).
     // What is said: the opening line, the maker's words for the card (what
     // changes in it), the deck's look — or the maker's own prompt — and the
-    // closing line. Always the plain wording.
+    // closing line. Always the plain wording. In the maker's own prompt
+    // {card} is "the same subject"; {name}, {type}, {flavor} and {rules}
+    // are still filled in where the maker wrote them — their choice.
     const said =
       own && words?.only
         ? own
         : clean.mode === "custom"
-          ? fillDeckPrompt(flatLine(clean.prompt), subject, own, "plain")
+          ? fillDeckPrompt(flatLine(clean.prompt), subject, own, "plain", REART_RESTYLE_CARD)
           : [own ? withStop(own) : "", reartStyleBlock(clean, "plain")].filter(Boolean).join(" ");
     const { text, cut } = clipBody(said, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX)));
     const ended = clean.mode === "custom" || own ? withStop(text) : text;

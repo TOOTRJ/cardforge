@@ -305,6 +305,7 @@ describe("the style form — the maker's own prompt (0209)", () => {
     cleanup();
     show(OWN, "restyle");
     expect(screen.getByText(/The first and last lines are always added: the card's own art is repainted/)).toBeTruthy();
+    expect(screen.getByText(/Here \{card\} stands for “the same subject” on a card with no words of its own/)).toBeTruthy();
     cleanup();
     // From the prompt alone: as before.
     show(TEMPLATE);

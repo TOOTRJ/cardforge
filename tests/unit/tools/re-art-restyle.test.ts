@@ -128,6 +128,17 @@ describe("a restyle's prompt", () => {
     );
   });
 
+  it("{card} on a card with no words of its own is “the same subject” — never its name and type (a famous name was redrawn from memory)", () => {
+    // The starter prompt ("{card}. <the look>") and any prompt written for a picture from scratch.
+    const starter = { ...STYLE, mode: "custom" as const, prompt: `{card}. ${reartStyleBlock(STYLE, "plain")}` };
+    expect(restyle(starter)).toBe(`${REART_RESTYLE_LEAD} the same subject. ${reartStyleBlock(STYLE, "plain")} ${REART_PLAIN_CLOSING_LINE}`);
+    const oil = { ...STYLE, mode: "custom" as const, prompt: "An oil painting of {card}, candle-lit" };
+    expect(restyle(oil)).toBe(`${REART_RESTYLE_LEAD} An oil painting of the same subject, candle-lit. ${REART_PLAIN_CLOSING_LINE}`);
+    expect(restyle(oil)).not.toMatch(/Krenko|Goblin Warrior/);
+    // From the prompt alone it is still the card's name and type.
+    expect(reartArtPrompt(KRENKO, oil, null, "plain")).toContain("An oil painting of Krenko, Mob Boss, a Legendary Creature — Goblin Warrior, candle-lit.");
+  });
+
   it("a long prompt is cut — said as cut — so that even the model that reads least reads the lines always added", () => {
     const long = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 30 }, () => "{card} in thick oil paint, candle-lit").join(", ") };
     const kontext = reartWordingOf("bfl/flux-kontext-pro", "restyle");

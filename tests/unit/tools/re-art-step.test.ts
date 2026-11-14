@@ -815,10 +815,11 @@ describe("a picture that starts from the card's own art (0212 restyle)", () => {
     const result = await run(restylePlan());
     expect(result).toMatchObject({ status: "done", image_model: "google/gemini-2.5-flash-image" });
     expect(result.note).toBe("Restyled from the real card's art.");
-    // The lookup, then the art: both quotas asked before either call.
+    // The lookup, then the art — the restyle's own quota, never the one for
+    // art a maker imports and keeps: both asked before either call.
     expect(m.scryfallRate.mock.calls.map((call) => call.slice(0, 2))).toEqual([
       ["u1", "named"],
-      ["u1", "import_art"],
+      ["u1", "restyle_art"],
     ]);
     expect(m.scryfallLog).toHaveBeenCalledWith("u1", "named");
     expect(m.getCard).toHaveBeenCalledWith("sf-1");

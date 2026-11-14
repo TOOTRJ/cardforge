@@ -57,6 +57,8 @@ describe("0212 re-art deck: how a card's picture was made", () => {
     expect(code).not.toMatch(/\b(create|drop|alter)\s+(policy|function|trigger)\b/i);
     expect(code).not.toMatch(/row level security/i);
     expect(code).not.toMatch(/primary\s+key/i);
+    // Another table's constraint is another migration's.
+    expect(code).not.toMatch(/scryfall_calls/);
   });
 
   it("the generated types know the column on the row, an insert and an update", () => {

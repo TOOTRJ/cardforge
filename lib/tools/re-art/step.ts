@@ -383,7 +383,7 @@ async function restyleSourcesFor(
         retry_after_seconds: Math.max(1, Math.min(120, Math.round(seconds || SCRYFALL_WAIT_FALLBACK_S))),
       },
     });
-    for (const label of ["named", "import_art"] as const) {
+    for (const label of ["named", "restyle_art"] as const) {
       const quota = await checkScryfallRateLimit(userId, label);
       if (!quota.ok) return quota.reason === "per_day" ? stop(quota.message) : wait(quota.retryAfterSeconds);
     }

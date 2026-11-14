@@ -52,6 +52,18 @@ describe("a card's own stored art", () => {
     expect(art).toEqual({ bytes: new Uint8Array([1, 2, 3, 2]), contentType: "image/png" });
     expect(fetched).toHaveBeenCalledTimes(1);
     expect(fetched.mock.calls[0][0]).toBe(OWN);
+    // The address was judged, not where it leads: no redirect is followed.
+    expect(fetched.mock.calls[0][1]).toMatchObject({ redirect: "error" });
+  });
+
+  it("a file the server says is too large is not read at all", async () => {
+    const body = vi.fn(async () => new Uint8Array([1]).buffer);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, headers: new Headers({ "content-type": "image/png", "content-length": String(26 * 1024 * 1024) }), arrayBuffer: body }) as unknown as Response),
+    );
+    expect(await fetchStoredArt(OWN)).toBeNull();
+    expect(body).not.toHaveBeenCalled();
   });
 
   it("an address the server may not fetch is never requested: another host, plain http, a site path, nothing", async () => {
@@ -96,12 +108,14 @@ describe("a printing's art", () => {
     ({ id: "sf-1", name: "Krenko, Mob Boss", image_uris: { art_crop: CROP, normal: "https://cards.scryfall.io/normal/front/8/2/824b.jpg" }, ...over }) as ScryfallCard;
   const picture = (bytes = [5, 5]) => ({ blob: new Blob([new Uint8Array(bytes)]), contentType: "image/jpeg" });
 
-  it("is the art crop — never the print scan — charged to the art quota once it resolved, and never stored", async () => {
+  it("is the art crop — never the print scan — charged to the restyle's own quota once it is in hand, and never stored", async () => {
     m.fetchImage.mockResolvedValue(picture());
     const art = await fetchScryfallArtCrop("u1", card(), "front");
     expect(art).toEqual({ ok: true, bytes: new Uint8Array([5, 5]), contentType: "image/jpeg" });
     expect(m.fetchImage).toHaveBeenCalledWith(CROP);
-    expect(m.log).toHaveBeenCalledWith("u1", "import_art");
+    // Its own action — never import_art (100 a day, for art a maker keeps).
+    expect(m.log.mock.calls).toEqual([["u1", "restyle_art"]]);
+    expect(m.fetchImage.mock.invocationCallOrder[0]).toBeLessThan(m.log.mock.invocationCallOrder[0]);
     // Never stored: the module holds no storage writer at all.
     const source = readFileSync(join(process.cwd(), "lib/scryfall/art-crop.ts"), "utf8");
     expect(source).not.toMatch(/user-storage|userFolder|\.upload\(|createAdminClient/);
@@ -133,5 +147,7 @@ describe("a printing's art", () => {
     expect(await fetchScryfallArtCrop("u1", card(), "front")).toMatchObject({ ok: false, error: expect.stringMatching(/Could not download/) });
     m.fetchImage.mockResolvedValueOnce(picture([]));
     expect(await fetchScryfallArtCrop("u1", card(), "front")).toMatchObject({ ok: false, error: expect.stringMatching(/can't be used/) });
+    // None of them spent the quota: only a picture in hand does.
+    expect(m.log).not.toHaveBeenCalled();
   });
 });

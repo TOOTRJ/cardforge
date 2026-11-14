@@ -485,8 +485,9 @@ describe("a tool built on the core may start each picture from the printing's ow
   it("the printing's art is fetched on the caller's art quota BEFORE anything is reserved, and repainted with the prompt as written", async () => {
     const { result, onSaved } = await start({ restyle: true, imageModel: "bfl/flux-kontext-pro" });
     expect(result.status).toBe("done");
-    // The lookup's quota, then the art's — both before the credit.
-    expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named", "import_art"]);
+    // The lookup's quota, then the restyle's own (never import_art: that is
+    // for art a maker keeps) — both before the credit.
+    expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named", "restyle_art"]);
     expect(m.artCrop).toHaveBeenCalledWith("u1", CARD, "front");
     expect(m.artCrop.mock.invocationCallOrder[0]).toBeLessThan(m.credited.mock.invocationCallOrder[0]);
     // Repainted from that picture — never painted from the prompt alone, never stored as the card's own.
@@ -510,12 +511,12 @@ describe("a tool built on the core may start each picture from the printing's ow
     expect(m.create).not.toHaveBeenCalled();
 
     m.scryfallRate.mockImplementation(async (_user: string, label: string) =>
-      label === "import_art" ? { ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 17 } : { ok: true },
+      label === "restyle_art" ? { ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 17 } : { ok: true },
     );
     const waiting = await start({ restyle: true });
     expect(waiting.result).toMatchObject({ status: "pending", error_code: "RATE_LIMITED", retry_after_seconds: 17 });
     m.scryfallRate.mockImplementation(async (_user: string, label: string) =>
-      label === "import_art" ? { ok: false, reason: "per_day", message: "That's the day's art." } : { ok: true },
+      label === "restyle_art" ? { ok: false, reason: "per_day", message: "That's the day's art." } : { ok: true },
     );
     expect((await start({ restyle: true })).result).toMatchObject({ status: "failed", error: "That's the day's art." });
     expect(m.credited).not.toHaveBeenCalled();
@@ -554,7 +555,7 @@ describe("a tool built on the core may start each picture from the printing's ow
       expect(m.artCrop).not.toHaveBeenCalled();
       expect(painted).toHaveBeenCalledTimes(1);
       expect(restyled).not.toHaveBeenCalled();
-      expect(m.scryfallRate.mock.calls.map((call) => call[1])).not.toContain("import_art");
+      expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named"]);
       m.scryfallRate.mockClear();
     }
   });
