@@ -5,9 +5,12 @@ import {
   REART_MODEL_IDS,
   REART_NO_FRAME_LINE,
   REART_PLAIN_CLOSING_LINE,
+  REART_MODEL_NOT_YOURS,
+  REART_PROMPT_BODY_MAX,
   buildReartPrompt,
   canPickReartModel,
   reartArtPrompt,
+  reartBodyMaxOf,
   reartCardLine,
   reartClosingLine,
   reartGatewayModel,
@@ -16,6 +19,8 @@ import {
   reartRunSchema,
   reartStyleBlock,
 } from "@/lib/tools/re-art/model";
+import { exactArtPromptLadder } from "@/lib/ai/art-prompt-safety";
+import { withFullyClothedLine } from "@/lib/ai/image-gen";
 
 // ---------------------------------------------------------------------------
 // Re-art deck's model picker (migration 0211; lib/tools/re-art/model.ts).
@@ -113,6 +118,52 @@ describe("who may name the model — admins and testers (owner 2026-11-13)", () 
     expect(canPickReartModel(undefined)).toBe(false);
     expect(canPickReartModel({ via: null, grant: null }, NOW)).toBe(false);
   });
+
+  it("a refused run is told why in words that fit the start AND a step of a run already going", () => {
+    // A tester's grant can run out mid-run: "the run wasn't started" was wrong there.
+    expect(REART_MODEL_NOT_YOURS).toMatch(/testers/);
+    expect(REART_MODEL_NOT_YOURS).toMatch(/Nothing was painted or charged/);
+    expect(REART_MODEL_NOT_YOURS).not.toMatch(/wasn't started/);
+  });
+});
+
+describe("a model that reads a shorter prompt (FLUX.1 Kontext: 512 tokens)", () => {
+  const KONTEXT = "bfl/flux-kontext-pro";
+  // About 2,200 characters filled in: past Kontext's limit, inside the tool's.
+  const long = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 25 }, () => "{card} in thick oil paint, candle-lit").join(", ") };
+
+  it("only Kontext has a limit of its own; every other choice keeps the tool's", () => {
+    expect(reartBodyMaxOf(KONTEXT)).toBe(1400);
+    for (const id of REART_MODEL_IDS.filter((id) => id !== KONTEXT)) expect(reartBodyMaxOf(id)).toBe(REART_PROMPT_BODY_MAX);
+    expect(reartBodyMaxOf("nobody/knows-it")).toBe(REART_PROMPT_BODY_MAX);
+  });
+
+  it("its prompt's body is cut sooner — said as cut — so the lines always added are inside what it reads", () => {
+    const { prompt, cut } = buildReartPrompt(KRENKO, long, null, "plain", reartBodyMaxOf(KONTEXT));
+    expect(cut).toBe(true);
+    expect(prompt.endsWith(REART_PLAIN_CLOSING_LINE)).toBe(true);
+    // Everything it is sent, on either rung, at the image door: under ~1,800
+    // characters (512 tokens). It was up to 3,250 — the closing line and
+    // "fully clothed" were sent and never read.
+    for (const rung of exactArtPromptLadder(prompt)) {
+      const sent = withFullyClothedLine(rung, 4000);
+      expect(sent.length).toBeLessThanOrEqual(1800);
+      expect(sent).toContain("no text, letters, signature, title or caption anywhere");
+      expect(sent.endsWith("it is fully clothed.")).toBe(true);
+    }
+    // The same prompt on a model with no limit of its own is sent whole.
+    const whole = buildReartPrompt(KRENKO, long, null, "plain", reartBodyMaxOf("google/gemini-3.1-flash-image"));
+    expect(whole.cut).toBe(false);
+    expect(whole.prompt.length).toBeGreaterThan(prompt.length);
+  });
+
+  it("a prompt under the limit is untouched, and a limit past the tool's is the tool's", () => {
+    const short = buildReartPrompt(KRENKO, STYLE, null, "plain", reartBodyMaxOf(KONTEXT));
+    expect(short).toEqual(buildReartPrompt(KRENKO, STYLE, null, "plain"));
+    expect(short.cut).toBe(false);
+    const huge = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 200 }, () => "{card} in thick oil paint").join(", ") };
+    expect(buildReartPrompt(KRENKO, huge, null, "plain", 99_999)).toEqual(buildReartPrompt(KRENKO, huge, null, "plain"));
+  });
 });
 
 describe("a run's request names its model", () => {
@@ -199,6 +250,12 @@ describe("the plain wording (every model but FLUX.2)", () => {
     expect(prompt).not.toMatch(/["“”]/);
   });
 
+  it("a flavour line that is nothing but quotation marks says nothing — never “Its mood: .”", () => {
+    const prompt = reartArtPrompt({ title: "Forest", typeLine: "Basic Land — Forest", flavorText: '“”', rulesText: "{T}: Add {G}." }, STYLE, null, "plain");
+    expect(prompt).not.toMatch(/Its mood/);
+    expect(prompt.startsWith(`Fantasy illustration of Forest, a Basic Land — Forest. ${LOOK}`)).toBe(true);
+  });
+
   it("takes “an” before a vowel, and a card with no type or text is its name alone", () => {
     expect(reartCardLine({ title: "Sol Ring", typeLine: "Artifact" }, "plain")).toBe("Sol Ring, an Artifact");
     expect(reartArtPrompt({ title: "Forest", typeLine: null }, { preset: "surprise", theme: "" }, null, "plain")).toBe(
@@ -227,6 +284,15 @@ describe("the plain wording (every model but FLUX.2)", () => {
     expect(reartArtPrompt(subject, style, null, "flux2")).toBe(
       `An oil painting of "Archivist of "Lost" Hours", a Creature — Human Wizard, lit by a "dying" candle. "Every hour is filed." ${REART_NO_FRAME_LINE}`,
     );
+  });
+
+  it("{name} loses a title's own quotation marks too", () => {
+    const style = { ...STYLE, mode: "custom" as const, prompt: "A portrait of {name}, in oils" };
+    const subject = { title: 'Archivist of "Lost" Hours', typeLine: "Creature — Human Wizard" };
+    expect(reartArtPrompt(subject, style, null, "plain")).toBe(`A portrait of Archivist of Lost Hours, in oils. ${REART_PLAIN_CLOSING_LINE}`);
+    expect(reartArtPrompt(subject, style, null, "flux2")).toBe(`A portrait of Archivist of "Lost" Hours, in oils. ${REART_NO_FRAME_LINE}`);
+    // A title that is only marks is no name.
+    expect(reartArtPrompt({ title: '""', typeLine: null }, style, null, "plain")).toBe(`A portrait of an unnamed card, in oils. ${REART_PLAIN_CLOSING_LINE}`);
   });
 
   it("its closing line says the picture is art from edge to edge, with no text", () => {

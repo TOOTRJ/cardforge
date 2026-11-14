@@ -39,6 +39,7 @@ export function ReartCardWordsDialog({
   entry,
   style,
   framing = "flux2",
+  bodyMax,
   onSaved,
 }: {
   open: boolean;
@@ -49,6 +50,9 @@ export function ReartCardWordsDialog({
   style: ReartStyle;
   /** The wording the picked model is sent (the preview's). */
   framing?: ReartFraming;
+  /** The most of a prompt's body the picked model reads (absent: the
+   *  tool's own limit). */
+  bodyMax?: number;
   onSaved: (words: ReartCardWords | null) => void;
 }) {
   const [text, setText] = useState(entry.words?.text ?? "");
@@ -77,6 +81,7 @@ export function ReartCardWordsDialog({
     style,
     words,
     framing,
+    bodyMax,
   );
   const changed = (entry.words?.text ?? "") !== text.trim() || (entry.words?.only ?? false) !== (words ? only : false);
 

@@ -390,10 +390,11 @@ async function paintWith(
 }
 
 /** ONE gateway call to a multimodal model that answers with an image file
- *  (isMultimodalImageModel). A refusal it states (its finish reason is the
- *  content filter) is `art_blocked`, so the ladder walks to a softer prompt;
- *  an answer with no picture for any other reason is `art_failed`. Throws
- *  what the gateway throws: paintWith reports it. */
+ *  (isMultimodalImageModel). A refusal is `art_blocked`, so the ladder walks
+ *  to a softer prompt: the content filter as its finish reason, or WORDS in
+ *  place of the picture (these models decline in text: "I can't create…").
+ *  An answer with neither a picture nor a word is `art_failed`. Throws what
+ *  the gateway throws: paintWith reports it. */
 async function paintViaText(
   model: string,
   prompt: string,
@@ -413,8 +414,10 @@ async function paintViaText(
   });
   const file = result.files.find((f) => f.mediaType?.startsWith("image/"));
   if (file) return { ok: true, bytes: file.uint8Array, contentType: file.mediaType ?? "image/png", model };
-  const refused = result.finishReason === "content-filter";
-  console.warn(`[ai:image] ${model} returned no image (${result.finishReason ?? "no reason"}).`);
+  const said = typeof result.text === "string" && result.text.trim().length > 0;
+  const refused = result.finishReason === "content-filter" || said;
+  // Never the model's words in the log: they can quote the prompt.
+  console.warn(`[ai:image] ${model} returned no image (${result.finishReason ?? "no reason"}${said ? ", text only" : ""}).`);
   return refused
     ? { ok: false, error: AI_FAILURE_COPY.art_blocked, failure: "art_blocked" }
     : { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };

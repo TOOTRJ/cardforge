@@ -29,6 +29,7 @@ import {
   REART_VISIBILITY_VALUES,
   buildReartPrompt,
   normalizeReartStyle,
+  reartBodyMaxOf,
   reartModelLabel,
   reartModelOf,
   reartRunMode,
@@ -152,6 +153,7 @@ export function ReartStudio({
   const [pickedModel, setModel] = useState<ReartModelId>(REART_DEFAULT_MODEL);
   const model: ReartModelId = canPickModel ? pickedModel : REART_DEFAULT_MODEL;
   const picked = reartModelOf(model);
+  const bodyMax = reartBodyMaxOf(model);
   const [filter, setFilter] = useState<ReartGridFilter>("all");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -200,8 +202,9 @@ export function ReartStudio({
       { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
       style,
       card.words,
-      // In the wording the picked model is sent.
+      // In the wording the picked model is sent, held to what it reads.
       picked.framing,
+      bodyMax,
     );
     return {
       name: card.name,
@@ -211,7 +214,7 @@ export function ReartStudio({
       // A real card's text isn't known here: it is read when it is painted.
       partial: card.kind === "printing",
     };
-  }, [paintable, style, picked.framing]);
+  }, [paintable, style, picked.framing, bodyMax]);
 
   const doneCount = runner.steps.filter((s) => s.status === "done").length;
   const failedCount = runner.steps.filter((s) => s.status === "failed").length;
@@ -715,6 +718,7 @@ export function ReartStudio({
           open={wordsOpen}
           onOpenChange={setWordsOpen}
           framing={picked.framing}
+          bodyMax={bodyMax}
           deckId={deck.id}
           entry={wordsEntry}
           style={style}

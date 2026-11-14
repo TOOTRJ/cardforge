@@ -107,7 +107,12 @@ export const REART_MODELS = [
     id: "bfl/flux-kontext-pro",
     label: "FLUX.1 Kontext [pro]",
     framing: "plain",
-    hint: "Black Forest Labs' editing model. It reads about the first 2,000 characters of a prompt.",
+    hint: "Black Forest Labs' editing model. It reads a shorter prompt than the others (512 tokens): a long one is cut sooner.",
+    // 512 tokens (BFL's Kontext prompting guide) is about 1,800 characters:
+    // the body is held so that the lines always added after it — the
+    // closing line, "fully clothed", a softened rung's suffix — are still
+    // inside what the model reads. Past it they were sent and never read.
+    bodyMax: 1400,
   },
   {
     id: "spacexai/grok-imagine-image",
@@ -127,7 +132,7 @@ export const REART_MODELS = [
     framing: "plain",
     hint: "Google's image model (Nano Banana 2).",
   },
-] as const satisfies ReadonlyArray<{ id: string; label: string; framing: ReartFraming; hint: string }>;
+] as const satisfies ReadonlyArray<{ id: string; label: string; framing: ReartFraming; hint: string; bodyMax?: number }>;
 
 export type ReartModelId = (typeof REART_MODELS)[number]["id"];
 export const REART_MODEL_IDS = REART_MODELS.map((model) => model.id) as [ReartModelId, ...ReartModelId[]];
@@ -136,6 +141,14 @@ export const REART_DEFAULT_MODEL: ReartModelId = "auto";
 /** The model of that id, or Automatic (an id the list doesn't know). */
 export function reartModelOf(id: string | null | undefined): (typeof REART_MODELS)[number] {
   return REART_MODELS.find((model) => model.id === id) ?? REART_MODELS[0];
+}
+
+/** The most of a prompt's body (what comes before the lines that are always
+ *  added) a run of that id sends: the model's own, shorter limit where it
+ *  has one, else REART_PROMPT_BODY_MAX. */
+export function reartBodyMaxOf(id: string | null | undefined): number {
+  const model = reartModelOf(id);
+  return "bodyMax" in model ? model.bodyMax : REART_PROMPT_BODY_MAX;
 }
 
 /** The gateway model a run of that id paints with — undefined for
@@ -164,7 +177,8 @@ export function canPickReartModel(
 }
 
 /** What a run that names a model is told when its maker may not pick one. */
-export const REART_MODEL_NOT_YOURS = "Choosing the model is for this tool's testers — the run wasn't started. Reload the page and try again.";
+export const REART_MODEL_NOT_YOURS =
+  "Choosing the model is for this tool's testers. Nothing was painted or charged — reload the page and start the run again.";
 
 /** Gateway models a picture may name that are not in the picker (what
  *  Automatic paints with), by their names. */
@@ -478,7 +492,7 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string, fram
   const text = (value: string) => (framing === "plain" ? unquoted(value) : value);
   const values: Record<string, string> = {
     card: own ? withoutStop(own) : reartCardLine(subject, framing),
-    name: subject.title.trim() || "an unnamed card",
+    name: text(subject.title.trim()) || "an unnamed card",
     type: subject.typeLine?.trim() ?? "",
     flavor: text(braceWords(sceneWords(subject.flavorText, 200))),
     flavour: text(braceWords(sceneWords(subject.flavorText, 200))),
@@ -510,12 +524,13 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string, fram
  *  (no frame, fully clothed, the softened rung's suffix) always fit. */
 export const REART_PROMPT_BODY_MAX = 3000;
 
-/** Cut at REART_PROMPT_BODY_MAX — on a word where one ends near the cut;
+/** Cut at `max` (REART_PROMPT_BODY_MAX, or the picked model's own shorter
+ *  limit) — on a word where one ends near the cut;
  *  text with no spaces to cut on (one long token, a script written without
  *  them) is cut where it stands rather than back to its first space. */
-function clipBody(text: string): { text: string; cut: boolean } {
-  if (text.length <= REART_PROMPT_BODY_MAX) return { text, cut: false };
-  const hard = clipAt(text, REART_PROMPT_BODY_MAX);
+function clipBody(text: string, max: number): { text: string; cut: boolean } {
+  if (text.length <= max) return { text, cut: false };
+  const hard = clipAt(text, max);
   const onWord = hard.replace(/\s+\S*$/, "");
   const kept = hard.length - onWord.length > 200 ? hard : onWord;
   return { text: kept.replace(/[\s,;:]+$/, ""), cut: true };
@@ -544,6 +559,9 @@ export function buildReartPrompt(
   style: ReartStyle,
   words?: ReartCardWords | null,
   framing: ReartFraming = "flux2",
+  /** The picked model's own body limit (reartBodyMaxOf), never more than
+   *  the tool's. */
+  bodyMax: number = REART_PROMPT_BODY_MAX,
 ): { prompt: string; cut: boolean } {
   const clean = normalizeReartStyle(style);
   const own = flatLine(cleanReartCardWords(words?.text));
@@ -560,9 +578,12 @@ export function buildReartPrompt(
       framing === "plain"
         ? [
             `Fantasy illustration of ${reartCardLine(subject, "plain")}.`,
-            // No quotation marks, and no stray colon a removed symbol left.
+            // No quotation marks, and no stray colon a removed symbol left;
+            // a line that was nothing but marks says nothing.
             flavor
-              ? withStop(`Its mood: ${braceWords(unquoted(flavor))}`)
+              ? braceWords(unquoted(flavor))
+                ? withStop(`Its mood: ${braceWords(unquoted(flavor))}`)
+                : ""
               : braceWords(unquoted(rules))
                 ? withStop(`As a scene, what it does: ${braceWords(unquoted(rules))}`)
                 : "",
@@ -573,7 +594,7 @@ export function buildReartPrompt(
           ];
     body = [...(own ? [withStop(own)] : subjectLines), reartStyleBlock(clean, framing)].filter(Boolean).join(" ");
   }
-  const { text, cut } = clipBody(body);
+  const { text, cut } = clipBody(body, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX)));
   // The template's own block ends as it always did; the maker's words get
   // a stop when they have none.
   const ended = clean.mode === "custom" || own ? withStop(text) : text;
@@ -586,8 +607,9 @@ export function reartArtPrompt(
   style: ReartStyle,
   words?: ReartCardWords | null,
   framing: ReartFraming = "flux2",
+  bodyMax: number = REART_PROMPT_BODY_MAX,
 ): string {
-  return buildReartPrompt(subject, style, words, framing).prompt;
+  return buildReartPrompt(subject, style, words, framing, bodyMax).prompt;
 }
 
 /**

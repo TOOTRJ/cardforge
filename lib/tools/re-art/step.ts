@@ -30,6 +30,7 @@ import {
   REART_VISIBILITY_VALUES,
   canPickReartModel,
   reartArtPrompt,
+  reartBodyMaxOf,
   reartEntryState,
   reartGatewayModel,
   reartModelOf,
@@ -146,6 +147,11 @@ type OwnCard = {
 const OWN_CARD_COLUMNS =
   "id, owner_id, title, card_type, supertype, subtypes, cost, color_identity, rules_text, flavor_text, artist_credit, frame_style, back_face, art_url, art_position";
 
+/** The model a run names, as its step paints with it: the gateway id
+ *  (undefined: the image door's default and backup), the wording it is sent
+ *  and the most of a prompt's body it reads. */
+type StepModel = { gateway: string | undefined; framing: ReartFraming; bodyMax: number };
+
 /** A card's own words are its FRONT's picture: a back face is painted from
  *  the deck's prompt alone. */
 const wordsFor = (face: "front" | "back", words: ReartCardWords | null) => (face === "front" ? words : null);
@@ -158,7 +164,7 @@ function payloadPrompt(
   face: "front" | "back",
   style: ReartStyle,
   words: ReartCardWords | null,
-  framing: ReartFraming,
+  model: StepModel,
 ) {
   const back = face === "back" ? payload.back_face : undefined;
   const typeLine = buildTypeLine({
@@ -169,7 +175,7 @@ function payloadPrompt(
   const own = wordsFor(face, words);
   return {
     style: reartLadderStyle(style),
-    exact: promptIsExact(style, own, framing),
+    exact: promptIsExact(style, own, model.framing),
     prompt: reartArtPrompt(
       {
         title: back?.title ?? payload.title,
@@ -179,7 +185,8 @@ function payloadPrompt(
       },
       style,
       own,
-      framing,
+      model.framing,
+      model.bodyMax,
     ),
   };
 }
@@ -226,7 +233,11 @@ export async function runReartStep(
   const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
   // The model the run names (the plan's schema holds it to the tool's own
   // list): painted with alone, in the wording that model takes.
-  const model = { gateway: reartGatewayModel(plan.model), framing: reartModelOf(plan.model).framing };
+  const model: StepModel = {
+    gateway: reartGatewayModel(plan.model),
+    framing: reartModelOf(plan.model).framing,
+    bodyMax: reartBodyMaxOf(plan.model),
+  };
 
   // The entry, from the caller's OWN deck again. The deck is embedded by
   // its foreign key's NAME: unnamed, the API refuses the read the day
@@ -287,7 +298,7 @@ export async function runReartStep(
       choices: reartBulkChoices(style, plan.visibility),
       aiLabel: "deck_reart_art",
       imageModel: model.gateway,
-      artPrompt: (payload, face) => payloadPrompt(payload, face, style, words, model.framing),
+      artPrompt: (payload, face) => payloadPrompt(payload, face, style, words, model),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
       onSaved: async (newCardId, art, models) => {
         const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
@@ -338,7 +349,7 @@ async function paintOwnCard(
   cardId: string,
   repaint: boolean,
   words: ReartCardWords | null,
-  model: { gateway: string | undefined; framing: ReartFraming },
+  model: StepModel,
   deps: BulkStepDeps,
 ): Promise<JobStep> {
   const supabase = await createClient();
@@ -448,6 +459,7 @@ async function paintOwnCard(
         style,
         own,
         model.framing,
+        model.bodyMax,
       );
       await logAiCall(userId, "deck_reart_art");
       const image = await generateImageWithFallbacks(

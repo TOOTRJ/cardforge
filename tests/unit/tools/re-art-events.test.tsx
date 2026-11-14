@@ -124,16 +124,18 @@ vi.mock("@/components/tools/re-art/reart-card-words-dialog", () => ({
     entry,
     style,
     framing,
+    bodyMax,
     onSaved,
   }: {
     open: boolean;
     entry: ReartStudioEntry;
     style: { mode?: string };
     framing?: string;
+    bodyMax?: number;
     onSaved: (words: { text: string; only: boolean } | null) => void;
   }) =>
     open ? (
-      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode} data-framing={framing}>
+      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode} data-framing={framing} data-body-max={bodyMax}>
         <button type="button" onClick={() => onSaved({ text: "a wyrm asleep", only: false })}>
           save words
         </button>
@@ -821,6 +823,15 @@ describe("the model picker (0211) — for admins and testers", () => {
     expect(screen.getByTestId("style-panel").getAttribute("data-framing")).toBe("plain");
     await press("edit words");
     expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-framing")).toBe("plain");
+    // Gemini reads the tool's whole body.
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-body-max")).toBe("3000");
+  });
+
+  it("a model that reads a shorter prompt: the previews are cut where the model's prompt is", async () => {
+    render(studio(null, { canPickModel: true }));
+    await pick("FLUX.1 Kontext [pro]");
+    await press("edit words");
+    expect(screen.getByRole("dialog", { name: /Words for/ }).getAttribute("data-body-max")).toBe("1400");
   });
 
   it("a run's panel names who painted each card, and its outcome says which model the run named", async () => {

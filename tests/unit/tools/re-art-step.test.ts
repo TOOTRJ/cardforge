@@ -683,6 +683,19 @@ describe("the model that paints (0211)", () => {
     expect(ladder(1)).toEqual(ladder(0));
   });
 
+  it("a model that reads a shorter prompt is sent a shorter one: the closing line stays inside what it reads", async () => {
+    const LONG = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 60 }, () => "{card} in thick oil paint, candle-lit").join(", ") };
+    m.styleAdmin.mockResolvedValue(LONG);
+    await run({ ...planWith(KONTEXT), style: LONG });
+    const [kontext] = ladder();
+    expect(kontext.endsWith(PLAIN_CLOSING)).toBe(true);
+    expect(kontext.length).toBeLessThanOrEqual(1400 + 2 + PLAIN_CLOSING.length);
+    // The same prompt on a model with no limit of its own is sent whole.
+    await run({ ...planWith("spacexai/grok-imagine-image-2.0"), style: LONG });
+    expect(ladder(1)[0].length).toBeGreaterThan(2400);
+    expect(ladder(1)[0].endsWith(PLAIN_CLOSING)).toBe(true);
+  });
+
   it("the maker's own words go to a named model in its wording too", async () => {
     m.words.mockResolvedValue({ ok: true, words: { text: "A lone lighthouse in a storm, woodcut", only: true } });
     await run(planWith("spacexai/grok-imagine-image"));

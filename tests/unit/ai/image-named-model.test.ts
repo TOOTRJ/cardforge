@@ -27,7 +27,7 @@ const s = vi.hoisted(() => ({
   /** What the next image call does, by model: "paint" (default) or an error message. */
   image: new Map<string, string>(),
   /** What the next text call answers. */
-  text: null as null | { files: Array<{ mediaType: string; uint8Array: Uint8Array }>; finishReason?: string } | { error: string },
+  text: null as null | { files: Array<{ mediaType: string; uint8Array: Uint8Array }>; finishReason?: string; text?: string } | { error: string },
 }));
 
 vi.mock("@/lib/ai/provider", () => ({ isGatewayConfigured: () => true }));
@@ -208,6 +208,25 @@ describe("Gemini's image models answer a text call with an image file", () => {
     const empty = await generateImageWithFallbacks(["As written.", "Dressed."], WINDOW, { model: GEMINI, budgetMs: 150_000 });
     expect(empty).toMatchObject({ ok: false, failure: "art_failed", safetyBlocked: false });
     expect(s.calls).toHaveLength(1);
+  });
+
+  it("words in place of the picture are a refusal too (these models decline in text) — and never reach the log", async () => {
+    const warned = vi.mocked(console.warn);
+    s.text = { files: [], finishReason: "stop", text: "I can't create that image of a goblin, but I can describe one." };
+    const declined = await generateImageWithFallbacks(["As written.", "Dressed."], WINDOW, { model: GEMINI, budgetMs: 150_000 });
+    expect(declined).toMatchObject({ ok: false, failure: "art_blocked", safetyBlocked: true });
+    // The softer prompt was tried.
+    expect(s.calls).toHaveLength(2);
+    expect(JSON.stringify(warned.mock.calls)).not.toMatch(/goblin|describe/);
+    expect(JSON.stringify(warned.mock.calls)).toMatch(/text only/);
+    // A picture that comes WITH words is a picture.
+    s.calls.length = 0;
+    s.text = { files: [{ mediaType: "image/png", uint8Array: new Uint8Array([7]) }], finishReason: "stop", text: "Here is your goblin." };
+    const painted = await generatePlainImage("A goblin.", WINDOW, { model: GEMINI, timeoutMs: 150_000 });
+    expect(painted).toMatchObject({ ok: true, model: GEMINI });
+    // Blank text is no words: an empty answer is a failure, not a refusal.
+    s.text = { files: [], finishReason: "stop", text: "  " };
+    expect(await generatePlainImage("A goblin.", WINDOW, { model: GEMINI, timeoutMs: 150_000 })).toMatchObject({ ok: false, failure: "art_failed" });
   });
 
   it("a gateway error is reported as any model's, never thrown", async () => {
