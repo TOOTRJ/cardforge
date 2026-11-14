@@ -32,6 +32,7 @@ const m = vi.hoisted(() => ({
   writePainted: vi.fn(),
   discard: vi.fn(),
   discardUnused: vi.fn(),
+  saveWords: vi.fn(),
   card: vi.fn(),
 }));
 
@@ -82,32 +83,36 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   readPaintedCards: m.painted,
   writePaintedCard: m.writePainted,
   discardReartArtIfUnused: m.discardUnused,
+  saveCardWords: m.saveWords,
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
 import {
   planReartAction,
   restoreReartArtAction,
+  saveReartCardWordsAction,
   saveReartStyleAction,
   startReartAction,
 } from "@/lib/tools/re-art/actions";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const STYLE = { preset: "storybook", theme: "a goblin warren" };
+const STYLE = { preset: "storybook", theme: "a goblin warren", mode: "preset" as const, prompt: "" };
+/** The maker's own prompt (0209). */
+const OWN = { ...STYLE, mode: "custom" as const, prompt: "{card}. A candle-lit oil painting of a goblin warren." };
 
 /** The lines the action wrote to the tool's log, as `[event, props]`. */
 function logged(): Array<[string, Record<string, unknown> | undefined]> {
   return m.event.mock.calls.map(([input]) => {
     expect(input).toMatchObject({ slug: "re-art-deck", userId: "u1", access: "grant" });
-    // Never a deck's or a card's name, the style's words or an id.
-    expect(JSON.stringify(input.props ?? {})).not.toMatch(/Sampler|Card \d|goblin|0000-4000|Cinderwing/i);
+    // Never a deck's or a card's name, the style's or a card's words or an id.
+    expect(JSON.stringify(input.props ?? {})).not.toMatch(/Sampler|Card \d|goblin|0000-4000|Cinderwing|candle|librarian/i);
     expect(Object.keys(input.props ?? {}).length).toBeLessThanOrEqual(12);
     return [input.event, input.props];
   });
 }
 
-function planned(entries: Array<{ kind: "own" | "printing"; credits?: number; paintedBefore?: boolean }>) {
+function planned(entries: Array<{ kind: "own" | "printing"; credits?: number; paintedBefore?: boolean; ownWords?: boolean }>) {
   return {
     ok: true,
     deck: { id: DECK, slug: "s", title: "Sampler", visibility: "private" },
@@ -124,6 +129,7 @@ function planned(entries: Array<{ kind: "own" | "printing"; credits?: number; pa
       cardId: entry.kind === "own" ? `card-${i}` : null,
       repaint: false,
       paintedBefore: entry.paintedBefore ?? false,
+      ownWords: entry.ownWords ?? false,
       notes: [],
     })),
   };
@@ -176,11 +182,30 @@ describe("startReartAction", () => {
           in_style: 0,
           scope: "all",
           preset: "storybook",
+          mode: "preset",
+          own_words: 0,
           style_changed: true,
           visibility: "private",
         },
       ],
     ]);
+  });
+
+  it("a run in the maker's own prompt carries it in the plan (never in the log), with how many cards have their own words", async () => {
+    m.saveStyle.mockResolvedValue({ ...OWN, version: 3 });
+    m.plan.mockResolvedValue({ ...planned([{ kind: "own", ownWords: true }, { kind: "own" }, { kind: "printing", ownWords: true }]), style: OWN });
+    expect((await startReartAction({ deckId: DECK, style: OWN })).ok).toBe(true);
+    const row = m.insert.mock.calls[0][0];
+    // The server-only plan holds the style the run was priced in, whole.
+    expect(row.plan.style).toEqual({ ...OWN, version: 3 });
+    // The entries name no words: the step reads them.
+    expect(JSON.stringify(row.plan.entries)).not.toMatch(/ownWords|librarian/);
+    // Nothing of the prompt reaches the owner-readable request or the log.
+    expect(JSON.stringify(row.request)).not.toMatch(/candle|goblin/);
+    const [[event, props]] = logged();
+    expect(event).toBe("start");
+    expect(props).toMatchObject({ mode: "custom", own_words: 2 });
+    expect(Object.keys(props ?? {}).length).toBeLessThanOrEqual(12);
   });
 
   it("logs a run by what it is: a sample, a first paint of one card, a re-roll", async () => {
@@ -314,7 +339,17 @@ describe("saveReartStyleAction", () => {
   it("logs the preset and the size of the words, never the words", async () => {
     m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "Sampler", visibility: "private" });
     expect(await saveReartStyleAction(DECK, STYLE)).toMatchObject({ ok: true, version: 2 });
-    expect(logged()).toEqual([["save_style", { preset: "storybook", theme_chars: STYLE.theme.length, version: 2 }]]);
+    expect(logged()).toEqual([
+      ["save_style", { preset: "storybook", theme_chars: STYLE.theme.length, mode: "preset", prompt_chars: 0, version: 2 }],
+    ]);
+    m.event.mockClear();
+    // The maker's own prompt: its length, never its words; the style comes
+    // back whole (the form takes it).
+    m.saveStyle.mockResolvedValue({ ...OWN, version: 3 });
+    expect(await saveReartStyleAction(DECK, OWN)).toEqual({ ok: true, style: OWN, version: 3 });
+    expect(logged()).toEqual([
+      ["save_style", { preset: "storybook", theme_chars: OWN.theme.length, mode: "custom", prompt_chars: OWN.prompt.length, version: 3 }],
+    ]);
     m.event.mockClear();
     m.saveStyle.mockResolvedValue(null);
     expect((await saveReartStyleAction(DECK, STYLE)).ok).toBe(false);
@@ -388,5 +423,62 @@ describe("restoreReartArtAction", () => {
     m.update.mockResolvedValue({ ok: false, formError: "No." });
     expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
     expect(logged()).toEqual([["restore_failed", { reason: "save_failed" }]]);
+  });
+});
+
+describe("saveReartCardWordsAction — one card's own words (0209)", () => {
+  const ENTRY = ID(7);
+  const WORDS = "an old goblin librarian asleep on a heap of overdue books";
+
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "Sampler", visibility: "private" });
+    m.card.mockReturnValue({ id: ENTRY });
+    m.saveWords.mockResolvedValue(true);
+  });
+
+  it("a closed tool, a body that can't be read, another's deck and an entry of another deck save nothing", async () => {
+    m.access.mockResolvedValueOnce(null);
+    expect((await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS, only: false })).ok).toBe(false);
+    for (const bad of [
+      ["not-a-deck", ENTRY, { text: WORDS }],
+      [DECK, "not-an-entry", { text: WORDS }],
+      [DECK, ENTRY, { text: 7 }],
+      [DECK, ENTRY, null],
+      [DECK, ENTRY, { text: "x".repeat(1201) }],
+    ] as const) {
+      expect((await saveReartCardWordsAction(bad[0], bad[1], bad[2])).ok).toBe(false);
+    }
+    m.deck.mockResolvedValueOnce(null);
+    expect((await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS })).ok).toBe(false);
+    m.card.mockReturnValueOnce(null);
+    expect((await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS })).ok).toBe(false);
+    expect(m.saveWords).not.toHaveBeenCalled();
+    expect(m.event).not.toHaveBeenCalled();
+  });
+
+  it("saves the words clean, on the caller's own deck and entry, and logs their length — never the words", async () => {
+    const result = await saveReartCardWordsAction(DECK, ENTRY, { text: `  ${WORDS}\n\n  `, only: true });
+    expect(result).toEqual({ ok: true, words: { text: WORDS, only: true } });
+    expect(m.saveWords).toHaveBeenCalledWith("u1", DECK, ENTRY, { text: WORDS, only: true });
+    expect(logged()).toEqual([["save_card_words", { chars: WORDS.length, only: true }]]);
+  });
+
+  it("`only` is true only when asked for; words past the limit are clipped", async () => {
+    await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS, only: "yes" });
+    expect(m.saveWords.mock.calls[0][3]).toEqual({ text: WORDS, only: false });
+    await saveReartCardWordsAction(DECK, ENTRY, { text: "w".repeat(900) });
+    expect(m.saveWords.mock.calls[1][3]).toEqual({ text: "w".repeat(600), only: false });
+  });
+
+  it("empty words remove them", async () => {
+    expect(await saveReartCardWordsAction(DECK, ENTRY, { text: "   ", only: true })).toEqual({ ok: true, words: null });
+    expect(m.saveWords).toHaveBeenCalledWith("u1", DECK, ENTRY, null);
+    expect(logged()).toEqual([["remove_card_words", undefined]]);
+  });
+
+  it("a write that failed says so and is `save_card_words_failed`", async () => {
+    m.saveWords.mockResolvedValue(false);
+    expect((await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS })).ok).toBe(false);
+    expect(logged()).toEqual([["save_card_words_failed", { reason: "not_saved" }]]);
   });
 });

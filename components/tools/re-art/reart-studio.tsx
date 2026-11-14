@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Paintbrush, Play, Sparkles } from "lucide-react";
+import { ReartCardWordsDialog } from "./reart-card-words-dialog";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -25,6 +26,7 @@ import {
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
   normalizeReartStyle,
+  reartArtPrompt,
   reartRunMode,
   reartRunOutcome,
   reartStateCountsInStyle,
@@ -35,8 +37,8 @@ import {
   suggestReartSample,
   type ReartRunInput,
   type ReartScope,
+  type NormalReartStyle,
   type ReartStudioEntry,
-  type ReartStyle,
   type ReartVisibility,
 } from "@/lib/tools/re-art/model";
 import { restoreReartArtAction, saveReartStyleAction } from "@/lib/tools/re-art/actions";
@@ -72,6 +74,14 @@ const REFRESH_EVERY_MS = 8_000;
 
 type Confirm = { title: string; description: string; input: ReartRunInput };
 
+/** A stored style as the form holds it (no version). */
+const styleOf = (stored: StoredReartStyle): NormalReartStyle => ({
+  preset: stored.preset,
+  theme: stored.theme,
+  mode: stored.mode,
+  prompt: stored.prompt,
+});
+
 export function ReartStudio({
   deck,
   storedStyle,
@@ -96,7 +106,10 @@ export function ReartStudio({
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const [savedStyle, setSavedStyle] = useState<StoredReartStyle | null>(storedStyle);
-  const [style, setStyle] = useState<ReartStyle>(storedStyle ? { preset: storedStyle.preset, theme: storedStyle.theme } : EMPTY_REART_STYLE);
+  const [style, setStyle] = useState<NormalReartStyle>(storedStyle ? styleOf(storedStyle) : EMPTY_REART_STYLE);
+  /** The card whose own words are being written (0209). */
+  const [wordsEntry, setWordsEntry] = useState<ReartStudioEntry | null>(null);
+  const [wordsOpen, setWordsOpen] = useState(false);
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
   const dirty = !savedStyle || !sameReartStyle(savedStyle, style);
@@ -151,6 +164,23 @@ export function ReartStudio({
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
     : paintable.filter((entry) => scopeTakes(scope, entry.kind) && !reartStateIsSettled(entry.state)).length;
   const slots = capacity ? remainingCapacity(capacity) : null;
+
+  // One card's whole prompt as the form's style would send it — the first
+  // card a run would paint, built by the function the step paints with.
+  const promptPreview = useMemo(() => {
+    const card = paintable[0];
+    if (!card) return null;
+    return {
+      name: card.name,
+      prompt: reartArtPrompt(
+        { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
+        style,
+        card.words,
+      ),
+      // A real card's text isn't known here: it is read when it is painted.
+      partial: card.kind === "printing",
+    };
+  }, [paintable, style]);
 
   const doneCount = runner.steps.filter((s) => s.status === "done").length;
   const failedCount = runner.steps.filter((s) => s.status === "failed").length;
@@ -379,11 +409,12 @@ export function ReartStudio({
             onReset={
               savedStyle
                 ? () => {
-                    setStyle({ preset: savedStyle.preset, theme: savedStyle.theme });
+                    setStyle(styleOf(savedStyle));
                     setSaveError(null);
                   }
                 : undefined
             }
+            preview={promptPreview}
             problem={problem}
             saveError={saveError}
             paintedInSaved={paintedInSaved}
@@ -599,9 +630,32 @@ export function ReartStudio({
           locked={running}
           paintBlocked={running ? null : paintBlocked}
           onPaintOne={paintOne}
+          onEditWords={(entry) => {
+            if (running) return;
+            setWordsEntry(entry);
+            setWordsOpen(true);
+          }}
           onRestore={restore}
         />
       </div>
+
+      {wordsEntry ? (
+        <ReartCardWordsDialog
+          open={wordsOpen}
+          onOpenChange={setWordsOpen}
+          deckId={deck.id}
+          entry={wordsEntry}
+          style={style}
+          onSaved={(words) => {
+            setWordsOpen(false);
+            // The dialog reopens on what was saved until the page's re-read
+            // lands.
+            setWordsEntry({ ...wordsEntry, words });
+            toast.success(words ? `${wordsEntry.name} has its own words.` : `${wordsEntry.name} is painted from its name and type again.`);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {confirm ? (
         <ReartConfirmDialog

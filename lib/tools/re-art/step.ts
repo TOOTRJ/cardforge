@@ -10,7 +10,7 @@ import { withCreditedStep } from "@/lib/ai/credited-step";
 import { logAiCall } from "@/lib/ai/rate-limit";
 import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
 import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
-import { artPromptLadder } from "@/lib/ai/art-prompt-safety";
+import { artPromptLadder, exactArtPromptLadder } from "@/lib/ai/art-prompt-safety";
 import { artShapeForBackFace, artShapeForFace, type ArtFace } from "@/lib/ai/art-aspect";
 import type { AiFailureKind } from "@/lib/ai/failure";
 import type { JobStep } from "@/lib/ai/generation-jobs";
@@ -27,16 +27,19 @@ import {
   REART_VISIBILITY_VALUES,
   reartArtPrompt,
   reartEntryState,
+  reartPromptIsMakers,
   reartLadderStyle,
   reartStateIsSettled,
   reartStepKey,
   reartStyleSchema,
   sameReartStyle,
   withBackArt,
+  type ReartCardWords,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
   discardReartArtIfUnused,
+  readCardWordsAdmin,
   readDeckStyleAdmin,
   readMadeForEntryAdmin,
   readPaintedCardAdmin,
@@ -133,17 +136,24 @@ type OwnCard = {
 const OWN_CARD_COLUMNS =
   "id, owner_id, title, card_type, supertype, subtypes, cost, color_identity, rules_text, flavor_text, artist_credit, frame_style, back_face, art_url, art_position";
 
-/** The prompt of a real card's picture: the card's own subject, the deck's
- *  style block. */
-function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: ReartStyle) {
+/** A card's own words are its FRONT's picture: a back face is painted from
+ *  the deck's prompt alone. */
+const wordsFor = (face: "front" | "back", words: ReartCardWords | null) => (face === "front" ? words : null);
+
+/** The prompt of a real card's picture: the card's own subject (or its own
+ *  words), in the deck's style or the maker's own deck prompt. `exact`: the
+ *  prompt is the maker's, and is never swapped for a generic one. */
+function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: ReartStyle, words: ReartCardWords | null) {
   const back = face === "back" ? payload.back_face : undefined;
   const typeLine = buildTypeLine({
     cardType: (back?.card_type ?? payload.card_type) as CardType | undefined,
     supertype: back ? (back.supertype ?? null) : (payload.supertype ?? null),
     subtypes: back ? (back.subtypes ?? []) : payload.subtypes,
   });
+  const own = wordsFor(face, words);
   return {
     style: reartLadderStyle(style),
+    exact: reartPromptIsMakers(style, own),
     prompt: reartArtPrompt(
       {
         title: back?.title ?? payload.title,
@@ -152,6 +162,7 @@ function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: 
         flavorText: back ? back.flavor_text : payload.flavor_text,
       },
       style,
+      own,
     ),
   };
 }
@@ -180,7 +191,7 @@ export async function runReartStep(
   if (!stored || stored.version !== plan.style.version || !sameReartStyle(stored, plan.style)) {
     return failed(step, REART_STYLE_CHANGED);
   }
-  const style: ReartStyle = { preset: stored.preset, theme: stored.theme };
+  const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
 
   // The entry, from the caller's OWN deck again.
   const supabase = await createClient();
@@ -193,6 +204,9 @@ export async function runReartStep(
     .maybeSingle();
   if (!entry) return failed(step, "This card is no longer in your deck.");
   if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
+  // The card's own words (0209), read here: the plan is the owner's to
+  // insert, so it names the entry and never the words.
+  const words = await readCardWordsAdmin(userId, plan.deck_id, entry.id);
 
   let cardId = entry.card_id;
   // A real card a Re-art run already MADE from this entry whose link didn't
@@ -210,7 +224,7 @@ export async function runReartStep(
   // An entry that is (now) linked to a card: the own-card path — a real
   // card another run already made lands here too, and is found in style.
   if (cardId) {
-    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, deps);
+    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, words, deps);
   }
   if (planned.kind !== "printing" || !entry.scryfall_id) {
     return failed(step, "This entry has no card to re-art any more.");
@@ -225,7 +239,7 @@ export async function runReartStep(
       source: { kind: "deck_entry", id: entry.id },
       choices: reartBulkChoices(style, plan.visibility),
       aiLabel: "deck_reart_art",
-      artPrompt: (payload, face) => payloadPrompt(payload, face, style),
+      artPrompt: (payload, face) => payloadPrompt(payload, face, style, words),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
       onSaved: async (newCardId, art) => {
         const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
@@ -274,6 +288,7 @@ async function paintOwnCard(
   version: number,
   cardId: string,
   repaint: boolean,
+  words: ReartCardWords | null,
   deps: BulkStepDeps,
 ): Promise<JobStep> {
   const supabase = await createClient();
@@ -372,6 +387,7 @@ async function paintOwnCard(
         supertype: onBack ? (back.supertype ?? null) : card.supertype,
         subtypes: (onBack ? back.subtypes : card.subtypes) ?? [],
       });
+      const own = wordsFor(face, words);
       const prompt = reartArtPrompt(
         {
           title,
@@ -380,14 +396,19 @@ async function paintOwnCard(
           flavorText: onBack ? back.flavor_text : card.flavor_text,
         },
         style,
+        own,
       );
       await logAiCall(userId, "deck_reart_art");
       const image = await generateImageWithFallbacks(
-        artPromptLadder(attempt, prompt, {
-          title,
-          colors: (card.color_identity ?? []) as ColorIdentity[],
-          style: reartLadderStyle(style),
-        }),
+        // The maker's own words are never swapped for a picture built from
+        // the card's name: refused twice, the step fails and is refunded.
+        reartPromptIsMakers(style, own)
+          ? exactArtPromptLadder(attempt, prompt)
+          : artPromptLadder(attempt, prompt, {
+              title,
+              colors: (card.color_identity ?? []) as ColorIdentity[],
+              style: reartLadderStyle(style),
+            }),
         face === "back" ? artShapeForBackFace(frontFace, back) : artShapeForFace(frontFace),
         { budgetMs },
       );

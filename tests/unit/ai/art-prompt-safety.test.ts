@@ -4,6 +4,7 @@ import {
   SAFE_ART_SUFFIX,
   artPromptForAttempt,
   artPromptLadder,
+  exactArtPromptLadder,
   fallbackArtPrompt,
   isSafetyBlockError,
   softenArtPrompt,
@@ -117,5 +118,27 @@ describe("attempt ladder", () => {
     expect(artPromptLadder(2, "A bloody duel", fallback)).toHaveLength(2);
     expect(artPromptLadder(3, "A bloody duel", fallback)).toHaveLength(1);
     expect(artPromptLadder(9, "A bloody duel", fallback)).toHaveLength(1);
+  });
+});
+
+describe("the ladder for a prompt its maker wrote word for word (Re-art deck's own prompts)", () => {
+  const OWN = "A naked blade on a velvet cushion, lit by one candle, oil on canvas.";
+
+  it("is the prompt as written, then the same words dressed — never a picture built from the card's name", () => {
+    const ladder = exactArtPromptLadder(1, OWN);
+    expect(ladder).toEqual([OWN, softenArtPrompt(OWN)]);
+    expect(ladder.join(" ")).not.toMatch(/Symbolic fantasy|evoking/);
+  });
+
+  it("a retry starts one prompt further on, and stays on the maker's words however often it is tried", () => {
+    expect(exactArtPromptLadder(2, OWN)).toEqual([softenArtPrompt(OWN)]);
+    expect(exactArtPromptLadder(5, OWN)).toEqual([softenArtPrompt(OWN)]);
+    expect(exactArtPromptLadder(0, OWN)).toEqual([OWN, softenArtPrompt(OWN)]);
+  });
+
+  it("the template's ladder still ends on the card's name (unchanged)", () => {
+    const ladder = artPromptLadder(1, OWN, { title: "Sol Ring" });
+    expect(ladder).toHaveLength(3);
+    expect(ladder[2]).toContain("Sol Ring");
   });
 });

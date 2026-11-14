@@ -83,11 +83,44 @@ vi.mock("@/components/tools/bulk-customize/bulk-progress", () => ({
 }));
 // The style form as a button that changes it (the form is then not saved).
 vi.mock("@/components/tools/re-art/reart-style-panel", () => ({
-  ReartStylePanel: ({ onChange }: { onChange: (next: { preset: string; theme: string }) => void }) => (
-    <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour" })}>
-      change style
-    </button>
+  ReartStylePanel: ({
+    onChange,
+    preview,
+  }: {
+    onChange: (next: { preset: string; theme: string; mode: "preset" | "custom"; prompt: string }) => void;
+    preview?: { name: string; prompt: string; partial: boolean } | null;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour", mode: "preset", prompt: "" })}>
+        change style
+      </button>
+      <button type="button" onClick={() => onChange({ preset: "watercolor", theme: "a haunted fen", mode: "custom", prompt: "An oil painting of {card}" })}>
+        own prompt
+      </button>
+      {preview ? <p data-testid="panel-preview">{`${preview.name} | ${preview.partial} | ${preview.prompt}`}</p> : null}
+    </div>
   ),
+}));
+// The card's own words (0209): the dialog as the studio opens it.
+vi.mock("@/components/tools/re-art/reart-card-words-dialog", () => ({
+  ReartCardWordsDialog: ({
+    open,
+    entry,
+    style,
+    onSaved,
+  }: {
+    open: boolean;
+    entry: ReartStudioEntry;
+    style: { mode?: string };
+    onSaved: (words: { text: string; only: boolean } | null) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode}>
+        <button type="button" onClick={() => onSaved({ text: "a wyrm asleep", only: false })}>
+          save words
+        </button>
+      </div>
+    ) : null,
 }));
 // The confirm as the studio opens it: its words, the run it would start, and
 // a Paint that starts it (the real dialog plans, prices and calls the start:
@@ -121,15 +154,20 @@ vi.mock("@/components/tools/re-art/reart-card-grid", () => ({
     entries,
     paintBlocked,
     onPaintOne,
+    onEditWords,
   }: {
     entries: ReartStudioEntry[];
     paintBlocked?: string | null;
     onPaintOne: (entry: ReartStudioEntry) => void;
+    onEditWords?: (entry: ReartStudioEntry) => void;
   }) => (
     <div>
       {paintBlocked ? <p data-testid="grid-blocked">{paintBlocked}</p> : null}
       <button type="button" onClick={() => onPaintOne(entries[0])}>
         paint one
+      </button>
+      <button type="button" onClick={() => onEditWords?.(entries[0])}>
+        edit words
       </button>
     </div>
   ),
@@ -248,6 +286,9 @@ const ENTRY: ReartStudioEntry = {
   state: null,
   canRestore: false,
   artNow: "own",
+  words: null,
+  rulesText: null,
+  flavorText: "Scales like slate.",
   credits: 1,
 };
 
@@ -262,7 +303,7 @@ const job = (steps: JobStep[], request: Record<string, unknown> = { sample: fals
   error: null,
 });
 
-const SAVED_STYLE = { preset: "watercolor", theme: "a haunted fen", version: 1 };
+const SAVED_STYLE = { preset: "watercolor", theme: "a haunted fen", mode: "preset" as const, prompt: "", version: 1 };
 
 function studio(
   pausedRunId: string | null = null,
@@ -558,5 +599,50 @@ describe("one card at a time — priced first, in the saved style, never by a st
     await press("paint one");
     expect(h.toastError).toHaveBeenCalledWith(expect.stringMatching(/Save the deck's style first/));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("the maker's own prompts in the studio (0209)", () => {
+  const press = async (text: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByText(text));
+    });
+  };
+
+  it("the style form is shown one card's whole prompt, built as the step builds it — and follows the form", async () => {
+    render(studio());
+    // The template: the card's own subject, then the deck's style block.
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(
+      /^Thornback Wyrm \| false \| Trading-card illustration of "Thornback Wyrm", a Creature — Wyrm\. Its mood: Scales like slate\. Rendered strictly in watercolor style\./,
+    );
+    await press("own prompt");
+    expect(screen.getByTestId("panel-preview").textContent).toBe(
+      'Thornback Wyrm | false | An oil painting of "Thornback Wyrm", a Creature — Wyrm. NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.',
+    );
+  });
+
+  it("a real card's preview is marked partial (its text is read when it is painted); the card's own words are in it", () => {
+    render(studio(null, { entry: { kind: "printing", flavorText: null, words: { text: "a wyrm asleep", only: false } } }));
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(/^Thornback Wyrm \| true \| a wyrm asleep\. Rendered strictly in watercolor style\./);
+  });
+
+  it("a card's own words open in their dialog with the form's style; saving them re-reads the page and paints nothing", async () => {
+    render(studio());
+    await press("own prompt");
+    await press("edit words");
+    const dialog = screen.getByRole("dialog", { name: "Words for Thornback Wyrm" });
+    expect(dialog.getAttribute("data-mode")).toBe("custom");
+    h.refresh.mockClear();
+    await press("save words");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(h.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("panel stop")).toBeNull();
+    expect(h.track).not.toHaveBeenCalled();
+  });
+
+  it("no words are edited while a run is going", async () => {
+    await begin([step(0)]);
+    await press("edit words");
+    expect(screen.queryByRole("dialog", { name: /Words for/ })).toBeNull();
   });
 });

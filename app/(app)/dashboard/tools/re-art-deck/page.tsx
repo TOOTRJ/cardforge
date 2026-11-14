@@ -15,6 +15,7 @@ import {
   getOwnedDeck,
   listReartRuns,
   readDeckStyle,
+  readCardWords,
   readPaintedCards,
   readReartPicturesByCard,
   bucketOfItem,
@@ -114,10 +115,11 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const [items, style, painted, runs, username, capacity, balance] = await Promise.all([
+  const [items, style, painted, words, runs, username, capacity, balance] = await Promise.all([
     listDeckPageCards(deck.id),
     readDeckStyle(deck.id),
     readPaintedCards(deck.id),
+    readCardWords(deck.id),
     listReartRuns(entry.userId, deck.id),
     getCurrentUsername(),
     getCardCapacity(),
@@ -164,6 +166,11 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       state: facts.state,
       canRestore: facts.canRestore,
       artNow: facts.artNow,
+      words: classified.kind === "skip" ? null : (words.get(e.id) ?? null),
+      // The prompt's preview fills {rules} / {flavor} from the maker's own
+      // card; a real card's are read from its printing when it is painted.
+      rulesText: own?.rules_text ?? null,
+      flavorText: own?.flavor_text ?? null,
       credits: own ? REART_CREDITS_PER_FACE * (rowHasBakedBack(own) ? 2 : 1) : REART_CREDITS_PER_FACE,
     };
   });

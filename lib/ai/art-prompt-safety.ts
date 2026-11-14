@@ -159,6 +159,18 @@ export function artPromptForAttempt(
   return fallbackArtPrompt(fallback);
 }
 
+/**
+ * The ladder for a prompt its MAKER wrote word for word (Re-art deck's own
+ * prompts, migration 0209): the prompt as written, then the same words with
+ * nudity dressed — and never the third rung, which paints from the card's
+ * name alone. A prompt both refuse fails (the step's credit comes back) and
+ * the maker rewords it; a generic picture is not what they asked for.
+ */
+export function exactArtPromptLadder(attempt: number, original: string): string[] {
+  const softened = softenArtPrompt(original);
+  return Array.from(new Set(attempt <= 1 ? [original, softened] : [softened]));
+}
+
 /** The ladder from this attempt onward — the image call walks it when a
  *  prompt is refused, so one credit still buys the best available art. */
 export function artPromptLadder(

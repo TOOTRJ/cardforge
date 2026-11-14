@@ -25,8 +25,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     deck of the maker's.
 // ---------------------------------------------------------------------------
 
-type Call = { table: string; op: "select" | "delete" | "upsert"; filters: Array<[string, unknown]>; head: boolean; row?: unknown };
-type Result = { data?: unknown; count?: number | null; error?: { message: string } | null };
+type Call = {
+  table: string;
+  op: "select" | "delete" | "upsert";
+  columns?: string;
+  filters: Array<[string, unknown]>;
+  head: boolean;
+  row?: unknown;
+};
+type Result = { data?: unknown; count?: number | null; error?: { message: string; code?: string } | null };
 
 const m = vi.hoisted(() => ({
   /** The caller's session client's answers. */
@@ -44,7 +51,8 @@ function clientOf(answerOf: (call: Call) => Promise<Result>) {
       const call: Call = { table, op: "select", filters: [], head: false };
       const answer = () => answerOf(call);
       const chain = {
-        select: (_columns: string, options?: { head?: boolean }) => {
+        select: (columns: string, options?: { head?: boolean }) => {
+          call.columns = columns;
           call.head = Boolean(options?.head);
           return chain;
         },
@@ -94,8 +102,14 @@ vi.mock("@/lib/tools/bulk-customize/server", () => ({ fetchBulkPrintings: vi.fn(
 import {
   discardReartArtIfUnused,
   planReartRun,
+  readCardWords,
+  readCardWordsAdmin,
+  readDeckStyle,
+  readDeckStyleAdmin,
   readReartPicturesByCard,
   revertPaintedCard,
+  saveCardWords,
+  saveDeckStyle,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
 import { REART_CHANGED_COPY } from "@/lib/tools/re-art/model";
@@ -136,12 +150,13 @@ describe("the plan — a card is in the style only while it still shows the styl
   });
 
   /** The deck with its stored style (version 3) and one own card. */
-  function deckWith(cardArt: string | null, painted: ReturnType<typeof row> | null) {
+  function deckWith(cardArt: string | null, painted: ReturnType<typeof row> | null, words: unknown[] = []) {
     m.items.mockResolvedValue([item(cardArt)]);
     m.query.mockImplementation(async (call: Call): Promise<Result> => {
       if (call.table === "decks") return { data: { id: DECK, slug: "embers", title: "Embers", visibility: "private" } };
       if (call.table === "deck_art_styles") return { data: { preset: "watercolor", theme: "a haunted fen", version: 3 } };
       if (call.table === "deck_reart_cards") return { data: painted ? [painted] : [] };
+      if (call.table === "deck_reart_prompts") return { data: words };
       return { data: null };
     });
   }
@@ -177,6 +192,16 @@ describe("the plan — a card is in the style only while it still shows the styl
   it("given its own art back from the tool: kept — a run over the deck leaves it alone", async () => {
     deckWith(ART("mine.png"), row(null));
     expect(await plan()).toMatchObject({ ok: true, inStyle: 1, entries: [], skipped: [] });
+  });
+
+  it("says which cards have words of their own (0209) — never the words", async () => {
+    deckWith(ART("mine.png"), null, [{ entry_id: ENTRY, prompt: "an old goblin librarian", only_words: true }]);
+    const withWords = await plan();
+    expect(withWords.ok && withWords.entries).toEqual([expect.objectContaining({ ownWords: true, notes: ["Its own words."] })]);
+    expect(JSON.stringify(withWords)).not.toContain("librarian");
+    deckWith(ART("mine.png"), null);
+    const without = await plan();
+    expect(without.ok && without.entries).toEqual([expect.objectContaining({ ownWords: false, notes: [] })]);
   });
 
   it("never painted: painted; and a named card in the style is painted again", async () => {
@@ -391,5 +416,140 @@ describe("Re-art's pictures on a card, from every deck of the maker's", () => {
     const partial = await readReartPicturesByCard(Array.from({ length: 150 }, (_, i) => `card-${i}`));
     expect(partial.complete).toBe(false);
     expect(partial.pictures.get("card-0")).toEqual([ART("ai-a.jpg")]);
+  });
+});
+
+describe("the deck's style — the template or the maker's own prompt (0209)", () => {
+  const OWN_ROW = { preset: "watercolor", theme: "a haunted fen", mode: "custom", prompt: "{card} in thick oil paint", version: 4, owner_id: ME };
+
+  it("reads the mode and the prompt with the style", async () => {
+    m.query.mockResolvedValue({ data: OWN_ROW, error: null });
+    expect(await readDeckStyle(DECK)).toEqual({ preset: "watercolor", theme: "a haunted fen", mode: "custom", prompt: "{card} in thick oil paint", version: 4 });
+    expect((m.query.mock.calls[0][0] as Call).columns).toContain("mode, prompt");
+  });
+
+  it("a row with neither (saved before 0209) is the template", async () => {
+    m.query.mockResolvedValue({ data: { preset: "watercolor", theme: "a haunted fen", version: 2 }, error: null });
+    expect(await readDeckStyle(DECK)).toEqual({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 2 });
+  });
+
+  it("a database 0209 hasn't reached is read again without its columns: every style there is the template", async () => {
+    m.query
+      .mockResolvedValueOnce({ data: null, error: { message: "column deck_art_styles.mode does not exist", code: "42703" } })
+      .mockResolvedValueOnce({ data: { preset: "storybook", theme: "", version: 1 }, error: null });
+    expect(await readDeckStyle(DECK)).toEqual({ preset: "storybook", theme: "", mode: "preset", prompt: "", version: 1 });
+    expect(m.query.mock.calls.map(([call]) => (call as Call).columns)).toEqual(["preset, theme, mode, prompt, version", "preset, theme, version"]);
+    // The step's read falls back the same way, and still holds the row to its owner.
+    m.admin
+      .mockResolvedValueOnce({ data: null, error: { message: "nope", code: "42703" } })
+      .mockResolvedValueOnce({ data: { preset: "storybook", theme: "", version: 1, owner_id: ME }, error: null });
+    expect(await readDeckStyleAdmin(ME, DECK)).toMatchObject({ mode: "preset", version: 1 });
+    m.admin.mockResolvedValue({ data: { ...OWN_ROW, owner_id: "someone" }, error: null });
+    expect(await readDeckStyleAdmin(ME, DECK)).toBeNull();
+  });
+
+  describe("saving", () => {
+    const upserts = () => m.admin.mock.calls.map(([call]) => call as Call).filter((call) => call.op === "upsert");
+    const stored = (row: unknown) =>
+      m.admin.mockImplementation(async (call: Call): Promise<Result> => (call.op === "upsert" ? { error: null } : { data: row, error: null }));
+
+    it("the same look keeps its version and writes nothing", async () => {
+      stored(OWN_ROW);
+      expect(await saveDeckStyle(ME, DECK, { preset: "watercolor", theme: "a haunted fen", mode: "custom", prompt: "  {card} in thick oil paint " })).toMatchObject({
+        version: 4,
+        mode: "custom",
+      });
+      expect(upserts()).toEqual([]);
+    });
+
+    it("a rewritten prompt — or a switch of mode — is a new look: the version moves on and the row holds both", async () => {
+      stored(OWN_ROW);
+      expect(await saveDeckStyle(ME, DECK, { ...OWN_ROW, mode: "custom", prompt: "{card} in thin washes" })).toMatchObject({ version: 5 });
+      expect(upserts()[0].row).toEqual({
+        deck_id: DECK,
+        owner_id: ME,
+        preset: "watercolor",
+        theme: "a haunted fen",
+        mode: "custom",
+        prompt: "{card} in thin washes",
+        version: 5,
+      });
+      m.admin.mockClear();
+      expect(await saveDeckStyle(ME, DECK, { preset: "watercolor", theme: "a haunted fen" })).toMatchObject({ version: 5, mode: "preset" });
+      expect(upserts()[0].row).toMatchObject({ mode: "preset", version: 5 });
+    });
+
+    it("a first style is version 1; another user's deck saves nothing; a failed write says so", async () => {
+      stored(null);
+      expect(await saveDeckStyle(ME, DECK, { preset: "anime", theme: "" })).toMatchObject({ version: 1, mode: "preset", prompt: "" });
+      stored({ ...OWN_ROW, owner_id: "someone" });
+      m.admin.mockClear();
+      stored({ ...OWN_ROW, owner_id: "someone" });
+      expect(await saveDeckStyle(ME, DECK, { preset: "anime", theme: "" })).toBeNull();
+      expect(upserts()).toEqual([]);
+      m.admin.mockImplementation(async (call: Call): Promise<Result> => (call.op === "upsert" ? { error: { message: "boom" } } : { data: null, error: null }));
+      expect(await saveDeckStyle(ME, DECK, { preset: "anime", theme: "" })).toBeNull();
+    });
+  });
+});
+
+describe("one card's own words (0209 deck_reart_prompts)", () => {
+  it("are read by entry, from the caller's own rows; a failed read is “none”", async () => {
+    m.query.mockResolvedValue({
+      data: [
+        { entry_id: ENTRY, prompt: "an old goblin librarian", only_words: false },
+        { entry_id: "e2", prompt: "a lighthouse", only_words: true },
+      ],
+      error: null,
+    });
+    const words = await readCardWords(DECK);
+    expect(words.get(ENTRY)).toEqual({ text: "an old goblin librarian", only: false });
+    expect(words.get("e2")).toEqual({ text: "a lighthouse", only: true });
+    expect((m.query.mock.calls[0][0] as Call).filters).toEqual([["deck_id", DECK]]);
+    // The table isn't there yet (a deploy ahead of its migration).
+    m.query.mockResolvedValue({ data: null, error: { message: "relation does not exist", code: "42P01" } });
+    expect((await readCardWords(DECK)).size).toBe(0);
+  });
+
+  it("the step reads one entry's with the service role, held to the owner", async () => {
+    m.admin.mockResolvedValue({ data: { entry_id: ENTRY, prompt: "a lighthouse", only_words: true, owner_id: ME }, error: null });
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ text: "a lighthouse", only: true });
+    expect((m.admin.mock.calls[0][0] as Call).filters).toEqual([
+      ["deck_id", DECK],
+      ["entry_id", ENTRY],
+    ]);
+    expect(await readCardWordsAdmin("someone", DECK, ENTRY)).toBeNull();
+    m.admin.mockResolvedValue({ data: null, error: null });
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toBeNull();
+    m.adminConfigured.mockReturnValue(false);
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toBeNull();
+  });
+
+  it("are saved clean under the owner; empty words remove the row", async () => {
+    m.admin.mockResolvedValue({ error: null });
+    expect(await saveCardWords(ME, DECK, ENTRY, { text: "  a   lighthouse\n in a storm ", only: true })).toBe(true);
+    const [write] = m.admin.mock.calls.map(([call]) => call as Call);
+    expect(write).toMatchObject({ table: "deck_reart_prompts", op: "upsert" });
+    expect(write.row).toEqual({ deck_id: DECK, entry_id: ENTRY, owner_id: ME, prompt: "a lighthouse in a storm", only_words: true });
+    m.admin.mockClear();
+    for (const none of [null, { text: "   ", only: true }]) await saveCardWords(ME, DECK, ENTRY, none);
+    for (const [call] of m.admin.mock.calls) {
+      expect(call).toMatchObject({ table: "deck_reart_prompts", op: "delete" });
+      expect((call as Call).filters).toEqual([
+        ["deck_id", DECK],
+        ["entry_id", ENTRY],
+        ["owner_id", ME],
+      ]);
+    }
+    expect(m.admin).toHaveBeenCalledTimes(2);
+  });
+
+  it("a failed write is false, and nothing is written without the service role", async () => {
+    m.admin.mockResolvedValue({ error: { message: "deck_reart_prompt_not_owner" } });
+    expect(await saveCardWords(ME, DECK, ENTRY, { text: "a lighthouse", only: false })).toBe(false);
+    m.adminConfigured.mockReturnValue(false);
+    m.admin.mockClear();
+    expect(await saveCardWords(ME, DECK, ENTRY, { text: "a lighthouse", only: false })).toBe(false);
+    expect(m.admin).not.toHaveBeenCalled();
   });
 });

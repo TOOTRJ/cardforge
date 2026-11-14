@@ -1,22 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
+  REART_CARD_WORDS_MAX,
   REART_CHANGED_COPY,
   REART_DEFAULT_VISIBILITY,
+  REART_NO_FRAME_LINE,
+  REART_PLACEHOLDERS,
+  REART_PROMPT_MAX,
   REART_SAMPLE_MAX,
   classifyReartEntry,
+  cleanReartCardWords,
+  cleanReartPrompt,
   cleanReartTheme,
+  normalizeReartStyle,
   reartArtIsOnCard,
   reartArtPrompt,
   reartCardFacts,
   reartCostDetail,
   reartCostLine,
   reartEntryState,
+  reartPromptIsMakers,
+  reartPromptNamesCard,
   reartRunSchema,
   reartStateCountsInStyle,
   reartStateIsSettled,
   reartStateLabel,
   reartStyleBlock,
   reartStyleProblem,
+  reartStyleSchema,
   sameReartStyle,
   scopeTakes,
   suggestReartSample,
@@ -320,5 +330,152 @@ describe("where a card stands against the deck's style", () => {
     expect(label("changed")).toBe("Has other art now");
     expect(label("earlier")).toBe("Painted in an earlier style");
     expect(label(null)).toBe("Your card — not painted yet");
+  });
+});
+
+describe("the maker's own prompts (migration 0209)", () => {
+  const KRENKO = {
+    title: "Krenko, Mob Boss",
+    typeLine: "Legendary Creature — Goblin Warrior",
+    rulesText: "{T}: Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control.",
+    flavorText: "“He displays a negotiator's sense of fairness.”",
+  };
+  const RING = { title: "Sol Ring", typeLine: "Artifact", rulesText: "{T}: Add {C}{C}.", flavorText: null };
+  const TEMPLATE = { preset: "watercolor", theme: "a drowned city, teal light" };
+  const own = (prompt: string) => ({ ...TEMPLATE, mode: "custom" as const, prompt });
+
+  describe("the deck's style", () => {
+    it("a style saved before 0209 — or a run's plan from before it — is the template", () => {
+      expect(normalizeReartStyle(TEMPLATE)).toEqual({ ...TEMPLATE, mode: "preset", prompt: "" });
+      const parsed = reartStyleSchema.parse(TEMPLATE);
+      expect(parsed).toEqual({ ...TEMPLATE, mode: "preset", prompt: "" });
+      expect(reartStyleSchema.safeParse({ ...TEMPLATE, mode: "freehand" }).success).toBe(false);
+      expect(reartStyleSchema.safeParse(own("x".repeat(REART_PROMPT_MAX * 2 + 1))).success).toBe(false);
+    });
+
+    it("the maker's prompt is stored clean and clipped to its limit", () => {
+      expect(cleanReartPrompt("  An oil\n\npainting\u200b of   {card}.  ")).toBe("An oil painting of {card}.");
+      expect(cleanReartPrompt("w".repeat(2000))).toHaveLength(REART_PROMPT_MAX);
+      expect(normalizeReartStyle(own("  thick   paint ")).prompt).toBe("thick paint");
+      expect(cleanReartCardWords("c".repeat(900))).toHaveLength(REART_CARD_WORDS_MAX);
+      expect(cleanReartCardWords(null)).toBe("");
+    });
+
+    it("the same look is the same mode and what THAT mode paints with", () => {
+      expect(sameReartStyle(own("thick paint"), own("thick paint"))).toBe(true);
+      expect(sameReartStyle(own("thick paint"), own("thin washes"))).toBe(false);
+      // Switching how the prompt is made is a new look, whatever the words.
+      expect(sameReartStyle(TEMPLATE, own("thick paint"))).toBe(false);
+      // What the OTHER mode holds is kept for a switch back and changes nothing.
+      expect(sameReartStyle(own("thick paint"), { ...own("thick paint"), preset: "anime", theme: "elsewhere" })).toBe(true);
+      expect(sameReartStyle(TEMPLATE, { ...TEMPLATE, prompt: "an old draft" })).toBe(true);
+    });
+
+    it("the maker's own prompt has to be written — braces alone are no words", () => {
+      expect(reartStyleProblem(own(""))).not.toBeNull();
+      expect(reartStyleProblem(own("{card}. {flavor}"))).not.toBeNull();
+      expect(reartStyleProblem(own("{card}. Thick oil paint, candle light."))).toBeNull();
+      // The template's own rule is as it was.
+      expect(reartStyleProblem({ preset: "surprise", theme: "" })).not.toBeNull();
+    });
+
+    it("names the card or doesn't", () => {
+      expect(reartPromptNamesCard("An oil painting of {card}")).toBe(true);
+      expect(reartPromptNamesCard("An oil painting of {NAME}, a {Type}")).toBe(true);
+      expect(reartPromptNamesCard("An oil painting of a storm")).toBe(false);
+      expect(reartPromptNamesCard("An oil painting of {subject}")).toBe(false);
+      expect(reartPromptNamesCard(null)).toBe(false);
+      // Asked twice: the answer doesn't depend on the last one.
+      expect(reartPromptNamesCard("{card}")).toBe(true);
+      expect(reartPromptNamesCard("{card}")).toBe(true);
+      expect(REART_PLACEHOLDERS.map((name) => name.token)).toEqual(["{card}", "{name}", "{type}", "{flavor}", "{rules}"]);
+      for (const name of REART_PLACEHOLDERS) expect(reartPromptNamesCard(name.token)).toBe(true);
+    });
+  });
+
+  describe("one picture's prompt", () => {
+    it("the maker's own deck prompt REPLACES the template: its braces filled in, then the no-frame line", () => {
+      const prompt = reartArtPrompt(KRENKO, own("An oil painting of {card}, candle-lit. Its mood: {flavor}"));
+      expect(prompt).toBe(
+        `An oil painting of "Krenko, Mob Boss", a Legendary Creature — Goblin Warrior, candle-lit. Its mood: “He displays a negotiator's sense of fairness.” ${REART_NO_FRAME_LINE}`,
+      );
+      // Nothing of the template: no "Trading-card illustration", no style block.
+      expect(prompt).not.toMatch(/Trading-card illustration|Rendered strictly|cohesive set|drowned city/);
+    });
+
+    it("fills each name on its own, whatever its case, and cleans a card's text as the template does", () => {
+      const prompt = reartArtPrompt(KRENKO, own("{Name} / {TYPE} / {rules} / {flavour}"));
+      // Symbols are out of the card's own text, with the colon one leaves
+      // behind ("{T}: Create…").
+      expect(prompt).toBe(
+        `Krenko, Mob Boss / Legendary Creature — Goblin Warrior / Create X 1/1 red Goblin creature tokens, where X is the number of Goblins you control / “He displays a negotiator's sense of fairness.” ${REART_NO_FRAME_LINE}`,
+      );
+      expect(prompt).not.toContain("{T}");
+      // A brace name the tool doesn't know is the maker's own text.
+      expect(reartArtPrompt(RING, own("{card} beside a {lamp}"))).toContain('"Sol Ring", an Artifact beside a {lamp}.');
+    });
+
+    it("a name the card has nothing for leaves no stray comma behind", () => {
+      expect(reartArtPrompt(RING, own("A painting of {name}, {flavor}, in gold leaf."))).toBe(
+        `A painting of Sol Ring, in gold leaf. ${REART_NO_FRAME_LINE}`,
+      );
+      expect(reartArtPrompt({ title: "", typeLine: null }, own("{card}: {type}"))).toBe(`"an unnamed card". ${REART_NO_FRAME_LINE}`);
+    });
+
+    it("a card's own words stand where {card} stands — or first, when the prompt has no {card}", () => {
+      const words = { text: "A goblin chef juggling knives.", only: false };
+      expect(reartArtPrompt(KRENKO, own("An oil painting of {card}, candle-lit"), words)).toBe(
+        `An oil painting of A goblin chef juggling knives, candle-lit. ${REART_NO_FRAME_LINE}`,
+      );
+      expect(reartArtPrompt(KRENKO, own("Thick oil paint, candle light"), words)).toBe(
+        `A goblin chef juggling knives. Thick oil paint, candle light. ${REART_NO_FRAME_LINE}`,
+      );
+      // {name} is still the card's name: only {card} is its subject.
+      expect(reartArtPrompt(KRENKO, own("{card}, signed “{name}”"), words)).toContain("A goblin chef juggling knives, signed “Krenko, Mob Boss”");
+    });
+
+    it("in the template a card's own words replace its subject, and the deck's style block stays", () => {
+      const prompt = reartArtPrompt(KRENKO, TEMPLATE, { text: "a goblin chef juggling knives", only: false });
+      expect(prompt.startsWith("a goblin chef juggling knives. Rendered strictly in watercolor style.")).toBe(true);
+      expect(prompt).toContain("a drowned city, teal light");
+      expect(prompt).not.toMatch(/Trading-card illustration|Krenko|Its mood/);
+      expect(prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+    });
+
+    it("“only these words” is the card's whole prompt, in either mode", () => {
+      const words = { text: "A lone lighthouse in a storm, woodcut", only: true };
+      const expected = `A lone lighthouse in a storm, woodcut. ${REART_NO_FRAME_LINE}`;
+      expect(reartArtPrompt(KRENKO, TEMPLATE, words)).toBe(expected);
+      expect(reartArtPrompt(KRENKO, own("An oil painting of {card}"), words)).toBe(expected);
+      // No words: the switch means nothing.
+      expect(reartArtPrompt(KRENKO, TEMPLATE, { text: "  ", only: true })).toBe(reartArtPrompt(KRENKO, TEMPLATE));
+    });
+
+    it("without words of its own a card's template prompt is exactly what it was", () => {
+      expect(reartArtPrompt(KRENKO, TEMPLATE, null)).toBe(reartArtPrompt(KRENKO, TEMPLATE));
+      const prompt = reartArtPrompt(KRENKO, TEMPLATE);
+      expect(prompt.startsWith('Trading-card illustration of "Krenko, Mob Boss", a Legendary Creature — Goblin Warrior. Its mood:')).toBe(true);
+      expect(prompt).toContain(reartStyleBlock(TEMPLATE));
+      expect(prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+    });
+
+    it("every prompt ends with the no-frame line, whoever wrote the rest", () => {
+      const words = { text: "a storm", only: false };
+      for (const prompt of [
+        reartArtPrompt(KRENKO, TEMPLATE),
+        reartArtPrompt(KRENKO, TEMPLATE, words),
+        reartArtPrompt(KRENKO, own("{card} in oils")),
+        reartArtPrompt(KRENKO, own("{card} in oils"), { ...words, only: true }),
+      ]) {
+        expect(prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+      }
+    });
+
+    it("a prompt is the maker's when they wrote the deck's, or the card has words", () => {
+      expect(reartPromptIsMakers(TEMPLATE)).toBe(false);
+      expect(reartPromptIsMakers(TEMPLATE, { text: "  ", only: true })).toBe(false);
+      expect(reartPromptIsMakers(TEMPLATE, { text: "a storm", only: false })).toBe(true);
+      expect(reartPromptIsMakers(own("{card} in oils"))).toBe(true);
+    });
   });
 });

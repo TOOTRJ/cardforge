@@ -15,6 +15,15 @@
 // (an edit of the art alone), and its old picture is kept so it can be put
 // back.
 //
+// The maker's OWN prompts (migration 0209): the deck's prompt can be the
+// tool's template (a preset and the deck's world — mode "preset") or words
+// the maker wrote themselves (mode "custom", up to REART_PROMPT_MAX, with
+// {card} / {name} / {type} / {flavor} / {rules} filled in per card), and any
+// card can have words of its own (its subject in the deck's look, or — "only
+// these words" — its whole prompt). ONE function builds every picture's
+// prompt, reartArtPrompt; the studio previews with it and the step paints
+// with it.
+//
 // Never touched: another creator's card (it keeps its art — a deck may hold
 // it, D3, but it is theirs), an emblem (owner rule for remixes: it prints
 // its walker's art), the maybeboard (not the deck).
@@ -43,6 +52,13 @@ export const REART_SAMPLE_MAX = 3;
 /** The longest description of the deck's world (0191's CHECK). */
 export const REART_THEME_MAX = 300;
 
+/** The longest prompt the maker writes for the deck themselves (0209's
+ *  CHECK on deck_art_styles.prompt). */
+export const REART_PROMPT_MAX = 1500;
+
+/** The longest words for one card (0209's CHECK on deck_reart_prompts). */
+export const REART_CARD_WORDS_MAX = 600;
+
 /** One credit per picture — two for a double-faced card (Bulk Customize's
  *  price, the AI deck remix's). */
 export const REART_CREDITS_PER_FACE = BULK_AI_ART_CREDITS_PER_FACE;
@@ -53,18 +69,33 @@ export const REART_CREDITS_PER_FACE = BULK_AI_ART_CREDITS_PER_FACE;
 
 const STYLE_IDS = [SURPRISE_PRESET_ID, ...STYLE_PRESETS.map((preset) => preset.id)] as [string, ...string[]];
 
+/** How the deck's prompt is made: the tool's template with a preset and the
+ *  deck's world ("preset"), or the maker's own prompt ("custom"). */
+export const REART_STYLE_MODES = ["preset", "custom"] as const;
+export type ReartStyleMode = (typeof REART_STYLE_MODES)[number];
+
 export const reartStyleSchema = z
   .object({
     /** A style preset's id, or "surprise" for none. */
     preset: z.enum(STYLE_IDS),
     /** The maker's own words about the deck's world and look. */
     theme: z.string().max(REART_THEME_MAX * 2),
+    /** Absent: the template (every style saved before 0209, and a plan a
+     *  run started before it). */
+    mode: z.enum(REART_STYLE_MODES).default("preset"),
+    /** The maker's own prompt (mode "custom"). */
+    prompt: z.string().max(REART_PROMPT_MAX * 2).default(""),
   })
   .strict();
 
-export type ReartStyle = { preset: string; theme: string };
+/** A style as a form or a caller hands it (`mode` and `prompt` may be
+ *  absent: the template). */
+export type ReartStyle = { preset: string; theme: string; mode?: ReartStyleMode; prompt?: string };
 
-export const EMPTY_REART_STYLE: ReartStyle = { preset: SURPRISE_PRESET_ID, theme: "" };
+/** A style as it is stored and compared: every field present. */
+export type NormalReartStyle = Required<ReartStyle>;
+
+export const EMPTY_REART_STYLE: NormalReartStyle = { preset: SURPRISE_PRESET_ID, theme: "", mode: "preset", prompt: "" };
 
 /** Starting points for the deck's world: the maker's words, one click
  *  away (they edit them after). Original, generic words only — no
@@ -82,31 +113,63 @@ export const REART_THEME_IDEAS: ReadonlyArray<{ label: string; theme: string }> 
 // set lib/ai/presets.ts cleanTwist drops).
 const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f-\u009f؜​‎‏‪-‮⁦-⁩]/g;
 
-/** The maker's words as the prompt takes them: unsafe characters out,
- *  whitespace folded, trimmed, clipped to REART_THEME_MAX. */
-export function cleanReartTheme(text: string | null | undefined): string {
+/** The maker's words as a prompt takes them: unsafe characters out,
+ *  whitespace folded, trimmed, clipped to `max`. */
+function cleanWords(text: string | null | undefined, max: number): string {
   if (!text) return "";
-  return text.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim().slice(0, REART_THEME_MAX).trim();
+  return text.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim().slice(0, max).trim();
 }
 
-/** A style as it is stored and compared (the preset known, the words clean). */
-export function normalizeReartStyle(style: ReartStyle): ReartStyle {
+/** The deck's world as the prompt takes it (clipped to REART_THEME_MAX). */
+export function cleanReartTheme(text: string | null | undefined): string {
+  return cleanWords(text, REART_THEME_MAX);
+}
+
+/** The maker's own deck prompt as it is stored and sent (REART_PROMPT_MAX). */
+export function cleanReartPrompt(text: string | null | undefined): string {
+  return cleanWords(text, REART_PROMPT_MAX);
+}
+
+/** One card's own words as they are stored and sent (REART_CARD_WORDS_MAX). */
+export function cleanReartCardWords(text: string | null | undefined): string {
+  return cleanWords(text, REART_CARD_WORDS_MAX);
+}
+
+/** A style as it is stored and compared (the preset known, the words clean,
+ *  the mode named). */
+export function normalizeReartStyle(style: ReartStyle): NormalReartStyle {
   const preset = stylePresetById(style.preset) ? style.preset : SURPRISE_PRESET_ID;
-  return { preset, theme: cleanReartTheme(style.theme) };
+  return {
+    preset,
+    theme: cleanReartTheme(style.theme),
+    mode: style.mode === "custom" ? "custom" : "preset",
+    prompt: cleanReartPrompt(style.prompt),
+  };
 }
 
+/** The same look: the same mode, and what that mode paints with (the
+ *  maker's prompt, or the preset and the deck's world). What the other mode
+ *  holds is kept for a switch back, and changes nothing a run paints. */
 export function sameReartStyle(a: ReartStyle | null | undefined, b: ReartStyle | null | undefined): boolean {
   if (!a || !b) return false;
   const x = normalizeReartStyle(a);
   const y = normalizeReartStyle(b);
-  return x.preset === y.preset && x.theme === y.theme;
+  if (x.mode !== y.mode) return false;
+  return x.mode === "custom" ? x.prompt === y.prompt : x.preset === y.preset && x.theme === y.theme;
 }
 
-/** Why a style can't paint yet, or null. A style is a preset or the
- *  deck's own words (at least a few letters) — "style first". */
+const letters = (text: string) => text.replace(/[^\p{L}]/gu, "").length;
+
+/** Why a style can't paint yet, or null. The template needs a preset or the
+ *  deck's own words (at least a few letters) — "style first"; the maker's
+ *  own prompt needs to be written. */
 export function reartStyleProblem(style: ReartStyle): string | null {
   const clean = normalizeReartStyle(style);
-  if (clean.preset === SURPRISE_PRESET_ID && clean.theme.replace(/[^\p{L}]/gu, "").length < 3) {
+  if (clean.mode === "custom") {
+    // The braces' names are not words of the maker's.
+    return letters(clean.prompt.replace(PLACEHOLDER, " ")) < 10 ? "Write the deck's prompt first." : null;
+  }
+  if (clean.preset === SURPRISE_PRESET_ID && letters(clean.theme) < 3) {
     return "Pick a style or describe the deck's world first.";
   }
   return null;
@@ -150,6 +213,10 @@ export type ReartSubject = {
   flavorText?: string | null;
 };
 
+/** One card's own words (0209 deck_reart_prompts): its subject, painted in
+ *  the deck's look — or, `only`, its whole prompt. */
+export type ReartCardWords = { text: string; only: boolean };
+
 /** Reminder text, symbols and markup out of a card text, clipped on a word. */
 function sceneWords(text: string | null | undefined, max: number): string {
   if (!text) return "";
@@ -164,23 +231,121 @@ function sceneWords(text: string | null | undefined, max: number): string {
   return `${plain.slice(0, max).replace(/\s+\S*$/, "")}…`;
 }
 
+/** The line every prompt ends with, whoever wrote the rest: the picture is
+ *  ART for a card, never a card. (The "fully clothed" line is added at the
+ *  gateway's door, lib/ai/image-gen.ts.) */
+export const REART_NO_FRAME_LINE = "NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.";
+
+/** The names the maker's own deck prompt may put in braces, filled in for
+ *  each card. `{card}` is the card's subject: its own words when it has
+ *  some, else its name and type. */
+export const REART_PLACEHOLDERS: ReadonlyArray<{ token: string; label: string; hint: string }> = [
+  { token: "{card}", label: "Card", hint: "The card's subject: the words you wrote for it, else its name and type." },
+  { token: "{name}", label: "Name", hint: "The card's name." },
+  { token: "{type}", label: "Type", hint: "The card's type line." },
+  { token: "{flavor}", label: "Flavour", hint: "The card's flavour text, shortened." },
+  { token: "{rules}", label: "Rules", hint: "What the card does, shortened." },
+];
+
+const PLACEHOLDER = /\{(card|name|type|flavou?r|rules)\}/gi;
+
+/** Whether the maker's own prompt names the card at all: one that doesn't
+ *  paints every card from the same words. */
+export function reartPromptNamesCard(prompt: string | null | undefined): boolean {
+  PLACEHOLDER.lastIndex = 0;
+  return PLACEHOLDER.test(prompt ?? "");
+}
+
+/** Ends as a sentence (a closing quote or bracket after the stop counts). */
+const withStop = (text: string) => (/[.!?…]["'”’)\]]*$/.test(text) ? text : `${text}.`);
+const withoutStop = (text: string) => text.replace(/[.\s]+$/, "");
+/** A card's own text as a brace's value: no stop at its end, and none of
+ *  the punctuation a removed symbol leaves at its start ("{T}: Add …"). */
+const braceWords = (text: string) => withoutStop(text.replace(/^[\s:;,.—–-]+/, ""));
+
+/** `"Name", a Type line` — what `{card}` stands for on a card with no words
+ *  of its own. */
+export function reartCardLine(subject: ReartSubject): string {
+  const title = subject.title.trim() || "an unnamed card";
+  const type = subject.typeLine?.trim() ?? "";
+  return `"${title}"${type ? `, ${/^[aeiou]/i.test(type) ? "an" : "a"} ${type}` : ""}`;
+}
+
+/** The maker's own deck prompt with its braces filled in for one card. A
+ *  card with words of its own puts them where `{card}` stands — or first,
+ *  when the prompt has no `{card}`. A name the card has nothing for leaves
+ *  no stray comma behind. */
+function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): string {
+  const values: Record<string, string> = {
+    card: own ? withoutStop(own) : reartCardLine(subject),
+    name: subject.title.trim() || "an unnamed card",
+    type: subject.typeLine?.trim() ?? "",
+    flavor: braceWords(sceneWords(subject.flavorText, 200)),
+    flavour: braceWords(sceneWords(subject.flavorText, 200)),
+    rules: braceWords(sceneWords(subject.rulesText, 160)),
+  };
+  let namesCard = false;
+  const filled = prompt
+    .replace(PLACEHOLDER, (_whole, name: string) => {
+      const key = name.toLowerCase();
+      if (key === "card") namesCard = true;
+      return values[key] ?? "";
+    })
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/[,;:]+(?=[.,;:!?])/g, "")
+    // …and none at the very end, where a name that came up empty stood.
+    .replace(/[\s,;:]+$/, "")
+    .trim();
+  return own && !namesCard ? `${withStop(own)} ${filled}` : filled;
+}
+
 /**
- * One picture's prompt: the card's OWN subject (its name, type line and a
- * hint of its flavour or what it does) then the deck's shared style block.
- * Never a real artist, never the source's art.
+ * One picture's prompt — the ONE builder the studio previews with and the
+ * step paints with:
+ *
+ *   * the card's OWN words alone, when the maker asked for only those;
+ *   * the maker's own deck prompt (mode "custom") with its braces filled in
+ *     for the card;
+ *   * else the template: the card's subject (its own words, or its name,
+ *     type line and a hint of its flavour or what it does), then the deck's
+ *     shared style block.
+ *
+ * Every one ends with the no-frame line. Never the source's art.
  */
-export function reartArtPrompt(subject: ReartSubject, style: ReartStyle): string {
+export function reartArtPrompt(subject: ReartSubject, style: ReartStyle, words?: ReartCardWords | null): string {
+  const clean = normalizeReartStyle(style);
+  const own = cleanReartCardWords(words?.text);
+  if (own && words?.only) return `${withStop(own)} ${REART_NO_FRAME_LINE}`;
+  if (clean.mode === "custom") {
+    return [withStop(fillDeckPrompt(clean.prompt, subject, own)), REART_NO_FRAME_LINE].join(" ");
+  }
   const flavor = sceneWords(subject.flavorText, 200);
   const rules = flavor ? "" : sceneWords(subject.rulesText, 160);
   const title = subject.title.trim() || "an unnamed card";
   return [
-    `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
-    flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
-    reartStyleBlock(style),
-    "NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.",
+    ...(own
+      ? [withStop(own)]
+      : [
+          `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
+          flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
+        ]),
+    reartStyleBlock(clean),
+    REART_NO_FRAME_LINE,
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/**
+ * The prompt is the MAKER's (their own deck prompt, or the card's own
+ * words): the safety ladder then never swaps it for a picture built from
+ * the card's name (lib/ai/art-prompt-safety.ts exactArtPromptLadder) — a
+ * prompt the provider refuses fails, with its credit back, and the maker
+ * rewords it.
+ */
+export function reartPromptIsMakers(style: ReartStyle, words?: ReartCardWords | null): boolean {
+  return normalizeReartStyle(style).mode === "custom" || Boolean(cleanReartCardWords(words?.text));
 }
 
 // ---------------------------------------------------------------------------
@@ -503,6 +668,12 @@ export type ReartStudioEntry = {
   canRestore: boolean;
   /** What the card shows now (the one-card confirm's words). */
   artNow: ReartArtNow;
+  /** The card's own words (0209), or null. */
+  words: ReartCardWords | null;
+  /** The card's own text, for the prompt's preview — the maker's own card;
+   *  a real card's is read from its printing when it is painted (null). */
+  rulesText: string | null;
+  flavorText: string | null;
   /** What painting it costs (a real card's is confirmed at plan time). */
   credits: number;
 };

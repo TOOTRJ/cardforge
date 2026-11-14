@@ -52,7 +52,8 @@ vi.mock("@/lib/ai/rate-limit", () => ({ logAiCall: vi.fn() }));
 vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: vi.fn() }));
 vi.mock("@/lib/ai/random-art", () => ({ persistGeneratedArt: vi.fn(), discardGeneratedArt: vi.fn() }));
 
-import { bulkStepFailureReason, runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
+import { bulkStepFailureReason, customizeSourceStep, runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
+import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000001";
@@ -329,6 +330,43 @@ describe("what a failed card records (`card_failed`)", () => {
     expect(bulkStepFailureReason({ error_code: "INSUFFICIENT_CREDITS" })).toBe("insufficient_credits");
     expect(bulkStepFailureReason({ error_code: null, failure: "art_store" })).toBe("art_store");
     expect(bulkStepFailureReason({})).toBe("other");
+  });
+});
+
+describe("a tool built on the core hands it the picture's prompt", () => {
+  const paintWith = async (exact: boolean | undefined) => {
+    const image = vi.mocked(generateImageWithFallbacks);
+    image.mockReset();
+    image.mockResolvedValue({ ok: false, error: "No picture.", failure: "art_failed", safetyBlocked: false });
+    m.plan.mockReturnValue({ ...PLANNED, changes: ["ai_art"], credits: 1 });
+    await customizeSourceStep(
+      "u1",
+      "job-1",
+      STEP,
+      {
+        source: { kind: "deck_entry", id: ENTRY_ID },
+        choices: { ...DEFAULT_BULK_CHOICES, art: "ai" },
+        aiLabel: "deck_reart_art",
+        artPrompt: () => ({ prompt: "A goblin chef, in thick oil paint.", style: "oil", ...(exact === undefined ? {} : { exact }) }),
+      },
+      DEPS,
+    );
+    return image.mock.calls[0][0] as string[];
+  };
+
+  it("a prompt that is its maker's own is dressed if refused, never swapped for one built from the card's name", async () => {
+    const ladder = await paintWith(true);
+    expect(ladder).toHaveLength(2);
+    expect(ladder[0]).toBe("A goblin chef, in thick oil paint.");
+    expect(ladder.join(" ")).not.toMatch(/Symbolic fantasy|Llanowar/);
+  });
+
+  it("any other prompt keeps the three rungs, ending on the card's name", async () => {
+    for (const exact of [false, undefined]) {
+      const ladder = await paintWith(exact);
+      expect(ladder).toHaveLength(3);
+      expect(ladder[2]).toMatch(/Symbolic fantasy[^.]*Llanowar Elves/);
+    }
   });
 });
 
