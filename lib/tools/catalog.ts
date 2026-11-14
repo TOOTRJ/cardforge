@@ -100,7 +100,7 @@ export const TOOL_CATALOG = [
     name: "Re-art deck",
     tagline: "Give every card of a deck new art in one shared style.",
     description:
-      "Pick one of your decks and define its look once: a style and a few words about its world. Try it on a few cards first, then paint the whole deck in that style. Real cards become your own versions with the new art, your own cards get new art on them, and any card can be re-rolled or given its old art back.",
+      "Pick one of your decks and define its look once: a style and a few words about its world, or a prompt you write yourself. Any card can have words of its own. Try it on a few cards first, then paint the whole deck in that style. Real cards become your own versions with the new art, your own cards get new art on them, and any card can be re-rolled or given its old art back.",
     highlights: [
       "One style for the whole deck, kept the same on every card",
       "Try it on three cards before you paint the deck",

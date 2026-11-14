@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Paintbrush, Play, Sparkles } from "lucide-react";
+import { ReartCardWordsDialog } from "./reart-card-words-dialog";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -24,6 +25,7 @@ import {
   REART_SCOPE_VALUES,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
+  buildReartPrompt,
   normalizeReartStyle,
   reartRunMode,
   reartRunOutcome,
@@ -31,12 +33,13 @@ import {
   reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
+  sameReartStyleFields,
   scopeTakes,
   suggestReartSample,
   type ReartRunInput,
   type ReartScope,
+  type NormalReartStyle,
   type ReartStudioEntry,
-  type ReartStyle,
   type ReartVisibility,
 } from "@/lib/tools/re-art/model";
 import { restoreReartArtAction, saveReartStyleAction } from "@/lib/tools/re-art/actions";
@@ -72,6 +75,14 @@ const REFRESH_EVERY_MS = 8_000;
 
 type Confirm = { title: string; description: string; input: ReartRunInput };
 
+/** A stored style as the form holds it (no version). */
+const styleOf = (stored: StoredReartStyle): NormalReartStyle => ({
+  preset: stored.preset,
+  theme: stored.theme,
+  mode: stored.mode,
+  prompt: stored.prompt,
+});
+
 export function ReartStudio({
   deck,
   storedStyle,
@@ -96,10 +107,20 @@ export function ReartStudio({
   const router = useRouter();
   const upgrade = useUpgradeModal();
   const [savedStyle, setSavedStyle] = useState<StoredReartStyle | null>(storedStyle);
-  const [style, setStyle] = useState<ReartStyle>(storedStyle ? { preset: storedStyle.preset, theme: storedStyle.theme } : EMPTY_REART_STYLE);
+  const [style, setStyle] = useState<NormalReartStyle>(storedStyle ? styleOf(storedStyle) : EMPTY_REART_STYLE);
+  /** The card whose own words are being written (0209). */
+  const [wordsEntry, setWordsEntry] = useState<ReartStudioEntry | null>(null);
+  const [wordsOpen, setWordsOpen] = useState(false);
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const dirty = !savedStyle || !sameReartStyle(savedStyle, style);
+  /** The form paints another LOOK than the deck's saved one (or none is
+   *  saved): a run in it starts a new version, and one card can't be
+   *  painted until it is saved. */
+  const lookChanged = !savedStyle || !sameReartStyle(savedStyle, style);
+  /** The form holds something to save: another look, or the OTHER mode's
+   *  draft (a prompt written and then left for the template — the same
+   *  look, but it was dropped on a reload). */
+  const dirty = !savedStyle || !sameReartStyleFields(savedStyle, style);
   const problem = reartStyleProblem(style);
 
   const paintable = useMemo(() => entries.filter((entry) => entry.kind !== "skip"), [entries]);
@@ -147,10 +168,33 @@ export function ReartStudio({
   /** As the list's "Left as they are" filter counts them: the cards a run
    *  never paints, and the ones that show other art now. */
   const leftAsTheyAre = entries.length - paintable.length + paintable.filter((entry) => entry.state === "changed").length;
-  const toPaint = dirty
+  const toPaint = lookChanged
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
     : paintable.filter((entry) => scopeTakes(scope, entry.kind) && !reartStateIsSettled(entry.state)).length;
   const slots = capacity ? remainingCapacity(capacity) : null;
+
+  // One card's whole prompt as the form's style would send it — the first
+  // card a run would paint, built by the function the step paints with.
+  const promptPreview = useMemo(() => {
+    // A card painted from the DECK's prompt: one with no words of its own,
+    // else one whose words stand in it — never one that uses only its own
+    // words (its prompt shows nothing of the deck's) unless every card does.
+    const card = paintable.find((entry) => !entry.words) ?? paintable.find((entry) => !entry.words?.only) ?? paintable[0];
+    if (!card) return null;
+    const built = buildReartPrompt(
+      { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
+      style,
+      card.words,
+    );
+    return {
+      name: card.name,
+      prompt: built.prompt,
+      // Longer than a picture's prompt can be: its end is left out.
+      cut: built.cut,
+      // A real card's text isn't known here: it is read when it is painted.
+      partial: card.kind === "printing",
+    };
+  }, [paintable, style]);
 
   const doneCount = runner.steps.filter((s) => s.status === "done").length;
   const failedCount = runner.steps.filter((s) => s.status === "failed").length;
@@ -256,7 +300,7 @@ export function ReartStudio({
   // word.
   const paintBlocked = !savedStyle
     ? "Save the deck's style first: one card is painted in the saved style."
-    : dirty
+    : lookChanged
       ? "You changed the style. Save it or undo your changes first: one card is painted in the deck's saved style."
       : null;
 
@@ -379,14 +423,16 @@ export function ReartStudio({
             onReset={
               savedStyle
                 ? () => {
-                    setStyle({ preset: savedStyle.preset, theme: savedStyle.theme });
+                    setStyle(styleOf(savedStyle));
                     setSaveError(null);
                   }
                 : undefined
             }
+            preview={promptPreview}
             problem={problem}
             saveError={saveError}
-            paintedInSaved={paintedInSaved}
+            // Only another LOOK repaints the cards painted in the saved one.
+            paintedInSaved={lookChanged ? paintedInSaved : 0}
           />
 
           <section aria-labelledby="reart-sample" className="flex flex-col gap-3 rounded-frame border border-border/60 bg-surface/50 p-4 sm:p-5">
@@ -508,8 +554,8 @@ export function ReartStudio({
             ) : null}
             <p className="text-sm tabular-nums text-foreground">
               {toPaint} card{toPaint === 1 ? "" : "s"} to paint
-              {!dirty && inStyle > 0 ? ` · ${inStyle} in this style already` : ""}
-              {!dirty && otherArtNow > 0 ? ` · ${otherArtNow} with other art now, left as ${otherArtNow === 1 ? "it is" : "they are"}` : ""}
+              {!lookChanged && inStyle > 0 ? ` · ${inStyle} in this style already` : ""}
+              {!lookChanged && otherArtNow > 0 ? ` · ${otherArtNow} with other art now, left as ${otherArtNow === 1 ? "it is" : "they are"}` : ""}
               {slots !== null ? ` · ${slots} card slot${slots === 1 ? "" : "s"} left` : ""}
               {balance !== null ? ` · ${balance} credit${balance === 1 ? "" : "s"}` : ""}
             </p>
@@ -599,9 +645,32 @@ export function ReartStudio({
           locked={running}
           paintBlocked={running ? null : paintBlocked}
           onPaintOne={paintOne}
+          onEditWords={(entry) => {
+            if (running) return;
+            setWordsEntry(entry);
+            setWordsOpen(true);
+          }}
           onRestore={restore}
         />
       </div>
+
+      {wordsEntry ? (
+        <ReartCardWordsDialog
+          open={wordsOpen}
+          onOpenChange={setWordsOpen}
+          deckId={deck.id}
+          entry={wordsEntry}
+          style={style}
+          onSaved={(words) => {
+            setWordsOpen(false);
+            // The dialog reopens on what was saved until the page's re-read
+            // lands.
+            setWordsEntry({ ...wordsEntry, words });
+            toast.success(words ? `${wordsEntry.name} has its own words.` : `${wordsEntry.name} is painted from its name and type again.`);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {confirm ? (
         <ReartConfirmDialog

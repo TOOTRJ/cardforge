@@ -11,10 +11,12 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { rowHasBakedBack } from "@/lib/cards/faces";
+import { buildTypeLine } from "@/lib/cards/card-display";
 import {
   getOwnedDeck,
   listReartRuns,
   readDeckStyle,
+  readCardWords,
   readPaintedCards,
   readReartPicturesByCard,
   bucketOfItem,
@@ -114,10 +116,11 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const [items, style, painted, runs, username, capacity, balance] = await Promise.all([
+  const [items, style, painted, words, runs, username, capacity, balance] = await Promise.all([
     listDeckPageCards(deck.id),
     readDeckStyle(deck.id),
     readPaintedCards(deck.id),
+    readCardWords(deck.id),
     listReartRuns(entry.userId, deck.id),
     getCurrentUsername(),
     getCardCapacity(),
@@ -155,7 +158,12 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       name: card?.title || e.name,
       quantity: e.quantity,
       board: e.board,
-      typeLine: e.type_line,
+      // The maker's own card: the type line the step builds its prompt
+      // from (the card's own words), so the studio's preview is what is
+      // sent. A real card's is its entry's, until its printing is read.
+      typeLine: own
+        ? buildTypeLine({ cardType: own.card_type ?? undefined, supertype: own.supertype ?? null, subtypes: own.subtypes ?? [] }) || e.type_line
+        : e.type_line,
       imageUrl: e.image_url,
       kind: classified.kind,
       skipMessage: classified.kind === "skip" ? classified.message : null,
@@ -164,6 +172,11 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       state: facts.state,
       canRestore: facts.canRestore,
       artNow: facts.artNow,
+      words: classified.kind === "skip" ? null : (words.get(e.id) ?? null),
+      // The prompt's preview fills {rules} / {flavor} from the maker's own
+      // card; a real card's are read from its printing when it is painted.
+      rulesText: own?.rules_text ?? null,
+      flavorText: own?.flavor_text ?? null,
       credits: own ? REART_CREDITS_PER_FACE * (rowHasBakedBack(own) ? 2 : 1) : REART_CREDITS_PER_FACE,
     };
   });

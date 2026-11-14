@@ -19,13 +19,17 @@ import {
   REART_MAX_CARDS,
   REART_SKIP_COPY,
   classifyReartEntry,
+  cleanReartCardWords,
   normalizeReartStyle,
+  sameReartStyleFields,
   reartEntryState,
   reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
   scopeTakes,
   typeBucketOf,
+  type NormalReartStyle,
+  type ReartCardWords,
   type ReartEntryKind,
   type ReartScope,
   type ReartStyle,
@@ -55,30 +59,56 @@ export async function getOwnedDeck(userId: string, deckId: string): Promise<Rear
   return data ? { id: data.id, slug: data.slug, title: data.title, visibility: data.visibility } : null;
 }
 
-export type StoredReartStyle = ReartStyle & { version: number };
+export type StoredReartStyle = NormalReartStyle & { version: number };
+
+type StyleRow = { preset: string; theme: string; version: number; mode?: string | null; prompt?: string | null; owner_id?: string };
+
+/** The style's columns; `mode` and `prompt` are 0209's. */
+const STYLE_COLUMNS = "preset, theme, mode, prompt, version";
+/** The same read on a database 0209 hasn't reached (a deploy that lands
+ *  before its migration): every style there is the template. Remove once
+ *  0209 is on production and dev. */
+const STYLE_COLUMNS_BEFORE_0209 = "preset, theme, version";
+
+const undefinedColumn = (error: { code?: string } | null | undefined) => error?.code === "42703";
+
+function storedStyleOf(row: StyleRow): StoredReartStyle {
+  return {
+    ...normalizeReartStyle({
+      preset: row.preset,
+      theme: row.theme,
+      mode: row.mode === "custom" ? "custom" : "preset",
+      prompt: row.prompt ?? "",
+    }),
+    version: row.version,
+  };
+}
 
 /** The deck's stored style (the owner's session), or null. */
 export async function readDeckStyle(deckId: string): Promise<StoredReartStyle | null> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("deck_art_styles")
-    .select("preset, theme, version")
-    .eq("deck_id", deckId)
-    .maybeSingle();
-  return data ? { preset: data.preset, theme: data.theme, version: data.version } : null;
+  const read = (columns: string) => supabase.from("deck_art_styles").select(columns).eq("deck_id", deckId).maybeSingle();
+  let { data, error } = await read(STYLE_COLUMNS);
+  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0209));
+  return data ? storedStyleOf(data as unknown as StyleRow) : null;
+}
+
+/** The style row as the service role reads it, with its owner. */
+async function readStyleRowAdmin(deckId: string): Promise<StyleRow | null> {
+  const admin = createAdminClient();
+  const read = (columns: string) => admin.from("deck_art_styles").select(`${columns}, owner_id`).eq("deck_id", deckId).maybeSingle();
+  let { data, error } = await read(STYLE_COLUMNS);
+  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0209));
+  return (data as unknown as StyleRow | null) ?? null;
 }
 
 /** The deck's style as the SERVER reads it (a step: the stored row is the
  *  authority on the version a run paints in). */
 export async function readDeckStyleAdmin(userId: string, deckId: string): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
-  const { data } = await createAdminClient()
-    .from("deck_art_styles")
-    .select("preset, theme, version, owner_id")
-    .eq("deck_id", deckId)
-    .maybeSingle();
-  if (!data || data.owner_id !== userId) return null;
-  return { preset: data.preset, theme: data.theme, version: data.version };
+  const row = await readStyleRowAdmin(deckId);
+  if (!row || row.owner_id !== userId) return null;
+  return storedStyleOf(row);
 }
 
 /**
@@ -90,23 +120,92 @@ export async function readDeckStyleAdmin(userId: string, deckId: string): Promis
 export async function saveDeckStyle(userId: string, deckId: string, style: ReartStyle): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
   const clean = normalizeReartStyle(style);
-  const admin = createAdminClient();
-  const { data: stored } = await admin
-    .from("deck_art_styles")
-    .select("preset, theme, version, owner_id")
-    .eq("deck_id", deckId)
-    .maybeSingle();
+  const stored = await readStyleRowAdmin(deckId);
   if (stored && stored.owner_id !== userId) return null;
-  if (stored && sameReartStyle(stored, clean)) return { ...clean, version: stored.version };
-  const version = stored ? stored.version + 1 : 1;
-  const { error } = await admin
+  const before = stored ? storedStyleOf(stored) : null;
+  // The same LOOK keeps its version (nothing a run paints changed). The
+  // row is still written when the OTHER mode's draft changed — a prompt
+  // written and then left for the template, or the other way: it was
+  // dropped on a reload — and never when nothing changed at all.
+  const sameLook = Boolean(before && sameReartStyle(before, clean));
+  if (before && sameLook && sameReartStyleFields(before, clean)) return { ...clean, version: before.version };
+  const version = before ? (sameLook ? before.version : before.version + 1) : 1;
+  const { error } = await createAdminClient()
     .from("deck_art_styles")
-    .upsert({ deck_id: deckId, owner_id: userId, preset: clean.preset, theme: clean.theme, version }, { onConflict: "deck_id" });
+    .upsert(
+      { deck_id: deckId, owner_id: userId, preset: clean.preset, theme: clean.theme, mode: clean.mode, prompt: clean.prompt, version },
+      { onConflict: "deck_id" },
+    );
   if (error) {
     console.error(`[re-art] style for deck ${deckId} not saved: ${error.message}`);
     return null;
   }
   return { ...clean, version };
+}
+
+// ---------------------------------------------------------------------------
+// One card's own words (0209 deck_reart_prompts), by deck entry
+// ---------------------------------------------------------------------------
+
+type WordsRow = { entry_id: string; prompt: string; only_words: boolean; owner_id?: string };
+
+const wordsOf = (row: WordsRow): ReartCardWords => ({ text: row.prompt, only: row.only_words === true });
+
+/** The deck's cards' own words (the owner's session), by entry id. A read
+ *  that fails — the table isn't there yet — is "none". */
+export async function readCardWords(deckId: string): Promise<Map<string, ReartCardWords>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("deck_reart_prompts").select("entry_id, prompt, only_words").eq("deck_id", deckId);
+  if (error || !data) return new Map();
+  return new Map((data as WordsRow[]).map((row) => [row.entry_id, wordsOf(row)]));
+}
+
+/** The table isn't there: a database 0209 hasn't reached (a deploy that
+ *  lands before its migration). No card has words yet. */
+const missingTable = (error: { code?: string } | null | undefined) => error?.code === "42P01" || error?.code === "PGRST205";
+
+/**
+ * One entry's own words as the server reads them (a step) — FAIL CLOSED: a
+ * read that didn't answer is `ok: false`, never "no words". The step then
+ * stops before any charge; read as "none", a card with words of its own was
+ * painted from the deck's prompt, charged, and recorded as in the style.
+ */
+export async function readCardWordsAdmin(
+  userId: string,
+  deckId: string,
+  entryId: string,
+): Promise<{ ok: true; words: ReartCardWords | null } | { ok: false }> {
+  if (!isAdminConfigured()) return { ok: false };
+  const { data, error } = await createAdminClient()
+    .from("deck_reart_prompts")
+    .select("entry_id, prompt, only_words, owner_id")
+    .eq("deck_id", deckId)
+    .eq("entry_id", entryId)
+    .maybeSingle();
+  if (error) return missingTable(error) ? { ok: true, words: null } : { ok: false };
+  const row = data as WordsRow | null;
+  return { ok: true, words: row && row.owner_id === userId ? wordsOf(row) : null };
+}
+
+/** Saves (or, `words` null, removes) one entry's own words. The trigger
+ *  holds the row to the deck's owner and to an entry of that deck (0209).
+ *  False when the write failed. */
+export async function saveCardWords(
+  userId: string,
+  deckId: string,
+  entryId: string,
+  words: ReartCardWords | null,
+): Promise<boolean> {
+  if (!isAdminConfigured()) return false;
+  const admin = createAdminClient();
+  const text = cleanReartCardWords(words?.text);
+  const { error } = text
+    ? await admin
+        .from("deck_reart_prompts")
+        .upsert({ deck_id: deckId, entry_id: entryId, owner_id: userId, prompt: text, only_words: words?.only === true }, { onConflict: "deck_id,entry_id" })
+    : await admin.from("deck_reart_prompts").delete().eq("deck_id", deckId).eq("entry_id", entryId).eq("owner_id", userId);
+  if (error) console.warn(`[re-art] words for entry ${entryId} on deck ${deckId} not saved: ${error.message}`);
+  return !error;
 }
 
 /** One card Re-art has painted on a deck (0191 deck_reart_cards). */
@@ -414,12 +513,16 @@ export type ReartPlannedEntry = {
    *  tool's log alone reads it: a first paint of one card is `paint_one`, a
    *  later one `reroll`. Never in the job's plan. */
   paintedBefore: boolean;
+  /** The card has words of its own (0209): said in the confirm's list and
+   *  counted in the tool's log. Never in the job's plan — the step reads
+   *  the words themselves. */
+  ownWords: boolean;
   notes: string[];
 };
 
 export type ReartPlan = {
   deck: ReartDeck;
-  style: ReartStyle;
+  style: NormalReartStyle;
   /** The version the run paints in (the stored one, or the next). */
   version: number;
   styleChanged: boolean;
@@ -459,7 +562,8 @@ export async function planReartRun(
   const styleChanged = !stored || !sameReartStyle(stored, wanted);
   const version = stored ? (styleChanged ? stored.version + 1 : stored.version) : 1;
 
-  const [items, painted] = await Promise.all([listDeckPageCards(deck.id), readPaintedCards(deck.id)]);
+  const [items, painted, words] = await Promise.all([listDeckPageCards(deck.id), readPaintedCards(deck.id), readCardWords(deck.id)]);
+  const OWN_WORDS_NOTE = "Its own words.";
   const explicit = input.entryIds ? new Set(input.entryIds.map((id) => id.toLowerCase())) : null;
   const chosen: DeckItem<DeckPageCard>[] = explicit
     ? items.filter((item) => explicit.has(item.entry.id.toLowerCase()))
@@ -511,6 +615,7 @@ export async function planReartRun(
         continue;
       }
       const twoFaces = rowHasBakedBack(card);
+      const ownWords = words.has(entry.id);
       own.push({
         entryId: entry.id,
         name: card.title || entry.name,
@@ -519,7 +624,8 @@ export async function planReartRun(
         cardId: card.id,
         repaint: Boolean(explicit),
         paintedBefore: Boolean(done),
-        notes: twoFaces ? ["Two faces: two pictures."] : [],
+        ownWords,
+        notes: [...(twoFaces ? ["Two faces: two pictures."] : []), ...(ownWords ? [OWN_WORDS_NOTE] : [])],
       });
       continue;
     }
@@ -537,7 +643,8 @@ export async function planReartRun(
         cardId: made.cardId,
         repaint: Boolean(explicit),
         paintedBefore: true,
-        notes: ["Made by an earlier run — linked to its entry again."],
+        ownWords: words.has(entry.id),
+        notes: ["Made by an earlier run — linked to its entry again.", ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : [])],
       });
       continue;
     }
@@ -585,7 +692,8 @@ export async function planReartRun(
         cardId: null,
         repaint: Boolean(explicit),
         paintedBefore: false,
-        notes: plan.doubleFaced ? ["Two faces: two pictures."] : [],
+        ownWords: words.has(entry.id),
+        notes: [...(plan.doubleFaced ? ["Two faces: two pictures."] : []), ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : [])],
       });
     }
   }

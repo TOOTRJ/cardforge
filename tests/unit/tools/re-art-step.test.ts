@@ -36,6 +36,7 @@ const m = vi.hoisted(() => ({
   discard: vi.fn(),
   discardUnused: vi.fn(),
   revert: vi.fn(),
+  words: vi.fn(),
   bakedBack: vi.fn(),
   rows: { deck_cards: null as unknown, cards: null as unknown },
 }));
@@ -61,6 +62,7 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   writePaintedCard: m.writePainted,
   discardReartArtIfUnused: m.discardUnused,
   revertPaintedCard: m.revert,
+  readCardWordsAdmin: m.words,
   reartBulkChoices: (style: { preset: string }, visibility: string) => ({ art: "ai", artStyle: style.preset, visibility }),
 }));
 vi.mock("@/lib/tools/bulk-customize/step", () => ({ customizeSourceStep: m.customize }));
@@ -137,6 +139,7 @@ beforeEach(() => {
   m.paintedAdmin.mockResolvedValue(null);
   m.paintedRows.mockResolvedValue([]);
   m.madeForEntry.mockResolvedValue(null);
+  m.words.mockResolvedValue({ ok: true, words: null });
   m.link.mockResolvedValue({ ok: true });
   m.writePainted.mockResolvedValue(true);
   m.rows.deck_cards = { id: ENTRY, name: "Archivist", board: "main", card_id: "card-1", scryfall_id: null };
@@ -469,5 +472,119 @@ describe("a real card", () => {
     expect(result.status).toBe("done");
     expect(m.customize).not.toHaveBeenCalled();
     expect(m.credited).not.toHaveBeenCalled();
+  });
+});
+
+describe("the maker's own prompts (0209)", () => {
+  const OWN_STYLE = { ...STYLE, mode: "custom" as const, prompt: "An oil painting of {card}, candle-lit, thick paint" };
+  const NO_FRAME = "NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.";
+  const planIn = (style: Record<string, unknown>, kind: "own" | "printing" = "own") => ({ ...planOf(kind), style });
+  const ladder = (call = 0): string[] => m.image.mock.calls[call][0];
+
+  it("a card's own words are read by ENTRY from the server — the plan names none — and paint its subject in the deck's style", async () => {
+    m.words.mockResolvedValue({ ok: true, words: { text: "an old goblin librarian asleep on a heap of books", only: false } });
+    await run(planOf());
+    expect(m.words).toHaveBeenCalledWith("u1", DECK, ENTRY);
+    const [first] = ladder();
+    expect(first.startsWith("an old goblin librarian asleep on a heap of books. Rendered strictly in storybook style.")).toBe(true);
+    expect(first).toContain("a goblin warren");
+    expect(first).not.toMatch(/Trading-card illustration|Archivist of Lost Hours/);
+    expect(first.endsWith(NO_FRAME)).toBe(true);
+  });
+
+  it("words that couldn't be READ stop the step before any charge — never painted as “no words”", async () => {
+    // Read as none, a card with words of its own was painted from the
+    // deck's prompt, charged, and recorded as in the style.
+    m.words.mockResolvedValue({ ok: false });
+    const result = await run(planOf());
+    expect(result).toMatchObject({ status: "failed" });
+    expect(result.error).toMatch(/own words couldn't be read/);
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+    // A real card's entry: the same, before the card is made.
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    expect((await run(planOf("printing"))).status).toBe("failed");
+    expect(m.customize).not.toHaveBeenCalled();
+  });
+
+  it("“only these words” is the card's whole prompt", async () => {
+    m.words.mockResolvedValue({ ok: true, words: { text: "A lone lighthouse in a storm, woodcut", only: true } });
+    await run(planOf());
+    expect(ladder()[0]).toBe(`A lone lighthouse in a storm, woodcut. ${NO_FRAME}`);
+  });
+
+  it("the maker's own deck prompt replaces the template, filled in for the card", async () => {
+    m.styleAdmin.mockResolvedValue(OWN_STYLE);
+    await run(planIn(OWN_STYLE));
+    expect(ladder()[0]).toBe(
+      `An oil painting of "Archivist of Lost Hours", a Creature — Human Wizard, candle-lit, thick paint. ${NO_FRAME}`,
+    );
+  });
+
+  it("the maker's words are dressed if refused, never swapped for a picture built from the card's name", async () => {
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef", only: false } });
+    await run(planOf());
+    expect(ladder()).toHaveLength(2);
+    expect(ladder().join(" ")).not.toMatch(/Symbolic fantasy|evoking/);
+    // The same for the maker's own deck prompt…
+    m.words.mockResolvedValue({ ok: true, words: null });
+    m.styleAdmin.mockResolvedValue(OWN_STYLE);
+    await run(planIn(OWN_STYLE));
+    expect(ladder(1)).toHaveLength(2);
+    // …while the template alone keeps its three rungs, ending on the card's name.
+    m.styleAdmin.mockResolvedValue(STYLE);
+    await run(planOf());
+    expect(ladder(2)).toHaveLength(3);
+    expect(ladder(2)[2]).toMatch(/Symbolic fantasy/);
+    // A retry sends the maker's words AS WRITTEN first again (a slow
+    // provider refused nothing): the same two rungs on every try.
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef", only: false } });
+    await run(planOf(), { ...STEP, attempts: 2 });
+    expect(ladder(3)).toEqual(ladder(0));
+  });
+
+  it("a run priced in the template stops before any charge once the deck has the maker's own prompt (and the other way)", async () => {
+    m.styleAdmin.mockResolvedValue(OWN_STYLE);
+    expect(await run(planOf())).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    m.styleAdmin.mockResolvedValue(STYLE);
+    expect(await run(planIn(OWN_STYLE))).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    m.styleAdmin.mockResolvedValue({ ...OWN_STYLE, prompt: "Another prompt altogether, in gouache" });
+    expect(await run(planIn(OWN_STYLE))).toMatchObject({ status: "failed", error: REART_STYLE_CHANGED });
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  it("a card's own words are its FRONT's: a back face is painted from the deck's prompt", async () => {
+    m.bakedBack.mockReturnValue(true);
+    m.rows.cards = {
+      ...OWN_CARD,
+      back_face: { title: "The Hour Unbound", card_type: "creature", subtypes: ["Spirit"], art_url: ART("back.png") },
+    };
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef juggling knives", only: true } });
+    m.persist.mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-front.jpg") }).mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-back.jpg") });
+    await run(planOf());
+    expect(ladder(0)[0]).toBe(`a goblin chef juggling knives. ${NO_FRAME}`);
+    expect(ladder(1)[0]).toContain("The Hour Unbound");
+    expect(ladder(1)[0]).not.toContain("goblin chef");
+    // The back's prompt is the template's: its own three rungs.
+    expect(ladder(1)).toHaveLength(3);
+  });
+
+  it("a real card is made with the same prompt rules, and says when the prompt is the maker's", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin boss on a throne of crates", only: false } });
+    await run(planOf("printing"));
+    const [, , , options] = m.customize.mock.calls[0];
+    const payload = { title: "Krenko, Mob Boss", subtypes: ["Goblin"], card_type: "creature", back_face: { title: "Back", subtypes: [] } };
+    const front = options.artPrompt(payload, "front");
+    expect(front.exact).toBe(true);
+    expect(front.prompt.startsWith("a goblin boss on a throne of crates. Rendered strictly in storybook style.")).toBe(true);
+    const back = options.artPrompt(payload, "back");
+    expect(back.exact).toBe(false);
+    expect(back.prompt).not.toContain("throne of crates");
+    // No words, the template: the bulk core keeps its own ladder.
+    m.words.mockResolvedValue({ ok: true, words: null });
+    await run(planOf("printing"));
+    expect(m.customize.mock.calls[1][3].artPrompt(payload, "front").exact).toBe(false);
   });
 });

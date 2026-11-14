@@ -17,7 +17,7 @@ import { withCreditedStep } from "@/lib/ai/credited-step";
 import { logAiCall, type AiActionLabel } from "@/lib/ai/rate-limit";
 import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
 import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
-import { artPromptLadder } from "@/lib/ai/art-prompt-safety";
+import { artPromptLadder, exactArtPromptLadder } from "@/lib/ai/art-prompt-safety";
 import { artShapeForBackFace, artShapeForFace, type ArtFace } from "@/lib/ai/art-aspect";
 import { composeArtStyle, styleArtBrief } from "@/lib/ai/presets";
 import { AI_FAILURE_COPY, type AiFailureKind } from "@/lib/ai/failure";
@@ -204,8 +204,11 @@ export type CustomizeSourceOptions = {
   /** The AI label the pictures are logged and charged under (card_ai_calls
    *  + the ledger's reason). */
   aiLabel: AiActionLabel;
-  /** A picture's prompt; default: the batch's one style (aiArtPrompt). */
-  artPrompt?: (payload: BulkCardPayload, face: "front" | "back") => { prompt: string; style: string };
+  /** A picture's prompt; default: the batch's one style (aiArtPrompt).
+   *  `exact`: the prompt is its maker's own words — the safety ladder dresses
+   *  it but never swaps it for a picture built from the card's name
+   *  (lib/ai/art-prompt-safety.ts exactArtPromptLadder). */
+  artPrompt?: (payload: BulkCardPayload, face: "front" | "back") => { prompt: string; style: string; exact?: boolean };
   /** A planned card the caller refuses before anything is stored or paid
    *  (Re-art: an emblem). Its sentence, or null. */
   refusePlanned?: (payload: BulkCardPayload) => string | null;
@@ -388,13 +391,15 @@ export async function customizeSourceStep(
     const painted: string[] = [];
     const models: string[] = [];
     const paint = async (face: "front" | "back"): Promise<{ ok: true; url: string } | { ok: false; error: string; failure: AiFailureKind }> => {
-      const { prompt, style } = options.artPrompt
+      const { prompt, style, exact } = options.artPrompt
         ? options.artPrompt(planned.payload, face)
-        : aiArtPrompt(planned.payload, plan.choices, face);
+        : { ...aiArtPrompt(planned.payload, plan.choices, face), exact: false };
       await logAiCall(userId, options.aiLabel);
       const title = face === "back" ? (planned.payload.back_face?.title ?? planned.payload.title) : planned.payload.title;
       const image = await generateImageWithFallbacks(
-        artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
+        exact
+          ? exactArtPromptLadder(prompt)
+          : artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
         face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace),
         { budgetMs },
       );

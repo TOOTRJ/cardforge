@@ -21,15 +21,19 @@ import { recordToolEventLater, type ToolEventProps } from "@/lib/tools/events";
 import { toolHref, toolReasonOfCode } from "@/lib/tools/catalog";
 import {
   REART_DEFAULT_VISIBILITY,
+  REART_CARD_WORDS_MAX,
   REART_TOOL_SLUG,
+  cleanReartCardWords,
   reartRunMode,
+  reartWordsSaySomething,
   reartRunSchema,
   reartStepKey,
   reartStyleProblem,
   reartStyleSchema,
   withBackArt,
+  type NormalReartStyle,
+  type ReartCardWords,
   type ReartCost,
-  type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
   discardReartArtIfUnused,
@@ -37,6 +41,7 @@ import {
   planLines,
   planReartRun,
   readPaintedCards,
+  saveCardWords,
   saveDeckStyle,
   writePaintedCard,
   type ReartPlanLine,
@@ -47,7 +52,10 @@ import type { ReartJobPlan } from "@/lib/tools/re-art/step";
 // Re-art deck's server actions. Every one starts with the tool's gate.
 //
 //   * SAVE STYLE keeps the deck's style (0191 deck_art_styles; a changed
-//     style moves its version on — a new look).
+//     style moves its version on — a new look). The style is the tool's
+//     template or the maker's OWN prompt (0209).
+//   * SAVE A CARD'S WORDS keeps (or removes) one card's own words for its
+//     picture (0209 deck_reart_prompts). Nothing is painted or charged.
 //   * PLAN reads the deck once (the `deck_import` quota for its real cards'
 //     Scryfall run, as Bulk Customize's prepare) and prices the run: the
 //     studio's confirm shows it BEFORE anything is charged.
@@ -96,7 +104,7 @@ export type ReartFailure = {
 export async function saveReartStyleAction(
   deckId: unknown,
   styleInput: unknown,
-): Promise<{ ok: true; style: ReartStyle; version: number } | ReartFailure> {
+): Promise<{ ok: true; style: NormalReartStyle; version: number } | ReartFailure> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   const style = reartStyleSchema.safeParse(styleInput);
@@ -110,9 +118,67 @@ export async function saveReartStyleAction(
     track(access, "save_style_failed", { reason: "not_saved" });
     return { ok: false, error: "Couldn't save the style — try again." };
   }
-  track(access, "save_style", { preset: saved.preset, theme_chars: saved.theme.length, version: saved.version });
+  // Never the words: how the prompt is made, and how long it is.
+  track(access, "save_style", {
+    preset: saved.preset,
+    theme_chars: saved.theme.length,
+    mode: saved.mode,
+    prompt_chars: saved.prompt.length,
+    version: saved.version,
+  });
   revalidatePath(toolHref(REART_TOOL_SLUG));
-  return { ok: true, style: { preset: saved.preset, theme: saved.theme }, version: saved.version };
+  const { version, ...savedStyle } = saved;
+  return { ok: true, style: savedStyle, version };
+}
+
+/**
+ * One card's own words for its picture — its subject in the deck's look, or
+ * (`only`) its whole prompt — by deck ENTRY (a real card's entry has no card
+ * of the maker's until a run makes one). Empty words remove them. Nothing is
+ * painted or charged: a card already painted is painted with them when it is
+ * re-rolled.
+ */
+export async function saveReartCardWordsAction(
+  deckId: unknown,
+  entryId: unknown,
+  input: unknown,
+): Promise<{ ok: true; words: ReartCardWords | null } | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  const raw = (input ?? {}) as { text?: unknown; only?: unknown };
+  if (
+    typeof deckId !== "string" ||
+    typeof entryId !== "string" ||
+    !isUuid(deckId) ||
+    !isUuid(entryId) ||
+    typeof raw.text !== "string" ||
+    raw.text.length > REART_CARD_WORDS_MAX * 2
+  ) {
+    return { ok: false, error: "Those words couldn't be read." };
+  }
+  const deck = await getOwnedDeck(access.userId, deckId);
+  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  // The entry, from the caller's own deck (the database holds the row to it
+  // too: 0209's trigger).
+  const supabase = await createClient();
+  const { data: entry } = await supabase.from("deck_cards").select("id").eq("id", entryId).eq("deck_id", deck.id).maybeSingle();
+  if (!entry) return { ok: false, error: "That card is no longer in this deck." };
+  const text = cleanReartCardWords(raw.text);
+  // Words that say nothing (a lone ".") are no picture's subject, and
+  // would be painted and paid for.
+  if (text && !reartWordsSaySomething(text)) {
+    return { ok: false, error: "Write what the picture shows, or leave it empty to remove the words." };
+  }
+  const words: ReartCardWords | null = text ? { text, only: raw.only === true } : null;
+  if (!(await saveCardWords(access.userId, deck.id, entry.id, words))) {
+    track(access, "save_card_words_failed", { reason: "not_saved" });
+    return { ok: false, error: "Couldn't save the words — try again." };
+  }
+  // Never the words: their length and what they stand for.
+  if (words) track(access, "save_card_words", { chars: words.text.length, only: words.only });
+  else track(access, "remove_card_words");
+  revalidatePath(toolHref(REART_TOOL_SLUG));
+  return { ok: true, words };
 }
 
 export type ReartPlanned = {
@@ -302,7 +368,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
 
   const jobPlan: ReartJobPlan = {
     deck_id: plan.deck.id,
-    style: { preset: saved.preset, theme: saved.theme, version: saved.version },
+    style: { preset: saved.preset, theme: saved.theme, mode: saved.mode, prompt: saved.prompt, version: saved.version },
     visibility: parsed.data.visibility ?? REART_DEFAULT_VISIBILITY,
     entries: plan.entries.map((entry) => ({
       entry_id: entry.entryId,
@@ -364,6 +430,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     in_style: plan.inStyle,
     scope: parsed.data.scope ?? "all",
     preset: saved.preset,
+    // How the prompts are made (0209): the template or the maker's own
+    // prompt, and how many of the cards have words of their own.
+    mode: saved.mode,
+    own_words: plan.entries.filter((entry) => entry.ownWords).length,
     style_changed: plan.styleChanged,
     visibility: jobPlan.visibility,
   });

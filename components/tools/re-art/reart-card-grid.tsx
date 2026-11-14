@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, RotateCcw, Undo2, Wand2 } from "lucide-react";
+import { Loader2, PenLine, RotateCcw, Undo2, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { CardTile } from "@/components/cards/card-tile";
@@ -51,6 +51,7 @@ export function ReartCardGrid({
   locked,
   paintBlocked = null,
   onPaintOne,
+  onEditWords,
   onRestore,
 }: {
   entries: ReartStudioEntry[];
@@ -68,6 +69,8 @@ export function ReartCardGrid({
    *  studio says it again when a paint link is pressed. */
   paintBlocked?: string | null;
   onPaintOne: (entry: ReartStudioEntry) => void;
+  /** Opens the card's own words (0209). Absent: not offered. */
+  onEditWords?: (entry: ReartStudioEntry) => void;
   onRestore: (entry: ReartStudioEntry) => void;
 }) {
   const counts = { all: entries.length, todo: 0, done: 0, skipped: 0 };
@@ -148,6 +151,7 @@ export function ReartCardGrid({
                     {entry.state === "changed" ? <Badge variant="outline">Has other art now</Badge> : null}
                     {entry.state === "earlier" ? <Badge variant="gold">Earlier style</Badge> : null}
                     {entry.board === "commander" ? <Badge variant="accent">Commander</Badge> : null}
+                    {entry.words ? <Badge variant="outline">{entry.words.only ? "Only its own words" : "Own words"}</Badge> : null}
                     {entry.state === null || entry.kind === "skip" ? <span>{reartStateLabel(entry)}</span> : null}
                   </p>
                   {paintable ? (
@@ -203,6 +207,23 @@ export function ReartCardGrid({
                         ) : null}
                         <span className="sr-only"> — {entry.name}</span>
                       </button>
+                      {onEditWords ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!locked) onEditWords(entry);
+                          }}
+                          aria-disabled={locked ? true : undefined}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-sm text-xs text-muted underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
+                            locked ? "cursor-not-allowed opacity-60" : "hover:text-foreground hover:underline",
+                          )}
+                        >
+                          <PenLine className="h-3.5 w-3.5" aria-hidden />
+                          {entry.words ? "Edit its words…" : "Its own words…"}
+                          <span className="sr-only"> — {entry.name}</span>
+                        </button>
+                      ) : null}
                       {entry.canRestore ? (
                         <button
                           type="button"

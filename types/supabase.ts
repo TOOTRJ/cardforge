@@ -700,6 +700,8 @@ export type Database = {
           owner_id: string;
           preset: string;
           theme: string;
+          mode: string;
+          prompt: string;
           version: number;
           created_at: string;
           updated_at: string;
@@ -709,6 +711,8 @@ export type Database = {
           owner_id: string;
           preset: string;
           theme?: string;
+          mode?: string;
+          prompt?: string;
           version?: number;
           created_at?: string;
           updated_at?: string;
@@ -718,7 +722,39 @@ export type Database = {
           owner_id?: string;
           preset?: string;
           theme?: string;
+          mode?: string;
+          prompt?: string;
           version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      deck_reart_prompts: {
+        Row: {
+          deck_id: string;
+          entry_id: string;
+          owner_id: string;
+          prompt: string;
+          only_words: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          deck_id: string;
+          entry_id: string;
+          owner_id: string;
+          prompt: string;
+          only_words?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          deck_id?: string;
+          entry_id?: string;
+          owner_id?: string;
+          prompt?: string;
+          only_words?: boolean;
           created_at?: string;
           updated_at?: string;
         };
