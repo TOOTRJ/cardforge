@@ -22,7 +22,10 @@ import { toolHref, toolReasonOfCode } from "@/lib/tools/catalog";
 import {
   REART_DEFAULT_VISIBILITY,
   REART_CARD_WORDS_MAX,
+  REART_DEFAULT_MODEL,
+  REART_MODEL_NOT_YOURS,
   REART_TOOL_SLUG,
+  canPickReartModel,
   cleanReartCardWords,
   reartRunMode,
   reartWordsSaySomething,
@@ -262,6 +265,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   if (!parsed.success) return { ok: false, error: "That run couldn't be read — reload the page." };
   const failed = (reason: string, props: ToolEventProps = {}) =>
     track(access, "start_failed", { reason, mode: runMode(parsed.data), ...props });
+  // Naming the model is for admins and testers (the studio shows them the
+  // picker): anyone else's run that names one is refused, never painted on
+  // Automatic behind their back.
+  if ((parsed.data.model ?? REART_DEFAULT_MODEL) !== REART_DEFAULT_MODEL && !canPickReartModel(access)) {
+    failed("model_not_allowed");
+    return { ok: false, error: REART_MODEL_NOT_YOURS };
+  }
   if (!isGatewayConfigured()) {
     failed("ai_unavailable");
     return { ok: false, error: "AI art isn't available right now — try again later." };
@@ -370,6 +380,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     deck_id: plan.deck.id,
     style: { preset: saved.preset, theme: saved.theme, mode: saved.mode, prompt: saved.prompt, version: saved.version },
     visibility: parsed.data.visibility ?? REART_DEFAULT_VISIBILITY,
+    model: parsed.data.model ?? REART_DEFAULT_MODEL,
     entries: plan.entries.map((entry) => ({
       entry_id: entry.entryId,
       name: entry.name,
@@ -400,6 +411,9 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
         sample: parsed.data.sample === true,
         reroll,
         style_version: saved.version,
+        // The model the run names (a code from the tool's own list): the
+        // studio says it in the run's outcome.
+        model: jobPlan.model,
       },
       plan: jobPlan as unknown as Json,
       steps: steps as unknown as Json,
@@ -434,6 +448,8 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     // prompt, and how many of the cards have words of their own.
     mode: saved.mode,
     own_words: plan.entries.filter((entry) => entry.ownWords).length,
+    // Which model the run names (0211) — a code from the tool's own list.
+    model: jobPlan.model,
     style_changed: plan.styleChanged,
     visibility: jobPlan.visibility,
   });
@@ -503,6 +519,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     styleVersion: painted.styleVersion,
     artUrl: null,
     backArtUrl: null,
+    imageModel: null,
     made: false,
     previousArtUrl: null,
     previousArtPosition: null,

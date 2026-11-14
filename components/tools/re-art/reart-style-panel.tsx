@@ -8,14 +8,15 @@ import { FieldGroup } from "@/components/creator/field-group";
 import { textareaClass } from "@/components/ui/field-classes";
 import { STYLE_PRESETS, SURPRISE_PRESET_ID } from "@/lib/ai/presets";
 import {
-  REART_NO_FRAME_LINE,
   REART_PLACEHOLDERS,
   REART_PROMPT_MAX,
   REART_THEME_IDEAS,
   REART_THEME_MAX,
+  reartClosingLine,
   reartPromptNamesCard,
   reartStyleBlock,
   type NormalReartStyle,
+  type ReartFraming,
   type ReartStyleMode,
 } from "@/lib/tools/re-art/model";
 
@@ -31,8 +32,8 @@ const MODE_OPTIONS: ChipOption<ReartStyleMode>[] = [
 
 /** The maker's own prompt starts from the look the form shows: the card's
  *  subject, then the style block's words — theirs to rewrite. */
-export function starterPrompt(style: NormalReartStyle): string {
-  return `{card}. ${reartStyleBlock(style)}`.slice(0, REART_PROMPT_MAX);
+export function starterPrompt(style: NormalReartStyle, framing: ReartFraming = "flux2"): string {
+  return `{card}. ${reartStyleBlock(style, framing)}`.slice(0, REART_PROMPT_MAX);
 }
 
 /**
@@ -54,6 +55,7 @@ export function ReartStylePanel({
   saveError,
   paintedInSaved,
   preview,
+  framing = "flux2",
 }: {
   style: NormalReartStyle;
   onChange: (next: NormalReartStyle) => void;
@@ -74,6 +76,10 @@ export function ReartStylePanel({
   /** One card's whole prompt as the form's style would send it (the maker's
    *  own prompt shows it; null: the deck has no card to show). */
   preview?: { name: string; prompt: string; partial: boolean; cut?: boolean } | null;
+  /** The wording the picked model is sent (the studio's model picker): the
+   *  shared block is shown — and a prompt of the maker's own started — in
+   *  it. Absent: FLUX.2's, what every run was sent before the picker. */
+  framing?: ReartFraming;
 }) {
   const themeId = useId();
   const blockId = useId();
@@ -133,7 +139,7 @@ export function ReartStylePanel({
             onChange={(next) =>
               // The first time: the maker's own prompt starts from the look
               // the form shows, so nothing is lost by switching.
-              onChange({ ...style, mode: next, prompt: next === "custom" && !style.prompt.trim() ? starterPrompt(style) : style.prompt })
+              onChange({ ...style, mode: next, prompt: next === "custom" && !style.prompt.trim() ? starterPrompt(style, framing) : style.prompt })
             }
           />
         )}
@@ -193,7 +199,7 @@ export function ReartStylePanel({
               {preview ? `What is sent for ${preview.name}` : "What is sent for each card"}
             </p>
             <p aria-labelledby={blockId} className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted">
-              {preview ? preview.prompt : `Your prompt, then: ${REART_NO_FRAME_LINE}`}
+              {preview ? preview.prompt : `Your prompt, then: ${reartClosingLine(framing)}`}
             </p>
             <p className="mt-1 text-xs leading-5 text-subtle">
               The last line is always added: the picture is art for a card, never a card.
@@ -263,7 +269,7 @@ export function ReartStylePanel({
               Every picture&apos;s prompt shares this
             </p>
             <p aria-labelledby={blockId} className="mt-1 text-xs leading-5 text-muted">
-              {reartStyleBlock(style)}
+              {reartStyleBlock(style, framing)}
             </p>
             <p className="mt-1 text-xs leading-5 text-subtle">
               Before it: each card&apos;s own name, type and flavour — or the words you give that card.

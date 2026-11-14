@@ -212,10 +212,14 @@ export type CustomizeSourceOptions = {
   /** A planned card the caller refuses before anything is stored or paid
    *  (Re-art: an emblem). Its sentence, or null. */
   refusePlanned?: (payload: BulkCardPayload) => string | null;
+  /** Paint with THIS gateway model and no other (the caller validated the
+   *  id against its own list — Re-art deck's model picker). Absent: the
+   *  image door's default and its backup. */
+  imageModel?: string;
   /** After the card is saved and recorded on its source: the caller's own
-   *  record. A note when it didn't land (never a failed step: the card
-   *  exists). */
-  onSaved?: (cardId: string, art: { front: string | null; back: string | null }) => Promise<string | null>;
+   *  record — the card, its pictures and the model(s) that painted them. A
+   *  note when it didn't land (never a failed step: the card exists). */
+  onSaved?: (cardId: string, art: { front: string | null; back: string | null }, models: string[]) => Promise<string | null>;
 };
 
 /**
@@ -290,6 +294,8 @@ export async function customizeSourceStep(
   if (!gameSystemId) return failed(step, "No game system configured.");
 
   let savedArt: { front: string | null; back: string | null } = { front: null, back: null };
+  /** The model(s) that painted this card's AI pictures (empty: none were). */
+  const paintedBy: string[] = [];
   const save = async (art: { front?: string; back?: string; artist?: string; backArtist?: string }) => {
     savedArt = { front: art.front ?? null, back: art.back ?? null };
     const { visibility, back_face, ...rest } = planned.payload;
@@ -319,7 +325,7 @@ export async function customizeSourceStep(
 
   const done = async (result: Extract<CreateCardResult, { ok: true }>, extra: Partial<JobStep> = {}): Promise<JobStep> => {
     const note = await recordCustomized(userId, source, result.cardId);
-    const own = options.onSaved ? await options.onSaved(result.cardId, savedArt) : null;
+    const own = options.onSaved ? await options.onSaved(result.cardId, savedArt, [...new Set(paintedBy)]) : null;
     return {
       ...step,
       ...CLEARED,
@@ -401,13 +407,14 @@ export async function customizeSourceStep(
           ? exactArtPromptLadder(prompt)
           : artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
         face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace),
-        { budgetMs },
+        { budgetMs, model: options.imageModel },
       );
       if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
       const stored = await persistGeneratedArt(image.bytes, image.contentType);
       if (!stored.ok) return { ok: false, error: stored.error, failure: stored.failure };
       painted.push(stored.publicUrl);
       models.push(image.model);
+      paintedBy.push(image.model);
       return { ok: true, url: stored.publicUrl };
     };
     const discard = () => Promise.all(painted.map((url) => discardGeneratedArt(userId, url)));

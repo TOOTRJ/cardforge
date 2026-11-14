@@ -106,10 +106,14 @@ import {
   readCardWordsAdmin,
   readDeckStyle,
   readDeckStyleAdmin,
+  readPaintedCardAdmin,
+  readPaintedCards,
+  readPaintedRowsForCardAdmin,
   readReartPicturesByCard,
   revertPaintedCard,
   saveCardWords,
   saveDeckStyle,
+  writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
 import { REART_CHANGED_COPY } from "@/lib/tools/re-art/model";
@@ -332,6 +336,7 @@ describe("a paint's row is put back when its edit was refused", () => {
     previousBackArtistCredit: null,
     paintedAt: "2026-11-01T00:00:00Z",
     jobId: "job-earlier",
+    imageModel: "bfl/flux-kontext-pro",
   };
 
   it("an earlier row is written back as it was — the run that painted it included", async () => {
@@ -350,6 +355,8 @@ describe("a paint's row is put back when its edit was refused", () => {
       previous_artist_credit: "Jane Painter",
       made: false,
       job_id: "job-earlier",
+      // …and who painted it (0211).
+      image_model: "bfl/flux-kontext-pro",
     });
   });
 
@@ -583,5 +590,132 @@ describe("one card's own words (0209 deck_reart_prompts)", () => {
     m.admin.mockClear();
     expect(await saveCardWords(ME, DECK, ENTRY, { text: "a lighthouse", only: false })).toBe(false);
     expect(m.admin).not.toHaveBeenCalled();
+  });
+});
+
+describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
+  const stored = (over: Record<string, unknown> = {}) => ({
+    card_id: CARD,
+    entry_id: ENTRY,
+    style_version: 3,
+    art_url: ART("ai-new.jpg"),
+    back_art_url: null,
+    made: false,
+    previous_art_url: ART("mine.png"),
+    previous_art_position: null,
+    previous_back_art_url: null,
+    previous_back_art_position: null,
+    previous_artist_credit: null,
+    previous_back_artist_credit: null,
+    painted_at: "2026-11-13T00:00:00Z",
+    job_id: "job-1",
+    ...over,
+  });
+  const painted: Omit<PaintedCard, "paintedAt" | "jobId"> = {
+    cardId: CARD,
+    entryId: ENTRY,
+    styleVersion: 3,
+    artUrl: ART("ai-new.jpg"),
+    backArtUrl: null,
+    made: false,
+    previousArtUrl: ART("mine.png"),
+    previousArtPosition: null,
+    previousBackArtUrl: null,
+    previousBackArtPosition: null,
+    previousArtistCredit: "Jane Painter",
+    previousBackArtistCredit: null,
+    imageModel: "spacexai/grok-imagine-image",
+  };
+  const upserts = () => m.admin.mock.calls.map(([call]) => call as Call).filter((call) => call.op === "upsert");
+  const NO_COLUMN = { message: "column deck_reart_cards.image_model does not exist", code: "42703" };
+
+  it("is read with the row, by every reader; a row painted before 0211 names none", async () => {
+    m.query.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-pro" })], error: null });
+    expect((await readPaintedCards(DECK)).get(CARD)).toMatchObject({ imageModel: "bfl/flux-2-pro", jobId: "job-1" });
+    expect((m.query.mock.calls[0][0] as Call).columns).toMatch(/, image_model$/);
+
+    m.admin.mockResolvedValue({ data: { ...stored({ image_model: null }), owner_id: ME }, error: null });
+    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, imageModel: null });
+    expect((m.admin.mock.calls[0][0] as Call).columns).toMatch(/, image_model, owner_id$/);
+
+    m.admin.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-flex + bfl/flux-2-pro" })], error: null });
+    expect(await readPaintedRowsForCardAdmin(ME, CARD)).toMatchObject([{ imageModel: "bfl/flux-2-flex + bfl/flux-2-pro" }]);
+  });
+
+  it("a database 0211 hasn't reached is read again without the column — never as “nothing painted”", async () => {
+    // The owner's session (the studio's page): every card read as never
+    // painted would be offered for painting again, and charged.
+    m.query.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: [stored()], error: null });
+    const cards = await readPaintedCards(DECK);
+    expect(cards.get(CARD)).toMatchObject({ artUrl: ART("ai-new.jpg"), imageModel: null });
+    const columns = m.query.mock.calls.map(([call]) => (call as Call).columns ?? "");
+    expect(columns[0]).toContain("image_model");
+    expect(columns[1]).not.toContain("image_model");
+    expect(columns[1]).toContain("job_id");
+
+    // The step's reads (the service role) fall back the same way, and the
+    // one-row read still holds the row to its owner.
+    m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: { ...stored(), owner_id: ME }, error: null });
+    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, imageModel: null });
+    m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: { ...stored(), owner_id: "someone" }, error: null });
+    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toBeNull();
+    m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: [stored()], error: null });
+    expect(await readPaintedRowsForCardAdmin(ME, CARD)).toHaveLength(1);
+  });
+
+  it("any other failed read is not read twice", async () => {
+    m.query.mockResolvedValue({ data: null, error: { message: "boom", code: "57014" } });
+    expect((await readPaintedCards(DECK)).size).toBe(0);
+    expect(m.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("is written with the row, under the owner", async () => {
+    m.admin.mockResolvedValue({ error: null });
+    expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(true);
+    expect(upserts()).toHaveLength(1);
+    expect(upserts()[0].row).toMatchObject({
+      deck_id: DECK,
+      card_id: CARD,
+      owner_id: ME,
+      job_id: "job-1",
+      art_url: ART("ai-new.jpg"),
+      image_model: "spacexai/grok-imagine-image",
+    });
+  });
+
+  it("is held to the column's limit, and an empty name is none (the CHECK takes 1 to 200 characters)", async () => {
+    m.admin.mockResolvedValue({ error: null });
+    await writePaintedCard(ME, DECK, "job-1", { ...painted, imageModel: `vendor/${"x".repeat(400)}` });
+    await writePaintedCard(ME, DECK, "job-1", { ...painted, imageModel: "   " });
+    await writePaintedCard(ME, DECK, "job-1", { ...painted, imageModel: null });
+    const [long, blank, none] = upserts().map((call) => (call.row as { image_model: string | null }).image_model);
+    expect(long).toHaveLength(200);
+    expect(blank).toBeNull();
+    expect(none).toBeNull();
+  });
+
+  it("a database 0211 hasn't reached still records the paint — it holds the art to put back", async () => {
+    for (const code of ["PGRST204", "42703"]) {
+      m.admin.mockReset();
+      m.admin.mockResolvedValueOnce({ error: { message: "Could not find the 'image_model' column", code } }).mockResolvedValueOnce({ error: null });
+      expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(true);
+      const [first, second] = upserts().map((call) => call.row as Record<string, unknown>);
+      expect(first).toHaveProperty("image_model", "spacexai/grok-imagine-image");
+      expect(second).not.toHaveProperty("image_model");
+      // The same row otherwise: the art to put back is in it.
+      expect(second).toMatchObject({ card_id: CARD, previous_art_url: ART("mine.png"), previous_artist_credit: "Jane Painter" });
+    }
+  });
+
+  it("any other refused write is false, and is not tried again", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    m.admin.mockResolvedValue({ error: { message: "boom", code: "23514" } });
+    expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(false);
+    expect(upserts()).toHaveLength(1);
+    m.adminConfigured.mockReturnValue(false);
+    m.admin.mockReset();
+    expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(false);
+    expect(m.admin).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

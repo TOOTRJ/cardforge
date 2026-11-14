@@ -54,6 +54,7 @@ vi.mock("@/lib/ai/random-art", () => ({ persistGeneratedArt: vi.fn(), discardGen
 
 import { bulkStepFailureReason, customizeSourceStep, runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
 import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
+import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000001";
@@ -367,6 +368,69 @@ describe("a tool built on the core hands it the picture's prompt", () => {
       expect(ladder).toHaveLength(3);
       expect(ladder[2]).toMatch(/Symbolic fantasy[^.]*Llanowar Elves/);
     }
+  });
+});
+
+describe("a tool built on the core may name the model that paints (Re-art's picker)", () => {
+  const AI_ART = "https://x.supabase.co/storage/v1/object/public/card-art/u1/ai-1.jpg";
+  type OnSaved = (cardId: string, art: { front: string | null; back: string | null }, models: string[]) => Promise<string | null>;
+  const paint = async (options: { imageModel?: string; painter: string; doubleFaced?: boolean }) => {
+    const image = vi.mocked(generateImageWithFallbacks);
+    image.mockReset();
+    image.mockResolvedValue({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: options.painter, promptIndex: 0 });
+    vi.mocked(persistGeneratedArt).mockReset();
+    vi.mocked(persistGeneratedArt).mockResolvedValue({ ok: true, publicUrl: AI_ART } as Awaited<ReturnType<typeof persistGeneratedArt>>);
+    m.plan.mockReturnValue({
+      ...PLANNED,
+      changes: ["ai_art"],
+      credits: options.doubleFaced ? 2 : 1,
+      doubleFaced: Boolean(options.doubleFaced),
+      payload: options.doubleFaced
+        ? { ...PLANNED.payload, back_face: { title: "Back", card_type: "creature", subtypes: [], frame_style: { template: "m15dfcback" } } }
+        : PLANNED.payload,
+    });
+    const onSaved = vi.fn<OnSaved>(async () => null);
+    const result = await customizeSourceStep(
+      "u1",
+      "job-1",
+      STEP,
+      {
+        source: { kind: "deck_entry", id: ENTRY_ID },
+        choices: { ...DEFAULT_BULK_CHOICES, art: "ai" },
+        aiLabel: "deck_reart_art",
+        ...(options.imageModel ? { imageModel: options.imageModel } : {}),
+        onSaved,
+      },
+      DEPS,
+    );
+    return { result, image, onSaved };
+  };
+
+  it("the named model is handed to the image door for every picture, and the caller's record is told who painted", async () => {
+    const { result, image, onSaved } = await paint({ imageModel: "bfl/flux-kontext-pro", painter: "bfl/flux-kontext-pro" });
+    expect(result.status).toBe("done");
+    expect(image.mock.calls[0][2]).toMatchObject({ model: "bfl/flux-kontext-pro" });
+    expect(onSaved).toHaveBeenCalledWith("card-1", { front: AI_ART, back: null }, ["bfl/flux-kontext-pro"]);
+  });
+
+  it("no model named: the door's own default (and backup) — and the record still says who painted", async () => {
+    const { image, onSaved } = await paint({ painter: "bfl/flux-2-flex" });
+    expect(image.mock.calls[0][2]?.model).toBeUndefined();
+    expect(image.mock.calls[0][2]?.budgetMs).toBeGreaterThan(0);
+    expect(onSaved.mock.calls[0][2]).toEqual(["bfl/flux-2-flex"]);
+  });
+
+  it("a card with no AI picture names no painter", async () => {
+    m.plan.mockReturnValue(PLANNED);
+    const onSaved = vi.fn<OnSaved>(async () => null);
+    await customizeSourceStep(
+      "u1",
+      "job-1",
+      STEP,
+      { source: { kind: "deck_entry", id: ENTRY_ID }, choices: { ...DEFAULT_BULK_CHOICES, art: "later" }, aiLabel: "deck_reart_art", onSaved },
+      DEPS,
+    );
+    expect(onSaved.mock.calls[0][2]).toEqual([]);
   });
 });
 

@@ -24,12 +24,22 @@
 // prompt, reartArtPrompt; the studio previews with it and the step paints
 // with it.
 //
+// The model picker (migration 0211): a run may NAME the gateway model that
+// paints it (REART_MODELS — for testing; one credit a picture on any of
+// them). "Automatic" is what every other tool paints with. A model other
+// than FLUX.2 is sent the same prompt in PLAINER words (ReartFraming): the
+// template's "Trading-card illustration of “Name”…", a quoted flavour line
+// and "NO frame, NO text" are tuned for FLUX.2 and made the others paint a
+// card frame with the title and the flavour text in it (tried on the dev
+// key, 2026-11-13).
+//
 // Never touched: another creator's card (it keeps its art — a deck may hold
 // it, D3, but it is theirs), an emblem (owner rule for remixes: it prints
 // its walker's art), the maybeboard (not the deck).
 // ---------------------------------------------------------------------------
 
 import { toolReasonOfCode } from "@/lib/tools/catalog";
+import { grantIsLive, type ToolAccessPath, type ToolGrant } from "@/lib/tools/access";
 import { z } from "zod";
 import { STYLE_PRESETS, SURPRISE_PRESET_ID, stylePresetById } from "@/lib/ai/presets";
 import { BULK_AI_ART_CREDITS_PER_FACE, BULK_VISIBILITY_VALUES, type BulkVisibility } from "@/lib/tools/bulk-customize/model";
@@ -62,6 +72,119 @@ export const REART_CARD_WORDS_MAX = 600;
 /** One credit per picture — two for a double-faced card (Bulk Customize's
  *  price, the AI deck remix's). */
 export const REART_CREDITS_PER_FACE = BULK_AI_ART_CREDITS_PER_FACE;
+
+// ---------------------------------------------------------------------------
+// The model that paints (for testing)
+// ---------------------------------------------------------------------------
+
+/** How a prompt is worded for a model: "flux2" = the wording every tool
+ *  sends FLUX.2 (never changed by the picker); "plain" = no quoted title,
+ *  no "trading-card", no quoted flavour, and a closing line that says what
+ *  the picture IS — for the models that take the first wording literally. */
+export type ReartFraming = "flux2" | "plain";
+
+/**
+ * The gateway models a run may be painted with. `id` "auto" names none:
+ * the image door's own default with its backup (lib/ai/image-gen.ts). Every
+ * other id is a Vercel AI Gateway model, painted with alone — no backup, so
+ * a card always says who painted it. The SERVER validates a run's model
+ * against this list (never a user's free text).
+ */
+export const REART_MODELS = [
+  {
+    id: "auto",
+    label: "Automatic",
+    framing: "flux2",
+    hint: "What every other tool paints with: FLUX.2 [flex], with FLUX.2 [pro] as its backup when it is slow.",
+  },
+  {
+    id: "bfl/flux-2-pro",
+    label: "FLUX.2 [pro]",
+    framing: "flux2",
+    hint: "Black Forest Labs' faster FLUX.2, on its own. Paints the art window's exact size.",
+  },
+  {
+    id: "bfl/flux-kontext-pro",
+    label: "FLUX.1 Kontext [pro]",
+    framing: "plain",
+    hint: "Black Forest Labs' editing model. It reads about the first 2,000 characters of a prompt.",
+  },
+  {
+    id: "spacexai/grok-imagine-image",
+    label: "Grok Imagine",
+    framing: "plain",
+    hint: "xAI's first image model.",
+  },
+  {
+    id: "spacexai/grok-imagine-image-2.0",
+    label: "Grok Imagine 2.0",
+    framing: "plain",
+    hint: "xAI's newer image model.",
+  },
+  {
+    id: "google/gemini-3.1-flash-image",
+    label: "Gemini 3.1 Flash Image",
+    framing: "plain",
+    hint: "Google's image model (Nano Banana 2).",
+  },
+] as const satisfies ReadonlyArray<{ id: string; label: string; framing: ReartFraming; hint: string }>;
+
+export type ReartModelId = (typeof REART_MODELS)[number]["id"];
+export const REART_MODEL_IDS = REART_MODELS.map((model) => model.id) as [ReartModelId, ...ReartModelId[]];
+export const REART_DEFAULT_MODEL: ReartModelId = "auto";
+
+/** The model of that id, or Automatic (an id the list doesn't know). */
+export function reartModelOf(id: string | null | undefined): (typeof REART_MODELS)[number] {
+  return REART_MODELS.find((model) => model.id === id) ?? REART_MODELS[0];
+}
+
+/** The gateway model a run of that id paints with — undefined for
+ *  Automatic (the image door's own default and backup). */
+export function reartGatewayModel(id: string | null | undefined): string | undefined {
+  const model = reartModelOf(id);
+  return model.id === "auto" ? undefined : model.id;
+}
+
+/**
+ * Who may NAME the model (owner 2026-11-13: the picker is for admins and
+ * testers): an admin, or an account that holds a live tester grant for the
+ * tool — whatever the tool's release. Someone the tool opens for through
+ * their PLAN (once it is released) paints with Automatic. The studio shows
+ * the picker by it, and the start and every step refuse a named model
+ * without it (a job's plan is its owner's to write).
+ */
+export function canPickReartModel(
+  access: { via: ToolAccessPath | null; grant?: ToolGrant | null } | null | undefined,
+  now?: Date,
+): boolean {
+  if (!access) return false;
+  // "grant": the tester rule is what let them in (a beta tool). A tester of
+  // a RELEASED tool comes in through their plan, and still holds the grant.
+  return access.via === "admin" || access.via === "grant" || grantIsLive(access.grant, now);
+}
+
+/** What a run that names a model is told when its maker may not pick one. */
+export const REART_MODEL_NOT_YOURS = "Choosing the model is for this tool's testers — the run wasn't started. Reload the page and try again.";
+
+/** Gateway models a picture may name that are not in the picker (what
+ *  Automatic paints with), by their names. */
+const OTHER_MODEL_LABELS: Record<string, string> = {
+  "bfl/flux-2-flex": "FLUX.2 [flex]",
+  "google/gemini-2.5-flash-image": "Gemini 2.5 Flash Image",
+};
+
+/** Who painted, in words: a step's `image_model` (one gateway id, or two
+ *  joined by " + " for a two-faced card painted by two models). An id
+ *  nobody named is shown as it is. */
+export function reartModelLabel(painted: string | null | undefined): string | null {
+  if (!painted?.trim()) return null;
+  return painted
+    .split(" + ")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => REART_MODELS.find((model) => model.id === id && id !== "auto")?.label ?? OTHER_MODEL_LABELS[id] ?? id)
+    .join(" + ");
+}
 
 // ---------------------------------------------------------------------------
 // The style
@@ -222,16 +345,26 @@ export function reartStyleProblem(style: ReartStyle): string | null {
  * The ONE style block every picture of the deck shares — what keeps a run
  * consistent. The studio shows it to the maker word for word.
  */
-export function reartStyleBlock(style: ReartStyle): string {
+export function reartStyleBlock(style: ReartStyle, framing: ReartFraming = "flux2"): string {
   const clean = normalizeReartStyle(style);
   const preset = stylePresetById(clean.preset);
-  return [
-    preset
-      ? `Rendered strictly in ${preset.label.toLowerCase()} style. Art direction: ${preset.art}.`
-      : "Painterly fantasy illustration style.",
-    clean.theme ? `The deck's world and look: ${clean.theme}.` : "",
-    "Every card of this deck is one cohesive set: the same rendering technique, palette, lighting and level of detail.",
-  ]
+  const look = preset
+    ? `Rendered strictly in ${preset.label.toLowerCase()} style. Art direction: ${preset.art}.`
+    : "Painterly fantasy illustration style.";
+  return (
+    framing === "plain"
+      ? // No "deck", no "card": the words alone made some models paint one.
+        [
+          look,
+          clean.theme ? `The world and look: ${clean.theme}.` : "",
+          "One of a cohesive series of paintings: the same rendering technique, palette, lighting and level of detail.",
+        ]
+      : [
+          look,
+          clean.theme ? `The deck's world and look: ${clean.theme}.` : "",
+          "Every card of this deck is one cohesive set: the same rendering technique, palette, lighting and level of detail.",
+        ]
+  )
     .filter(Boolean)
     .join(" ");
 }
@@ -279,6 +412,22 @@ function sceneWords(text: string | null | undefined, max: number): string {
  *  gateway's door, lib/ai/image-gen.ts.) */
 export const REART_NO_FRAME_LINE = "NO frame, NO borders, NO card layout, NO text or lettering anywhere in the image.";
 
+/** The same line in the PLAIN wording (ReartFraming): it says what the
+ *  picture is before what it isn't. With the first line, FLUX.1 Kontext and
+ *  Grok Imagine painted a card frame with a title, and Gemini a page with a
+ *  white margin; with this one all three paint the art alone. */
+export const REART_PLAIN_CLOSING_LINE =
+  "The painting covers the entire image from edge to edge: no white margin, paper edge, border or frame, and no text, letters, signature, title or caption anywhere.";
+
+/** The line a prompt of that wording ends with. */
+export function reartClosingLine(framing: ReartFraming = "flux2"): string {
+  return framing === "plain" ? REART_PLAIN_CLOSING_LINE : REART_NO_FRAME_LINE;
+}
+
+/** A card's text without its quotation marks: a quoted line reads to some
+ *  models as words to WRITE in the picture. */
+const unquoted = (text: string) => text.replace(/["“”„«»]/g, "").replace(/\s+/g, " ").trim();
+
 /** The names the maker's own deck prompt may put in braces, filled in for
  *  each card. `{card}` is the card's subject: its own words when it has
  *  some, else its name and type. */
@@ -308,10 +457,11 @@ const braceWords = (text: string) => withoutStop(text.replace(/^[\s:;,.—–-]+
 
 /** `"Name", a Type line` — what `{card}` stands for on a card with no words
  *  of its own. */
-export function reartCardLine(subject: ReartSubject): string {
+export function reartCardLine(subject: ReartSubject, framing: ReartFraming = "flux2"): string {
   const title = subject.title.trim() || "an unnamed card";
   const type = subject.typeLine?.trim() ?? "";
-  return `"${title}"${type ? `, ${/^[aeiou]/i.test(type) ? "an" : "a"} ${type}` : ""}`;
+  const name = framing === "plain" ? unquoted(title) || "an unnamed card" : `"${title}"`;
+  return `${name}${type ? `, ${/^[aeiou]/i.test(type) ? "an" : "a"} ${type}` : ""}`;
 }
 
 /** Where a brace's value came up empty, until the text around it is tidied. */
@@ -324,14 +474,15 @@ const EMPTY_SLOT = "\u0001";
  * the comma, colon or semicolon before it away with it — and nothing else
  * of the maker's punctuation is touched.
  */
-function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): string {
+function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string, framing: ReartFraming): string {
+  const text = (value: string) => (framing === "plain" ? unquoted(value) : value);
   const values: Record<string, string> = {
-    card: own ? withoutStop(own) : reartCardLine(subject),
+    card: own ? withoutStop(own) : reartCardLine(subject, framing),
     name: subject.title.trim() || "an unnamed card",
     type: subject.typeLine?.trim() ?? "",
-    flavor: braceWords(sceneWords(subject.flavorText, 200)),
-    flavour: braceWords(sceneWords(subject.flavorText, 200)),
-    rules: braceWords(sceneWords(subject.rulesText, 160)),
+    flavor: text(braceWords(sceneWords(subject.flavorText, 200))),
+    flavour: text(braceWords(sceneWords(subject.flavorText, 200))),
+    rules: text(braceWords(sceneWords(subject.rulesText, 160))),
   };
   let namesCard = false;
   const filled = prompt
@@ -382,13 +533,17 @@ function clipBody(text: string): { text: string; cut: boolean } {
  *     shared style block. The template names no real artist and never the
  *     source's art; the maker's own words are theirs.
  *
- * Every one ends with the no-frame line: the body before it is held to
- * REART_PROMPT_BODY_MAX (`cut`: it was longer, and its end is left out).
+ * Every one ends with the closing line of its wording (`framing`: FLUX.2's,
+ * or the plain one a named model other than FLUX.2 is sent): the body
+ * before it is held to REART_PROMPT_BODY_MAX (`cut`: it was longer, and its
+ * end is left out). In FLUX.2's wording a card with no words of its own in
+ * the template is, character for character, what it always was.
  */
 export function buildReartPrompt(
   subject: ReartSubject,
   style: ReartStyle,
   words?: ReartCardWords | null,
+  framing: ReartFraming = "flux2",
 ): { prompt: string; cut: boolean } {
   const clean = normalizeReartStyle(style);
   const own = flatLine(cleanReartCardWords(words?.text));
@@ -396,33 +551,43 @@ export function buildReartPrompt(
   if (own && words?.only) {
     body = own;
   } else if (clean.mode === "custom") {
-    body = fillDeckPrompt(flatLine(clean.prompt), subject, own);
+    body = fillDeckPrompt(flatLine(clean.prompt), subject, own, framing);
   } else {
     const flavor = sceneWords(subject.flavorText, 200);
     const rules = flavor ? "" : sceneWords(subject.rulesText, 160);
     const title = subject.title.trim() || "an unnamed card";
-    body = [
-      ...(own
-        ? [withStop(own)]
+    const subjectLines =
+      framing === "plain"
+        ? [
+            `Fantasy illustration of ${reartCardLine(subject, "plain")}.`,
+            // No quotation marks, and no stray colon a removed symbol left.
+            flavor
+              ? withStop(`Its mood: ${braceWords(unquoted(flavor))}`)
+              : braceWords(unquoted(rules))
+                ? withStop(`As a scene, what it does: ${braceWords(unquoted(rules))}`)
+                : "",
+          ]
         : [
             `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
             flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
-          ]),
-      reartStyleBlock(clean),
-    ]
-      .filter(Boolean)
-      .join(" ");
+          ];
+    body = [...(own ? [withStop(own)] : subjectLines), reartStyleBlock(clean, framing)].filter(Boolean).join(" ");
   }
   const { text, cut } = clipBody(body);
   // The template's own block ends as it always did; the maker's words get
   // a stop when they have none.
   const ended = clean.mode === "custom" || own ? withStop(text) : text;
-  return { prompt: `${ended} ${REART_NO_FRAME_LINE}`, cut };
+  return { prompt: `${ended} ${reartClosingLine(framing)}`, cut };
 }
 
 /** One picture's prompt (buildReartPrompt's). */
-export function reartArtPrompt(subject: ReartSubject, style: ReartStyle, words?: ReartCardWords | null): string {
-  return buildReartPrompt(subject, style, words).prompt;
+export function reartArtPrompt(
+  subject: ReartSubject,
+  style: ReartStyle,
+  words?: ReartCardWords | null,
+  framing: ReartFraming = "flux2",
+): string {
+  return buildReartPrompt(subject, style, words, framing).prompt;
 }
 
 /**
@@ -621,6 +786,8 @@ export const reartRunSchema = z
     entryIds: z.array(UUID).min(1).max(REART_MAX_CARDS).optional(),
     /** The run is a sample (said in the run's history). */
     sample: z.boolean().optional(),
+    /** The model that paints the run (REART_MODELS; for testing). */
+    model: z.enum(REART_MODEL_IDS).default(REART_DEFAULT_MODEL),
   })
   .strict()
   .refine((run) => !run.sample || (run.entryIds !== undefined && run.entryIds.length <= REART_SAMPLE_MAX), {
@@ -758,6 +925,9 @@ export type ReartStudioEntry = {
   artNow: ReartArtNow;
   /** The card's own words (0209), or null. */
   words: ReartCardWords | null;
+  /** Who painted the picture Re-art put on the card (0211), in words —
+   *  null: not painted by Re-art, or painted before it was recorded. */
+  paintedBy: string | null;
   /** The card's own text, for the prompt's preview — the maker's own card;
    *  a real card's is read from its printing when it is painted (null). */
   rulesText: string | null;

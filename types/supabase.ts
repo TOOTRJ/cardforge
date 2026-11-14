@@ -778,6 +778,7 @@ export type Database = {
           previous_artist_credit: string | null;
           previous_back_artist_credit: string | null;
           painted_at: string;
+          image_model: string | null;
         };
         Insert: {
           deck_id: string;
@@ -796,6 +797,7 @@ export type Database = {
           previous_artist_credit?: string | null;
           previous_back_artist_credit?: string | null;
           painted_at?: string;
+          image_model?: string | null;
         };
         Update: {
           deck_id?: string;
@@ -814,6 +816,7 @@ export type Database = {
           previous_artist_credit?: string | null;
           previous_back_artist_credit?: string | null;
           painted_at?: string;
+          image_model?: string | null;
         };
         Relationships: [];
       };

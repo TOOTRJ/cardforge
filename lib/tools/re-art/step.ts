@@ -21,12 +21,18 @@ import type { CardBackFace, CardType, ColorIdentity } from "@/types/card";
 import type { Json } from "@/types/supabase";
 import {
   REART_CREDITS_PER_FACE,
+  REART_DEFAULT_MODEL,
   REART_MAX_CARDS,
+  REART_MODEL_IDS,
+  REART_MODEL_NOT_YOURS,
   REART_SKIP_COPY,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
+  canPickReartModel,
   reartArtPrompt,
   reartEntryState,
+  reartGatewayModel,
+  reartModelOf,
   reartPromptIsMakers,
   reartLadderStyle,
   reartStateIsSettled,
@@ -35,6 +41,7 @@ import {
   sameReartStyle,
   withBackArt,
   type ReartCardWords,
+  type ReartFraming,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
@@ -96,6 +103,9 @@ const planSchema = z
     deck_id: z.string().uuid(),
     style: reartStyleSchema.extend({ version: z.number().int().min(1) }),
     visibility: z.enum(REART_VISIBILITY_VALUES),
+    /** The model that paints the run (0211) — one of the tool's own list,
+     *  whoever wrote the plan. Absent (a run started before it): Automatic. */
+    model: z.enum(REART_MODEL_IDS).default(REART_DEFAULT_MODEL),
     entries: z.array(planEntrySchema).min(1).max(REART_MAX_CARDS),
   })
   .strict();
@@ -143,7 +153,13 @@ const wordsFor = (face: "front" | "back", words: ReartCardWords | null) => (face
 /** The prompt of a real card's picture: the card's own subject (or its own
  *  words), in the deck's style or the maker's own deck prompt. `exact`: the
  *  prompt is the maker's, and is never swapped for a generic one. */
-function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: ReartStyle, words: ReartCardWords | null) {
+function payloadPrompt(
+  payload: BulkCardPayload,
+  face: "front" | "back",
+  style: ReartStyle,
+  words: ReartCardWords | null,
+  framing: ReartFraming,
+) {
   const back = face === "back" ? payload.back_face : undefined;
   const typeLine = buildTypeLine({
     cardType: (back?.card_type ?? payload.card_type) as CardType | undefined,
@@ -153,7 +169,7 @@ function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: 
   const own = wordsFor(face, words);
   return {
     style: reartLadderStyle(style),
-    exact: reartPromptIsMakers(style, own),
+    exact: promptIsExact(style, own, framing),
     prompt: reartArtPrompt(
       {
         title: back?.title ?? payload.title,
@@ -163,8 +179,21 @@ function payloadPrompt(payload: BulkCardPayload, face: "front" | "back", style: 
       },
       style,
       own,
+      framing,
     ),
   };
+}
+
+/**
+ * The prompt is never swapped for the safety ladder's generic third rung:
+ * the maker wrote it — or it is in the PLAIN wording a named model other
+ * than FLUX.2 is sent (that rung is FLUX.2's wording, "trading-card
+ * illustration evoking “Name”…", which made those models paint a card
+ * frame with the title in it). Refused twice, the step fails and is
+ * refunded.
+ */
+function promptIsExact(style: ReartStyle, words: ReartCardWords | null, framing: ReartFraming): boolean {
+  return reartPromptIsMakers(style, words) || framing === "plain";
 }
 
 export async function runReartStep(
@@ -184,6 +213,9 @@ export async function runReartStep(
   const plan = parsedPlan.data;
   const planned = plan.entries[stepIndex];
   if (!planned || step.key !== reartStepKey(stepIndex)) return failed(step, "Missing card plan.");
+  // Naming the model is for admins and testers: the plan is its owner's to
+  // write, so the step asks again — before any read or charge.
+  if (plan.model !== REART_DEFAULT_MODEL && !canPickReartModel(access)) return failed(step, REART_MODEL_NOT_YOURS);
 
   // The deck's stored style is the authority: a run priced in a style the
   // deck no longer has stops here, before any charge.
@@ -192,6 +224,9 @@ export async function runReartStep(
     return failed(step, REART_STYLE_CHANGED);
   }
   const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
+  // The model the run names (the plan's schema holds it to the tool's own
+  // list): painted with alone, in the wording that model takes.
+  const model = { gateway: reartGatewayModel(plan.model), framing: reartModelOf(plan.model).framing };
 
   // The entry, from the caller's OWN deck again. The deck is embedded by
   // its foreign key's NAME: unnamed, the API refuses the read the day
@@ -236,7 +271,7 @@ export async function runReartStep(
   // An entry that is (now) linked to a card: the own-card path — a real
   // card another run already made lands here too, and is found in style.
   if (cardId) {
-    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, words, deps);
+    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, words, model, deps);
   }
   if (planned.kind !== "printing" || !entry.scryfall_id) {
     return failed(step, "This entry has no card to re-art any more.");
@@ -251,15 +286,17 @@ export async function runReartStep(
       source: { kind: "deck_entry", id: entry.id },
       choices: reartBulkChoices(style, plan.visibility),
       aiLabel: "deck_reart_art",
-      artPrompt: (payload, face) => payloadPrompt(payload, face, style, words),
+      imageModel: model.gateway,
+      artPrompt: (payload, face) => payloadPrompt(payload, face, style, words, model.framing),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
-      onSaved: async (newCardId, art) => {
+      onSaved: async (newCardId, art, models) => {
         const recorded = await writePaintedCard(userId, plan.deck_id, jobId, {
           cardId: newCardId,
           entryId: entry.id,
           styleVersion: stored.version,
           artUrl: art.front,
           backArtUrl: art.back,
+          imageModel: models.join(" + ") || null,
           made: true,
           previousArtUrl: null,
           previousArtPosition: null,
@@ -301,6 +338,7 @@ async function paintOwnCard(
   cardId: string,
   repaint: boolean,
   words: ReartCardWords | null,
+  model: { gateway: string | undefined; framing: ReartFraming },
   deps: BulkStepDeps,
 ): Promise<JobStep> {
   const supabase = await createClient();
@@ -409,12 +447,14 @@ async function paintOwnCard(
         },
         style,
         own,
+        model.framing,
       );
       await logAiCall(userId, "deck_reart_art");
       const image = await generateImageWithFallbacks(
-        // The maker's own words are never swapped for a picture built from
-        // the card's name: refused twice, the step fails and is refunded.
-        reartPromptIsMakers(style, own)
+        // The maker's own words — and a prompt in the plain wording — are
+        // never swapped for a picture built from the card's name: refused
+        // twice, the step fails and is refunded.
+        promptIsExact(style, own, model.framing)
           ? exactArtPromptLadder(prompt)
           : artPromptLadder(attempt, prompt, {
               title,
@@ -422,7 +462,7 @@ async function paintOwnCard(
               style: reartLadderStyle(style),
             }),
         face === "back" ? artShapeForBackFace(frontFace, back) : artShapeForFace(frontFace),
-        { budgetMs },
+        { budgetMs, model: model.gateway },
       );
       if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
       const saved = await persistGeneratedArt(image.bytes, image.contentType);
@@ -458,6 +498,7 @@ async function paintOwnCard(
       styleVersion: version,
       artUrl: front.url,
       backArtUrl: backUrl,
+      imageModel: [...new Set(models)].join(" + ") || null,
       ...previous,
     });
 
