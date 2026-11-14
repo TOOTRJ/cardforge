@@ -93,7 +93,10 @@ export async function listDeckTileArt(
     const read = (withRank: boolean) =>
       supabase
         .from("decks")
-        .select(`id, owner_id, deck_cards(${entryColumns(withRank)})`)
+        // The foreign key by NAME: unnamed, the API refuses the read the
+        // day another table links decks and deck_cards (PGRST201 — 0209
+        // did, and every tile lost its art; deck-entry-embeds.test.ts).
+        .select(`id, owner_id, deck_cards!deck_cards_deck_id_fkey(${entryColumns(withRank)})`)
         .in("id", decks.map((deck) => deck.id))
         .neq("deck_cards.board", "maybe")
         .order("position", { referencedTable: "deck_cards" })
@@ -102,6 +105,10 @@ export async function listDeckTileArt(
         .limit(ENTRY_CAP, { referencedTable: "deck_cards" });
     let { data, error } = await read(true);
     if (missingFeaturedRank(error)) ({ data, error } = await read(false));
+    // A failed read still draws the neutral tiles — but it is SAID: for a
+    // day in 2026-11 every tile on the site lost its art with no line in
+    // any log (the API refused the embed as ambiguous).
+    if (error) console.error(`[decks] tile art not read: ${error.code ?? ""} ${error.message}`);
 
     const lite = new Map<string, { ownerId: string; colors: DeckCoverColor[] | null; fan: FeaturedCard<LiteCard>[] }>();
     for (const deck of (data ?? []) as unknown as Array<{ id: string; owner_id: string; deck_cards: EntryRow[] | null }>) {

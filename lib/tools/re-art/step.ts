@@ -193,15 +193,24 @@ export async function runReartStep(
   }
   const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
 
-  // The entry, from the caller's OWN deck again.
+  // The entry, from the caller's OWN deck again. The deck is embedded by
+  // its foreign key's NAME: unnamed, the API refuses the read the day
+  // another table links decks and deck_cards (PGRST201 — 0209 did, and
+  // every card was told it had left its deck; deck-entry-embeds.test.ts).
   const supabase = await createClient();
-  const { data: entry } = await supabase
+  const { data: entry, error: entryError } = await supabase
     .from("deck_cards")
-    .select("id, name, board, card_id, scryfall_id, decks!inner(owner_id)")
+    .select("id, name, board, card_id, scryfall_id, decks!deck_cards_deck_id_fkey!inner(owner_id)")
     .eq("id", planned.entry_id)
     .eq("deck_id", plan.deck_id)
     .eq("decks.owner_id", userId)
     .maybeSingle();
+  // A read that FAILED is never "the card is gone": said as it is, logged,
+  // and nothing is charged.
+  if (entryError) {
+    console.error(`[re-art] deck entry ${planned.entry_id} not read: ${entryError.code ?? ""} ${entryError.message}`);
+    return failed(step, "We couldn't read this card's deck entry — try it again.");
+  }
   if (!entry) return failed(step, "This card is no longer in your deck.");
   if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
   // The card's own words (0209), read here: the plan is the owner's to

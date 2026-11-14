@@ -21,7 +21,15 @@ const HOST = "https://auth.pipglyph.com";
 
 type Row = Record<string, unknown>;
 type Call = { table: string; ops: Array<[string, ...unknown[]]> };
-const s = vi.hoisted(() => ({ decks: [] as Row[], cards: [] as Row[], calls: [] as Call[], fail: false, noRank: false }));
+const s = vi.hoisted(() => ({
+  decks: [] as Row[],
+  cards: [] as Row[],
+  calls: [] as Call[],
+  fail: false,
+  noRank: false,
+  /** The API's own refusal of the deck read (an answer, not a throw). */
+  refused: null as null | { code: string; message: string },
+}));
 
 function chain(table: string) {
   const call: Call = { table, ops: [] };
@@ -43,6 +51,7 @@ function chain(table: string) {
         error: { code: "42703", message: "column deck_cards_1.featured_rank does not exist" },
       }).then(resolve, reject);
     }
+    if (s.refused && table === "decks") return Promise.resolve({ data: null, error: s.refused }).then(resolve, reject);
     return Promise.resolve({ data: table === "decks" ? s.decks : s.cards, error: null }).then(resolve, reject);
   };
   return c;
@@ -89,6 +98,7 @@ beforeEach(() => {
   s.calls = [];
   s.fail = false;
   s.noRank = false;
+  s.refused = null;
 });
 
 describe("listDeckTileArt — colours (D3, the page's default cover)", () => {
@@ -173,6 +183,35 @@ describe("listDeckTileArt — the fan", () => {
     expect(deckRead).toContain(JSON.stringify(["order", "id", { referencedTable: "deck_cards" }]));
     // Never the HD PNG as a column a tile would draw: the thumb is selected.
     expect(String(s.calls[0].ops.find((op) => op[0] === "select")?.[1])).toContain("rendered_thumb_url");
+  });
+
+  // 2026-11-13: migration 0209's table (keyed on its two foreign keys) read
+  // to the API as a second link between decks and deck_cards, and the
+  // unnamed embed was refused as ambiguous — every tile on the site drew its
+  // default cover, with no line in any log.
+  it("embeds the deck's entries by their foreign key's NAME — an unnamed embed is refused once another table links the two", async () => {
+    s.decks = [{ id: "d3", owner_id: OWNER, deck_cards: [entry("e30", "main", null)] }];
+    await listDeckTileArt([{ id: "d3", owner_id: OWNER }], { anonymous: true });
+    const select = String(s.calls[0].ops.find((op) => op[0] === "select")?.[1]);
+    expect(select.startsWith("id, owner_id, deck_cards!deck_cards_deck_id_fkey(")).toBe(true);
+    // The embed keeps its name: the filters, the order and the cap still say "deck_cards".
+    expect(s.calls[0].ops.filter((op) => op[0] === "neq")).toEqual([["neq", "deck_cards.board", "maybe"]]);
+  });
+
+  it("a read the API REFUSES draws the neutral tiles — and says so in the log", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    s.refused = { code: "PGRST201", message: "Could not embed because more than one relationship was found for 'decks' and 'deck_cards'" };
+    const art = await listDeckTileArt([{ id: "d8", owner_id: OWNER }], { anonymous: true });
+    expect(art.size).toBe(0);
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(String(logged.mock.calls[0][0])).toMatch(/^\[decks\] tile art not read: PGRST201 /);
+    // A read that answers logs nothing.
+    logged.mockClear();
+    s.refused = null;
+    s.decks = [{ id: "d8", owner_id: OWNER, deck_cards: [entry("e80", "main", null)] }];
+    expect((await listDeckTileArt([{ id: "d8", owner_id: OWNER }], { anonymous: true })).size).toBe(1);
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
   });
 
   it("follows the owner's cover picks (DK6.4): the commander, then the picks by rank", async () => {

@@ -39,6 +39,8 @@ const m = vi.hoisted(() => ({
   words: vi.fn(),
   bakedBack: vi.fn(),
   rows: { deck_cards: null as unknown, cards: null as unknown },
+  /** The API's own refusal of the entry's read, and what the step selected. */
+  entry: { error: null as null | { code: string; message: string }, select: "" },
 }));
 
 vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
@@ -46,9 +48,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     from: (table: "deck_cards" | "cards") => {
       const chain = {
-        select: () => chain,
+        select: (columns: string) => {
+          if (table === "deck_cards") m.entry.select = columns;
+          return chain;
+        },
         eq: () => chain,
-        maybeSingle: async () => ({ data: m.rows[table], error: null }),
+        maybeSingle: async () =>
+          table === "deck_cards" && m.entry.error ? { data: null, error: m.entry.error } : { data: m.rows[table], error: null },
       };
       return chain;
     },
@@ -142,6 +148,8 @@ beforeEach(() => {
   m.words.mockResolvedValue({ ok: true, words: null });
   m.link.mockResolvedValue({ ok: true });
   m.writePainted.mockResolvedValue(true);
+  m.entry.error = null;
+  m.entry.select = "";
   m.rows.deck_cards = { id: ENTRY, name: "Archivist", board: "main", card_id: "card-1", scryfall_id: null };
   m.rows.cards = OWN_CARD;
   m.bakedBack.mockReturnValue(false);
@@ -174,8 +182,27 @@ describe("the step trusts nothing in the plan", () => {
 
   it("an entry no longer in the caller's deck fails", async () => {
     m.rows.deck_cards = null;
-    expect((await run(planOf())).status).toBe("failed");
+    expect(await run(planOf())).toMatchObject({ status: "failed", error: "This card is no longer in your deck." });
     expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  // 2026-11-13: migration 0209's table read to the API as a second link
+  // between decks and deck_cards; the unnamed embed was refused (PGRST201)
+  // and every card of every run was told it had left its deck.
+  it("reads the entry's deck by its foreign key's NAME, and a read the API refuses is said as one — never “no longer in your deck”", async () => {
+    await run(planOf());
+    expect(m.entry.select).toContain("decks!deck_cards_deck_id_fkey!inner(owner_id)");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    m.entry.error = { code: "PGRST201", message: "Could not embed because more than one relationship was found" };
+    m.credited.mockClear();
+    m.image.mockClear();
+    const result = await run(planOf());
+    expect(result.status).toBe("failed");
+    expect(result.error).toBe("We couldn't read this card's deck entry — try it again.");
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect(String(logged.mock.calls[0][0])).toMatch(/^\[re-art\] deck entry .* not read: PGRST201 /);
+    logged.mockRestore();
   });
 });
 
