@@ -38,6 +38,10 @@ export type SkippedBulkSource = { key: string; name: string; reason: string };
 
 const SCRYFALL_ID_RE = /^[0-9a-f-]{8,64}$/i;
 
+/** What a source is told when its own row couldn't be READ (the API didn't
+ *  answer, or refused): never "not found" — it may well be there. */
+export const BULK_SOURCE_UNREAD = "We couldn't read it just now — try again.";
+
 /** The caller's sources, each resolved from their own rows — or skipped with
  *  a reason the dialog shows. Order and de-duplication follow the request. */
 export async function resolveBulkSources(
@@ -57,6 +61,9 @@ export async function resolveBulkSources(
   const supabase = await createClient();
 
   const entries = new Map<string, { scryfall_id: string | null; name: string; card_id: string | null }>();
+  /** The read of the deck entries / the collection rows didn't answer. */
+  let entriesUnread = false;
+  let collectionUnread = false;
   if (entryIds.length > 0) {
     // The entry's deck must be the caller's own (a public deck's entries are
     // readable by anyone; customizing one is the owner's). The deck is
@@ -68,9 +75,12 @@ export async function resolveBulkSources(
       .select("id, name, scryfall_id, card_id, decks!deck_cards_deck_id_fkey!inner(owner_id)")
       .in("id", entryIds)
       .eq("decks.owner_id", userId);
-    // A read that FAILED is said in the log: it used to pass for "none of
-    // these entries are yours".
-    if (error) console.error(`[bulk-customize] deck entries not read: ${error.code ?? ""} ${error.message}`);
+    // A read that FAILED is said — in the log, and to the maker below: it
+    // used to pass for "none of these entries are yours".
+    if (error) {
+      console.error(`[bulk-customize] deck entries not read: ${error.code ?? ""} ${error.message}`);
+      entriesUnread = true;
+    }
     for (const row of data ?? []) {
       entries.set(row.id, { scryfall_id: row.scryfall_id, name: row.name, card_id: row.card_id });
     }
@@ -78,11 +88,15 @@ export async function resolveBulkSources(
 
   const rows = new Map<string, { scryfall_id: string; name: string }>();
   if (collectionIds.length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("collection_cards")
       .select("id, name, scryfall_id")
       .in("id", collectionIds)
       .eq("owner_id", userId);
+    if (error) {
+      console.error(`[bulk-customize] collection cards not read: ${error.code ?? ""} ${error.message}`);
+      collectionUnread = true;
+    }
     for (const row of data ?? []) rows.set(row.id, { scryfall_id: row.scryfall_id, name: row.name });
   }
 
@@ -93,7 +107,7 @@ export async function resolveBulkSources(
     if (source.kind === "deck_entry") {
       const entry = entries.get(source.id);
       if (!entry) {
-        skipped.push({ key, name: "A deck entry", reason: "Not found in your decks." });
+        skipped.push({ key, name: "A deck entry", reason: entriesUnread ? BULK_SOURCE_UNREAD : "Not found in your decks." });
       } else if (entry.card_id) {
         skipped.push({ key, name: entry.name, reason: "Already one of your PipGlyph cards." });
       } else if (!entry.scryfall_id || !SCRYFALL_ID_RE.test(entry.scryfall_id)) {
@@ -103,7 +117,7 @@ export async function resolveBulkSources(
       }
     } else if (source.kind === "collection") {
       const row = rows.get(source.id);
-      if (!row) skipped.push({ key, name: "A collection card", reason: "Not found in your collection." });
+      if (!row) skipped.push({ key, name: "A collection card", reason: collectionUnread ? BULK_SOURCE_UNREAD : "Not found in your collection." });
       else resolved.push({ key, source, scryfallId: row.scryfall_id, name: row.name, collectionId: source.id });
     } else if (SCRYFALL_ID_RE.test(source.id)) {
       resolved.push({ key, source, scryfallId: source.id.toLowerCase(), name: "" });

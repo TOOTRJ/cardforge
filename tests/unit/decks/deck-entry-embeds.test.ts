@@ -56,7 +56,8 @@ function embedsIn(file: string, text: string): Embed[] {
     const next = rest.search(/\.from\(/);
     const statement = rest.slice(0, Math.min(next === -1 ? rest.length : next, 1500));
     const other = PAIR[start[1]];
-    const embed = new RegExp(`(?<![\\w.])${other}((?:![a-z_]+)*)\\s*\\(`, "g");
+    // A hint is a constraint, a column or a join word: letters, digits, "_".
+    const embed = new RegExp(`(?<![\\w.])${other}((?:![A-Za-z0-9_]+)*)\\s*\\(`, "g");
     for (let hit = embed.exec(statement); hit; hit = embed.exec(statement)) {
       const at = start.index + start[0].length + hit.index;
       found.push({
@@ -96,6 +97,8 @@ describe("embedded reads between decks and deck_cards", () => {
     expect(sample('"id, decks(owner_id)"')).toMatchObject([{ embed: "decks", hints: "" }]);
     expect(sample('"id, decks!inner(owner_id)"')).toMatchObject([{ hints: "!inner" }]);
     expect(sample('"id, deck:decks!inner(owner_id)"')).toMatchObject([{ hints: "!inner" }]);
+    // A hint with digits or capitals is still read whole — and still isn't the key.
+    expect(sample('"id, decks!Deck_Cards_fk2!inner(owner_id)"')).toMatchObject([{ hints: "!Deck_Cards_fk2!inner" }]);
     expect(sample("`id, deck_cards(${columns})`", "decks")).toMatchObject([{ embed: "deck_cards", hints: "" }]);
     // Named: found, and it passes.
     expect(sample('"id, decks!deck_cards_deck_id_fkey!inner(owner_id)"')).toMatchObject([{ hints: `!${FKEY}!inner` }]);
