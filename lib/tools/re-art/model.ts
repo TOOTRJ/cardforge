@@ -117,7 +117,14 @@ const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f-\u009f؜​‎‏‪-‮⁦-⁩]
  *  whitespace folded, trimmed, clipped to `max`. */
 function cleanWords(text: string | null | undefined, max: number): string {
   if (!text) return "";
-  return text.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim().slice(0, max).trim();
+  return clipAt(text.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim(), max);
+}
+
+/** The first `max` characters — never half of a character: a cut that
+ *  lands inside a surrogate pair (an emoji, a rare CJK character) leaves a
+ *  lone half the database refuses. */
+function clipAt(text: string, max: number): string {
+  return text.slice(0, max).replace(/[\uD800-\uDBFF]$/, "").trim();
 }
 
 /** The deck's world as the prompt takes it (clipped to REART_THEME_MAX). */
@@ -131,15 +138,14 @@ export function cleanReartTheme(text: string | null | undefined): string {
  *  on one line (flatLine). */
 function cleanLines(text: string | null | undefined, max: number): string {
   if (!text) return "";
-  return text
+  const folded = text
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((line) => line.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim())
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, max)
     .trim();
+  return clipAt(folded, max);
 }
 
 /** Text as a prompt carries it: one line. */
@@ -155,10 +161,10 @@ export function cleanReartCardWords(text: string | null | undefined): string {
   return cleanLines(text, REART_CARD_WORDS_MAX);
 }
 
-/** Words that say something: a few letters at least (a lone "." is not a
- *  picture's subject, and would be painted and paid for). */
+/** Words that say something: a letter at least — "ox" and "火山" are
+ *  subjects; a lone "." is not, and would be painted and paid for. */
 export function reartWordsSaySomething(text: string | null | undefined): boolean {
-  return letters(cleanReartCardWords(text)) >= 3;
+  return letters(cleanReartCardWords(text)) >= 1;
 }
 
 /** A style as it is stored and compared (the preset known, the words clean,
@@ -334,6 +340,10 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): str
       if (key === "card") namesCard = true;
       return values[key] || EMPTY_SLOT;
     })
+    // An empty value that was a whole sentence goes with its stop
+    // ("{flavor}. A knight" is "A knight", never ". A knight")…
+    .replace(/(^|[.!?…]\s*)\u0001\s*[.!?…]+/g, "$1")
+    // …any other takes the comma, colon or semicolon before it.
     .replace(/\s*[,;:]?\s*\u0001/g, "")
     .replace(/^[\s,;:]+/, "")
     .replace(/\s+/g, " ")
@@ -349,10 +359,15 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): str
  *  (no frame, fully clothed, the softened rung's suffix) always fit. */
 export const REART_PROMPT_BODY_MAX = 3000;
 
-/** Cut on a word, at REART_PROMPT_BODY_MAX. */
+/** Cut at REART_PROMPT_BODY_MAX — on a word where one ends near the cut;
+ *  text with no spaces to cut on (one long token, a script written without
+ *  them) is cut where it stands rather than back to its first space. */
 function clipBody(text: string): { text: string; cut: boolean } {
   if (text.length <= REART_PROMPT_BODY_MAX) return { text, cut: false };
-  return { text: text.slice(0, REART_PROMPT_BODY_MAX).replace(/\s+\S*$/, "").replace(/[\s,;:]+$/, ""), cut: true };
+  const hard = clipAt(text, REART_PROMPT_BODY_MAX);
+  const onWord = hard.replace(/\s+\S*$/, "");
+  const kept = hard.length - onWord.length > 200 ? hard : onWord;
+  return { text: kept.replace(/[\s,;:]+$/, ""), cut: true };
 }
 
 /**

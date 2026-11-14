@@ -464,9 +464,34 @@ describe("the maker's own prompts (migration 0209)", () => {
     it("words have to say something: a lone stop is no picture's subject", () => {
       expect(reartWordsSaySomething(".")).toBe(false);
       expect(reartWordsSaySomething(" -- ")).toBe(false);
+      expect(reartWordsSaySomething("12")).toBe(false);
       expect(reartWordsSaySomething("")).toBe(false);
-      expect(reartWordsSaySomething("fog")).toBe(true);
+      // A short subject is a subject.
+      expect(reartWordsSaySomething("ox")).toBe(true);
+      expect(reartWordsSaySomething("火山")).toBe(true);
       expect(reartWordsSaySomething("a goblin chef")).toBe(true);
+    });
+
+    it("an empty value that was a whole sentence goes with its stop", () => {
+      expect(reartArtPrompt(RING, own("{flavor}. A ring of brass"))).toBe(`A ring of brass. ${REART_NO_FRAME_LINE}`);
+      expect(reartArtPrompt(RING, own("A ring of brass. {flavor}. In oils."))).toBe(`A ring of brass. In oils. ${REART_NO_FRAME_LINE}`);
+      expect(reartArtPrompt(RING, own("A ring of brass. Its mood: {flavor}."))).toBe(`A ring of brass. Its mood. ${REART_NO_FRAME_LINE}`);
+    });
+
+    it("a cut never eats text that has no spaces to cut on, and never leaves half a character", () => {
+      // One unbroken token (or a script written without spaces): cut where
+      // it stands, not back to the first space.
+      const token = buildReartPrompt(RING, own(`oils ${"x".repeat(1400)} {card} {card} {card}`), { text: "火".repeat(600), only: false });
+      expect(token.cut).toBe(true);
+      expect(token.prompt.length).toBeGreaterThan(REART_PROMPT_BODY_MAX - 250);
+      expect(token.prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+      // A cut inside a surrogate pair drops the lone half (the database
+      // refuses one).
+      const lone = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/;
+      expect(lone.test(cleanReartPrompt(`${"p".repeat(REART_PROMPT_MAX - 1)}😀`))).toBe(false);
+      expect(lone.test(cleanReartCardWords(`${"w".repeat(REART_CARD_WORDS_MAX - 1)}😀`))).toBe(false);
+      expect(lone.test(cleanReartTheme(`${"t".repeat(299)}😀`))).toBe(false);
+      expect(cleanReartPrompt(`${"p".repeat(REART_PROMPT_MAX - 2)}😀`).endsWith("😀")).toBe(true);
     });
 
     it("a card's own words stand where {card} stands — or first, when the prompt has no {card}", () => {

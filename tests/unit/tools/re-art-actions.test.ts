@@ -471,7 +471,7 @@ describe("saveReartCardWordsAction — one card's own words (0209)", () => {
   });
 
   it("words that say nothing are refused (a lone stop would be painted and paid for)", async () => {
-    for (const text of [".", " - ", "!!"]) {
+    for (const text of [".", " - ", "!!", "42"]) {
       const result = await saveReartCardWordsAction(DECK, ENTRY, { text });
       expect(result).toMatchObject({ ok: false });
       expect(result.ok === false && result.error).toMatch(/Write what the picture shows/);
