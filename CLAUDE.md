@@ -61,6 +61,20 @@ Rules and gotchas:
   with a blanket `grant all on all tables` (that undoes the 0073/0074/0088
   lockdowns). Forgotten grants = `permission denied` (42501) on a branch whose
   Supabase check is green.
+- **A composite primary key over two foreign keys is a many-to-many link to
+  the API.** PostgREST reads a table whose PRIMARY KEY holds foreign keys to
+  two tables as a link between them; if those two already have a foreign key
+  between them, every embedded read that names none is refused (PGRST201).
+  0209's `deck_reart_prompts (deck_id, entry_id)` did it to decks ↔
+  deck_cards on production: every deck tile lost its colours and fan, Bulk
+  Customize and Re-art read no entry (2026-11-13; 0210 keyed the table on
+  `entry_id`). Unit tests mock the client and never see it. So: key such a
+  table on ONE column and keep the pair UNIQUE; a later migration with a
+  composite primary key says `-- api-junction: checked — <why>`
+  (`deck-reart-prompts-key-migration.test.ts`); an embedded read between
+  `decks` and `deck_cards` names `!deck_cards_deck_id_fkey`
+  (`deck-entry-embeds.test.ts`); and a read that FAILS is logged, never
+  passed off as "nothing there".
 - The `dev` git branch is machine-owned (`sync-dev.yml` fast-forwards it to
   `main`; Supabase migrates the dev DB from it). Never commit to it.
 - Supabase's branch runner fails silently sometimes (hung check, empty DB,

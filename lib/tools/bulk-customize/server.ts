@@ -59,12 +59,18 @@ export async function resolveBulkSources(
   const entries = new Map<string, { scryfall_id: string | null; name: string; card_id: string | null }>();
   if (entryIds.length > 0) {
     // The entry's deck must be the caller's own (a public deck's entries are
-    // readable by anyone; customizing one is the owner's).
-    const { data } = await supabase
+    // readable by anyone; customizing one is the owner's). The deck is
+    // embedded by its foreign key's NAME: unnamed, the API refuses the read
+    // the day another table links decks and deck_cards (PGRST201 — 0209
+    // did, and every entry read as skipped; deck-entry-embeds.test.ts).
+    const { data, error } = await supabase
       .from("deck_cards")
-      .select("id, name, scryfall_id, card_id, decks!inner(owner_id)")
+      .select("id, name, scryfall_id, card_id, decks!deck_cards_deck_id_fkey!inner(owner_id)")
       .in("id", entryIds)
       .eq("decks.owner_id", userId);
+    // A read that FAILED is said in the log: it used to pass for "none of
+    // these entries are yours".
+    if (error) console.error(`[bulk-customize] deck entries not read: ${error.code ?? ""} ${error.message}`);
     for (const row of data ?? []) {
       entries.set(row.id, { scryfall_id: row.scryfall_id, name: row.name, card_id: row.card_id });
     }

@@ -446,3 +446,12 @@ instead. Each bullet: what the header says, and what is true now.
   `title` and `nickname`: a `~` in rules text draws the name (layout v76),
   so a symbol a card reaches only through its name is kept as removed,
   never deleted for good.
+- **0209 (`deck_reart_prompts`: `primary key (deck_id, entry_id)`)** — since
+  0210 the primary key is `entry_id` alone and `(deck_id, entry_id)` is a
+  UNIQUE constraint (`deck_reart_prompts_deck_entry_key`: what the app's
+  upsert and the seed name). Keyed on both foreign keys the table read to
+  the API as a second link between `decks` and `deck_cards`, and every
+  embedded read between the two that named no foreign key was refused
+  (PGRST201) — deck tiles' art, Bulk Customize's entries, Re-art's step.
+  0209's index `deck_reart_prompts_entry_idx` is dropped (the key's own
+  index covers it).
