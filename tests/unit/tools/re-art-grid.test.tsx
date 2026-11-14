@@ -40,7 +40,9 @@ import { ReartConfirmDialog } from "@/components/tools/re-art/reart-confirm-dial
 import {
   REART_NO_FRAME_LINE,
   REART_PLAIN_CLOSING_LINE,
+  REART_RESTYLE_LEAD,
   reartModelLabel,
+  reartWordingOf,
   reartStyleBlock,
   type NormalReartStyle,
   type ReartRunInput,
@@ -67,6 +69,7 @@ const entry = (over: Partial<ReartStudioEntry> = {}): ReartStudioEntry => ({
   flavorText: null,
   credits: 1,
   paintedBy: null,
+  restyled: false,
   ...over,
 });
 
@@ -119,6 +122,15 @@ describe("the studio's card list", () => {
     cleanup();
     grid([entry({ state: "in_style" })]);
     expect(screen.queryByText(/Painted by/)).toBeNull();
+  });
+
+  it("says HOW the picture was made (0212): repainted from the card's art, with or without a model on record", () => {
+    grid([entry({ state: "in_style", paintedBy: "Grok Imagine 2.0", restyled: true })]);
+    expect(screen.getByText("Restyled from its art by Grok Imagine 2.0")).toBeTruthy();
+    expect(screen.queryByText(/Painted by/)).toBeNull();
+    cleanup();
+    grid([entry({ state: "in_style", restyled: true })]);
+    expect(screen.getByText("Restyled from its art")).toBeTruthy();
   });
 
   it("a paint link opens the confirm: it ends in “…” for every card and hands the card on", () => {
@@ -231,6 +243,7 @@ describe("the style form — the maker's own prompt (0209)", () => {
       onChange?: (next: NormalReartStyle) => void;
       preview?: Parameters<typeof ReartStylePanel>[0]["preview"];
       framing?: Parameters<typeof ReartStylePanel>[0]["framing"];
+      method?: Parameters<typeof ReartStylePanel>[0]["method"];
     } = {},
   ) {
     return render(
@@ -246,6 +259,7 @@ describe("the style form — the maker's own prompt (0209)", () => {
         paintedInSaved={0}
         preview={over.preview}
         framing={over.framing}
+        method={over.method}
       />,
     );
   }
@@ -279,6 +293,25 @@ describe("the style form — the maker's own prompt (0209)", () => {
     cleanup();
     panel(OWN);
     expect(screen.getByText(`Your prompt, then: ${REART_NO_FRAME_LINE}`)).toBeTruthy();
+  });
+
+  // A restyle (0212): the prompt goes with the card's own art, and the panel says so.
+  it("a restyle: the template's note says the picture comes first; the maker's own prompt says two lines are always added", () => {
+    const show = (style: NormalReartStyle, method?: "paint" | "restyle") =>
+      panel(style, { method, framing: method === "restyle" ? "plain" : undefined });
+    show(TEMPLATE, "restyle");
+    expect(screen.getByText(/Before it: the card's own art, with the instruction to keep its subject and pose/)).toBeTruthy();
+    expect(screen.queryByText(/each card's own name, type and flavour/)).toBeNull();
+    cleanup();
+    show(OWN, "restyle");
+    expect(screen.getByText(/The first and last lines are always added: the card's own art is repainted/)).toBeTruthy();
+    cleanup();
+    // From the prompt alone: as before.
+    show(TEMPLATE);
+    expect(screen.getByText(/Before it: each card's own name, type and flavour/)).toBeTruthy();
+    cleanup();
+    show(OWN);
+    expect(screen.getByText(/^The last line is always added: the picture is art for a card, never a card\./)).toBeTruthy();
   });
 
   it("“Write my own prompt” starts from the look the form shows, so switching loses nothing", () => {
@@ -379,6 +412,32 @@ describe("a card's own words — the dialog (0209)", () => {
     fireEvent.change(box(), { target: { value: "a wyrm coiled round a lighthouse" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /Use only these words for this card/ }));
     expect(preview()).toBe(`a wyrm coiled round a lighthouse. ${REART_PLAIN_CLOSING_LINE}`);
+  });
+
+  it("a restyle (0212): the words say what CHANGES in the card's picture, and the preview is what goes with its art", () => {
+    const wording = reartWordingOf("auto", "restyle");
+    render(
+      <ReartCardWordsDialog
+        open
+        onOpenChange={() => undefined}
+        deckId={DECK}
+        entry={entry({ kind: "printing", flavorText: "Scales like slate." })}
+        style={STYLE}
+        framing={wording.framing}
+        bodyMax={wording.bodyMax}
+        method="restyle"
+        onSaved={vi.fn()}
+      />,
+    );
+    // No words: the opening, the deck's look, the closing line — nothing of the card's name or text.
+    expect(preview()).toBe(`${REART_RESTYLE_LEAD} ${reartStyleBlock(STYLE, "plain")} ${REART_PLAIN_CLOSING_LINE}`);
+    expect(preview()).not.toMatch(/Thornback Wyrm|Scales like slate/);
+    expect(document.body.textContent).toContain("What changes in this card's picture");
+    expect(document.body.textContent).toContain("It is sent with the card's own art: the picture is the subject.");
+    // The note about a real card's text is the paint's: a restyle sends none of it.
+    expect(document.body.textContent).not.toContain("flavour and rules text are read when it is painted");
+    fireEvent.change(box(), { target: { value: "the wyrm breathes blue fire" } });
+    expect(preview()).toBe(`${REART_RESTYLE_LEAD} the wyrm breathes blue fire. ${reartStyleBlock(STYLE, "plain")} ${REART_PLAIN_CLOSING_LINE}`);
   });
 
   it("previews in the maker's own deck prompt when that is the deck's", () => {
@@ -550,6 +609,16 @@ describe("the run's progress panel speaks the tool's words", () => {
     expect(document.body.textContent).not.toMatch(/Painted by/);
   });
 
+  it("says how each picture was made when the tool says so (a restyle run: “Restyled by”)", () => {
+    const steps = [{ key: "reart:0", label: "Thornback Wyrm", status: "done", image_model: "google/gemini-2.5-flash-image", note: "Restyled from the real card's art." }];
+    panel({ steps }, { noun: "painted", doing: "Painting", unit: "run", modelLabel: reartModelLabel, modelVerb: "Restyled by" });
+    expect(document.querySelector("li")?.textContent).toBe("Thornback WyrmRestyled from the real card's art.Restyled by Gemini 2.5 Flash Image");
+    cleanup();
+    // No verb named: "Painted by", as before.
+    panel({ steps }, { modelLabel: reartModelLabel });
+    expect(document.querySelector("li")?.textContent).toContain("Painted by Gemini 2.5 Flash Image");
+  });
+
   it("Bulk Customize keeps its own: made cards, a batch", () => {
     panel();
     expect(screen.getByRole("progressbar", { name: "Cards made" })).toBeTruthy();
@@ -599,6 +668,20 @@ describe("the confirm says which model paints, before anything is charged (0211)
     expect(text).toContain("Painted by Grok Imagine 2.0.");
     // The plan is asked for the run as it will be started.
     expect(planRun.mock.calls[0][0]).toMatchObject({ model: "spacexai/grok-imagine-image-2.0" });
+  });
+
+  it("a restyle (0212) says each picture starts from the card's own art — and by which model when one is named", async () => {
+    const auto = await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "auto", method: "restyle" });
+    expect(auto).toContain("Each picture starts from the card's own art and is repainted.");
+    expect(auto).not.toMatch(/Painted by/);
+    expect(planRun.mock.calls[0][0]).toMatchObject({ method: "restyle" });
+    cleanup();
+    const named = await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "bfl/flux-kontext-pro", method: "restyle" });
+    expect(named).toContain("Each picture starts from the card's own art and is repainted by FLUX.1 Kontext [pro].");
+    expect(named).not.toMatch(/Painted by/);
+    cleanup();
+    // From the prompt alone: no such line.
+    expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "auto", method: "paint" })).not.toMatch(/starts from the card's own art/);
   });
 
   it("Automatic — or no model at all — says nothing about one", async () => {

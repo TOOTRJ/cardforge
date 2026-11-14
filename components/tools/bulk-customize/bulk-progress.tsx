@@ -25,6 +25,7 @@ export function BulkProgress({
   doing = "Making",
   unit = "batch",
   modelLabel,
+  modelVerb = "Painted by",
   pausedNote = "Closing ends this batch; the cards made so far stay saved.",
 }: {
   runner: ReturnType<typeof useBulkRunner>;
@@ -46,6 +47,8 @@ export function BulkProgress({
    *  tool that says who painted — Re-art deck's model picker. Absent: not
    *  said. */
   modelLabel?: (imageModel: string) => string | null;
+  /** The words before that model's name ("Painted by", "Restyled by"). */
+  modelVerb?: string;
   /** What a paused batch says about leaving it. */
   pausedNote?: string;
 }) {
@@ -125,7 +128,9 @@ export function BulkProgress({
               ) : null}
               {step.note ? <span className="block text-xs text-muted">{step.note}</span> : null}
               {step.status === "done" && step.image_model && modelLabel?.(step.image_model) ? (
-                <span className="block text-xs text-subtle">Painted by {modelLabel(step.image_model)}</span>
+                <span className="block text-xs text-subtle">
+                  {modelVerb} {modelLabel(step.image_model)}
+                </span>
               ) : null}
               {step.forced_private ? (
                 <span className="block text-xs text-muted">Saved private: its text has strong language.</span>

@@ -183,6 +183,9 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       // picture is still the card's, and only for those who can pick the
       // model (it is a testing aid).
       paintedBy: canPickModel && done && reartArtIsOnCard(done, card?.art_url) ? reartModelLabel(done.imageModel) : null,
+      // …and how: repainted from the card's own art (0212), or from the
+      // prompt alone.
+      restyled: Boolean(canPickModel && done && reartArtIsOnCard(done, card?.art_url) && done.method === "restyle"),
       // The prompt's preview fills {rules} / {flavor} from the maker's own
       // card; a real card's are read from its printing when it is painted.
       rulesText: own?.rules_text ?? null,

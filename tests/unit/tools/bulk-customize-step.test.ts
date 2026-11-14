@@ -19,6 +19,7 @@ const m = vi.hoisted(() => ({
   scryfallRate: vi.fn(),
   uploadRate: vi.fn(),
   storeArt: vi.fn(),
+  artCrop: vi.fn(),
   capacity: vi.fn(),
   create: vi.fn(),
   link: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock("@/lib/tools/bulk-customize/planner", () => ({ planCustomizedCard: m.pla
 vi.mock("@/lib/scryfall/client", () => ({ getCardById: m.getCard }));
 vi.mock("@/lib/scryfall/rate-limit", () => ({ checkScryfallRateLimit: m.scryfallRate, logScryfallCall: vi.fn() }));
 vi.mock("@/lib/scryfall/import-art", () => ({ storeScryfallArt: m.storeArt }));
+vi.mock("@/lib/scryfall/art-crop", () => ({ fetchScryfallArtCrop: m.artCrop }));
 vi.mock("@/lib/media/upload-rate-limit", () => ({ checkUploadRateLimit: m.uploadRate }));
 vi.mock("@/lib/media/user-storage", () => ({ userFolder: () => ({ remove: m.remove }) }));
 vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => [] }));
@@ -49,11 +51,11 @@ vi.mock("@/lib/cards/actions", () => ({ createCardAction: m.create }));
 vi.mock("@/lib/decks/card-actions", () => ({ linkDeckCardAction: m.link }));
 vi.mock("@/lib/ai/credited-step", () => ({ withCreditedStep: m.credited }));
 vi.mock("@/lib/ai/rate-limit", () => ({ logAiCall: vi.fn() }));
-vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: vi.fn() }));
+vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: vi.fn(), restyleWithFallbacks: vi.fn() }));
 vi.mock("@/lib/ai/random-art", () => ({ persistGeneratedArt: vi.fn(), discardGeneratedArt: vi.fn() }));
 
 import { bulkStepFailureReason, customizeSourceStep, runBulkCustomizeStep } from "@/lib/tools/bulk-customize/step";
-import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
+import { generateImageWithFallbacks, restyleWithFallbacks } from "@/lib/ai/image-gen";
 import { persistGeneratedArt } from "@/lib/ai/random-art";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 
@@ -431,6 +433,130 @@ describe("a tool built on the core may name the model that paints (Re-art's pick
       DEPS,
     );
     expect(onSaved.mock.calls[0][2]).toEqual([]);
+  });
+});
+
+describe("a tool built on the core may start each picture from the printing's own art (Re-art's restyle)", () => {
+  const AI_ART = "https://x.supabase.co/storage/v1/object/public/card-art/u1/ai-1.jpg";
+  const CARD = { id: "sf-1", name: "Llanowar Elves", set: "dom" };
+  type OnSaved = (cardId: string, art: { front: string | null; back: string | null }, models: string[]) => Promise<string | null>;
+  const restyled = vi.mocked(restyleWithFallbacks);
+  const painted = vi.mocked(generateImageWithFallbacks);
+  const start = async (over: { restyle?: boolean; doubleFaced?: boolean; imageModel?: string } = {}) => {
+    m.plan.mockReturnValue({
+      ...PLANNED,
+      changes: ["ai_art"],
+      credits: over.doubleFaced ? 2 : 1,
+      doubleFaced: Boolean(over.doubleFaced),
+      payload: over.doubleFaced
+        ? { ...PLANNED.payload, back_face: { title: "Back", card_type: "creature", subtypes: [], frame_style: { template: "m15dfcback" } } }
+        : PLANNED.payload,
+    });
+    const onSaved = vi.fn<OnSaved>(async () => null);
+    const result = await customizeSourceStep(
+      "u1",
+      "job-1",
+      STEP,
+      {
+        source: { kind: "deck_entry", id: ENTRY_ID },
+        choices: { ...DEFAULT_BULK_CHOICES, art: "ai" },
+        aiLabel: "deck_reart_art",
+        artPrompt: () => ({ prompt: "Repaint this exact picture in gouache.", style: "gouache", exact: true }),
+        ...(over.restyle === undefined ? {} : { restyle: over.restyle }),
+        ...(over.imageModel ? { imageModel: over.imageModel } : {}),
+        onSaved,
+      },
+      DEPS,
+    );
+    return { result, onSaved };
+  };
+
+  beforeEach(() => {
+    restyled.mockReset();
+    painted.mockReset();
+    vi.mocked(persistGeneratedArt).mockReset();
+    vi.mocked(persistGeneratedArt).mockResolvedValue({ ok: true, publicUrl: AI_ART } as Awaited<ReturnType<typeof persistGeneratedArt>>);
+    restyled.mockResolvedValue({ ok: true, bytes: new Uint8Array([2]), contentType: "image/png", model: "google/gemini-2.5-flash-image", promptIndex: 0 });
+    painted.mockResolvedValue({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: "bfl/flux-2-flex", promptIndex: 0 });
+    m.getCard.mockResolvedValue(CARD);
+    m.artCrop.mockResolvedValue({ ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" });
+  });
+
+  it("the printing's art is fetched on the caller's art quota BEFORE anything is reserved, and repainted with the prompt as written", async () => {
+    const { result, onSaved } = await start({ restyle: true, imageModel: "bfl/flux-kontext-pro" });
+    expect(result.status).toBe("done");
+    // The lookup's quota, then the art's — both before the credit.
+    expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named", "import_art"]);
+    expect(m.artCrop).toHaveBeenCalledWith("u1", CARD, "front");
+    expect(m.artCrop.mock.invocationCallOrder[0]).toBeLessThan(m.credited.mock.invocationCallOrder[0]);
+    // Repainted from that picture — never painted from the prompt alone, never stored as the card's own.
+    expect(painted).not.toHaveBeenCalled();
+    expect(m.storeArt).not.toHaveBeenCalled();
+    const [ladder, source, , options] = restyled.mock.calls[0];
+    expect(ladder).toHaveLength(2);
+    expect(ladder[0]).toBe("Repaint this exact picture in gouache.");
+    expect([...source.bytes]).toEqual([5]);
+    expect(options).toMatchObject({ model: "bfl/flux-kontext-pro" });
+    // Saved as the AI picture it is, and the caller's record is told who repainted it.
+    expect(onSaved).toHaveBeenCalledWith("card-1", { front: AI_ART, back: null }, ["google/gemini-2.5-flash-image"]);
+    expect(result.image_model).toBe("google/gemini-2.5-flash-image");
+  });
+
+  it("a printing with no art to start from fails before any charge; a spent minute of the art quota waits", async () => {
+    m.artCrop.mockResolvedValue({ ok: false, error: "Scryfall has no art for this card to restyle." });
+    const none = await start({ restyle: true });
+    expect(none.result).toMatchObject({ status: "failed", error: "Scryfall has no art for this card to restyle." });
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.create).not.toHaveBeenCalled();
+
+    m.scryfallRate.mockImplementation(async (_user: string, label: string) =>
+      label === "import_art" ? { ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 17 } : { ok: true },
+    );
+    const waiting = await start({ restyle: true });
+    expect(waiting.result).toMatchObject({ status: "pending", error_code: "RATE_LIMITED", retry_after_seconds: 17 });
+    m.scryfallRate.mockImplementation(async (_user: string, label: string) =>
+      label === "import_art" ? { ok: false, reason: "per_day", message: "That's the day's art." } : { ok: true },
+    );
+    expect((await start({ restyle: true })).result).toMatchObject({ status: "failed", error: "That's the day's art." });
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(restyled).not.toHaveBeenCalled();
+  });
+
+  it("a double-faced printing starts each face from its own art: two pictures, two credits", async () => {
+    m.artCrop.mockImplementation(async (_user: string, _card: unknown, face: string) => ({ ok: true, bytes: new Uint8Array([face === "back" ? 8 : 5]), contentType: "image/jpeg" }));
+    const { result } = await start({ restyle: true, doubleFaced: true });
+    expect(result.status).toBe("done");
+    expect(m.credited.mock.calls[0][2]).toBe(2);
+    expect(m.artCrop.mock.calls.map((call) => call[2])).toEqual(["front", "back"]);
+    expect(restyled.mock.calls.map((call) => [...call[1].bytes])).toEqual([[5], [8]]);
+    // A back with no art stops it before the charge too.
+    m.credited.mockClear();
+    m.artCrop.mockImplementation(async (_user: string, _card: unknown, face: string) =>
+      face === "back" ? { ok: false, error: "This card has no back face." } : { ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" },
+    );
+    expect((await start({ restyle: true, doubleFaced: true })).result).toMatchObject({ status: "failed", error: "This card has no back face." });
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  it("a restyle the provider declines fails the card and discards nothing it didn't store", async () => {
+    restyled.mockResolvedValue({ ok: false, error: "The image service declined to repaint this picture.", failure: "art_blocked", safetyBlocked: true });
+    const { result } = await start({ restyle: true });
+    expect(result).toMatchObject({ status: "failed", failure: "art_blocked" });
+    expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it("not asked for (Bulk Customize itself, a Re-art paint): no art is fetched, and the picture is painted from the prompt", async () => {
+    for (const restyle of [undefined, false]) {
+      m.artCrop.mockClear();
+      painted.mockClear();
+      const { result } = await start({ restyle });
+      expect(result.status).toBe("done");
+      expect(m.artCrop).not.toHaveBeenCalled();
+      expect(painted).toHaveBeenCalledTimes(1);
+      expect(restyled).not.toHaveBeenCalled();
+      expect(m.scryfallRate.mock.calls.map((call) => call[1])).not.toContain("import_art");
+      m.scryfallRate.mockClear();
+    }
   });
 });
 

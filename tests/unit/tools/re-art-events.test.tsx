@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import type { ReartStudioEntry } from "@/lib/tools/re-art/model";
@@ -73,11 +73,13 @@ vi.mock("@/components/tools/bulk-customize/bulk-progress", () => ({
   BulkProgress: ({
     runner,
     modelLabel,
+    modelVerb,
   }: {
     runner: { stop: () => void; retryFailed: () => void };
     modelLabel?: (imageModel: string) => string | null;
+    modelVerb?: string;
   }) => (
-    <div data-testid="progress" data-names-model={modelLabel ? (modelLabel("bfl/flux-kontext-pro") ?? "") : "no"}>
+    <div data-testid="progress" data-names-model={modelLabel ? (modelLabel("bfl/flux-kontext-pro") ?? "") : "no"} data-verb={modelVerb}>
       <button type="button" onClick={runner.stop}>
         panel stop
       </button>
@@ -95,14 +97,16 @@ vi.mock("@/components/tools/re-art/reart-style-panel", () => ({
     dirty,
     paintedInSaved,
     framing,
+    method,
   }: {
     onChange: (next: { preset: string; theme: string; mode: "preset" | "custom"; prompt: string }) => void;
     preview?: { name: string; prompt: string; partial: boolean } | null;
     dirty: boolean;
     paintedInSaved: number;
     framing?: string;
+    method?: string;
   }) => (
-    <div data-testid="style-panel" data-framing={framing}>
+    <div data-testid="style-panel" data-framing={framing} data-method={method}>
       <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour", mode: "preset", prompt: "" })}>
         change style
       </button>
@@ -125,6 +129,7 @@ vi.mock("@/components/tools/re-art/reart-card-words-dialog", () => ({
     style,
     framing,
     bodyMax,
+    method,
     onSaved,
   }: {
     open: boolean;
@@ -132,10 +137,11 @@ vi.mock("@/components/tools/re-art/reart-card-words-dialog", () => ({
     style: { mode?: string };
     framing?: string;
     bodyMax?: number;
+    method?: string;
     onSaved: (words: { text: string; only: boolean } | null) => void;
   }) =>
     open ? (
-      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode} data-framing={framing} data-body-max={bodyMax}>
+      <div role="dialog" aria-label={`Words for ${entry.name}`} data-mode={style.mode} data-framing={framing} data-body-max={bodyMax} data-method={method}>
         <button type="button" onClick={() => onSaved({ text: "a wyrm asleep", only: false })}>
           save words
         </button>
@@ -311,6 +317,7 @@ const ENTRY: ReartStudioEntry = {
   flavorText: "Scales like slate.",
   credits: 1,
   paintedBy: null,
+  restyled: false,
 };
 
 const job = (steps: JobStep[], request: Record<string, unknown> = { sample: false, reroll: false }): GenerationJobView => ({
@@ -544,8 +551,9 @@ describe("one card at a time — priced first, in the saved style, never by a st
       entryIds: [ENTRY.id],
       scope: "all",
       visibility: "private",
-      // No picker for this viewer: every run is Automatic.
+      // No picker for this viewer: every run is Automatic, from the prompt alone.
       model: "auto",
+      method: "paint",
     });
     await press("confirm paint");
     expect(screen.getByText("panel stop")).toBeTruthy();
@@ -858,5 +866,121 @@ describe("the model picker (0211) — for admins and testers", () => {
       },
     ]);
     expect(Object.keys(events("run_finished")[0] as object).length).toBeLessThanOrEqual(12);
+  });
+});
+
+describe("a picture that starts from the card's own art (0212) — for admins and testers", () => {
+  const LEAD = "Repaint this exact picture in a new art style.";
+  const press = async (text: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByText(text));
+    });
+  };
+  const pickIn = async (group: string, label: RegExp) => {
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("radiogroup", { name: group })).getByRole("radio", { name: label }));
+    });
+  };
+  const inputOf = () => JSON.parse(screen.getByRole("dialog").getAttribute("data-input")!) as Record<string, unknown>;
+
+  it("is not offered to a viewer who may not choose: every run is from the prompt alone", async () => {
+    render(studio());
+    expect(screen.queryByRole("radiogroup", { name: "Each picture starts from" })).toBeNull();
+    for (const open of ["paint one", "Paint the sample…", "Re-art the deck…"]) {
+      await press(open);
+      expect(inputOf().method).toBe("paint");
+      cleanup();
+      render(studio());
+    }
+    expect(screen.getByTestId("style-panel").getAttribute("data-method")).toBe("paint");
+  });
+
+  it("offers the prompt alone (picked) or the card's own art, each said in its own words, with the price", async () => {
+    render(studio(null, { canPickModel: true }));
+    const group = screen.getByRole("radiogroup", { name: "Each picture starts from" });
+    const chips = [...group.querySelectorAll("[role='radio']")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["The prompt alone", "The card's own art"]);
+    expect(chips.map((chip) => chip.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+    const described = () => document.getElementById(group.getAttribute("aria-describedby")!)?.textContent ?? "";
+    expect(described()).toBe("Each picture is painted new, from the prompt. One credit a picture either way.");
+    // Nothing about restyling is said until it is picked.
+    expect(screen.queryByText(/signature/)).toBeNull();
+    await pickIn("Each picture starts from", /^The card's own art/);
+    expect(described()).toMatch(/real card's art on Scryfall/);
+    expect(described()).toMatch(/One credit a picture either way\.$/);
+    // What a tester has to know before a run: which model repaints, the signature, a declined card.
+    expect(screen.getByText(/Automatic repaints with Gemini 2\.5 Flash Image/)).toBeTruthy();
+    expect(screen.getByText(/A signature painted into the original can still come through/)).toBeTruthy();
+    expect(screen.getByText(/a card that is declined is not charged/)).toBeTruthy();
+  });
+
+  it("goes with every run — one card, the sample, the deck — beside the picked model, and is no part of the style", async () => {
+    for (const [open, extra] of [
+      ["paint one", { entryIds: [ENTRY.id] }],
+      ["Paint the sample…", { sample: true }],
+      ["Re-art the deck…", {}],
+    ] as const) {
+      render(studio(null, { canPickModel: true }));
+      await pickIn("Each picture starts from", /^The card's own art/);
+      await pickIn("Painted by", /^Grok Imagine 2\.0/);
+      expect(screen.getByTestId("panel-state").textContent).toBe("dirty:false repaint:0");
+      expect(screen.queryByTestId("grid-blocked")).toBeNull();
+      await press(open);
+      expect(inputOf()).toMatchObject({ method: "restyle", model: "spacexai/grok-imagine-image-2.0", ...extra });
+      expect(JSON.stringify(inputOf().style ?? {})).not.toMatch(/restyle/);
+      cleanup();
+    }
+  });
+
+  it("the prompt shown is the restyle's — the plain wording on every model, FLUX.2's own included — and so are the previews' notes", async () => {
+    render(studio(null, { canPickModel: true }));
+    await pickIn("Each picture starts from", /^The card's own art/);
+    const preview = () => screen.getByTestId("panel-preview").textContent ?? "";
+    expect(preview()).toMatch(new RegExp(`\\| ${LEAD} Keep every character and object`));
+    expect(preview()).toMatch(/no text, letters, signature, title or caption anywhere\.$/);
+    // The picture is the subject: the card's name is not in it.
+    expect(preview().split(" | ")[2]).not.toMatch(/Thornback Wyrm|Trading-card|Fantasy illustration/);
+    expect(screen.getByTestId("style-panel").getAttribute("data-framing")).toBe("plain");
+    expect(screen.getByTestId("style-panel").getAttribute("data-method")).toBe("restyle");
+    // The note about plainer words is the PAINT's: a restyle is always plain.
+    await pickIn("Painted by", /^FLUX\.2 \[pro\]/);
+    expect(preview()).toMatch(new RegExp(`\\| ${LEAD}`));
+    expect(screen.getByTestId("style-panel").getAttribute("data-framing")).toBe("plain");
+    expect(screen.queryByText(/sent the same prompt in plainer words/)).toBeNull();
+    expect(screen.queryByText(/Automatic repaints with/)).toBeNull();
+    await press("edit words");
+    const dialog = screen.getByRole("dialog", { name: /Words for/ });
+    expect(dialog.getAttribute("data-method")).toBe("restyle");
+    expect(dialog.getAttribute("data-framing")).toBe("plain");
+    // The opening lines count against what the model reads.
+    expect(Number(dialog.getAttribute("data-body-max"))).toBeLessThan(3000);
+  });
+
+  it("a run's panel says “Restyled by”, and its outcome says the run started from the cards' art", async () => {
+    h.runner = running([step(0)]);
+    h.job = job([step(0)], { sample: false, reroll: true, model: "auto", method: "restyle" });
+    const view = render(studio(null, { canPickModel: true }));
+    await press("paint one");
+    await press("confirm paint");
+    expect(screen.getByTestId("progress").getAttribute("data-verb")).toBe("Restyled by");
+    h.runner = { ...h.runner, steps: [done(0, { image_model: "google/gemini-2.5-flash-image" })], running: false, runsEnded: 1 };
+    act(() => view.rerender(studio(null, { canPickModel: true })));
+    expect(events("run_finished")).toEqual([
+      { cards: 1, painted: 1, failed: 0, waiting: 0, credits: 1, stopped: "done", mode: "cards", pass: 1, resumed: false, model: "auto", method: "restyle" },
+    ]);
+    // With the commonest failure named too, the log's twelve props are full — never past it.
+    expect(Object.keys(events("run_finished")[0] as object).length + 1).toBeLessThanOrEqual(12);
+    cleanup();
+    // A run from the prompt alone says "Painted by", and names no method.
+    h.runner = running([step(0)]);
+    h.job = job([step(0)], { sample: false, reroll: true, model: "auto", method: "paint" });
+    const painted = render(studio(null, { canPickModel: true }));
+    await press("paint one");
+    await press("confirm paint");
+    expect(screen.getByTestId("progress").getAttribute("data-verb")).toBe("Painted by");
+    h.track.mockClear();
+    h.runner = { ...h.runner, steps: [done(0)], running: false, runsEnded: 1 };
+    act(() => painted.rerender(studio(null, { canPickModel: true })));
+    expect(events("run_finished")[0]).not.toHaveProperty("method");
   });
 });

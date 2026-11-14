@@ -8,13 +8,17 @@ import { rowHasBakedBack } from "@/lib/cards/faces";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { logAiCall } from "@/lib/ai/rate-limit";
-import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
+import { generateImageWithFallbacks, restyleWithFallbacks, type RestyleSource } from "@/lib/ai/image-gen";
 import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { artPromptLadder, exactArtPromptLadder } from "@/lib/ai/art-prompt-safety";
 import { artShapeForBackFace, artShapeForFace, type ArtFace } from "@/lib/ai/art-aspect";
 import type { AiFailureKind } from "@/lib/ai/failure";
 import type { JobStep } from "@/lib/ai/generation-jobs";
 import { checkToolAccess } from "@/lib/tools/queries";
+import { getCardById } from "@/lib/scryfall/client";
+import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
+import { fetchScryfallArtCrop } from "@/lib/scryfall/art-crop";
+import { fetchStoredArt } from "@/lib/tools/re-art/restyle-source";
 import { customizeSourceStep, type BulkStepDeps } from "@/lib/tools/bulk-customize/step";
 import type { BulkCardPayload } from "@/lib/tools/bulk-customize/planner";
 import type { CardBackFace, CardType, ColorIdentity } from "@/types/card";
@@ -22,18 +26,20 @@ import type { Json } from "@/types/supabase";
 import {
   REART_CREDITS_PER_FACE,
   REART_DEFAULT_MODEL,
+  REART_DEFAULT_METHOD,
   REART_MAX_CARDS,
+  REART_METHODS,
   REART_MODEL_IDS,
   REART_MODEL_NOT_YOURS,
+  REART_NO_ART_COPY,
   REART_SKIP_COPY,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
   canPickReartModel,
   reartArtPrompt,
-  reartBodyMaxOf,
   reartEntryState,
   reartGatewayModel,
-  reartModelOf,
+  reartWordingOf,
   reartPromptIsMakers,
   reartLadderStyle,
   reartStateIsSettled,
@@ -43,6 +49,7 @@ import {
   withBackArt,
   type ReartCardWords,
   type ReartFraming,
+  type ReartMethod,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import {
@@ -107,6 +114,9 @@ const planSchema = z
     /** The model that paints the run (0211) — one of the tool's own list,
      *  whoever wrote the plan. Absent (a run started before it): Automatic. */
     model: z.enum(REART_MODEL_IDS).default(REART_DEFAULT_MODEL),
+    /** What each picture starts from (0212). Absent (a run started before
+     *  it): the prompt alone. */
+    method: z.enum(REART_METHODS).default(REART_DEFAULT_METHOD),
     entries: z.array(planEntrySchema).min(1).max(REART_MAX_CARDS),
   })
   .strict();
@@ -150,7 +160,7 @@ const OWN_CARD_COLUMNS =
 /** The model a run names, as its step paints with it: the gateway id
  *  (undefined: the image door's default and backup), the wording it is sent
  *  and the most of a prompt's body it reads. */
-type StepModel = { gateway: string | undefined; framing: ReartFraming; bodyMax: number };
+type StepModel = { gateway: string | undefined; framing: ReartFraming; bodyMax: number; method: ReartMethod };
 
 /** A card's own words are its FRONT's picture: a back face is painted from
  *  the deck's prompt alone. */
@@ -187,6 +197,7 @@ function payloadPrompt(
       own,
       model.framing,
       model.bodyMax,
+      model.method,
     ),
   };
 }
@@ -200,6 +211,7 @@ function payloadPrompt(
  * refunded.
  */
 function promptIsExact(style: ReartStyle, words: ReartCardWords | null, framing: ReartFraming): boolean {
+  // (A restyle is always in the plain wording: reartWordingOf.)
   return reartPromptIsMakers(style, words) || framing === "plain";
 }
 
@@ -220,9 +232,12 @@ export async function runReartStep(
   const plan = parsedPlan.data;
   const planned = plan.entries[stepIndex];
   if (!planned || step.key !== reartStepKey(stepIndex)) return failed(step, "Missing card plan.");
-  // Naming the model is for admins and testers: the plan is its owner's to
-  // write, so the step asks again — before any read or charge.
-  if (plan.model !== REART_DEFAULT_MODEL && !canPickReartModel(access)) return failed(step, REART_MODEL_NOT_YOURS);
+  // Naming the model — or what a picture starts from — is for admins and
+  // testers: the plan is its owner's to write, so the step asks again,
+  // before any read or charge.
+  if ((plan.model !== REART_DEFAULT_MODEL || plan.method !== REART_DEFAULT_METHOD) && !canPickReartModel(access)) {
+    return failed(step, REART_MODEL_NOT_YOURS);
+  }
 
   // The deck's stored style is the authority: a run priced in a style the
   // deck no longer has stops here, before any charge.
@@ -233,11 +248,7 @@ export async function runReartStep(
   const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
   // The model the run names (the plan's schema holds it to the tool's own
   // list): painted with alone, in the wording that model takes.
-  const model: StepModel = {
-    gateway: reartGatewayModel(plan.model),
-    framing: reartModelOf(plan.model).framing,
-    bodyMax: reartBodyMaxOf(plan.model),
-  };
+  const model: StepModel = { gateway: reartGatewayModel(plan.model), ...reartWordingOf(plan.model, plan.method), method: plan.method };
 
   // The entry, from the caller's OWN deck again. The deck is embedded by
   // its foreign key's NAME: unnamed, the API refuses the read the day
@@ -282,7 +293,7 @@ export async function runReartStep(
   // An entry that is (now) linked to a card: the own-card path — a real
   // card another run already made lands here too, and is found in style.
   if (cardId) {
-    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, planned.repaint, words, model, deps);
+    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, entry.scryfall_id, planned.repaint, words, model, deps);
   }
   if (planned.kind !== "printing" || !entry.scryfall_id) {
     return failed(step, "This entry has no card to re-art any more.");
@@ -298,6 +309,7 @@ export async function runReartStep(
       choices: reartBulkChoices(style, plan.visibility),
       aiLabel: "deck_reart_art",
       imageModel: model.gateway,
+      restyle: model.method === "restyle",
       artPrompt: (payload, face) => payloadPrompt(payload, face, style, words, model),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
       onSaved: async (newCardId, art, models) => {
@@ -308,6 +320,7 @@ export async function runReartStep(
           artUrl: art.front,
           backArtUrl: art.back,
           imageModel: models.join(" + ") || null,
+          method: model.method,
           made: true,
           previousArtUrl: null,
           previousArtPosition: null,
@@ -334,6 +347,70 @@ type Previous = Pick<
   | "previousBackArtistCredit"
 >;
 
+/** How long a step waits when Scryfall's per-minute limit gives no number. */
+const SCRYFALL_WAIT_FALLBACK_S = 20;
+
+/**
+ * The picture(s) a restyle of the maker's own card starts from, read before
+ * anything is reserved:
+ *
+ *   * the entry stands for a printing → the REAL card's art, read from
+ *     Scryfall on the caller's own quota (the lookup, then its art);
+ *   * else the art the card had BEFORE Re-art (`previous`: what "old art
+ *     back" would put back — never a picture Re-art painted, or a re-roll
+ *     would restyle a restyle), from the app's own storage.
+ *
+ * A spent minute puts the step back in line (the runner waits); a card with
+ * nothing to start from fails here, and nothing is charged.
+ */
+async function restyleSourcesFor(
+  userId: string,
+  step: JobStep,
+  entryScryfallId: string | null,
+  twoFaces: boolean,
+  previous: Previous,
+): Promise<{ ok: true; sources: { front: RestyleSource; back?: RestyleSource } } | { ok: false; step: JobStep }> {
+  const stop = (error: string) => ({ ok: false as const, step: failed(step, error) });
+  if (entryScryfallId) {
+    const wait = (seconds: number | undefined) => ({
+      ok: false as const,
+      step: {
+        ...step,
+        ...CLEARED,
+        status: "pending" as const,
+        error: undefined,
+        error_code: "RATE_LIMITED" as const,
+        retry_after_seconds: Math.max(1, Math.min(120, Math.round(seconds || SCRYFALL_WAIT_FALLBACK_S))),
+      },
+    });
+    for (const label of ["named", "import_art"] as const) {
+      const quota = await checkScryfallRateLimit(userId, label);
+      if (!quota.ok) return quota.reason === "per_day" ? stop(quota.message) : wait(quota.retryAfterSeconds);
+    }
+    await logScryfallCall(userId, "named");
+    const printing = await getCardById(entryScryfallId);
+    if (!printing) return stop("Scryfall didn't answer for this card — try it again.");
+    const front = await fetchScryfallArtCrop(userId, printing, "front");
+    if (!front.ok) return stop(front.error);
+    if (!twoFaces) return { ok: true, sources: { front: { bytes: front.bytes, contentType: front.contentType } } };
+    const back = await fetchScryfallArtCrop(userId, printing, "back");
+    if (!back.ok) return stop("This card has two faces, and its printing has no art for the back to restyle.");
+    return {
+      ok: true,
+      sources: {
+        front: { bytes: front.bytes, contentType: front.contentType },
+        back: { bytes: back.bytes, contentType: back.contentType },
+      },
+    };
+  }
+  const front = await fetchStoredArt(previous.previousArtUrl);
+  if (!front) return stop(REART_NO_ART_COPY);
+  if (!twoFaces) return { ok: true, sources: { front } };
+  const back = await fetchStoredArt(previous.previousBackArtUrl);
+  if (!back) return stop("This card's back has no art of its own to restyle — paint it from the prompt instead.");
+  return { ok: true, sources: { front, back } };
+}
+
 /**
  * The maker's own card gets its new picture: an edit of its ART — the
  * picture, its fit and the artist credit that goes with it (the AI's, as
@@ -347,6 +424,9 @@ async function paintOwnCard(
   style: ReartStyle,
   version: number,
   cardId: string,
+  /** The printing the card's entry stands for, if any (a restyle starts
+   *  from its art). */
+  entryScryfallId: string | null,
   repaint: boolean,
   words: ReartCardWords | null,
   model: StepModel,
@@ -435,6 +515,18 @@ async function paintOwnCard(
         previousBackArtistCredit: twoFaces ? (back?.artist_credit ?? null) : null,
       };
 
+  // A restyle's pictures to start from, read BEFORE anything is reserved: a
+  // card with none is told so, and nothing is charged.
+  let sources: { front?: RestyleSource; back?: RestyleSource } = {};
+  if (model.method === "restyle") {
+    const found = await restyleSourcesFor(userId, step, entryScryfallId, twoFaces, previous);
+    if (!found.ok) return found.step;
+    sources = found.sources;
+  }
+  // Said on the finished step: which picture it started from.
+  const startedFrom =
+    model.method === "restyle" ? (entryScryfallId ? "Restyled from the real card's art." : "Restyled from the art it had before Re-art.") : null;
+
   return withCreditedStep(userId, jobId, credits, "deck_reart_art", step, async () => {
     const attempt = (step.attempts ?? 0) + 1;
     const budgetMs = twoFaces ? TWO_PICTURES_BUDGET_MS : ONE_PICTURE_BUDGET_MS;
@@ -460,22 +552,28 @@ async function paintOwnCard(
         own,
         model.framing,
         model.bodyMax,
+        model.method,
       );
       await logAiCall(userId, "deck_reart_art");
-      const image = await generateImageWithFallbacks(
-        // The maker's own words — and a prompt in the plain wording — are
-        // never swapped for a picture built from the card's name: refused
-        // twice, the step fails and is refunded.
-        promptIsExact(style, own, model.framing)
-          ? exactArtPromptLadder(prompt)
-          : artPromptLadder(attempt, prompt, {
-              title,
-              colors: (card.color_identity ?? []) as ColorIdentity[],
-              style: reartLadderStyle(style),
-            }),
-        face === "back" ? artShapeForBackFace(frontFace, back) : artShapeForFace(frontFace),
-        { budgetMs, model: model.gateway },
-      );
+      const shape = face === "back" ? artShapeForBackFace(frontFace, back) : artShapeForFace(frontFace);
+      const from = sources[face];
+      const image = from
+        ? // The card's own art, repainted: the prompt as written.
+          await restyleWithFallbacks(exactArtPromptLadder(prompt), from, shape, { budgetMs, model: model.gateway })
+        : await generateImageWithFallbacks(
+            // The maker's own words — and a prompt in the plain wording — are
+            // never swapped for a picture built from the card's name: refused
+            // twice, the step fails and is refunded.
+            promptIsExact(style, own, model.framing)
+              ? exactArtPromptLadder(prompt)
+              : artPromptLadder(attempt, prompt, {
+                  title,
+                  colors: (card.color_identity ?? []) as ColorIdentity[],
+                  style: reartLadderStyle(style),
+                }),
+            shape,
+            { budgetMs, model: model.gateway },
+          );
       if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
       const saved = await persistGeneratedArt(image.bytes, image.contentType);
       if (!saved.ok) return { ok: false, error: saved.error, failure: saved.failure };
@@ -511,6 +609,7 @@ async function paintOwnCard(
       artUrl: front.url,
       backArtUrl: backUrl,
       imageModel: [...new Set(models)].join(" + ") || null,
+      method: model.method,
       ...previous,
     });
 
@@ -570,7 +669,7 @@ async function paintOwnCard(
       label: card.title,
       attempts: attempt,
       image_model: [...new Set(models)].join(" + ") || null,
-      note: recorded ? null : "New art saved, but its old art can't be put back from the tool.",
+      note: [startedFrom, recorded ? null : "New art saved, but its old art can't be put back from the tool."].filter(Boolean).join(" ") || null,
       ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
     };
   });

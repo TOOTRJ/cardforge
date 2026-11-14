@@ -33,6 +33,14 @@
 // card frame with the title and the flavour text in it (tried on the dev
 // key, 2026-11-13).
 //
+// From the card's own art (ReartMethod "restyle"; for testing, like the
+// picker): a run may start each picture from a PICTURE instead of from the
+// prompt alone — the real card's art on Scryfall for an entry that stands
+// for a printing, else (a card of the maker's own with no printing) the art
+// it had before Re-art — and repaint it in the deck's style: the same
+// subject and pose, the deck's look and world. Same price, same record,
+// same "old art back". The method is not part of the deck's style.
+//
 // Never touched: another creator's card (it keeps its art — a deck may hold
 // it, D3, but it is theirs), an emblem (owner rule for remixes: it prints
 // its walker's art), the maybeboard (not the deck).
@@ -178,7 +186,7 @@ export function canPickReartModel(
 
 /** What a run that names a model is told when its maker may not pick one. */
 export const REART_MODEL_NOT_YOURS =
-  "Choosing the model is for this tool's testers. Nothing was painted or charged — reload the page and start the run again.";
+  "Choosing the model, or what a picture starts from, is for this tool's testers. Nothing was painted or charged — reload the page and start the run again.";
 
 /** Gateway models a picture may name that are not in the picker (what
  *  Automatic paints with), by their names. */
@@ -198,6 +206,71 @@ export function reartModelLabel(painted: string | null | undefined): string | nu
     .filter(Boolean)
     .map((id) => REART_MODELS.find((model) => model.id === id && id !== "auto")?.label ?? OTHER_MODEL_LABELS[id] ?? id)
     .join(" + ");
+}
+
+// ---------------------------------------------------------------------------
+// What a picture starts from (for testing)
+// ---------------------------------------------------------------------------
+
+/** "paint": the prompt alone (what the tool always did). "restyle": the
+ *  card's own art, repainted — its subject and pose kept, its look changed. */
+export const REART_METHODS = ["paint", "restyle"] as const;
+export type ReartMethod = (typeof REART_METHODS)[number];
+export const REART_DEFAULT_METHOD: ReartMethod = "paint";
+
+export const REART_METHOD_LABELS: Record<ReartMethod, string> = {
+  paint: "The prompt alone",
+  restyle: "The card's own art",
+};
+
+export const REART_METHOD_HINTS: Record<ReartMethod, string> = {
+  paint: "Each picture is painted new, from the prompt.",
+  restyle:
+    "Each picture starts from the real card's art on Scryfall — a card of your own with no printing, from the art it had before Re-art — and is repainted in the deck's style: the same subject and pose, a new look.",
+};
+
+/** The lines a restyle's prompt opens with, whoever wrote the rest: what to
+ *  do with the picture. Tried on the dev key (2026-11-14) on two real
+ *  cards' art across six models: a looser opening ("the same scene", "a new
+ *  style and setting") let FLUX.1 Kontext paint another character and a
+ *  model recompose the picture; with "this exact picture … clearly the same
+ *  picture" all that answered kept every figure and pose. Without the
+ *  signature line Gemini 2.5 copied the artist's signature into the new
+ *  picture (it can still come through: the studio says so). */
+export const REART_RESTYLE_LEAD =
+  "Repaint this exact picture in a new art style. Keep every character and object, their poses and the composition as they are, so it is clearly the same picture; change the rendering, the palette, the lighting and the look of the surroundings. Remove any signature, watermark or lettering that is in the picture.";
+
+/** The wording a picture's prompt is in and the most of its body the model
+ *  reads: a restyle is always in the plain wording (no quoted name, no
+ *  "trading-card"), and its opening line counts against the body. */
+export function reartWordingOf(
+  modelId: string | null | undefined,
+  method: ReartMethod = "paint",
+): { framing: ReartFraming; bodyMax: number } {
+  const bodyMax = reartBodyMaxOf(modelId);
+  return method === "restyle"
+    ? { framing: "plain", bodyMax: Math.max(1, bodyMax - REART_RESTYLE_LEAD.length - 1) }
+    : { framing: reartModelOf(modelId).framing, bodyMax };
+}
+
+/**
+ * The picture a restyle of the maker's OWN card (one with no printing)
+ * starts from: the art it had BEFORE Re-art — never a picture Re-art
+ * painted, or a re-roll would restyle a restyle. While the card shows the
+ * picture a row records, that is the row's "art to put back"; otherwise the
+ * art on the card now. Null: no art to start from.
+ */
+export function reartOwnSourceArt(
+  cardArtUrl: string | null | undefined,
+  painted: { artUrl: string | null; previousArtUrl: string | null } | null | undefined,
+): string | null {
+  if (painted?.artUrl && cardArtUrl && painted.artUrl === cardArtUrl) return painted.previousArtUrl ?? null;
+  return cardArtUrl ?? null;
+}
+
+/** How a card's picture was made, in a word: "Painted" / "Restyled". */
+export function reartMethodVerb(method: ReartMethod | null | undefined): string {
+  return method === "restyle" ? "Restyled" : "Painted";
 }
 
 // ---------------------------------------------------------------------------
@@ -562,9 +635,28 @@ export function buildReartPrompt(
   /** The picked model's own body limit (reartBodyMaxOf), never more than
    *  the tool's. */
   bodyMax: number = REART_PROMPT_BODY_MAX,
+  /** "restyle": the prompt goes with the card's own art (reartWordingOf
+   *  gives its framing and body limit). */
+  method: ReartMethod = "paint",
 ): { prompt: string; cut: boolean } {
   const clean = normalizeReartStyle(style);
   const own = flatLine(cleanReartCardWords(words?.text));
+  if (method === "restyle") {
+    // The picture IS the subject: the card's name, type and text are left
+    // out (a famous name made a model redraw the character from memory).
+    // What is said: the opening line, the maker's words for the card (what
+    // changes in it), the deck's look — or the maker's own prompt — and the
+    // closing line. Always the plain wording.
+    const said =
+      own && words?.only
+        ? own
+        : clean.mode === "custom"
+          ? fillDeckPrompt(flatLine(clean.prompt), subject, own, "plain")
+          : [own ? withStop(own) : "", reartStyleBlock(clean, "plain")].filter(Boolean).join(" ");
+    const { text, cut } = clipBody(said, Math.max(1, Math.min(bodyMax, REART_PROMPT_BODY_MAX)));
+    const ended = clean.mode === "custom" || own ? withStop(text) : text;
+    return { prompt: `${REART_RESTYLE_LEAD} ${ended} ${REART_PLAIN_CLOSING_LINE}`, cut };
+  }
   let body: string;
   if (own && words?.only) {
     body = own;
@@ -608,8 +700,9 @@ export function reartArtPrompt(
   words?: ReartCardWords | null,
   framing: ReartFraming = "flux2",
   bodyMax: number = REART_PROMPT_BODY_MAX,
+  method: ReartMethod = "paint",
 ): string {
-  return buildReartPrompt(subject, style, words, framing, bodyMax).prompt;
+  return buildReartPrompt(subject, style, words, framing, bodyMax, method).prompt;
 }
 
 /**
@@ -643,6 +736,10 @@ export const REART_SKIP_COPY = {
   gone: "No longer available.",
   not_real: "Not a real card yet — pick its printing or make it first.",
 } as const;
+
+/** A restyle only: a card of the maker's own with no printing and no art of
+ *  its own to start from is left as it is (nothing is charged). */
+export const REART_NO_ART_COPY = "No art of its own to restyle — paint it from the prompt instead.";
 
 /** What one entry of the deck becomes in a run. Pure: the server's plan
  *  and the studio's list read the same answer. */
@@ -810,6 +907,8 @@ export const reartRunSchema = z
     sample: z.boolean().optional(),
     /** The model that paints the run (REART_MODELS; for testing). */
     model: z.enum(REART_MODEL_IDS).default(REART_DEFAULT_MODEL),
+    /** What each picture starts from (REART_METHODS; for testing). */
+    method: z.enum(REART_METHODS).default(REART_DEFAULT_METHOD),
   })
   .strict()
   .refine((run) => !run.sample || (run.entryIds !== undefined && run.entryIds.length <= REART_SAMPLE_MAX), {
@@ -950,6 +1049,9 @@ export type ReartStudioEntry = {
   /** Who painted the picture Re-art put on the card (0211), in words —
    *  null: not painted by Re-art, or painted before it was recorded. */
   paintedBy: string | null;
+  /** That picture was repainted from the card's own art (0212), not painted
+   *  from the prompt alone. */
+  restyled: boolean;
   /** The card's own text, for the prompt's preview — the maker's own card;
    *  a real card's is read from its printing when it is painted (null). */
   rulesText: string | null;

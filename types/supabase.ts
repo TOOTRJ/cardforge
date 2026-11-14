@@ -771,6 +771,7 @@ export type Database = {
           art_url: string | null;
           back_art_url: string | null;
           made: boolean;
+          method: string | null;
           previous_art_url: string | null;
           previous_art_position: Json | null;
           previous_back_art_url: string | null;
@@ -790,6 +791,7 @@ export type Database = {
           art_url?: string | null;
           back_art_url?: string | null;
           made?: boolean;
+          method?: string | null;
           previous_art_url?: string | null;
           previous_art_position?: Json | null;
           previous_back_art_url?: string | null;
@@ -809,6 +811,7 @@ export type Database = {
           art_url?: string | null;
           back_art_url?: string | null;
           made?: boolean;
+          method?: string | null;
           previous_art_url?: string | null;
           previous_art_position?: Json | null;
           previous_back_art_url?: string | null;

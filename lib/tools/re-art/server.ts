@@ -9,6 +9,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { discardGeneratedArt } from "@/lib/ai/random-art";
 import { isUuid } from "@/lib/ids";
+import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import type { Json } from "@/types/supabase";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard } from "@/lib/tools/bulk-customize/planner";
@@ -17,12 +18,14 @@ import {
   REART_CHANGED_COPY,
   REART_CREDITS_PER_FACE,
   REART_MAX_CARDS,
+  REART_NO_ART_COPY,
   REART_SKIP_COPY,
   classifyReartEntry,
   cleanReartCardWords,
   normalizeReartStyle,
   sameReartStyleFields,
   reartEntryState,
+  reartOwnSourceArt,
   reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
@@ -31,6 +34,7 @@ import {
   type NormalReartStyle,
   type ReartCardWords,
   type ReartEntryKind,
+  type ReartMethod,
   type ReartScope,
   type ReartStyle,
   type ReartVisibility,
@@ -232,6 +236,10 @@ export type PaintedCard = {
   /** The gateway model that painted the picture(s) (0211) — one id, or two
    *  joined by " + ". Null: painted before 0211, or not known. */
   imageModel: string | null;
+  /** How the picture(s) were made (0212): from the prompt alone, or the
+   *  card's own art repainted. Null: painted before 0212 (from the prompt),
+   *  the card's own art put back, or not known. */
+  method: ReartMethod | null;
 };
 
 type PaintedRow = {
@@ -250,28 +258,30 @@ type PaintedRow = {
   painted_at: string;
   job_id?: string | null;
   image_model?: string | null;
+  method?: string | null;
 };
 
-/** The row's columns before 0211 (which added `image_model`). */
-const PAINTED_COLUMNS_BEFORE_0211 =
-  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at, job_id";
-const PAINTED_COLUMNS = `${PAINTED_COLUMNS_BEFORE_0211}, image_model`;
+/** The row's columns before 0212 (which added `method`). 0211's
+ *  `image_model` is on production and dev: its own fallback is gone. */
+const PAINTED_COLUMNS_BEFORE_0212 =
+  "card_id, entry_id, style_version, art_url, back_art_url, made, previous_art_url, previous_art_position, previous_back_art_url, previous_back_art_position, previous_artist_credit, previous_back_artist_credit, painted_at, job_id, image_model";
+const PAINTED_COLUMNS = `${PAINTED_COLUMNS_BEFORE_0212}, method`;
 
 /** A column the database doesn't have yet: a select names it (42703), or a
  *  write does (PostgREST's schema cache: PGRST204). */
 const unknownColumn = (error: { code?: string } | null | undefined) => error?.code === "42703" || error?.code === "PGRST204";
 
 /**
- * A read of painted rows with 0211's column — and, on a database 0211
+ * A read of painted rows with 0212's column — and, on a database 0212
  * hasn't reached (a deploy that lands before its migration), the same read
  * without it: a failed read there showed every card as never painted.
- * Remove once 0211 is on production and dev.
+ * Remove once 0212 is on production and dev.
  */
 async function readPainted<T extends { data: unknown; error: { code?: string } | null }>(
   read: (columns: string) => PromiseLike<T>,
 ): Promise<T> {
   const first = await read(PAINTED_COLUMNS);
-  return unknownColumn(first.error) ? read(PAINTED_COLUMNS_BEFORE_0211) : first;
+  return unknownColumn(first.error) ? read(PAINTED_COLUMNS_BEFORE_0212) : first;
 }
 
 function paintedOf(row: PaintedRow): PaintedCard {
@@ -291,6 +301,7 @@ function paintedOf(row: PaintedRow): PaintedCard {
     paintedAt: row.painted_at,
     jobId: row.job_id ?? null,
     imageModel: row.image_model ?? null,
+    method: row.method === "restyle" || row.method === "paint" ? row.method : null,
   };
 }
 
@@ -364,15 +375,16 @@ export async function writePaintedCard(
     previous_artist_credit: painted.previousArtistCredit,
     previous_back_artist_credit: painted.previousBackArtistCredit,
     painted_at: new Date().toISOString(),
+    // Who painted (0211) — clipped to the column's limit, never an empty text.
+    image_model: painted.imageModel?.trim().slice(0, 200) || null,
   };
   const admin = createAdminClient();
-  const write = (values: typeof row & { image_model?: string | null }) =>
+  const write = (values: typeof row & { method?: string | null }) =>
     admin.from("deck_reart_cards").upsert(values, { onConflict: "deck_id,card_id" });
-  // Who painted (0211) — clipped to the column's limit, never an empty
-  // text. On a database 0211 hasn't reached the row is written without it
-  // (the paint must still be recorded: it holds the art to put back).
-  const imageModel = painted.imageModel?.trim().slice(0, 200) || null;
-  let { error } = await write({ ...row, image_model: imageModel });
+  // How it was made (0212). On a database 0212 hasn't reached the row is
+  // written without it (the paint must still be recorded: it holds the art
+  // to put back). Remove the retry once 0212 is on production and dev.
+  let { error } = await write({ ...row, method: painted.method ?? null });
   if (unknownColumn(error)) ({ error } = await write(row));
   if (error) console.warn(`[re-art] painted card ${painted.cardId} on deck ${deckId} not recorded: ${error.message}`);
   return !error;
@@ -574,6 +586,8 @@ export async function planReartRun(
     scope: ReartScope;
     visibility: ReartVisibility;
     entryIds?: string[];
+    /** What each picture starts from (default: the prompt alone). */
+    method?: ReartMethod;
   },
   quota: "deck_import" | "deck_import_commit",
 ): Promise<({ ok: true } & ReartPlan) | ReartPlanFailure> {
@@ -589,6 +603,11 @@ export async function planReartRun(
 
   const [items, painted, words] = await Promise.all([listDeckPageCards(deck.id), readPaintedCards(deck.id), readCardWords(deck.id)]);
   const OWN_WORDS_NOTE = "Its own words.";
+  // A restyle starts from a picture: the real card's art for an entry that
+  // stands for a printing, else the art the maker's card had before Re-art.
+  const restyle = input.method === "restyle";
+  const FROM_PRINTING_NOTE = "Starts from the real card's art.";
+  const FROM_OWN_NOTE = "Starts from the art it had before Re-art.";
   const explicit = input.entryIds ? new Set(input.entryIds.map((id) => id.toLowerCase())) : null;
   const chosen: DeckItem<DeckPageCard>[] = explicit
     ? items.filter((item) => explicit.has(item.entry.id.toLowerCase()))
@@ -641,6 +660,18 @@ export async function planReartRun(
       }
       const twoFaces = rowHasBakedBack(card);
       const ownWords = words.has(entry.id);
+      // A restyle of a card with no printing needs the card's own art from
+      // before Re-art: none, and the card is left as it is (said in the
+      // list; nothing is charged).
+      if (restyle && !entry.scryfall_id) {
+        // …and art the server may fetch (the app's own storage): the step
+        // asks the same before it charges.
+        const from = reartOwnSourceArt(card.art_url, done);
+        if (!from || !isAllowedServerImageFetchUrl(from)) {
+          skipped.push({ name: card.title || entry.name, reason: REART_NO_ART_COPY });
+          continue;
+        }
+      }
       own.push({
         entryId: entry.id,
         name: card.title || entry.name,
@@ -650,7 +681,11 @@ export async function planReartRun(
         repaint: Boolean(explicit),
         paintedBefore: Boolean(done),
         ownWords,
-        notes: [...(twoFaces ? ["Two faces: two pictures."] : []), ...(ownWords ? [OWN_WORDS_NOTE] : [])],
+        notes: [
+          ...(twoFaces ? ["Two faces: two pictures."] : []),
+          ...(ownWords ? [OWN_WORDS_NOTE] : []),
+          ...(restyle ? [entry.scryfall_id ? FROM_PRINTING_NOTE : FROM_OWN_NOTE] : []),
+        ],
       });
       continue;
     }
@@ -669,7 +704,11 @@ export async function planReartRun(
         repaint: Boolean(explicit),
         paintedBefore: true,
         ownWords: words.has(entry.id),
-        notes: ["Made by an earlier run — linked to its entry again.", ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : [])],
+        notes: [
+          "Made by an earlier run — linked to its entry again.",
+          ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : []),
+          ...(restyle ? [FROM_PRINTING_NOTE] : []),
+        ],
       });
       continue;
     }
@@ -718,7 +757,11 @@ export async function planReartRun(
         repaint: Boolean(explicit),
         paintedBefore: false,
         ownWords: words.has(entry.id),
-        notes: [...(plan.doubleFaced ? ["Two faces: two pictures."] : []), ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : [])],
+        notes: [
+          ...(plan.doubleFaced ? ["Two faces: two pictures."] : []),
+          ...(words.has(entry.id) ? [OWN_WORDS_NOTE] : []),
+          ...(restyle ? [FROM_PRINTING_NOTE] : []),
+        ],
       });
     }
   }

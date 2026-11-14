@@ -38,6 +38,12 @@ const m = vi.hoisted(() => ({
   revert: vi.fn(),
   words: vi.fn(),
   bakedBack: vi.fn(),
+  restyle: vi.fn(),
+  getCard: vi.fn(),
+  scryfallRate: vi.fn(),
+  scryfallLog: vi.fn(),
+  artCrop: vi.fn(),
+  storedArt: vi.fn(),
   rows: { deck_cards: null as unknown, cards: null as unknown },
   /** The API's own refusal of the entry's read, and what the step selected. */
   entry: { error: null as null | { code: string; message: string }, select: "" },
@@ -80,7 +86,11 @@ vi.mock("@/lib/cards/faces", async (importOriginal) => ({
 }));
 vi.mock("@/lib/ai/credited-step", () => ({ withCreditedStep: m.credited }));
 vi.mock("@/lib/ai/rate-limit", () => ({ logAiCall: vi.fn() }));
-vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: m.image }));
+vi.mock("@/lib/ai/image-gen", () => ({ generateImageWithFallbacks: m.image, restyleWithFallbacks: m.restyle }));
+vi.mock("@/lib/scryfall/client", () => ({ getCardById: m.getCard }));
+vi.mock("@/lib/scryfall/rate-limit", () => ({ checkScryfallRateLimit: m.scryfallRate, logScryfallCall: m.scryfallLog }));
+vi.mock("@/lib/scryfall/art-crop", () => ({ fetchScryfallArtCrop: m.artCrop }));
+vi.mock("@/lib/tools/re-art/restyle-source", () => ({ fetchStoredArt: m.storedArt }));
 vi.mock("@/lib/ai/random-art", () => ({ persistGeneratedArt: m.persist, discardGeneratedArt: m.discard }));
 
 import { REART_STYLE_CHANGED, runReartStep } from "@/lib/tools/re-art/step";
@@ -134,6 +144,7 @@ const ROW = (over: Record<string, unknown> = {}) => ({
   previousBackArtistCredit: null,
   paintedAt: "",
   imageModel: null,
+  method: null,
   ...over,
 });
 
@@ -159,6 +170,11 @@ beforeEach(() => {
   m.update.mockResolvedValue({ ok: true, cardId: "card-1", slug: "archivist" });
   m.customize.mockResolvedValue({ ...STEP, status: "done", card_id: "made-1" });
   m.credited.mockImplementation(async (_u, _j, _amount, _reason, _step, body: () => Promise<JobStep>) => body());
+  m.restyle.mockResolvedValue({ ok: true, bytes: new Uint8Array([2]), contentType: "image/png", model: "google/gemini-2.5-flash-image", promptIndex: 0 });
+  m.scryfallRate.mockResolvedValue({ ok: true });
+  m.getCard.mockResolvedValue({ id: "sf-1", name: "Krenko, Mob Boss" });
+  m.artCrop.mockResolvedValue({ ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" });
+  m.storedArt.mockResolvedValue({ bytes: new Uint8Array([6]), contentType: "image/png" });
 });
 
 describe("the step trusts nothing in the plan", () => {
@@ -770,5 +786,203 @@ describe("the model that paints (0211)", () => {
     expect(auto.imageModel).toBeUndefined();
     expect(auto.artPrompt(payload, "front").exact).toBe(false);
     expect(auto.artPrompt(payload, "front").prompt).toContain('Trading-card illustration of "Krenko, Mob Boss"');
+  });
+});
+
+describe("a picture that starts from the card's own art (0212 restyle)", () => {
+  const LEAD = "Repaint this exact picture in a new art style.";
+  const PLAIN_CLOSING =
+    "The painting covers the entire image from edge to edge: no white margin, paper edge, border or frame, and no text, letters, signature, title or caption anywhere.";
+  const restylePlan = (kind: "own" | "printing" = "own", model?: string) => ({ ...planOf(kind), method: "restyle", ...(model ? { model } : {}) });
+  const ladder = (call = 0): string[] => m.restyle.mock.calls[call][0];
+  const sourceOf = (call = 0): { bytes: Uint8Array; contentType: string } => m.restyle.mock.calls[call][1];
+  const optionsOf = (call = 0): { budgetMs: number; model?: string } => m.restyle.mock.calls[call][3];
+  const linkedToPrinting = () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: "card-1", scryfall_id: "sf-1" };
+  };
+
+  it("a plan that names none (every run before 0212) paints from the prompt alone, and the row says so", async () => {
+    await run(planOf());
+    expect(m.restyle).not.toHaveBeenCalled();
+    expect(m.image).toHaveBeenCalledTimes(1);
+    expect(m.getCard).not.toHaveBeenCalled();
+    expect(m.storedArt).not.toHaveBeenCalled();
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ method: "paint" });
+  });
+
+  it("the maker's own version of a REAL card starts from the real card's art, read on their own Scryfall quota", async () => {
+    linkedToPrinting();
+    const result = await run(restylePlan());
+    expect(result).toMatchObject({ status: "done", image_model: "google/gemini-2.5-flash-image" });
+    expect(result.note).toBe("Restyled from the real card's art.");
+    // The lookup, then the art: both quotas asked before either call.
+    expect(m.scryfallRate.mock.calls.map((call) => call.slice(0, 2))).toEqual([
+      ["u1", "named"],
+      ["u1", "import_art"],
+    ]);
+    expect(m.scryfallLog).toHaveBeenCalledWith("u1", "named");
+    expect(m.getCard).toHaveBeenCalledWith("sf-1");
+    expect(m.artCrop).toHaveBeenCalledTimes(1);
+    expect(m.artCrop.mock.calls[0].slice(0, 3)).toEqual(["u1", { id: "sf-1", name: "Krenko, Mob Boss" }, "front"]);
+    // Never the card's own stored art, and never a picture from the prompt alone.
+    expect(m.storedArt).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect([...sourceOf().bytes]).toEqual([5]);
+    // One credit, under the tool's label; the row says how it was made.
+    expect(m.credited.mock.calls[0][2]).toBe(1);
+    expect(m.credited.mock.calls[0][3]).toBe("deck_reart_art");
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ method: "restyle", imageModel: "google/gemini-2.5-flash-image", previousArtUrl: ART("mine.png") });
+  });
+
+  it("the prompt goes with the picture: the opening, the deck's look, the closing line — as written, dressed once if refused", async () => {
+    linkedToPrinting();
+    await run(restylePlan());
+    expect(ladder()).toHaveLength(2);
+    const [first] = ladder();
+    expect(first.startsWith(`${LEAD} Keep every character and object`)).toBe(true);
+    expect(first).toContain("Rendered strictly in storybook style.");
+    expect(first).toContain("The world and look: a goblin warren.");
+    expect(first.endsWith(PLAIN_CLOSING)).toBe(true);
+    // The picture is the subject: nothing of the card's name, type or text.
+    expect(first).not.toMatch(/Archivist|Human Wizard|Every hour|Trading-card|Fantasy illustration/);
+    expect(ladder().join(" ")).not.toMatch(/Symbolic fantasy|evoking/);
+  });
+
+  it("Automatic names no model (the image door's own restyle model); a picked model repaints alone", async () => {
+    linkedToPrinting();
+    await run(restylePlan());
+    expect(optionsOf().model).toBeUndefined();
+    expect(optionsOf().budgetMs).toBeGreaterThan(0);
+    m.restyle.mockResolvedValue({ ok: true, bytes: new Uint8Array([2]), contentType: "image/png", model: "bfl/flux-kontext-pro", promptIndex: 0 });
+    await run(restylePlan("own", "bfl/flux-kontext-pro"));
+    expect(optionsOf(1).model).toBe("bfl/flux-kontext-pro");
+    expect(m.writePainted.mock.calls[1][3]).toMatchObject({ method: "restyle", imageModel: "bfl/flux-kontext-pro" });
+    // Kontext reads a shorter prompt: a long one of the maker's is cut so the closing line is inside it.
+    const LONG = { ...STYLE, mode: "custom" as const, prompt: Array.from({ length: 60 }, () => "{card} in thick oil paint, candle-lit").join(", ") };
+    m.styleAdmin.mockResolvedValue(LONG);
+    await run({ ...restylePlan("own", "bfl/flux-kontext-pro"), style: LONG });
+    expect(ladder(2)[0].length).toBeLessThanOrEqual(1400 + 2 + PLAIN_CLOSING.length);
+    expect(ladder(2)[0].endsWith(PLAIN_CLOSING)).toBe(true);
+  });
+
+  it("a card of the maker's own with NO printing starts from its own art", async () => {
+    const result = await run(restylePlan());
+    expect(result).toMatchObject({ status: "done" });
+    expect(result.note).toBe("Restyled from the art it had before Re-art.");
+    expect(m.storedArt).toHaveBeenCalledWith(ART("mine.png"));
+    expect([...sourceOf().bytes]).toEqual([6]);
+    // No Scryfall call: there is no printing to ask about.
+    expect(m.scryfallRate).not.toHaveBeenCalled();
+    expect(m.getCard).not.toHaveBeenCalled();
+    expect(m.artCrop).not.toHaveBeenCalled();
+  });
+
+  it("…the art it had BEFORE Re-art: a re-roll never restyles a picture Re-art painted", async () => {
+    // The card shows a picture this deck's run painted; its own art is the row's art to put back.
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg"), artist_credit: "AI" };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
+    await run({ ...restylePlan(), entries: [{ entry_id: ENTRY, name: "Archivist", kind: "own", credits: 1, repaint: true }] });
+    expect(m.storedArt).toHaveBeenCalledWith(ART("mine.png"));
+    expect(m.storedArt).not.toHaveBeenCalledWith(ART("ai-old.jpg"));
+    // …and it stays the art to put back.
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ method: "restyle", previousArtUrl: ART("mine.png") });
+  });
+
+  it("no art to start from: the card is told so before anything is reserved, and nothing is charged", async () => {
+    m.storedArt.mockResolvedValue(null);
+    const result = await run(restylePlan());
+    expect(result).toMatchObject({ status: "failed", error: "No art of its own to restyle — paint it from the prompt instead." });
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.restyle).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect(m.writePainted).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+  });
+
+  it("Scryfall's limits and silences stop it before any charge: a spent minute waits, a spent day fails, no answer fails", async () => {
+    linkedToPrinting();
+    m.scryfallRate.mockResolvedValueOnce({ ok: false, reason: "per_minute", message: "Slow down.", retryAfterSeconds: 31 });
+    expect(await run(restylePlan())).toMatchObject({ status: "pending", error_code: "RATE_LIMITED", retry_after_seconds: 31 });
+    // The art's limit, after the lookup's passed.
+    m.scryfallRate.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, reason: "per_day", message: "That's the day's art." });
+    expect(await run(restylePlan())).toMatchObject({ status: "failed", error: "That's the day's art." });
+    m.getCard.mockResolvedValueOnce(null);
+    expect(await run(restylePlan())).toMatchObject({ status: "failed", error: "Scryfall didn't answer for this card — try it again." });
+    m.artCrop.mockResolvedValueOnce({ ok: false, error: "Scryfall has no art for this card to restyle." });
+    expect(await run(restylePlan())).toMatchObject({ status: "failed", error: "Scryfall has no art for this card to restyle." });
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.restyle).not.toHaveBeenCalled();
+  });
+
+  it("a two-faced card starts each face from its own art; a back with none stops before any charge", async () => {
+    m.bakedBack.mockReturnValue(true);
+    m.rows.cards = {
+      ...OWN_CARD,
+      back_face: { title: "The Hour Unbound", card_type: "creature", subtypes: ["Spirit"], art_url: ART("back.png") },
+    };
+    m.storedArt.mockImplementation(async (address: string) => ({ bytes: new Uint8Array([address.includes("back") ? 8 : 6]), contentType: "image/png" }));
+    m.persist.mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-front.jpg") }).mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-back.jpg") });
+    const result = await run(restylePlan());
+    expect(result.status).toBe("done");
+    expect(m.credited.mock.calls[0][2]).toBe(2);
+    expect(m.storedArt.mock.calls.map(([address]) => address)).toEqual([ART("mine.png"), ART("back.png")]);
+    expect([[...sourceOf(0).bytes], [...sourceOf(1).bytes]]).toEqual([[6], [8]]);
+
+    // From a printing: its back's art — and a printing with one face can't give a two-faced card a back.
+    m.credited.mockClear();
+    linkedToPrinting();
+    m.artCrop.mockResolvedValueOnce({ ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" }).mockResolvedValueOnce({ ok: false, error: "This card has no back face." });
+    const stopped = await run(restylePlan());
+    expect(stopped.status).toBe("failed");
+    expect(stopped.error).toMatch(/its printing has no art for the back/);
+    expect(m.artCrop.mock.calls.map((call) => call[2])).toEqual(["front", "back"]);
+    expect(m.credited).not.toHaveBeenCalled();
+  });
+
+  it("a restyle the provider declines fails the card in the door's own words, and the wrapper refunds", async () => {
+    linkedToPrinting();
+    m.restyle.mockResolvedValue({ ok: false, error: "The image service declined to repaint this picture. Try another model, or paint the card from the prompt instead.", failure: "art_blocked", safetyBlocked: true });
+    const result = await run(restylePlan());
+    expect(result).toMatchObject({ status: "failed", failure: "art_blocked" });
+    expect(result.error).toMatch(/declined to repaint this picture/);
+    // Reserved (the wrapper, mocked here, refunds a failed body), never recorded or saved.
+    expect(m.credited).toHaveBeenCalledTimes(1);
+    expect(m.writePainted).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+  });
+
+  it("is for admins and testers: a plan's audience is refused before any read or charge, on Automatic too", async () => {
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: null });
+    const refused = await run(restylePlan());
+    expect(refused.status).toBe("failed");
+    expect(refused.error).toMatch(/testers/);
+    expect(m.styleAdmin).not.toHaveBeenCalled();
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.restyle).not.toHaveBeenCalled();
+    // A method the tool doesn't know is no plan at all.
+    m.access.mockResolvedValue({ userId: "u1", via: "grant" });
+    expect((await run({ ...planOf(), method: "sketch" })).status).toBe("failed");
+    expect(m.styleAdmin).not.toHaveBeenCalled();
+  });
+
+  it("a real card not yet the maker's own is made through the shared core, told to start from the printing's art", async () => {
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    await run(restylePlan("printing", "spacexai/grok-imagine-image-2.0"));
+    const [, , , made] = m.customize.mock.calls[0];
+    expect(made).toMatchObject({ restyle: true, imageModel: "spacexai/grok-imagine-image-2.0", aiLabel: "deck_reart_art" });
+    const payload = { title: "Krenko, Mob Boss", subtypes: ["Goblin"], card_type: "creature" };
+    const front = made.artPrompt(payload, "front");
+    expect(front.exact).toBe(true);
+    expect(front.prompt.startsWith(LEAD)).toBe(true);
+    expect(front.prompt).not.toMatch(/Krenko/);
+    await made.onSaved("made-1", { front: ART("ai-1.jpg"), back: null }, ["spacexai/grok-imagine-image-2.0"]);
+    expect(m.writePainted.mock.calls[0][3]).toMatchObject({ cardId: "made-1", made: true, method: "restyle", imageModel: "spacexai/grok-imagine-image-2.0" });
+    // From the prompt alone: the core is told no such thing, and the row says "paint".
+    await run(planOf("printing"));
+    const [, , , painted] = m.customize.mock.calls[1];
+    expect(painted.restyle).toBe(false);
+    await painted.onSaved("made-2", { front: ART("ai-2.jpg"), back: null }, ["bfl/flux-2-flex"]);
+    expect(m.writePainted.mock.calls[1][3]).toMatchObject({ cardId: "made-2", method: "paint" });
   });
 });
