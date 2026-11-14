@@ -271,6 +271,10 @@ describe("the style form — the maker's own prompt (0209)", () => {
     expect(screen.getByText("What is sent for Krenko, Mob Boss")).toBeTruthy();
     expect(screen.getByText(`An oil painting of "Krenko, Mob Boss". ${REART_NO_FRAME_LINE}`)).toBeTruthy();
     expect(screen.getByText(/A real card's flavour and rules text are read when it is painted/)).toBeTruthy();
+    expect(screen.queryByText(/its end is left out/)).toBeNull();
+    cleanup();
+    panel(OWN, { preview: { name: "Krenko, Mob Boss", prompt: `cut ${REART_NO_FRAME_LINE}`, partial: false, cut: true } });
+    expect(screen.getByText(/longer than a picture's prompt can be: its end is left\s+out/)).toBeTruthy();
   });
 });
 
@@ -336,15 +340,54 @@ describe("a card's own words — the dialog (0209)", () => {
     expect(onSaved).toHaveBeenCalledWith(null);
   });
 
-  it("a refusal is said on the field and nothing is handed back", async () => {
+  it("a refusal — or a lost connection — is the dialog's ONE alert; the field isn't called invalid and nothing is handed back", async () => {
     saveWords.mockReset();
     saveWords.mockResolvedValue({ ok: false, error: "That card is no longer in this deck." });
     const onSaved = dialog(entry());
     fireEvent.change(box(), { target: { value: "a wyrm asleep" } });
     await press("Save words");
-    expect(screen.getByText("That card is no longer in this deck.")).toBeTruthy();
-    expect(box().getAttribute("aria-invalid")).toBe("true");
+    // Heard by a screen reader where it happens (it was a field error: no
+    // live region, the focus still on Save).
+    expect(screen.getByRole("alert").textContent).toBe("That card is no longer in this deck.");
+    expect(box().getAttribute("aria-invalid")).toBeNull();
     expect(onSaved).not.toHaveBeenCalled();
+    saveWords.mockRejectedValue(new Error("offline"));
+    await press("Save words");
+    expect(screen.getByRole("alert").textContent).toMatch(/couldn't reach PipGlyph/);
+    // The words typed are still in the box.
+    expect(box().value).toBe("a wyrm asleep");
+  });
+
+  it("every OPENING starts from the card's stored words: removed words don't come back, an abandoned draft is forgotten", () => {
+    const stored = entry({ words: { text: "a goblin chef", only: true } });
+    const view = render(
+      <ReartCardWordsDialog open onOpenChange={() => undefined} deckId={DECK} entry={stored} style={STYLE} onSaved={() => undefined} />,
+    );
+    const mount = (card: ReartStudioEntry, open: boolean) =>
+      view.rerender(<ReartCardWordsDialog open={open} onOpenChange={() => undefined} deckId={DECK} entry={card} style={STYLE} onSaved={() => undefined} />);
+    expect(box().value).toBe("a goblin chef");
+    // A draft typed and abandoned…
+    fireEvent.change(box(), { target: { value: "a draft nobody saved" } });
+    mount(stored, false);
+    mount(stored, true);
+    expect(box().value).toBe("a goblin chef");
+    expect((screen.getByRole("checkbox", { name: /Use only these words/ }) as HTMLInputElement).checked).toBe(true);
+    // …and the same card after its words were removed.
+    mount({ ...stored, words: null }, false);
+    mount({ ...stored, words: null }, true);
+    expect(box().value).toBe("");
+    expect(screen.getByRole("button", { name: "Save words" }).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByRole("button", { name: "Remove its words" })).toBeNull();
+  });
+
+  it("says when the prompt is longer than a picture's prompt can be", () => {
+    // Twenty {card}s: short with the card's name, far too long with 600
+    // characters of its own words in each.
+    dialog(entry(), vi.fn(), { ...STYLE, mode: "custom", prompt: Array.from({ length: 20 }, () => "{card}").join(" ") });
+    expect(screen.queryByText(/its end is left out/)).toBeNull();
+    fireEvent.change(box(), { target: { value: "w".repeat(600) } });
+    expect(screen.getByText(/longer than a picture's prompt can be: its end is left out/)).toBeTruthy();
+    expect(preview().endsWith(REART_NO_FRAME_LINE)).toBe(true);
   });
 });
 

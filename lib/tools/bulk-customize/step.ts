@@ -398,7 +398,7 @@ export async function customizeSourceStep(
       const title = face === "back" ? (planned.payload.back_face?.title ?? planned.payload.title) : planned.payload.title;
       const image = await generateImageWithFallbacks(
         exact
-          ? exactArtPromptLadder(attempt, prompt)
+          ? exactArtPromptLadder(prompt)
           : artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
         face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace),
         { budgetMs },

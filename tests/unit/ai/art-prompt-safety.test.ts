@@ -125,15 +125,19 @@ describe("the ladder for a prompt its maker wrote word for word (Re-art deck's o
   const OWN = "A naked blade on a velvet cushion, lit by one candle, oil on canvas.";
 
   it("is the prompt as written, then the same words dressed — never a picture built from the card's name", () => {
-    const ladder = exactArtPromptLadder(1, OWN);
+    const ladder = exactArtPromptLadder(OWN);
     expect(ladder).toEqual([OWN, softenArtPrompt(OWN)]);
     expect(ladder.join(" ")).not.toMatch(/Symbolic fantasy|evoking/);
   });
 
-  it("a retry starts one prompt further on, and stays on the maker's words however often it is tried", () => {
-    expect(exactArtPromptLadder(2, OWN)).toEqual([softenArtPrompt(OWN)]);
-    expect(exactArtPromptLadder(5, OWN)).toEqual([softenArtPrompt(OWN)]);
-    expect(exactArtPromptLadder(0, OWN)).toEqual([OWN, softenArtPrompt(OWN)]);
+  it("is the same two rungs on every try: a retry after a slow provider never sends the maker's words changed", () => {
+    // The softened rung rewrites words ("child" → "young apprentices"): it
+    // is walked to only on a refusal the provider states, never because
+    // the step was tried before.
+    const scene = "A child reading by a window, watercolour.";
+    expect(exactArtPromptLadder(scene)[0]).toBe(scene);
+    expect(exactArtPromptLadder(scene)[1]).toContain("young apprentices");
+    expect(exactArtPromptLadder(scene)).toHaveLength(2);
   });
 
   it("the template's ladder still ends on the card's name (unchanged)", () => {

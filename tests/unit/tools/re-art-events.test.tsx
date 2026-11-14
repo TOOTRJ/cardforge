@@ -86,18 +86,26 @@ vi.mock("@/components/tools/re-art/reart-style-panel", () => ({
   ReartStylePanel: ({
     onChange,
     preview,
+    dirty,
+    paintedInSaved,
   }: {
     onChange: (next: { preset: string; theme: string; mode: "preset" | "custom"; prompt: string }) => void;
     preview?: { name: string; prompt: string; partial: boolean } | null;
+    dirty: boolean;
+    paintedInSaved: number;
   }) => (
     <div>
       <button type="button" onClick={() => onChange({ preset: "anime", theme: "a neon harbour", mode: "preset", prompt: "" })}>
         change style
       </button>
+      <button type="button" onClick={() => onChange({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "{card} in oils, a draft" })}>
+        leave a draft
+      </button>
       <button type="button" onClick={() => onChange({ preset: "watercolor", theme: "a haunted fen", mode: "custom", prompt: "An oil painting of {card}" })}>
         own prompt
       </button>
       {preview ? <p data-testid="panel-preview">{`${preview.name} | ${preview.partial} | ${preview.prompt}`}</p> : null}
+      <p data-testid="panel-state">{`dirty:${dirty} repaint:${paintedInSaved}`}</p>
     </div>
   ),
 }));
@@ -644,5 +652,66 @@ describe("the maker's own prompts in the studio (0209)", () => {
     await begin([step(0)]);
     await press("edit words");
     expect(screen.queryByRole("dialog", { name: /Words for/ })).toBeNull();
+  });
+});
+
+describe("the other mode's draft (0209) — something to save, never a new look", () => {
+  const press = async (text: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByText(text));
+    });
+  };
+  const second: ReartStudioEntry = { ...ENTRY, id: "00000000-0000-4000-8000-0000000000e2", name: "Cinder Hound", state: "in_style", artNow: "reart" };
+
+  function studioWith(entries: ReartStudioEntry[]) {
+    return render(
+      <ReartStudio
+        deck={{ id: "00000000-0000-4000-8000-0000000000d1", slug: "embers", title: "Embers of the Fen" }}
+        storedStyle={SAVED_STYLE}
+        entries={entries}
+        username="dev_free"
+        capacity={null}
+        balance={20}
+        aiAvailable
+        pausedRunId={null}
+        runs={[]}
+      />,
+    );
+  }
+
+  it("a prompt written and then left for the template is the SAME look: the form has something to save, and nothing else changes", async () => {
+    studioWith([ENTRY, second]);
+    expect(screen.getByTestId("panel-state").textContent).toBe("dirty:false repaint:0");
+    await press("leave a draft");
+    // Save is offered (the draft was dropped on a reload)…
+    expect(screen.getByTestId("panel-state").textContent).toBe("dirty:true repaint:0");
+    // …but it is no new look: one card can still be painted, and the card
+    // painted in the saved style is not painted again.
+    expect(screen.queryByTestId("grid-blocked")).toBeNull();
+    expect(screen.getByText(/1 card to paint · 1 in this style already/)).toBeTruthy();
+    await press("paint one");
+    expect(screen.getByRole("dialog", { name: "Paint Thornback Wyrm" })).toBeTruthy();
+  });
+
+  it("another LOOK is: one card waits for the save, and the painted cards would be painted again", async () => {
+    studioWith([ENTRY, second]);
+    await press("change style");
+    expect(screen.getByTestId("panel-state").textContent).toBe("dirty:true repaint:1");
+    expect(screen.getByTestId("grid-blocked")).toBeTruthy();
+    expect(screen.getByText(/2 cards to paint/)).toBeTruthy();
+  });
+
+  it("the deck prompt's preview is a card painted from the DECK's prompt — never one that uses only its own words, while another exists", async () => {
+    const onlyWords: ReartStudioEntry = { ...ENTRY, words: { text: "a lighthouse in a storm", only: true } };
+    const withWords: ReartStudioEntry = { ...second, state: null, artNow: "own", words: { text: "a hound of embers", only: false } };
+    const plain: ReartStudioEntry = { ...second, id: "00000000-0000-4000-8000-0000000000e3", name: "Fen Witch", state: null, artNow: "own" };
+    const view = studioWith([onlyWords, withWords, plain]);
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(/^Fen Witch \|/);
+    view.unmount();
+    const next = studioWith([onlyWords, withWords]);
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(/^Cinder Hound \| false \| a hound of embers\. Rendered strictly/);
+    next.unmount();
+    studioWith([onlyWords]);
+    expect(screen.getByTestId("panel-preview").textContent).toMatch(/^Thornback Wyrm \| false \| a lighthouse in a storm\. NO frame/);
   });
 });

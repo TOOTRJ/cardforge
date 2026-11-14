@@ -165,10 +165,14 @@ export function artPromptForAttempt(
  * nudity dressed — and never the third rung, which paints from the card's
  * name alone. A prompt both refuse fails (the step's credit comes back) and
  * the maker rewords it; a generic picture is not what they asked for.
+ *
+ * The SAME two rungs on every try: a retry after a slow provider or a
+ * failed save must not send the maker's words changed (the softened rung
+ * turns "child" into "young apprentices") when nothing refused them — the
+ * softened one is walked to only on a refusal the provider states.
  */
-export function exactArtPromptLadder(attempt: number, original: string): string[] {
-  const softened = softenArtPrompt(original);
-  return Array.from(new Set(attempt <= 1 ? [original, softened] : [softened]));
+export function exactArtPromptLadder(original: string): string[] {
+  return Array.from(new Set([original, softenArtPrompt(original)]));
 }
 
 /** The ladder from this attempt onward — the image call walks it when a

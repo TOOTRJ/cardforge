@@ -21,6 +21,7 @@ import {
   classifyReartEntry,
   cleanReartCardWords,
   normalizeReartStyle,
+  sameReartStyleFields,
   reartEntryState,
   reartStateIsSettled,
   reartStyleProblem,
@@ -121,8 +122,14 @@ export async function saveDeckStyle(userId: string, deckId: string, style: Reart
   const clean = normalizeReartStyle(style);
   const stored = await readStyleRowAdmin(deckId);
   if (stored && stored.owner_id !== userId) return null;
-  if (stored && sameReartStyle(storedStyleOf(stored), clean)) return { ...clean, version: stored.version };
-  const version = stored ? stored.version + 1 : 1;
+  const before = stored ? storedStyleOf(stored) : null;
+  // The same LOOK keeps its version (nothing a run paints changed). The
+  // row is still written when the OTHER mode's draft changed — a prompt
+  // written and then left for the template, or the other way: it was
+  // dropped on a reload — and never when nothing changed at all.
+  const sameLook = Boolean(before && sameReartStyle(before, clean));
+  if (before && sameLook && sameReartStyleFields(before, clean)) return { ...clean, version: before.version };
+  const version = before ? (sameLook ? before.version : before.version + 1) : 1;
   const { error } = await createAdminClient()
     .from("deck_art_styles")
     .upsert(
@@ -153,18 +160,31 @@ export async function readCardWords(deckId: string): Promise<Map<string, ReartCa
   return new Map((data as WordsRow[]).map((row) => [row.entry_id, wordsOf(row)]));
 }
 
-/** One entry's own words as the server reads them (a step). */
-export async function readCardWordsAdmin(userId: string, deckId: string, entryId: string): Promise<ReartCardWords | null> {
-  if (!isAdminConfigured()) return null;
-  const { data } = await createAdminClient()
+/** The table isn't there: a database 0209 hasn't reached (a deploy that
+ *  lands before its migration). No card has words yet. */
+const missingTable = (error: { code?: string } | null | undefined) => error?.code === "42P01" || error?.code === "PGRST205";
+
+/**
+ * One entry's own words as the server reads them (a step) — FAIL CLOSED: a
+ * read that didn't answer is `ok: false`, never "no words". The step then
+ * stops before any charge; read as "none", a card with words of its own was
+ * painted from the deck's prompt, charged, and recorded as in the style.
+ */
+export async function readCardWordsAdmin(
+  userId: string,
+  deckId: string,
+  entryId: string,
+): Promise<{ ok: true; words: ReartCardWords | null } | { ok: false }> {
+  if (!isAdminConfigured()) return { ok: false };
+  const { data, error } = await createAdminClient()
     .from("deck_reart_prompts")
     .select("entry_id, prompt, only_words, owner_id")
     .eq("deck_id", deckId)
     .eq("entry_id", entryId)
     .maybeSingle();
+  if (error) return missingTable(error) ? { ok: true, words: null } : { ok: false };
   const row = data as WordsRow | null;
-  if (!row || row.owner_id !== userId) return null;
-  return wordsOf(row);
+  return { ok: true, words: row && row.owner_id === userId ? wordsOf(row) : null };
 }
 
 /** Saves (or, `words` null, removes) one entry's own words. The trigger

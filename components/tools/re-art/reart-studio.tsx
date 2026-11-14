@@ -25,14 +25,15 @@ import {
   REART_SCOPE_VALUES,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
+  buildReartPrompt,
   normalizeReartStyle,
-  reartArtPrompt,
   reartRunMode,
   reartRunOutcome,
   reartStateCountsInStyle,
   reartStateIsSettled,
   reartStyleProblem,
   sameReartStyle,
+  sameReartStyleFields,
   scopeTakes,
   suggestReartSample,
   type ReartRunInput,
@@ -112,7 +113,14 @@ export function ReartStudio({
   const [wordsOpen, setWordsOpen] = useState(false);
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
-  const dirty = !savedStyle || !sameReartStyle(savedStyle, style);
+  /** The form paints another LOOK than the deck's saved one (or none is
+   *  saved): a run in it starts a new version, and one card can't be
+   *  painted until it is saved. */
+  const lookChanged = !savedStyle || !sameReartStyle(savedStyle, style);
+  /** The form holds something to save: another look, or the OTHER mode's
+   *  draft (a prompt written and then left for the template — the same
+   *  look, but it was dropped on a reload). */
+  const dirty = !savedStyle || !sameReartStyleFields(savedStyle, style);
   const problem = reartStyleProblem(style);
 
   const paintable = useMemo(() => entries.filter((entry) => entry.kind !== "skip"), [entries]);
@@ -160,7 +168,7 @@ export function ReartStudio({
   /** As the list's "Left as they are" filter counts them: the cards a run
    *  never paints, and the ones that show other art now. */
   const leftAsTheyAre = entries.length - paintable.length + paintable.filter((entry) => entry.state === "changed").length;
-  const toPaint = dirty
+  const toPaint = lookChanged
     ? paintable.filter((entry) => scopeTakes(scope, entry.kind)).length
     : paintable.filter((entry) => scopeTakes(scope, entry.kind) && !reartStateIsSettled(entry.state)).length;
   const slots = capacity ? remainingCapacity(capacity) : null;
@@ -168,15 +176,21 @@ export function ReartStudio({
   // One card's whole prompt as the form's style would send it — the first
   // card a run would paint, built by the function the step paints with.
   const promptPreview = useMemo(() => {
-    const card = paintable[0];
+    // A card painted from the DECK's prompt: one with no words of its own,
+    // else one whose words stand in it — never one that uses only its own
+    // words (its prompt shows nothing of the deck's) unless every card does.
+    const card = paintable.find((entry) => !entry.words) ?? paintable.find((entry) => !entry.words?.only) ?? paintable[0];
     if (!card) return null;
+    const built = buildReartPrompt(
+      { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
+      style,
+      card.words,
+    );
     return {
       name: card.name,
-      prompt: reartArtPrompt(
-        { title: card.name, typeLine: card.typeLine, rulesText: card.rulesText, flavorText: card.flavorText },
-        style,
-        card.words,
-      ),
+      prompt: built.prompt,
+      // Longer than a picture's prompt can be: its end is left out.
+      cut: built.cut,
       // A real card's text isn't known here: it is read when it is painted.
       partial: card.kind === "printing",
     };
@@ -286,7 +300,7 @@ export function ReartStudio({
   // word.
   const paintBlocked = !savedStyle
     ? "Save the deck's style first: one card is painted in the saved style."
-    : dirty
+    : lookChanged
       ? "You changed the style. Save it or undo your changes first: one card is painted in the deck's saved style."
       : null;
 
@@ -417,7 +431,8 @@ export function ReartStudio({
             preview={promptPreview}
             problem={problem}
             saveError={saveError}
-            paintedInSaved={paintedInSaved}
+            // Only another LOOK repaints the cards painted in the saved one.
+            paintedInSaved={lookChanged ? paintedInSaved : 0}
           />
 
           <section aria-labelledby="reart-sample" className="flex flex-col gap-3 rounded-frame border border-border/60 bg-surface/50 p-4 sm:p-5">
@@ -539,8 +554,8 @@ export function ReartStudio({
             ) : null}
             <p className="text-sm tabular-nums text-foreground">
               {toPaint} card{toPaint === 1 ? "" : "s"} to paint
-              {!dirty && inStyle > 0 ? ` · ${inStyle} in this style already` : ""}
-              {!dirty && otherArtNow > 0 ? ` · ${otherArtNow} with other art now, left as ${otherArtNow === 1 ? "it is" : "they are"}` : ""}
+              {!lookChanged && inStyle > 0 ? ` · ${inStyle} in this style already` : ""}
+              {!lookChanged && otherArtNow > 0 ? ` · ${otherArtNow} with other art now, left as ${otherArtNow === 1 ? "it is" : "they are"}` : ""}
               {slots !== null ? ` · ${slots} card slot${slots === 1 ? "" : "s"} left` : ""}
               {balance !== null ? ` · ${balance} credit${balance === 1 ? "" : "s"}` : ""}
             </p>

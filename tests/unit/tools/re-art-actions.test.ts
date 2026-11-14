@@ -470,6 +470,15 @@ describe("saveReartCardWordsAction — one card's own words (0209)", () => {
     expect(m.saveWords.mock.calls[1][3]).toEqual({ text: "w".repeat(600), only: false });
   });
 
+  it("words that say nothing are refused (a lone stop would be painted and paid for)", async () => {
+    for (const text of [".", " - ", "!!"]) {
+      const result = await saveReartCardWordsAction(DECK, ENTRY, { text });
+      expect(result).toMatchObject({ ok: false });
+      expect(result.ok === false && result.error).toMatch(/Write what the picture shows/);
+    }
+    expect(m.saveWords).not.toHaveBeenCalled();
+  });
+
   it("empty words remove them", async () => {
     expect(await saveReartCardWordsAction(DECK, ENTRY, { text: "   ", only: true })).toEqual({ ok: true, words: null });
     expect(m.saveWords).toHaveBeenCalledWith("u1", DECK, ENTRY, null);

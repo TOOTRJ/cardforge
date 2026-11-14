@@ -73,7 +73,7 @@ export function ReartStylePanel({
   paintedInSaved: number;
   /** One card's whole prompt as the form's style would send it (the maker's
    *  own prompt shows it; null: the deck has no card to show). */
-  preview?: { name: string; prompt: string; partial: boolean } | null;
+  preview?: { name: string; prompt: string; partial: boolean; cut?: boolean } | null;
 }) {
   const themeId = useId();
   const blockId = useId();
@@ -199,6 +199,12 @@ export function ReartStylePanel({
               The last line is always added: the picture is art for a card, never a card.
               {preview?.partial ? " A real card's flavour and rules text are read when it is painted." : ""}
             </p>
+            {preview?.cut ? (
+              <p className="mt-1 text-xs leading-5 text-warning">
+                With the card&apos;s facts filled in this is longer than a picture&apos;s prompt can be: its end is left
+                out. Use fewer braces or fewer words.
+              </p>
+            ) : null}
           </div>
         </>
       ) : (

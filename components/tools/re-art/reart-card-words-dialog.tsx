@@ -15,7 +15,7 @@ import { FieldGroup } from "@/components/creator/field-group";
 import { textareaClass } from "@/components/ui/field-classes";
 import {
   REART_CARD_WORDS_MAX,
-  reartArtPrompt,
+  buildReartPrompt,
   reartStateIsSettled,
   type ReartCardWords,
   type ReartStudioEntry,
@@ -54,18 +54,21 @@ export function ReartCardWordsDialog({
   const onlyId = useId();
   const previewId = useId();
 
-  // Each card opens on its own stored words (state adjusted during render:
-  // no effect sets it).
-  const [shown, setShown] = useState(entry.id);
-  if (shown !== entry.id) {
-    setShown(entry.id);
+  // Every OPENING starts from the card's stored words — another card, the
+  // same card after a save or a removal, or a draft that was abandoned
+  // (state adjusted during render: no effect sets it). It used to reset
+  // only for another card, so removed words came back in the box.
+  const opening = `${entry.id}|${open}|${entry.words?.only ?? false}|${entry.words?.text ?? ""}`;
+  const [shown, setShown] = useState(opening);
+  if (shown !== opening) {
+    setShown(opening);
     setText(entry.words?.text ?? "");
     setOnly(entry.words?.only ?? false);
     setError(null);
   }
 
   const words: ReartCardWords | null = text.trim() ? { text, only } : null;
-  const prompt = reartArtPrompt(
+  const { prompt, cut } = buildReartPrompt(
     { title: entry.name, typeLine: entry.typeLine, rulesText: entry.rulesText, flavorText: entry.flavorText },
     style,
     words,
@@ -103,7 +106,6 @@ export function ReartCardWordsDialog({
           <FieldGroup
             label="This card's own words"
             helper={`Its subject and scene, up to ${REART_CARD_WORDS_MAX} characters. Leave it empty to paint the card from its name and type.`}
-            error={error ?? undefined}
           >
             <textarea
               value={text}
@@ -111,7 +113,7 @@ export function ReartCardWordsDialog({
               rows={5}
               onChange={(event) => setText(event.target.value.slice(0, REART_CARD_WORDS_MAX))}
               placeholder="e.g. an old goblin librarian asleep on a heap of overdue books, one candle burning low"
-              className={textareaClass(Boolean(error))}
+              className={textareaClass(false)}
             />
           </FieldGroup>
           <p className="-mt-2 text-right text-xs tabular-nums text-subtle">
@@ -144,12 +146,26 @@ export function ReartCardWordsDialog({
             {entry.kind === "printing" ? (
               <p className="mt-1 text-xs leading-5 text-subtle">A real card&apos;s flavour and rules text are read when it is painted.</p>
             ) : null}
+            {cut ? (
+              <p className="mt-1 text-xs leading-5 text-warning">
+                This is longer than a picture&apos;s prompt can be: its end is left out.
+              </p>
+            ) : null}
           </div>
 
           {reartStateIsSettled(entry.state) ? (
             <p className="text-xs text-muted">This card is painted already: re-roll it to paint it with these words.</p>
           ) : null}
         </div>
+
+        {/* A refusal or a lost connection is the dialog's ONE alert (the
+            words themselves are never "invalid": nothing is wrong in the
+            field), said where a screen reader hears it. */}
+        {error ? (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
 
         <DialogFooter className="flex-wrap gap-2">
           {entry.words ? (

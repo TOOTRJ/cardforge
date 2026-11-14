@@ -125,14 +125,40 @@ export function cleanReartTheme(text: string | null | undefined): string {
   return cleanWords(text, REART_THEME_MAX);
 }
 
-/** The maker's own deck prompt as it is stored and sent (REART_PROMPT_MAX). */
-export function cleanReartPrompt(text: string | null | undefined): string {
-  return cleanWords(text, REART_PROMPT_MAX);
+/** The maker's longer writing as it is STORED: unsafe characters out and
+ *  spaces folded line by line, the maker's own line breaks kept (at most
+ *  one empty line between two), trimmed, clipped to `max`. A prompt is sent
+ *  on one line (flatLine). */
+function cleanLines(text: string | null | undefined, max: number): string {
+  if (!text) return "";
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(UNSAFE_CHARACTERS, " ").replace(/\s+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, max)
+    .trim();
 }
 
-/** One card's own words as they are stored and sent (REART_CARD_WORDS_MAX). */
+/** Text as a prompt carries it: one line. */
+const flatLine = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/** The maker's own deck prompt as it is stored (REART_PROMPT_MAX). */
+export function cleanReartPrompt(text: string | null | undefined): string {
+  return cleanLines(text, REART_PROMPT_MAX);
+}
+
+/** One card's own words as they are stored (REART_CARD_WORDS_MAX). */
 export function cleanReartCardWords(text: string | null | undefined): string {
-  return cleanWords(text, REART_CARD_WORDS_MAX);
+  return cleanLines(text, REART_CARD_WORDS_MAX);
+}
+
+/** Words that say something: a few letters at least (a lone "." is not a
+ *  picture's subject, and would be painted and paid for). */
+export function reartWordsSaySomething(text: string | null | undefined): boolean {
+  return letters(cleanReartCardWords(text)) >= 3;
 }
 
 /** A style as it is stored and compared (the preset known, the words clean,
@@ -156,6 +182,17 @@ export function sameReartStyle(a: ReartStyle | null | undefined, b: ReartStyle |
   const y = normalizeReartStyle(b);
   if (x.mode !== y.mode) return false;
   return x.mode === "custom" ? x.prompt === y.prompt : x.preset === y.preset && x.theme === y.theme;
+}
+
+/** The same ROW: every field the same — the mode's own words and the other
+ *  mode's draft. A form that differs only in the draft is the same look (no
+ *  new version, nothing repainted) but still has something to save: the
+ *  draft used to be dropped on a reload. */
+export function sameReartStyleFields(a: ReartStyle | null | undefined, b: ReartStyle | null | undefined): boolean {
+  if (!a || !b) return false;
+  const x = normalizeReartStyle(a);
+  const y = normalizeReartStyle(b);
+  return x.mode === y.mode && x.prompt === y.prompt && x.preset === y.preset && x.theme === y.theme;
 }
 
 const letters = (text: string) => text.replace(/[^\p{L}]/gu, "").length;
@@ -271,10 +308,16 @@ export function reartCardLine(subject: ReartSubject): string {
   return `"${title}"${type ? `, ${/^[aeiou]/i.test(type) ? "an" : "a"} ${type}` : ""}`;
 }
 
-/** The maker's own deck prompt with its braces filled in for one card. A
- *  card with words of its own puts them where `{card}` stands — or first,
- *  when the prompt has no `{card}`. A name the card has nothing for leaves
- *  no stray comma behind. */
+/** Where a brace's value came up empty, until the text around it is tidied. */
+const EMPTY_SLOT = "\u0001";
+
+/**
+ * The maker's own deck prompt with its braces filled in for one card. A
+ * card with words of its own puts them where `{card}` stands — or first,
+ * when the prompt has no `{card}`. A name the card has nothing for takes
+ * the comma, colon or semicolon before it away with it — and nothing else
+ * of the maker's punctuation is touched.
+ */
 function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): string {
   const values: Record<string, string> = {
     card: own ? withoutStop(own) : reartCardLine(subject),
@@ -289,15 +332,27 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): str
     .replace(PLACEHOLDER, (_whole, name: string) => {
       const key = name.toLowerCase();
       if (key === "card") namesCard = true;
-      return values[key] ?? "";
+      return values[key] || EMPTY_SLOT;
     })
+    .replace(/\s*[,;:]?\s*\u0001/g, "")
+    .replace(/^[\s,;:]+/, "")
     .replace(/\s+/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .replace(/[,;:]+(?=[.,;:!?])/g, "")
-    // …and none at the very end, where a name that came up empty stood.
-    .replace(/[\s,;:]+$/, "")
     .trim();
   return own && !namesCard ? `${withStop(own)} ${filled}` : filled;
+}
+
+/** The most of a prompt that is the card's and the maker's (what comes
+ *  before the no-frame line). The gateway's door clips a prompt at 4,000
+ *  characters from its END (lib/ai/image-gen.ts withFullyClothedLine), and a
+ *  brace can be written many times — `{card}` a hundred times over is far
+ *  past it — so the body is held here, and the lines that are always added
+ *  (no frame, fully clothed, the softened rung's suffix) always fit. */
+export const REART_PROMPT_BODY_MAX = 3000;
+
+/** Cut on a word, at REART_PROMPT_BODY_MAX. */
+function clipBody(text: string): { text: string; cut: boolean } {
+  if (text.length <= REART_PROMPT_BODY_MAX) return { text, cut: false };
+  return { text: text.slice(0, REART_PROMPT_BODY_MAX).replace(/\s+\S*$/, "").replace(/[\s,;:]+$/, ""), cut: true };
 }
 
 /**
@@ -309,32 +364,50 @@ function fillDeckPrompt(prompt: string, subject: ReartSubject, own: string): str
  *     for the card;
  *   * else the template: the card's subject (its own words, or its name,
  *     type line and a hint of its flavour or what it does), then the deck's
- *     shared style block.
+ *     shared style block. The template names no real artist and never the
+ *     source's art; the maker's own words are theirs.
  *
- * Every one ends with the no-frame line. Never the source's art.
+ * Every one ends with the no-frame line: the body before it is held to
+ * REART_PROMPT_BODY_MAX (`cut`: it was longer, and its end is left out).
  */
-export function reartArtPrompt(subject: ReartSubject, style: ReartStyle, words?: ReartCardWords | null): string {
+export function buildReartPrompt(
+  subject: ReartSubject,
+  style: ReartStyle,
+  words?: ReartCardWords | null,
+): { prompt: string; cut: boolean } {
   const clean = normalizeReartStyle(style);
-  const own = cleanReartCardWords(words?.text);
-  if (own && words?.only) return `${withStop(own)} ${REART_NO_FRAME_LINE}`;
-  if (clean.mode === "custom") {
-    return [withStop(fillDeckPrompt(clean.prompt, subject, own)), REART_NO_FRAME_LINE].join(" ");
+  const own = flatLine(cleanReartCardWords(words?.text));
+  let body: string;
+  if (own && words?.only) {
+    body = own;
+  } else if (clean.mode === "custom") {
+    body = fillDeckPrompt(flatLine(clean.prompt), subject, own);
+  } else {
+    const flavor = sceneWords(subject.flavorText, 200);
+    const rules = flavor ? "" : sceneWords(subject.rulesText, 160);
+    const title = subject.title.trim() || "an unnamed card";
+    body = [
+      ...(own
+        ? [withStop(own)]
+        : [
+            `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
+            flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
+          ]),
+      reartStyleBlock(clean),
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
-  const flavor = sceneWords(subject.flavorText, 200);
-  const rules = flavor ? "" : sceneWords(subject.rulesText, 160);
-  const title = subject.title.trim() || "an unnamed card";
-  return [
-    ...(own
-      ? [withStop(own)]
-      : [
-          `Trading-card illustration of "${title}"${subject.typeLine?.trim() ? `, a ${subject.typeLine.trim()}` : ""}.`,
-          flavor ? `Its mood: ${flavor}` : rules ? `As a scene, what it does: ${rules}` : "",
-        ]),
-    reartStyleBlock(clean),
-    REART_NO_FRAME_LINE,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const { text, cut } = clipBody(body);
+  // The template's own block ends as it always did; the maker's words get
+  // a stop when they have none.
+  const ended = clean.mode === "custom" || own ? withStop(text) : text;
+  return { prompt: `${ended} ${REART_NO_FRAME_LINE}`, cut };
+}
+
+/** One picture's prompt (buildReartPrompt's). */
+export function reartArtPrompt(subject: ReartSubject, style: ReartStyle, words?: ReartCardWords | null): string {
+  return buildReartPrompt(subject, style, words).prompt;
 }
 
 /**

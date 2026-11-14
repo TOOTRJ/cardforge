@@ -205,8 +205,11 @@ export async function runReartStep(
   if (!entry) return failed(step, "This card is no longer in your deck.");
   if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
   // The card's own words (0209), read here: the plan is the owner's to
-  // insert, so it names the entry and never the words.
-  const words = await readCardWordsAdmin(userId, plan.deck_id, entry.id);
+  // insert, so it names the entry and never the words. A read that didn't
+  // answer stops the step before any charge — never "no words".
+  const wordsRead = await readCardWordsAdmin(userId, plan.deck_id, entry.id);
+  if (!wordsRead.ok) return failed(step, "This card's own words couldn't be read — try it again.");
+  const words = wordsRead.words;
 
   let cardId = entry.card_id;
   // A real card a Re-art run already MADE from this entry whose link didn't
@@ -403,7 +406,7 @@ async function paintOwnCard(
         // The maker's own words are never swapped for a picture built from
         // the card's name: refused twice, the step fails and is refunded.
         reartPromptIsMakers(style, own)
-          ? exactArtPromptLadder(attempt, prompt)
+          ? exactArtPromptLadder(prompt)
           : artPromptLadder(attempt, prompt, {
               title,
               colors: (card.color_identity ?? []) as ColorIdentity[],

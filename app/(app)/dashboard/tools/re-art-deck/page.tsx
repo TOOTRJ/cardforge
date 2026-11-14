@@ -11,6 +11,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
 import { isGatewayConfigured } from "@/lib/ai/provider";
 import { rowHasBakedBack } from "@/lib/cards/faces";
+import { buildTypeLine } from "@/lib/cards/card-display";
 import {
   getOwnedDeck,
   listReartRuns,
@@ -157,7 +158,12 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       name: card?.title || e.name,
       quantity: e.quantity,
       board: e.board,
-      typeLine: e.type_line,
+      // The maker's own card: the type line the step builds its prompt
+      // from (the card's own words), so the studio's preview is what is
+      // sent. A real card's is its entry's, until its printing is read.
+      typeLine: own
+        ? buildTypeLine({ cardType: own.card_type ?? undefined, supertype: own.supertype ?? null, subtypes: own.subtypes ?? [] }) || e.type_line
+        : e.type_line,
       imageUrl: e.image_url,
       kind: classified.kind,
       skipMessage: classified.kind === "skip" ? classified.message : null,

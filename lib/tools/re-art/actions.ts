@@ -25,6 +25,7 @@ import {
   REART_TOOL_SLUG,
   cleanReartCardWords,
   reartRunMode,
+  reartWordsSaySomething,
   reartRunSchema,
   reartStepKey,
   reartStyleProblem,
@@ -130,8 +131,6 @@ export async function saveReartStyleAction(
   return { ok: true, style: savedStyle, version };
 }
 
-const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * One card's own words for its picture — its subject in the deck's look, or
  * (`only`) its whole prompt — by deck ENTRY (a real card's entry has no card
@@ -150,8 +149,8 @@ export async function saveReartCardWordsAction(
   if (
     typeof deckId !== "string" ||
     typeof entryId !== "string" ||
-    !UUID_SHAPE.test(deckId) ||
-    !UUID_SHAPE.test(entryId) ||
+    !isUuid(deckId) ||
+    !isUuid(entryId) ||
     typeof raw.text !== "string" ||
     raw.text.length > REART_CARD_WORDS_MAX * 2
   ) {
@@ -165,6 +164,11 @@ export async function saveReartCardWordsAction(
   const { data: entry } = await supabase.from("deck_cards").select("id").eq("id", entryId).eq("deck_id", deck.id).maybeSingle();
   if (!entry) return { ok: false, error: "That card is no longer in this deck." };
   const text = cleanReartCardWords(raw.text);
+  // Words that say nothing (a lone ".") are no picture's subject, and
+  // would be painted and paid for.
+  if (text && !reartWordsSaySomething(text)) {
+    return { ok: false, error: "Write what the picture shows, or leave it empty to remove the words." };
+  }
   const words: ReartCardWords | null = text ? { text, only: raw.only === true } : null;
   if (!(await saveCardWords(access.userId, deck.id, entry.id, words))) {
     track(access, "save_card_words_failed", { reason: "not_saved" });

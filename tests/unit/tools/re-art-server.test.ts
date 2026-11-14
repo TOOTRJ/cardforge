@@ -462,6 +462,23 @@ describe("the deck's style — the template or the maker's own prompt (0209)", (
       expect(upserts()).toEqual([]);
     });
 
+    it("the other mode's draft is saved WITHOUT a new version: the same look, nothing repainted, nothing lost on a reload", async () => {
+      // Saved in the template; the maker wrote a prompt, then went back.
+      stored({ preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "", version: 4, owner_id: ME });
+      expect(await saveDeckStyle(ME, DECK, { preset: "watercolor", theme: "a haunted fen", mode: "preset", prompt: "{card} in oils, a draft" })).toMatchObject({
+        version: 4,
+        mode: "preset",
+        prompt: "{card} in oils, a draft",
+      });
+      expect(upserts()).toHaveLength(1);
+      expect(upserts()[0].row).toMatchObject({ mode: "preset", prompt: "{card} in oils, a draft", version: 4 });
+      // …and the other way: the template's fields under the maker's own prompt.
+      m.admin.mockClear();
+      stored(OWN_ROW);
+      expect(await saveDeckStyle(ME, DECK, { ...OWN_ROW, mode: "custom", theme: "a sunken city" })).toMatchObject({ version: 4 });
+      expect(upserts()[0].row).toMatchObject({ mode: "custom", theme: "a sunken city", version: 4 });
+    });
+
     it("a rewritten prompt — or a switch of mode — is a new look: the version moves on and the row holds both", async () => {
       stored(OWN_ROW);
       expect(await saveDeckStyle(ME, DECK, { ...OWN_ROW, mode: "custom", prompt: "{card} in thin washes" })).toMatchObject({ version: 5 });
@@ -513,16 +530,30 @@ describe("one card's own words (0209 deck_reart_prompts)", () => {
 
   it("the step reads one entry's with the service role, held to the owner", async () => {
     m.admin.mockResolvedValue({ data: { entry_id: ENTRY, prompt: "a lighthouse", only_words: true, owner_id: ME }, error: null });
-    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ text: "a lighthouse", only: true });
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: true, words: { text: "a lighthouse", only: true } });
     expect((m.admin.mock.calls[0][0] as Call).filters).toEqual([
       ["deck_id", DECK],
       ["entry_id", ENTRY],
     ]);
-    expect(await readCardWordsAdmin("someone", DECK, ENTRY)).toBeNull();
+    expect(await readCardWordsAdmin("someone", DECK, ENTRY)).toEqual({ ok: true, words: null });
     m.admin.mockResolvedValue({ data: null, error: null });
-    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toBeNull();
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: true, words: null });
+  });
+
+  it("…and FAILS CLOSED: a read that didn't answer is never “no words” (the card would be painted without them, and charged)", async () => {
+    m.admin.mockResolvedValue({ data: null, error: { message: "connection reset", code: "08006" } });
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: false });
+    m.admin.mockResolvedValue({ data: null, error: { message: "boom" } });
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: false });
     m.adminConfigured.mockReturnValue(false);
-    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toBeNull();
+    expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: false });
+    m.adminConfigured.mockReturnValue(true);
+    // The one error that IS "none": the table isn't there yet (a deploy
+    // that lands before migration 0209) — no card has words.
+    for (const code of ["42P01", "PGRST205"]) {
+      m.admin.mockResolvedValue({ data: null, error: { message: "no such table", code } });
+      expect(await readCardWordsAdmin(ME, DECK, ENTRY)).toEqual({ ok: true, words: null });
+    }
   });
 
   it("are saved clean under the owner; empty words remove the row", async () => {
@@ -530,7 +561,8 @@ describe("one card's own words (0209 deck_reart_prompts)", () => {
     expect(await saveCardWords(ME, DECK, ENTRY, { text: "  a   lighthouse\n in a storm ", only: true })).toBe(true);
     const [write] = m.admin.mock.calls.map(([call]) => call as Call);
     expect(write).toMatchObject({ table: "deck_reart_prompts", op: "upsert" });
-    expect(write.row).toEqual({ deck_id: DECK, entry_id: ENTRY, owner_id: ME, prompt: "a lighthouse in a storm", only_words: true });
+    // Spaces folded; the maker's own line break kept.
+    expect(write.row).toEqual({ deck_id: DECK, entry_id: ENTRY, owner_id: ME, prompt: "a lighthouse\nin a storm", only_words: true });
     m.admin.mockClear();
     for (const none of [null, { text: "   ", only: true }]) await saveCardWords(ME, DECK, ENTRY, none);
     for (const [call] of m.admin.mock.calls) {

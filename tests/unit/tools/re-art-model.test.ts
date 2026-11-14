@@ -5,8 +5,10 @@ import {
   REART_DEFAULT_VISIBILITY,
   REART_NO_FRAME_LINE,
   REART_PLACEHOLDERS,
+  REART_PROMPT_BODY_MAX,
   REART_PROMPT_MAX,
   REART_SAMPLE_MAX,
+  buildReartPrompt,
   classifyReartEntry,
   cleanReartCardWords,
   cleanReartPrompt,
@@ -27,7 +29,9 @@ import {
   reartStyleBlock,
   reartStyleProblem,
   reartStyleSchema,
+  reartWordsSaySomething,
   sameReartStyle,
+  sameReartStyleFields,
   scopeTakes,
   suggestReartSample,
   typeBucketOf,
@@ -354,7 +358,12 @@ describe("the maker's own prompts (migration 0209)", () => {
     });
 
     it("the maker's prompt is stored clean and clipped to its limit", () => {
-      expect(cleanReartPrompt("  An oil\n\npainting\u200b of   {card}.  ")).toBe("An oil painting of {card}.");
+      // The maker's own line breaks are kept (one empty line at most);
+      // spaces are folded and unsafe characters dropped line by line.
+      expect(cleanReartPrompt("  An oil\r\n\n\n\npainting\u200b of   {card}.  \n thick paint ")).toBe("An oil\n\npainting of {card}.\nthick paint");
+      // …and a prompt is SENT on one line.
+      expect(reartArtPrompt(RING, own("An oil\n\npainting of {name}"))).toBe(`An oil painting of Sol Ring. ${REART_NO_FRAME_LINE}`);
+      expect(reartArtPrompt(RING, TEMPLATE, { text: "a ring\nof brass", only: true })).toBe(`a ring of brass. ${REART_NO_FRAME_LINE}`);
       expect(cleanReartPrompt("w".repeat(2000))).toHaveLength(REART_PROMPT_MAX);
       expect(normalizeReartStyle(own("  thick   paint ")).prompt).toBe("thick paint");
       expect(cleanReartCardWords("c".repeat(900))).toHaveLength(REART_CARD_WORDS_MAX);
@@ -369,6 +378,15 @@ describe("the maker's own prompts (migration 0209)", () => {
       // What the OTHER mode holds is kept for a switch back and changes nothing.
       expect(sameReartStyle(own("thick paint"), { ...own("thick paint"), preset: "anime", theme: "elsewhere" })).toBe(true);
       expect(sameReartStyle(TEMPLATE, { ...TEMPLATE, prompt: "an old draft" })).toBe(true);
+    });
+
+    it("…but the other mode's draft is still something to SAVE (it was dropped on a reload)", () => {
+      // The same look — no new version, nothing repainted — and another row.
+      expect(sameReartStyleFields(TEMPLATE, { ...TEMPLATE, prompt: "an old draft" })).toBe(false);
+      expect(sameReartStyleFields(own("thick paint"), { ...own("thick paint"), theme: "elsewhere" })).toBe(false);
+      expect(sameReartStyleFields(own(" thick  paint "), own("thick paint"))).toBe(true);
+      expect(sameReartStyleFields(TEMPLATE, { ...TEMPLATE, mode: "preset", prompt: "" })).toBe(true);
+      expect(sameReartStyleFields(TEMPLATE, null)).toBe(false);
     });
 
     it("the maker's own prompt has to be written — braces alone are no words", () => {
@@ -415,11 +433,40 @@ describe("the maker's own prompts (migration 0209)", () => {
       expect(reartArtPrompt(RING, own("{card} beside a {lamp}"))).toContain('"Sol Ring", an Artifact beside a {lamp}.');
     });
 
-    it("a name the card has nothing for leaves no stray comma behind", () => {
+    it("a name the card has nothing for takes the comma or colon before it away — and nothing else of the maker's punctuation", () => {
       expect(reartArtPrompt(RING, own("A painting of {name}, {flavor}, in gold leaf."))).toBe(
         `A painting of Sol Ring, in gold leaf. ${REART_NO_FRAME_LINE}`,
       );
       expect(reartArtPrompt({ title: "", typeLine: null }, own("{card}: {type}"))).toBe(`"an unnamed card". ${REART_NO_FRAME_LINE}`);
+      expect(reartArtPrompt(RING, own("{flavor}, {name} in gold"))).toBe(`Sol Ring in gold. ${REART_NO_FRAME_LINE}`);
+      // The maker's own punctuation and spacing stay as written.
+      expect(reartArtPrompt(RING, own("{name} :: gold ; teal , thick paint !"))).toBe(`Sol Ring :: gold ; teal , thick paint ! ${REART_NO_FRAME_LINE}`);
+    });
+
+    it("a brace written many times can't push the no-frame line off the end: the body is held, and says it was cut", () => {
+      // The gateway's door clips a prompt at 4,000 characters from its END.
+      const words = { text: "w".repeat(REART_CARD_WORDS_MAX), only: false };
+      const many = own(Array.from({ length: 200 }, () => "{card}").join(" "));
+      const built = buildReartPrompt(KRENKO, many, words);
+      expect(built.cut).toBe(true);
+      expect(built.prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+      expect(built.prompt.length).toBeLessThanOrEqual(REART_PROMPT_BODY_MAX + 1 + 1 + REART_NO_FRAME_LINE.length);
+      // Room is left for the lines added after it (the softened rung's
+      // suffix and the "fully clothed" line).
+      expect(built.prompt.length).toBeLessThan(4000 - 200);
+      // A prompt and words at their own limits fit whole.
+      const full = buildReartPrompt(KRENKO, own(`{card} ${"p".repeat(REART_PROMPT_MAX - 7)}`), words);
+      expect(full.cut).toBe(false);
+      expect(full.prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+      expect(buildReartPrompt(KRENKO, TEMPLATE).cut).toBe(false);
+    });
+
+    it("words have to say something: a lone stop is no picture's subject", () => {
+      expect(reartWordsSaySomething(".")).toBe(false);
+      expect(reartWordsSaySomething(" -- ")).toBe(false);
+      expect(reartWordsSaySomething("")).toBe(false);
+      expect(reartWordsSaySomething("fog")).toBe(true);
+      expect(reartWordsSaySomething("a goblin chef")).toBe(true);
     });
 
     it("a card's own words stand where {card} stands — or first, when the prompt has no {card}", () => {
@@ -453,10 +500,17 @@ describe("the maker's own prompts (migration 0209)", () => {
 
     it("without words of its own a card's template prompt is exactly what it was", () => {
       expect(reartArtPrompt(KRENKO, TEMPLATE, null)).toBe(reartArtPrompt(KRENKO, TEMPLATE));
-      const prompt = reartArtPrompt(KRENKO, TEMPLATE);
-      expect(prompt.startsWith('Trading-card illustration of "Krenko, Mob Boss", a Legendary Creature — Goblin Warrior. Its mood:')).toBe(true);
-      expect(prompt).toContain(reartStyleBlock(TEMPLATE));
-      expect(prompt.endsWith(REART_NO_FRAME_LINE)).toBe(true);
+      // Character for character what it was before 0209 (no stored card's
+      // next paint changes because of this feature).
+      expect(reartArtPrompt(KRENKO, TEMPLATE)).toBe(
+        `Trading-card illustration of "Krenko, Mob Boss", a Legendary Creature — Goblin Warrior. Its mood: “He displays a negotiator's sense of fairness.” ${reartStyleBlock(TEMPLATE)} ${REART_NO_FRAME_LINE}`,
+      );
+      expect(reartArtPrompt(RING, TEMPLATE)).toBe(
+        `Trading-card illustration of "Sol Ring", a Artifact. As a scene, what it does: : Add . ${reartStyleBlock(TEMPLATE)} ${REART_NO_FRAME_LINE}`,
+      );
+      expect(reartArtPrompt({ title: " ", typeLine: null }, { preset: "surprise", theme: "fog" })).toBe(
+        `Trading-card illustration of "an unnamed card". ${reartStyleBlock({ preset: "surprise", theme: "fog" })} ${REART_NO_FRAME_LINE}`,
+      );
     });
 
     it("every prompt ends with the no-frame line, whoever wrote the rest", () => {

@@ -139,7 +139,7 @@ beforeEach(() => {
   m.paintedAdmin.mockResolvedValue(null);
   m.paintedRows.mockResolvedValue([]);
   m.madeForEntry.mockResolvedValue(null);
-  m.words.mockResolvedValue(null);
+  m.words.mockResolvedValue({ ok: true, words: null });
   m.link.mockResolvedValue({ ok: true });
   m.writePainted.mockResolvedValue(true);
   m.rows.deck_cards = { id: ENTRY, name: "Archivist", board: "main", card_id: "card-1", scryfall_id: null };
@@ -482,7 +482,7 @@ describe("the maker's own prompts (0209)", () => {
   const ladder = (call = 0): string[] => m.image.mock.calls[call][0];
 
   it("a card's own words are read by ENTRY from the server — the plan names none — and paint its subject in the deck's style", async () => {
-    m.words.mockResolvedValue({ text: "an old goblin librarian asleep on a heap of books", only: false });
+    m.words.mockResolvedValue({ ok: true, words: { text: "an old goblin librarian asleep on a heap of books", only: false } });
     await run(planOf());
     expect(m.words).toHaveBeenCalledWith("u1", DECK, ENTRY);
     const [first] = ladder();
@@ -492,8 +492,24 @@ describe("the maker's own prompts (0209)", () => {
     expect(first.endsWith(NO_FRAME)).toBe(true);
   });
 
+  it("words that couldn't be READ stop the step before any charge — never painted as “no words”", async () => {
+    // Read as none, a card with words of its own was painted from the
+    // deck's prompt, charged, and recorded as in the style.
+    m.words.mockResolvedValue({ ok: false });
+    const result = await run(planOf());
+    expect(result).toMatchObject({ status: "failed" });
+    expect(result.error).toMatch(/own words couldn't be read/);
+    expect(m.credited).not.toHaveBeenCalled();
+    expect(m.image).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+    // A real card's entry: the same, before the card is made.
+    m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+    expect((await run(planOf("printing"))).status).toBe("failed");
+    expect(m.customize).not.toHaveBeenCalled();
+  });
+
   it("“only these words” is the card's whole prompt", async () => {
-    m.words.mockResolvedValue({ text: "A lone lighthouse in a storm, woodcut", only: true });
+    m.words.mockResolvedValue({ ok: true, words: { text: "A lone lighthouse in a storm, woodcut", only: true } });
     await run(planOf());
     expect(ladder()[0]).toBe(`A lone lighthouse in a storm, woodcut. ${NO_FRAME}`);
   });
@@ -507,12 +523,12 @@ describe("the maker's own prompts (0209)", () => {
   });
 
   it("the maker's words are dressed if refused, never swapped for a picture built from the card's name", async () => {
-    m.words.mockResolvedValue({ text: "a goblin chef", only: false });
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef", only: false } });
     await run(planOf());
     expect(ladder()).toHaveLength(2);
     expect(ladder().join(" ")).not.toMatch(/Symbolic fantasy|evoking/);
     // The same for the maker's own deck prompt…
-    m.words.mockResolvedValue(null);
+    m.words.mockResolvedValue({ ok: true, words: null });
     m.styleAdmin.mockResolvedValue(OWN_STYLE);
     await run(planIn(OWN_STYLE));
     expect(ladder(1)).toHaveLength(2);
@@ -521,11 +537,11 @@ describe("the maker's own prompts (0209)", () => {
     await run(planOf());
     expect(ladder(2)).toHaveLength(3);
     expect(ladder(2)[2]).toMatch(/Symbolic fantasy/);
-    // A retry starts one prompt further on and stays on the maker's words.
-    m.words.mockResolvedValue({ text: "a goblin chef", only: false });
+    // A retry sends the maker's words AS WRITTEN first again (a slow
+    // provider refused nothing): the same two rungs on every try.
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef", only: false } });
     await run(planOf(), { ...STEP, attempts: 2 });
-    expect(ladder(3)).toHaveLength(1);
-    expect(ladder(3)[0]).toContain("a goblin chef");
+    expect(ladder(3)).toEqual(ladder(0));
   });
 
   it("a run priced in the template stops before any charge once the deck has the maker's own prompt (and the other way)", async () => {
@@ -544,7 +560,7 @@ describe("the maker's own prompts (0209)", () => {
       ...OWN_CARD,
       back_face: { title: "The Hour Unbound", card_type: "creature", subtypes: ["Spirit"], art_url: ART("back.png") },
     };
-    m.words.mockResolvedValue({ text: "a goblin chef juggling knives", only: true });
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin chef juggling knives", only: true } });
     m.persist.mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-front.jpg") }).mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-back.jpg") });
     await run(planOf());
     expect(ladder(0)[0]).toBe(`a goblin chef juggling knives. ${NO_FRAME}`);
@@ -556,7 +572,7 @@ describe("the maker's own prompts (0209)", () => {
 
   it("a real card is made with the same prompt rules, and says when the prompt is the maker's", async () => {
     m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
-    m.words.mockResolvedValue({ text: "a goblin boss on a throne of crates", only: false });
+    m.words.mockResolvedValue({ ok: true, words: { text: "a goblin boss on a throne of crates", only: false } });
     await run(planOf("printing"));
     const [, , , options] = m.customize.mock.calls[0];
     const payload = { title: "Krenko, Mob Boss", subtypes: ["Goblin"], card_type: "creature", back_face: { title: "Back", subtypes: [] } };
@@ -567,7 +583,7 @@ describe("the maker's own prompts (0209)", () => {
     expect(back.exact).toBe(false);
     expect(back.prompt).not.toContain("throne of crates");
     // No words, the template: the bulk core keeps its own ladder.
-    m.words.mockResolvedValue(null);
+    m.words.mockResolvedValue({ ok: true, words: null });
     await run(planOf("printing"));
     expect(m.customize.mock.calls[1][3].artPrompt(payload, "front").exact).toBe(false);
   });
