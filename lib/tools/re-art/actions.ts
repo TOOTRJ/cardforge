@@ -22,6 +22,7 @@ import { toolHref, toolReasonOfCode } from "@/lib/tools/catalog";
 import {
   REART_DEFAULT_VISIBILITY,
   REART_CARD_WORDS_MAX,
+  REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
   REART_MODEL_NOT_YOURS,
   REART_TOOL_SLUG,
@@ -265,10 +266,14 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   if (!parsed.success) return { ok: false, error: "That run couldn't be read — reload the page." };
   const failed = (reason: string, props: ToolEventProps = {}) =>
     track(access, "start_failed", { reason, mode: runMode(parsed.data), ...props });
-  // Naming the model is for admins and testers (the studio shows them the
-  // picker): anyone else's run that names one is refused, never painted on
-  // Automatic behind their back.
-  if ((parsed.data.model ?? REART_DEFAULT_MODEL) !== REART_DEFAULT_MODEL && !canPickReartModel(access)) {
+  // Naming the model — or what a picture starts from — is for admins and
+  // testers (the studio shows them both): anyone else's run that names one
+  // is refused, never painted another way behind their back.
+  if (
+    ((parsed.data.model ?? REART_DEFAULT_MODEL) !== REART_DEFAULT_MODEL ||
+      (parsed.data.method ?? REART_DEFAULT_METHOD) !== REART_DEFAULT_METHOD) &&
+    !canPickReartModel(access)
+  ) {
     failed("model_not_allowed");
     return { ok: false, error: REART_MODEL_NOT_YOURS };
   }
@@ -381,6 +386,7 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
     style: { preset: saved.preset, theme: saved.theme, mode: saved.mode, prompt: saved.prompt, version: saved.version },
     visibility: parsed.data.visibility ?? REART_DEFAULT_VISIBILITY,
     model: parsed.data.model ?? REART_DEFAULT_MODEL,
+    method: parsed.data.method ?? REART_DEFAULT_METHOD,
     entries: plan.entries.map((entry) => ({
       entry_id: entry.entryId,
       name: entry.name,
@@ -412,8 +418,10 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
         reroll,
         style_version: saved.version,
         // The model the run names (a code from the tool's own list): the
-        // studio says it in the run's outcome.
+        // studio says it in the run's outcome. And what its pictures start
+        // from.
         model: jobPlan.model,
+        method: jobPlan.method,
       },
       plan: jobPlan as unknown as Json,
       steps: steps as unknown as Json,
@@ -520,6 +528,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     artUrl: null,
     backArtUrl: null,
     imageModel: null,
+    method: null,
     made: false,
     previousArtUrl: null,
     previousArtPosition: null,

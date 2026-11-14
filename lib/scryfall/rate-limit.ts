@@ -49,6 +49,16 @@ export const SCRYFALL_LIMITS = {
   // /cards/collection calls. A 25,000-card collection is ~84 chunks, a few
   // seconds each, so a whole import fits a day several times over.
   collection_import: { perMinute: 40, perDay: 400 },
+  // One row per real card's ART a model repaints (Re-art deck's restyle,
+  // migration 0213; lib/scryfall/art-crop.ts): the art crop is read from
+  // Scryfall's image CDN and never stored. Its own action — NOT import_art,
+  // whose 100 a day is sized for pictures a maker keeps in their folder: a
+  // run restyles up to 150 cards (two pictures for a two-faced one), and
+  // counted there it stopped near the hundredth card and spent the
+  // creator's own art import for the day. Each of these is one credit, so
+  // the credits are what really bounds it; the numbers are `named`'s (every
+  // restyled card is one lookup too).
+  restyle_art: { perMinute: 30, perDay: 500 },
 } as const;
 
 const LIMITS = SCRYFALL_LIMITS;

@@ -152,7 +152,14 @@ export function ReartConfirmDialog({
             <div className="rounded-lg border border-border/60 bg-elevated/40 p-4">
               <p className="text-base font-semibold tabular-nums text-foreground">{reartCostLine(cost)}</p>
               {reartCostDetail(cost) ? <p className="mt-1 text-sm text-muted">{reartCostDetail(cost)}</p> : null}
-              {input.model && input.model !== REART_DEFAULT_MODEL ? (
+              {input.method === "restyle" ? (
+                // Said before anything is charged: each picture starts from
+                // the card's own art (the list says which art, card by card).
+                <p className="mt-1 text-sm text-muted">
+                  Each picture starts from the card&apos;s own art and is repainted
+                  {input.model && input.model !== REART_DEFAULT_MODEL ? ` by ${reartModelOf(input.model).label}` : ""}.
+                </p>
+              ) : input.model && input.model !== REART_DEFAULT_MODEL ? (
                 // A named model (the studio's picker, for testing): said
                 // before anything is charged.
                 <p className="mt-1 text-sm text-muted">Painted by {reartModelOf(input.model).label}.</p>

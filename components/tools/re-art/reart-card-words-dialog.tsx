@@ -19,6 +19,7 @@ import {
   reartStateIsSettled,
   type ReartCardWords,
   type ReartFraming,
+  type ReartMethod,
   type ReartStudioEntry,
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
@@ -40,6 +41,7 @@ export function ReartCardWordsDialog({
   style,
   framing = "flux2",
   bodyMax,
+  method = "paint",
   onSaved,
 }: {
   open: boolean;
@@ -53,6 +55,9 @@ export function ReartCardWordsDialog({
   /** The most of a prompt's body the picked model reads (absent: the
    *  tool's own limit). */
   bodyMax?: number;
+  /** What the picture starts from (the preview's): the prompt alone, or the
+   *  card's own art. */
+  method?: ReartMethod;
   onSaved: (words: ReartCardWords | null) => void;
 }) {
   const [text, setText] = useState(entry.words?.text ?? "");
@@ -82,6 +87,7 @@ export function ReartCardWordsDialog({
     words,
     framing,
     bodyMax,
+    method,
   );
   const changed = (entry.words?.text ?? "") !== text.trim() || (entry.words?.only ?? false) !== (words ? only : false);
 
@@ -115,7 +121,11 @@ export function ReartCardWordsDialog({
         <div className="flex flex-col gap-4">
           <FieldGroup
             label="This card's own words"
-            helper={`Its subject and scene, up to ${REART_CARD_WORDS_MAX} characters. Leave it empty to paint the card from its name and type.`}
+            helper={
+              method === "restyle"
+                ? `What changes in this card's picture, up to ${REART_CARD_WORDS_MAX} characters. Leave it empty to repaint its art in the deck's style alone.`
+                : `Its subject and scene, up to ${REART_CARD_WORDS_MAX} characters. Leave it empty to paint the card from its name and type.`
+            }
           >
             <textarea
               value={text}
@@ -153,7 +163,9 @@ export function ReartCardWordsDialog({
             <p aria-labelledby={previewId} className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted">
               {prompt}
             </p>
-            {entry.kind === "printing" ? (
+            {method === "restyle" ? (
+              <p className="mt-1 text-xs leading-5 text-subtle">It is sent with the card&apos;s own art: the picture is the subject.</p>
+            ) : entry.kind === "printing" ? (
               <p className="mt-1 text-xs leading-5 text-subtle">A real card&apos;s flavour and rules text are read when it is painted.</p>
             ) : null}
             {cut ? (

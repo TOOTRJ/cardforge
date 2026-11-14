@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Re-art deck's server reads and writes (lib/tools/re-art/server.ts) that
@@ -116,7 +116,7 @@ import {
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
-import { REART_CHANGED_COPY } from "@/lib/tools/re-art/model";
+import { REART_CHANGED_COPY, REART_NO_ART_COPY } from "@/lib/tools/re-art/model";
 
 const ME = "u1";
 const DECK = "00000000-0000-4000-8000-0000000000d1";
@@ -206,6 +206,64 @@ describe("the plan — a card is in the style only while it still shows the styl
     deckWith(ART("mine.png"), null);
     const without = await plan();
     expect(without.ok && without.entries).toEqual([expect.objectContaining({ ownWords: false, notes: [] })]);
+  });
+
+  describe("a run that starts each picture from the card's own art (0212 restyle)", () => {
+    const restylePlan = (entryIds?: string[]) =>
+      planReartRun(ME, { deckId: DECK, scope: "all", visibility: "private", method: "restyle", ...(entryIds ? { entryIds } : {}) }, "deck_import");
+    // The app's own storage is the one host the server may fetch a card's art from.
+    beforeEach(() => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
+    });
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    /** The deck's one own card, its entry standing for a printing or not. */
+    const deckOf = (cardArt: string | null, painted: ReturnType<typeof row> | null, scryfallId: string | null = null) => {
+      deckWith(cardArt, painted);
+      const it = item(cardArt);
+      m.items.mockResolvedValue([{ ...it, entry: { ...it.entry, scryfall_id: scryfallId } }]);
+    };
+
+    it("a card of the maker's own with no printing starts from the art it has, and the line says so", async () => {
+      deckOf(ART("mine.png"), null);
+      const result = await restylePlan();
+      expect(result).toMatchObject({ ok: true, skipped: [] });
+      expect(result.ok && result.entries).toMatchObject([{ kind: "own", credits: 1, notes: ["Starts from the art it had before Re-art."] }]);
+    });
+
+    it("…from the art it had BEFORE Re-art when it shows a picture Re-art painted (a re-roll)", async () => {
+      deckOf(ART("ai-1.jpg"), row(ART("ai-1.jpg")));
+      const result = await restylePlan([ENTRY]);
+      expect(result.ok && result.entries).toMatchObject([{ kind: "own", notes: ["Starts from the art it had before Re-art."] }]);
+      // Re-art's picture with nothing before it is no art to start from.
+      deckOf(ART("ai-1.jpg"), { ...row(ART("ai-1.jpg")), previous_art_url: null } as unknown as ReturnType<typeof row>);
+      const none = await restylePlan([ENTRY]);
+      expect(none).toMatchObject({ ok: true, entries: [], skipped: [{ name: "Archivist of Lost Hours", reason: REART_NO_ART_COPY }] });
+    });
+
+    it("a card with no art — or art the server may not fetch — is left as it is, said, and priced at nothing", async () => {
+      for (const art of [null, "https://elsewhere.example/art.png", "/defaults/avatars/avatar-18.webp"]) {
+        deckOf(art, null);
+        const result = await restylePlan();
+        expect(result).toMatchObject({ ok: true, entries: [], skipped: [{ name: "Archivist of Lost Hours", reason: REART_NO_ART_COPY }] });
+      }
+    });
+
+    it("the maker's own version of a REAL card starts from the real card's art — whatever is on it now", async () => {
+      deckOf(null, null, "sf-1");
+      const result = await restylePlan();
+      expect(result.ok && result.entries).toMatchObject([{ kind: "own", notes: ["Starts from the real card's art."] }]);
+      expect(result.ok && result.skipped).toEqual([]);
+    });
+
+    it("a run from the prompt alone says none of it and skips no card for its art", async () => {
+      deckOf(null, null);
+      const result = await plan();
+      expect(result).toMatchObject({ ok: true, skipped: [] });
+      expect(result.ok && result.entries).toMatchObject([{ kind: "own", notes: [] }]);
+    });
   });
 
   it("never painted: painted; and a named card in the style is painted again", async () => {
@@ -337,6 +395,7 @@ describe("a paint's row is put back when its edit was refused", () => {
     paintedAt: "2026-11-01T00:00:00Z",
     jobId: "job-earlier",
     imageModel: "bfl/flux-kontext-pro",
+    method: "restyle",
   };
 
   it("an earlier row is written back as it was — the run that painted it included", async () => {
@@ -355,8 +414,9 @@ describe("a paint's row is put back when its edit was refused", () => {
       previous_artist_credit: "Jane Painter",
       made: false,
       job_id: "job-earlier",
-      // …and who painted it (0211).
+      // …and who painted it (0211), and how (0212).
       image_model: "bfl/flux-kontext-pro",
+      method: "restyle",
     });
   });
 
@@ -593,7 +653,7 @@ describe("one card's own words (0209 deck_reart_prompts)", () => {
   });
 });
 
-describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
+describe("who painted a card, and how (0211 deck_reart_cards.image_model, 0212 .method)", () => {
   const stored = (over: Record<string, unknown> = {}) => ({
     card_id: CARD,
     entry_id: ENTRY,
@@ -625,38 +685,43 @@ describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
     previousArtistCredit: "Jane Painter",
     previousBackArtistCredit: null,
     imageModel: "spacexai/grok-imagine-image",
+    method: "restyle",
   };
   const upserts = () => m.admin.mock.calls.map(([call]) => call as Call).filter((call) => call.op === "upsert");
-  const NO_COLUMN = { message: "column deck_reart_cards.image_model does not exist", code: "42703" };
+  const NO_COLUMN = { message: "column deck_reart_cards.method does not exist", code: "42703" };
 
-  it("is read with the row, by every reader; a row painted before 0211 names none", async () => {
-    m.query.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-pro" })], error: null });
-    expect((await readPaintedCards(DECK)).get(CARD)).toMatchObject({ imageModel: "bfl/flux-2-pro", jobId: "job-1" });
-    expect((m.query.mock.calls[0][0] as Call).columns).toMatch(/, image_model$/);
+  it("are read with the row, by every reader; a row painted before them names neither", async () => {
+    m.query.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-pro", method: "restyle" })], error: null });
+    expect((await readPaintedCards(DECK)).get(CARD)).toMatchObject({ imageModel: "bfl/flux-2-pro", method: "restyle", jobId: "job-1" });
+    expect((m.query.mock.calls[0][0] as Call).columns).toMatch(/, image_model, method$/);
 
-    m.admin.mockResolvedValue({ data: { ...stored({ image_model: null }), owner_id: ME }, error: null });
-    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, imageModel: null });
-    expect((m.admin.mock.calls[0][0] as Call).columns).toMatch(/, image_model, owner_id$/);
+    m.admin.mockResolvedValue({ data: { ...stored({ image_model: null, method: null }), owner_id: ME }, error: null });
+    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, imageModel: null, method: null });
+    expect((m.admin.mock.calls[0][0] as Call).columns).toMatch(/, image_model, method, owner_id$/);
 
-    m.admin.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-flex + bfl/flux-2-pro" })], error: null });
-    expect(await readPaintedRowsForCardAdmin(ME, CARD)).toMatchObject([{ imageModel: "bfl/flux-2-flex + bfl/flux-2-pro" }]);
+    m.admin.mockResolvedValue({ data: [stored({ image_model: "bfl/flux-2-flex + bfl/flux-2-pro", method: "paint" })], error: null });
+    expect(await readPaintedRowsForCardAdmin(ME, CARD)).toMatchObject([{ imageModel: "bfl/flux-2-flex + bfl/flux-2-pro", method: "paint" }]);
+    // A word the app doesn't know is no method.
+    m.admin.mockResolvedValue({ data: [stored({ method: "sketch" })], error: null });
+    expect(await readPaintedRowsForCardAdmin(ME, CARD)).toMatchObject([{ method: null }]);
   });
 
-  it("a database 0211 hasn't reached is read again without the column — never as “nothing painted”", async () => {
+  it("a database 0212 hasn't reached is read again without its column — never as “nothing painted”", async () => {
     // The owner's session (the studio's page): every card read as never
     // painted would be offered for painting again, and charged.
     m.query.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: [stored()], error: null });
     const cards = await readPaintedCards(DECK);
-    expect(cards.get(CARD)).toMatchObject({ artUrl: ART("ai-new.jpg"), imageModel: null });
+    expect(cards.get(CARD)).toMatchObject({ artUrl: ART("ai-new.jpg"), method: null });
     const columns = m.query.mock.calls.map(([call]) => (call as Call).columns ?? "");
-    expect(columns[0]).toContain("image_model");
-    expect(columns[1]).not.toContain("image_model");
-    expect(columns[1]).toContain("job_id");
+    expect(columns[0]).toMatch(/, method$/);
+    expect(columns[1]).not.toMatch(/\bmethod\b/);
+    // 0211's column is on every database now: it is read either way.
+    expect(columns[1]).toMatch(/, image_model$/);
 
     // The step's reads (the service role) fall back the same way, and the
     // one-row read still holds the row to its owner.
     m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: { ...stored(), owner_id: ME }, error: null });
-    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, imageModel: null });
+    expect(await readPaintedCardAdmin(ME, DECK, CARD)).toMatchObject({ cardId: CARD, method: null });
     m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: { ...stored(), owner_id: "someone" }, error: null });
     expect(await readPaintedCardAdmin(ME, DECK, CARD)).toBeNull();
     m.admin.mockResolvedValueOnce({ data: null, error: NO_COLUMN }).mockResolvedValueOnce({ data: [stored()], error: null });
@@ -669,7 +734,7 @@ describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
     expect(m.query).toHaveBeenCalledTimes(1);
   });
 
-  it("is written with the row, under the owner", async () => {
+  it("are written with the row, under the owner", async () => {
     m.admin.mockResolvedValue({ error: null });
     expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(true);
     expect(upserts()).toHaveLength(1);
@@ -680,7 +745,12 @@ describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
       job_id: "job-1",
       art_url: ART("ai-new.jpg"),
       image_model: "spacexai/grok-imagine-image",
+      method: "restyle",
     });
+    // A picture painted from the prompt says so; the card's own art put back names none.
+    await writePaintedCard(ME, DECK, "job-1", { ...painted, method: "paint" });
+    await writePaintedCard(ME, DECK, "job-1", { ...painted, method: null });
+    expect(upserts().slice(1).map((call) => (call.row as { method: string | null }).method)).toEqual(["paint", null]);
   });
 
   it("is held to the column's limit, and an empty name is none (the CHECK takes 1 to 200 characters)", async () => {
@@ -694,16 +764,21 @@ describe("who painted a card (0211 deck_reart_cards.image_model)", () => {
     expect(none).toBeNull();
   });
 
-  it("a database 0211 hasn't reached still records the paint — it holds the art to put back", async () => {
+  it("a database 0212 hasn't reached still records the paint — it holds the art to put back", async () => {
     for (const code of ["PGRST204", "42703"]) {
       m.admin.mockReset();
-      m.admin.mockResolvedValueOnce({ error: { message: "Could not find the 'image_model' column", code } }).mockResolvedValueOnce({ error: null });
+      m.admin.mockResolvedValueOnce({ error: { message: "Could not find the 'method' column", code } }).mockResolvedValueOnce({ error: null });
       expect(await writePaintedCard(ME, DECK, "job-1", painted)).toBe(true);
       const [first, second] = upserts().map((call) => call.row as Record<string, unknown>);
-      expect(first).toHaveProperty("image_model", "spacexai/grok-imagine-image");
-      expect(second).not.toHaveProperty("image_model");
-      // The same row otherwise: the art to put back is in it.
-      expect(second).toMatchObject({ card_id: CARD, previous_art_url: ART("mine.png"), previous_artist_credit: "Jane Painter" });
+      expect(first).toHaveProperty("method", "restyle");
+      expect(second).not.toHaveProperty("method");
+      // The same row otherwise: the art to put back is in it, and who painted (0211).
+      expect(second).toMatchObject({
+        card_id: CARD,
+        previous_art_url: ART("mine.png"),
+        previous_artist_credit: "Jane Painter",
+        image_model: "spacexai/grok-imagine-image",
+      });
     }
   });
 

@@ -127,7 +127,9 @@ describe("0185 collection builder", () => {
     const check = /add constraint scryfall_calls_action_check\s+check \(action in \(([^)]*)\)\);/.exec(sql);
     expect(check).not.toBeNull();
     const labels = [...check![1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-    expect(labels).toEqual(Object.keys(SCRYFALL_LIMITS).sort());
+    // 0213 (Re-art deck's restyle) adds a label after this one, held by its own test.
+    const later = new Set(["restyle_art"]);
+    expect(labels).toEqual(Object.keys(SCRYFALL_LIMITS).filter((label) => !later.has(label)).sort());
   });
 
   it("the buildable-decks read runs as the caller (deck RLS hides private entries)", () => {

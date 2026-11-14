@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCardById } from "@/lib/scryfall/client";
 import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
 import { storeScryfallArt } from "@/lib/scryfall/import-art";
+import { fetchScryfallArtCrop } from "@/lib/scryfall/art-crop";
 import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
 import { userFolder } from "@/lib/media/user-storage";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
@@ -15,7 +16,7 @@ import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { logAiCall, type AiActionLabel } from "@/lib/ai/rate-limit";
-import { generateImageWithFallbacks } from "@/lib/ai/image-gen";
+import { generateImageWithFallbacks, restyleWithFallbacks, type RestyleSource } from "@/lib/ai/image-gen";
 import { discardGeneratedArt, persistGeneratedArt } from "@/lib/ai/random-art";
 import { artPromptLadder, exactArtPromptLadder } from "@/lib/ai/art-prompt-safety";
 import { artShapeForBackFace, artShapeForFace, type ArtFace } from "@/lib/ai/art-aspect";
@@ -216,6 +217,12 @@ export type CustomizeSourceOptions = {
    *  id against its own list — Re-art deck's model picker). Absent: the
    *  image door's default and its backup. */
   imageModel?: string;
+  /** Each AI picture starts from the printing's own ART (its art crop on
+   *  Scryfall, fetched on the caller's `restyle_art` quota and never stored)
+   *  and is repainted with the prompt — Re-art deck's "from the card's own
+   *  art". A printing with no art to start from fails before any charge.
+   *  The prompt is sent as written (dressed if refused, never swapped). */
+  restyle?: boolean;
   /** After the card is saved and recorded on its source: the caller's own
    *  record — the card, its pictures and the model(s) that painted them. A
    *  note when it didn't land (never a failed step: the card exists). */
@@ -382,6 +389,25 @@ export async function customizeSourceStep(
     return done(result);
   }
 
+  // ---- A restyle's pictures to start from, BEFORE anything is reserved:
+  //      the printing's own art, on the restyle's own Scryfall quota. ----
+  const sources: { front?: RestyleSource; back?: RestyleSource } = {};
+  if (options.restyle) {
+    const quota = await checkScryfallRateLimit(userId, "restyle_art");
+    if (!quota.ok) {
+      if (quota.reason === "per_day") return failed(step, quota.message);
+      return wait(quota.retryAfterSeconds);
+    }
+    const front = await fetchScryfallArtCrop(userId, card, "front");
+    if (!front.ok) return failed(step, front.error);
+    sources.front = { bytes: front.bytes, contentType: front.contentType };
+    if (planned.doubleFaced) {
+      const back = await fetchScryfallArtCrop(userId, card, "back");
+      if (!back.ok) return failed(step, back.error);
+      sources.back = { bytes: back.bytes, contentType: back.contentType };
+    }
+  }
+
   // ---- New AI art, priced again here and reserved before any call ----
   return withCreditedStep(userId, jobId, planned.credits, options.aiLabel, step, async () => {
     const attempt = (step.attempts ?? 0) + 1;
@@ -402,13 +428,19 @@ export async function customizeSourceStep(
         : { ...aiArtPrompt(planned.payload, plan.choices, face), exact: false };
       await logAiCall(userId, options.aiLabel);
       const title = face === "back" ? (planned.payload.back_face?.title ?? planned.payload.title) : planned.payload.title;
-      const image = await generateImageWithFallbacks(
-        exact
-          ? exactArtPromptLadder(prompt)
-          : artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
-        face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace),
-        { budgetMs, model: options.imageModel },
-      );
+      const shape = face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace);
+      const from = sources[face];
+      const image = from
+        ? // The printing's art, repainted: the prompt as written (the
+          // generic rung would paint a new picture and drop the art).
+          await restyleWithFallbacks(exactArtPromptLadder(prompt), from, shape, { budgetMs, model: options.imageModel })
+        : await generateImageWithFallbacks(
+            exact
+              ? exactArtPromptLadder(prompt)
+              : artPromptLadder(attempt, prompt, { title, colors: planned.payload.color_identity, style }),
+            shape,
+            { budgetMs, model: options.imageModel },
+          );
       if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
       const stored = await persistGeneratedArt(image.bytes, image.contentType);
       if (!stored.ok) return { ok: false, error: stored.error, failure: stored.failure };

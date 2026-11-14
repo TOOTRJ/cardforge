@@ -32,6 +32,14 @@ import { FULLY_CLOTHED_LINE } from "@/lib/ai/art-prompt-safety";
 //   - Image-to-image restyle ("AI remix"): a multimodal gateway model
 //     (default google/gemini-2.5-flash-image, override AI_IMAGE_REMIX_MODEL)
 //     via generateText — the edited image comes back in result.files.
+//   - A restyle that may NAME its model and asks for the art window's shape
+//     (restyleWithFallbacks — Re-art deck's "from the card's art"): the same
+//     default, or the named model alone; an image model is handed the
+//     picture with the prompt (generateImage `prompt.images`), a multimodal
+//     one as a message. Tried for real on the dev key (2026-11-14): FLUX.2
+//     [pro], FLUX.1 Kontext, Grok Imagine (both) and Gemini's image models
+//     keep the picture's subject and pose; FLUX.2 [flex] paints a new scene
+//     and ignores the picture — never the default here.
 // ---------------------------------------------------------------------------
 
 const GATEWAY_REMIX_DEFAULT = "google/gemini-2.5-flash-image";
@@ -213,6 +221,135 @@ export async function restyleImage(input: {
     prompt,
     input.timeoutMs,
   );
+}
+
+/** The picture a restyle starts from. */
+export type RestyleSource = { bytes: Uint8Array; contentType: string };
+
+/** What a restyle the provider REFUSED is told. A model can decline the
+ *  picture itself (FLUX.2 [pro] and Gemini 3.1 declined one real card's art
+ *  that four other models repainted — tried 2026-11-14): rewording rarely
+ *  cures that, another model or a picture painted from the prompt does. */
+export const RESTYLE_BLOCKED_COPY =
+  "The image service declined to repaint this picture. Try another model, or paint the card from the prompt instead.";
+
+/** The model a restyle runs on when none is named: the app's one restyle
+ *  model (AI_IMAGE_REMIX_MODEL, default Gemini 2.5 Flash Image). */
+export function restyleModel(named?: string | null): string {
+  return named?.trim() || process.env.AI_IMAGE_REMIX_MODEL?.trim() || GATEWAY_REMIX_DEFAULT;
+}
+
+/**
+ * ONE edit of `source` by `model`: an image model is handed the picture
+ * with the prompt, a multimodal one (isMultimodalImageModel) as a message —
+ * both asked for `aspect` the way the model takes it. A stated refusal (the
+ * content filter, or words in place of the picture) is `art_blocked`.
+ * Never throws.
+ */
+async function restyleWith(
+  model: string,
+  prompt: string,
+  source: RestyleSource,
+  aspect: ImageAspect,
+  timeoutMs: number,
+): Promise<PaintResult> {
+  const started = Date.now();
+  const abortSignal = AbortSignal.timeout(Math.max(1, timeoutMs));
+  try {
+    if (isMultimodalImageModel(model)) {
+      const { aspectRatio } = imageShapeArgs(model, aspect);
+      const result = await generateText({
+        model,
+        abortSignal,
+        maxRetries: 1,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", image: source.bytes, mediaType: source.contentType },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+        providerOptions: {
+          google: { responseModalities: ["TEXT", "IMAGE"], ...(aspectRatio ? { imageConfig: { aspectRatio } } : {}) },
+        },
+      });
+      const file = result.files.find((f) => f.mediaType?.startsWith("image/"));
+      if (file) return { ok: true, bytes: file.uint8Array, contentType: file.mediaType ?? "image/png", model };
+      const said = typeof result.text === "string" && result.text.trim().length > 0;
+      const refused = result.finishReason === "content-filter" || said;
+      // Never the model's words in the log: they can quote the prompt.
+      console.warn(`[ai:image] ${model} returned no restyled image (${result.finishReason ?? "no reason"}${said ? ", text only" : ""}).`);
+      return refused
+        ? { ok: false, error: AI_FAILURE_COPY.art_blocked, failure: "art_blocked" }
+        : { ok: false, error: AI_FAILURE_COPY.art_failed, failure: "art_failed" };
+    }
+    const { image } = await generateImage({
+      model,
+      abortSignal,
+      maxRetries: 1,
+      prompt: { text: prompt, images: [source.bytes] },
+      ...imageShapeArgs(model, aspect),
+    });
+    return { ok: true, bytes: image.uint8Array, contentType: image.mediaType ?? "image/png", model };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Image restyle failed.";
+    const failure = imageFailure(`${detail} (after ${secondsSince(started)} s)`, model);
+    return { ok: false, error: failure.error, failure: failure.kind };
+  }
+}
+
+/**
+ * `source` repainted — its subject kept, its look changed — trying each
+ * prompt in order like generateImageWithFallbacks: a refusal the provider
+ * states moves to the next, safer prompt while the budget allows; anything
+ * else stops. ONE model paints (the named one, else restyleModel()): a
+ * restyle has no backup. The picture goes to the model upright, with no
+ * camera metadata and at most 2048 px (restyleImage's rules), prepared once.
+ */
+export async function restyleWithFallbacks(
+  prompts: readonly string[],
+  source: RestyleSource,
+  aspect: ImageAspect = "square",
+  options: ImageCallOptions & { budgetMs?: number } = {},
+): Promise<
+  | { ok: true; bytes: Uint8Array; contentType: string; promptIndex: number; model: string }
+  | { ok: false; error: string; failure: AiFailureKind; safetyBlocked: boolean }
+> {
+  const failedAs = (failure: AiFailureKind) => ({ ok: false as const, error: AI_FAILURE_COPY[failure], failure, safetyBlocked: false });
+  if (prompts.length === 0 || !prompts[0].trim() || source.bytes.byteLength === 0) return failedAs("art_failed");
+  if (!isGatewayConfigured()) {
+    console.warn("[ai:image] restyle refused: the AI Gateway isn't configured on this deployment.");
+    return failedAs("ai_unavailable");
+  }
+  const model = restyleModel(options.model);
+  const started = Date.now();
+  const budget = options.budgetMs ?? IMAGE_BUDGET_MS;
+  const upright = await autoOrientBytes(source.bytes, source.contentType);
+  const clean = await imageWithoutMetadata(upright.bytes, upright.contentType);
+  const input = await modelInputImage(clean.bytes, clean.contentType, { keepAlpha: true });
+
+  let lastError: string = AI_FAILURE_COPY.art_failed;
+  let lastFailure: AiFailureKind = "art_failed";
+  let blocked = false;
+  for (let i = 0; i < prompts.length; i += 1) {
+    const remaining = budget - (Date.now() - started);
+    if (i > 0 && remaining < MIN_RUNG_MS) break;
+    const result = await restyleWith(
+      model,
+      withFullyClothedLine(prompts[i], 4000),
+      { bytes: input.bytes, contentType: input.contentType },
+      aspect,
+      Math.min(options.timeoutMs ?? remaining, Math.max(remaining, 10_000)),
+    );
+    if (result.ok) return { ...result, promptIndex: i };
+    lastFailure = result.failure;
+    blocked = result.failure === "art_blocked";
+    lastError = blocked ? RESTYLE_BLOCKED_COPY : result.error;
+    if (!blocked) break;
+  }
+  return { ok: false, error: lastError, failure: lastFailure, safetyBlocked: blocked };
 }
 
 // ---------------------------------------------------------------------------

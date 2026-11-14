@@ -17,6 +17,7 @@ import {
   reartStyleBlock,
   type NormalReartStyle,
   type ReartFraming,
+  type ReartMethod,
   type ReartStyleMode,
 } from "@/lib/tools/re-art/model";
 
@@ -56,6 +57,7 @@ export function ReartStylePanel({
   paintedInSaved,
   preview,
   framing = "flux2",
+  method = "paint",
 }: {
   style: NormalReartStyle;
   onChange: (next: NormalReartStyle) => void;
@@ -80,6 +82,9 @@ export function ReartStylePanel({
    *  shared block is shown — and a prompt of the maker's own started — in
    *  it. Absent: FLUX.2's, what every run was sent before the picker. */
   framing?: ReartFraming;
+  /** What each picture starts from (the studio's choice, for testing): a
+   *  restyle's prompt goes with the card's own art, and says so. */
+  method?: ReartMethod;
 }) {
   const themeId = useId();
   const blockId = useId();
@@ -202,7 +207,9 @@ export function ReartStylePanel({
               {preview ? preview.prompt : `Your prompt, then: ${reartClosingLine(framing)}`}
             </p>
             <p className="mt-1 text-xs leading-5 text-subtle">
-              The last line is always added: the picture is art for a card, never a card.
+              {method === "restyle"
+                ? "The first and last lines are always added: the card's own art is repainted, and the picture is art for a card, never a card. Here {card} stands for “the same subject” on a card with no words of its own: the picture shows it."
+                : "The last line is always added: the picture is art for a card, never a card."}
               {preview?.partial ? " A real card's flavour and rules text are read when it is painted." : ""}
             </p>
             {preview?.cut ? (
@@ -272,7 +279,9 @@ export function ReartStylePanel({
               {reartStyleBlock(style, framing)}
             </p>
             <p className="mt-1 text-xs leading-5 text-subtle">
-              Before it: each card&apos;s own name, type and flavour — or the words you give that card.
+              {method === "restyle"
+                ? "Before it: the card's own art, with the instruction to keep its subject and pose — and the words you give that card."
+                : "Before it: each card's own name, type and flavour — or the words you give that card."}
             </p>
           </div>
         </>

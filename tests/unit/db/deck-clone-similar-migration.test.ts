@@ -246,7 +246,7 @@ describe("scryfall_calls: the deck page's tokens lookup is logged", () => {
     }
   });
   it("names exactly the app's actions (lib/scryfall/rate-limit.ts) but those added later", () => {
-    const later = new Set(["collection_import"]);
+    const later = new Set(["collection_import", "restyle_art"]);
     expect(actions(SQL).sort()).toEqual(Object.keys(SCRYFALL_LIMITS).filter((a) => !later.has(a)).sort());
   });
 });

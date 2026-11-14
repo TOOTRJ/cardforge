@@ -233,6 +233,38 @@ describe("startReartAction", () => {
     expect(m.insert.mock.calls[1][0].plan.model).toBe("bfl/flux-kontext-pro");
   });
 
+  it("a run that starts from the cards' own art carries the method in the plan and the request — and is priced the same", async () => {
+    const result = await startReartAction({ deckId: DECK, style: STYLE, method: "restyle" });
+    expect(result).toMatchObject({ ok: true, credits: 3 });
+    const row = m.insert.mock.calls[0][0];
+    expect(row.plan).toMatchObject({ method: "restyle", model: "auto" });
+    expect(row.request).toMatchObject({ method: "restyle", model: "auto", credits: 3 });
+    // The planner is told, so it can leave the cards with no art to start from.
+    expect(m.plan.mock.calls[0][1]).toMatchObject({ method: "restyle" });
+    // The start's log stays at twelve props (a thirteenth would be dropped): the method is on the job's request.
+    const [[, props]] = logged();
+    expect(Object.keys(props ?? {})).toHaveLength(12);
+    expect(props).not.toHaveProperty("method");
+    // No method named: the prompt alone.
+    await startReartAction({ deckId: DECK, style: STYLE });
+    expect(m.insert.mock.calls[1][0].plan.method).toBe("paint");
+    expect(m.insert.mock.calls[1][0].request.method).toBe("paint");
+  });
+
+  it("starting from the cards' own art is for admins and testers: a plan's audience is refused before the plan", async () => {
+    m.access.mockResolvedValue({ userId: "u1", via: "release", grant: null });
+    const refused = await startReartAction({ deckId: DECK, style: STYLE, method: "restyle" });
+    expect(refused.ok).toBe(false);
+    expect(!refused.ok && refused.error).toMatch(/testers/);
+    expect(m.plan).not.toHaveBeenCalled();
+    expect(m.insert).not.toHaveBeenCalled();
+    expect(m.event.mock.calls.map(([input]) => [input.event, input.props?.reason])).toEqual([["start_failed", "model_not_allowed"]]);
+    // A method the tool doesn't know starts nothing, for anyone.
+    m.access.mockResolvedValue({ userId: "u1", via: "grant" });
+    expect((await startReartAction({ deckId: DECK, style: STYLE, method: "sketch" })).ok).toBe(false);
+    expect(m.plan).not.toHaveBeenCalled();
+  });
+
   it("a model the tool doesn't list starts nothing: no plan, no job, nothing charged", async () => {
     for (const model of ["openai/gpt-image-1", "xai/grok-imagine-image", "bfl/flux-2-flex", ""]) {
       expect((await startReartAction({ deckId: DECK, style: STYLE, model })).ok).toBe(false);

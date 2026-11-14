@@ -42,6 +42,8 @@ const ACTION_LABELS: Record<string, string> = {
   // A deck page view whose tokens lookup reached Scryfall (0164) — signed-in
   // viewers only (anonymous views can't be logged), never refused.
   deck_tokens: "Deck page tokens",
+  // A real card's art read for a model to repaint (Re-art deck's restyle, 0213).
+  restyle_art: "Art for a restyle",
 };
 
 function StatTile({
