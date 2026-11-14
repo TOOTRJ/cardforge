@@ -207,6 +207,7 @@ describe("reference detection — every column, any depth, any URL form", () => 
     ["token_kits.items.<key>.artUrl (the Token Kit)", "card-art", (db, k) => db.token_kits.rows.push({ id: "tk1", items: { "token|treasure": { artUrl: pub("card-art", k) } } })],
     ["forged_pips.files.glyph (Pip Forge)", "set-covers", (db, k) => db.forged_pips.rows.push({ id: "fp1", files: { glyph: pub("set-covers", k) } })],
     ["set_symbols.files.<variant> (Set Symbol Studio)", "set-covers", (db, k) => db.set_symbols.rows.push({ id: "ss1", files: { auto: pub("set-covers", k) } })],
+    ["deck_art_styles.reference_url (Re-art deck: a deck's reference picture)", "set-covers", (db, k) => db.deck_art_styles.rows.push({ deck_id: "d1", reference_url: pub("set-covers", k) })],
     ["deck_reart_cards.previous_art_url (Re-art deck: the art to put back)", "card-art", (db, k) => db.deck_reart_cards.rows.push({ deck_id: "d1", card_id: "c9", previous_art_url: pub("card-art", k) })],
     ["a /render-cdn/ path", "card-renders", (db, k) => db.messages.rows.push({ id: "m1", body: `see /render-cdn/${k}?v=3` })],
     ["a next/image URL (percent-encoded)", "profile-media", (db, k) => db.feedback.rows.push({ id: "f1", page_url: `https://pipglyph.com/_next/image?url=${encodeURIComponent(pub("profile-media", k))}&w=96` })],

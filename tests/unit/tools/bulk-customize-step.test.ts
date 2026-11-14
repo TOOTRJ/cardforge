@@ -442,7 +442,15 @@ describe("a tool built on the core may start each picture from the printing's ow
   type OnSaved = (cardId: string, art: { front: string | null; back: string | null }, models: string[]) => Promise<string | null>;
   const restyled = vi.mocked(restyleWithFallbacks);
   const painted = vi.mocked(generateImageWithFallbacks);
-  const start = async (over: { restyle?: boolean; doubleFaced?: boolean; imageModel?: string } = {}) => {
+  const start = async (
+    over: {
+      restyle?: boolean;
+      doubleFaced?: boolean;
+      imageModel?: string;
+      reference?: { bytes: Uint8Array; contentType: string };
+      blockedCopy?: string;
+    } = {},
+  ) => {
     m.plan.mockReturnValue({
       ...PLANNED,
       changes: ["ai_art"],
@@ -464,6 +472,8 @@ describe("a tool built on the core may start each picture from the printing's ow
         artPrompt: () => ({ prompt: "Repaint this exact picture in gouache.", style: "gouache", exact: true }),
         ...(over.restyle === undefined ? {} : { restyle: over.restyle }),
         ...(over.imageModel ? { imageModel: over.imageModel } : {}),
+        ...(over.reference ? { reference: over.reference } : {}),
+        ...(over.blockedCopy ? { blockedCopy: over.blockedCopy } : {}),
         onSaved,
       },
       DEPS,
@@ -558,6 +568,51 @@ describe("a tool built on the core may start each picture from the printing's ow
       expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named"]);
       m.scryfallRate.mockClear();
     }
+  });
+
+  // Re-art deck's reference picture (migration 0214): the caller read it;
+  // the core hands it to the image door with every prompt.
+  describe("a picture painted WITH the caller's reference picture", () => {
+    const REFERENCE = { bytes: new Uint8Array([9]), contentType: "image/webp" };
+
+    it("goes to the image door with the prompt as written — no art is fetched, nothing is painted from the prompt alone", async () => {
+      const { result, onSaved } = await start({ reference: REFERENCE, imageModel: "spacexai/grok-imagine-image-2.0" });
+      expect(result.status).toBe("done");
+      expect(m.artCrop).not.toHaveBeenCalled();
+      expect(m.scryfallRate.mock.calls.map((call) => call[1])).toEqual(["named"]);
+      expect(painted).not.toHaveBeenCalled();
+      const [ladder, source, , options] = restyled.mock.calls[0];
+      expect(ladder).toHaveLength(2);
+      expect(ladder[0]).toBe("Repaint this exact picture in gouache.");
+      expect([...source.bytes]).toEqual([9]);
+      expect(options).toMatchObject({ model: "spacexai/grok-imagine-image-2.0" });
+      expect(onSaved).toHaveBeenCalledWith("card-1", { front: AI_ART, back: null }, ["google/gemini-2.5-flash-image"]);
+    });
+
+    it("both faces of a double-faced card are painted with it: two pictures, two credits", async () => {
+      const { result } = await start({ reference: REFERENCE, doubleFaced: true });
+      expect(result.status).toBe("done");
+      expect(m.credited.mock.calls[0][2]).toBe(2);
+      expect(restyled.mock.calls.map((call) => [...call[1].bytes])).toEqual([[9], [9]]);
+    });
+
+    it("a face that starts from the printing's own art is handed that art alone, never the reference", async () => {
+      await start({ reference: REFERENCE, restyle: true });
+      expect(restyled.mock.calls.map((call) => [...call[1].bytes])).toEqual([[5]]);
+    });
+  });
+
+  it("a declined picture is told the caller's sentence where it gave one — only a declined one", async () => {
+    const COPY = "Image services decline some properties' names.";
+    painted.mockResolvedValue({ ok: false, error: "The image service declined this prompt.", failure: "art_blocked", safetyBlocked: true });
+    expect((await start({ blockedCopy: COPY })).result).toMatchObject({ status: "failed", failure: "art_blocked", error: COPY });
+    expect((await start()).result).toMatchObject({ status: "failed", error: "The image service declined this prompt." });
+    painted.mockResolvedValue({ ok: false, error: "The image service timed out.", failure: "art_timeout", safetyBlocked: false });
+    expect((await start({ blockedCopy: COPY })).result).toMatchObject({ status: "failed", error: "The image service timed out." });
+    // A picture the app's own scan refuses after it was painted keeps the scan's words.
+    painted.mockResolvedValue({ ok: true, bytes: new Uint8Array([1]), contentType: "image/jpeg", model: "bfl/flux-2-flex", promptIndex: 0 });
+    vi.mocked(persistGeneratedArt).mockResolvedValue({ ok: false, error: "The picture was flagged.", failure: "art_blocked" } as Awaited<ReturnType<typeof persistGeneratedArt>>);
+    expect((await start({ blockedCopy: COPY })).result).toMatchObject({ status: "failed", error: "The picture was flagged." });
   });
 });
 

@@ -10,6 +10,7 @@ import { rowHasBakedBack } from "@/lib/cards/faces";
 import { discardGeneratedArt } from "@/lib/ai/random-art";
 import { isUuid } from "@/lib/ids";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import type { Json } from "@/types/supabase";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard } from "@/lib/tools/bulk-customize/planner";
@@ -17,7 +18,12 @@ import { fetchBulkPrintings, importPatchOf } from "@/lib/tools/bulk-customize/se
 import {
   REART_CHANGED_COPY,
   REART_CREDITS_PER_FACE,
+  REART_IP_CONFIRMATIONS_PER_DAY,
+  REART_IP_NEEDS_CONFIRMATION,
+  REART_IP_TOO_MANY,
   REART_MAX_CARDS,
+  REART_REFERENCE_NOT_YOURS,
+  REART_REFERENCE_WITH_RESTYLE,
   REART_NO_ART_COPY,
   REART_SKIP_COPY,
   classifyReartEntry,
@@ -25,6 +31,7 @@ import {
   normalizeReartStyle,
   sameReartStyleFields,
   reartEntryState,
+  reartIpStatement,
   reartOwnSourceArt,
   reartStateIsSettled,
   reartStyleProblem,
@@ -65,14 +72,25 @@ export async function getOwnedDeck(userId: string, deckId: string): Promise<Rear
 
 export type StoredReartStyle = NormalReartStyle & { version: number };
 
-type StyleRow = { preset: string; theme: string; version: number; mode?: string | null; prompt?: string | null; owner_id?: string };
+type StyleRow = {
+  preset: string;
+  theme: string;
+  version: number;
+  mode?: string | null;
+  prompt?: string | null;
+  ip_name?: string | null;
+  reference_url?: string | null;
+  owner_id?: string;
+};
 
-/** The style's columns; `mode` and `prompt` are 0209's. */
-const STYLE_COLUMNS = "preset, theme, mode, prompt, version";
-/** The same read on a database 0209 hasn't reached (a deploy that lands
- *  before its migration): every style there is the template. Remove once
- *  0209 is on production and dev. */
-const STYLE_COLUMNS_BEFORE_0209 = "preset, theme, version";
+/** The style's columns; `ip_name` and `reference_url` are 0214's. (0209's
+ *  `mode` and `prompt` are on production and dev: their own fallback is
+ *  gone.) */
+const STYLE_COLUMNS = "preset, theme, mode, prompt, ip_name, reference_url, version";
+/** The same read on a database 0214 hasn't reached (a deploy that lands
+ *  before its migration): no deck there names a property or holds a
+ *  reference picture. Remove once 0214 is on production and dev. */
+const STYLE_COLUMNS_BEFORE_0214 = "preset, theme, mode, prompt, version";
 
 const undefinedColumn = (error: { code?: string } | null | undefined) => error?.code === "42703";
 
@@ -83,6 +101,8 @@ function storedStyleOf(row: StyleRow): StoredReartStyle {
       theme: row.theme,
       mode: row.mode === "custom" ? "custom" : "preset",
       prompt: row.prompt ?? "",
+      ipName: row.ip_name ?? "",
+      referenceUrl: row.reference_url ?? null,
     }),
     version: row.version,
   };
@@ -93,26 +113,123 @@ export async function readDeckStyle(deckId: string): Promise<StoredReartStyle | 
   const supabase = await createClient();
   const read = (columns: string) => supabase.from("deck_art_styles").select(columns).eq("deck_id", deckId).maybeSingle();
   let { data, error } = await read(STYLE_COLUMNS);
-  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0209));
+  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0214));
   return data ? storedStyleOf(data as unknown as StyleRow) : null;
 }
 
-/** The style row as the service role reads it, with its owner. */
-async function readStyleRowAdmin(deckId: string): Promise<StyleRow | null> {
+/**
+ * The style row as the service role reads it, with its owner. A read that
+ * FAILED is said as one (and logged) — never "the deck has no style": a
+ * save that took it for none wrote version 1 over the row and left out the
+ * columns it thought were empty, so a property the maker had just removed
+ * stayed on the deck while the save answered "saved".
+ */
+async function readStyleRowAdmin(deckId: string): Promise<{ ok: true; row: StyleRow | null } | { ok: false }> {
   const admin = createAdminClient();
   const read = (columns: string) => admin.from("deck_art_styles").select(`${columns}, owner_id`).eq("deck_id", deckId).maybeSingle();
   let { data, error } = await read(STYLE_COLUMNS);
-  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0209));
-  return (data as unknown as StyleRow | null) ?? null;
+  if (undefinedColumn(error)) ({ data, error } = await read(STYLE_COLUMNS_BEFORE_0214));
+  if (error) {
+    console.error(`[re-art] style of deck ${deckId} not read: ${error.code ?? ""} ${error.message}`);
+    return { ok: false };
+  }
+  return { ok: true, row: (data as unknown as StyleRow | null) ?? null };
 }
 
 /** The deck's style as the SERVER reads it (a step: the stored row is the
- *  authority on the version a run paints in). */
+ *  authority on the version a run paints in). Null too when it couldn't be
+ *  read: a step then stops before any charge. */
 export async function readDeckStyleAdmin(userId: string, deckId: string): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
-  const row = await readStyleRowAdmin(deckId);
-  if (!row || row.owner_id !== userId) return null;
-  return storedStyleOf(row);
+  const read = await readStyleRowAdmin(deckId);
+  if (!read.ok || !read.row || read.row.owner_id !== userId) return null;
+  return storedStyleOf(read.row);
+}
+
+/** A deck's reference picture is one of the caller's OWN stored pictures
+ *  (their folder in set-covers or card-art, on our storage): the address
+ *  the server fetches for every picture of the deck. The database's trigger
+ *  asks the same (0214: media_url_allowed 'set-icon'). */
+export function isOwnReferencePicture(url: string | null | undefined, userId: string): url is string {
+  // Never without an owner to hold it to (the rule reads "any folder" then).
+  return Boolean(userId) && isAllowedMediaUrl("set-icon", url, userId);
+}
+
+/**
+ * Why `style` can't become this deck's as it is — asked by the planner and
+ * the save action BEFORE anything is written, so the maker is told in
+ * words; saveDeckStyle holds the same rule whoever calls it:
+ *
+ *   * a reference picture that isn't one of the caller's own stored
+ *     pictures is refused;
+ *   * a licensed property the deck doesn't name yet (`named`: the one it
+ *     does, '' for none) needs the maker's confirmation in THIS request
+ *     (`attested`), which is then recorded (recordIpAttestation). A
+ *     property the deck names already needs none again; removing one needs
+ *     none.
+ */
+export function styleLicenceProblem(userId: string, named: string | null | undefined, style: ReartStyle, attested: boolean): string | null {
+  const clean = normalizeReartStyle(style);
+  if (clean.referenceUrl && !isOwnReferencePicture(clean.referenceUrl, userId)) return REART_REFERENCE_NOT_YOURS;
+  if (clean.ipName && clean.ipName !== (named ?? "") && !attested) return REART_IP_NEEDS_CONFIRMATION;
+  return null;
+}
+
+/** `style` names a property the deck (`named`) doesn't: saving it writes a
+ *  new record. */
+const namesNewProperty = (named: string | null | undefined, style: ReartStyle) => {
+  const name = normalizeReartStyle(style).ipName ?? "";
+  return name !== "" && name !== (named ?? "");
+};
+
+/**
+ * The caller has recorded as many confirmations in the last 24 hours as one
+ * maker may (REART_IP_CONFIRMATIONS_PER_DAY): the record is append-only, so
+ * this is its one bound. A count that didn't answer is NOT the limit (the
+ * bound is against abuse; the rule that matters — no property without its
+ * record — is the insert's).
+ */
+async function ipConfirmationLimitReached(userId: string): Promise<boolean> {
+  if (!isAdminConfigured()) return false;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await createAdminClient()
+    .from("deck_ip_attestations")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", userId)
+    .gte("created_at", since);
+  if (error) {
+    console.error(`[re-art] confirmations of ${userId} not counted: ${error.code ?? ""} ${error.message}`);
+    return false;
+  }
+  return (count ?? 0) >= REART_IP_CONFIRMATIONS_PER_DAY;
+}
+
+/**
+ * styleLicenceProblem, and — for a style that would write a NEW record —
+ * the day's limit on them. What the planner, the save action and the save
+ * itself ask.
+ */
+export async function styleLicenceCheck(
+  userId: string,
+  named: string | null | undefined,
+  style: ReartStyle,
+  attested: boolean,
+): Promise<string | null> {
+  const problem = styleLicenceProblem(userId, named, style, attested);
+  if (problem) return problem;
+  return namesNewProperty(named, style) && (await ipConfirmationLimitReached(userId)) ? REART_IP_TOO_MANY : null;
+}
+
+/** What the maker confirmed, kept word for word (0214
+ *  deck_ip_attestations: append-only). False when it couldn't be written —
+ *  the style is then not saved with the property. */
+export async function recordIpAttestation(userId: string, deckId: string, ipName: string): Promise<boolean> {
+  if (!isAdminConfigured()) return false;
+  const { error } = await createAdminClient()
+    .from("deck_ip_attestations")
+    .insert({ owner_id: userId, deck_id: deckId, ip_name: ipName, statement: reartIpStatement(ipName) });
+  if (error) console.error(`[re-art] confirmation for deck ${deckId} not recorded: ${error.code ?? ""} ${error.message}`);
+  return !error;
 }
 
 /**
@@ -120,13 +237,31 @@ export async function readDeckStyleAdmin(userId: string, deckId: string): Promis
  * new one moves it on (a new look — cards painted in the old one are no
  * longer "in this style"). Returns the version, or null when it couldn't be
  * written.
+ *
+ * `attested`: the maker confirmed their rights to the property the style
+ * names, in this request. A style that names a property the deck doesn't
+ * name yet is saved ONLY with it — whoever the caller is (the actions ask
+ * styleLicenceCheck first, for the words) — and the confirmation is
+ * recorded BEFORE the style is written: no deck names a property without
+ * its record.
  */
-export async function saveDeckStyle(userId: string, deckId: string, style: ReartStyle): Promise<StoredReartStyle | null> {
+export async function saveDeckStyle(
+  userId: string,
+  deckId: string,
+  style: ReartStyle,
+  options: { attested?: boolean } = {},
+): Promise<StoredReartStyle | null> {
   if (!isAdminConfigured()) return null;
   const clean = normalizeReartStyle(style);
-  const stored = await readStyleRowAdmin(deckId);
+  // A read that failed saves nothing: "no style yet" is only ever a row
+  // that isn't there.
+  const read = await readStyleRowAdmin(deckId);
+  if (!read.ok) return null;
+  const stored = read.row;
   if (stored && stored.owner_id !== userId) return null;
   const before = stored ? storedStyleOf(stored) : null;
+  if (await styleLicenceCheck(userId, before?.ipName, clean, options.attested === true)) return null;
+  if (namesNewProperty(before?.ipName, clean) && !(await recordIpAttestation(userId, deckId, clean.ipName ?? ""))) return null;
   // The same LOOK keeps its version (nothing a run paints changed). The
   // row is still written when the OTHER mode's draft changed — a prompt
   // written and then left for the template, or the other way: it was
@@ -137,7 +272,21 @@ export async function saveDeckStyle(userId: string, deckId: string, style: Reart
   const { error } = await createAdminClient()
     .from("deck_art_styles")
     .upsert(
-      { deck_id: deckId, owner_id: userId, preset: clean.preset, theme: clean.theme, mode: clean.mode, prompt: clean.prompt, version },
+      {
+        deck_id: deckId,
+        owner_id: userId,
+        preset: clean.preset,
+        theme: clean.theme,
+        mode: clean.mode,
+        prompt: clean.prompt,
+        version,
+        // 0214's columns are written only by a style that holds (or held)
+        // one of them: every other save is, column for column, what it was
+        // — and works on a database the migration hasn't reached.
+        ...(clean.ipName || clean.referenceUrl || before?.ipName || before?.referenceUrl
+          ? { ip_name: clean.ipName ?? "", reference_url: clean.referenceUrl ?? null }
+          : {}),
+      },
       { onConflict: "deck_id" },
     );
   if (error) {
@@ -588,6 +737,9 @@ export async function planReartRun(
     entryIds?: string[];
     /** What each picture starts from (default: the prompt alone). */
     method?: ReartMethod;
+    /** The maker confirmed the sentence about the property the style names,
+     *  in this request. */
+    attested?: boolean;
   },
   quota: "deck_import" | "deck_import_commit",
 ): Promise<({ ok: true } & ReartPlan) | ReartPlanFailure> {
@@ -598,6 +750,13 @@ export async function planReartRun(
   if (!wanted) return { ok: false, error: "Pick the deck's style first." };
   const problem = reartStyleProblem(wanted);
   if (problem) return { ok: false, error: problem };
+  // A property the deck doesn't name yet waits for the maker's confirmation,
+  // and a reference picture is one of their own — said here, before a
+  // Scryfall call or a charge. One picture goes with a prompt: the card's
+  // own art or the deck's reference, never both.
+  const licence = await styleLicenceCheck(userId, stored?.ipName, wanted, input.attested === true);
+  if (licence) return { ok: false, error: licence };
+  if (input.method === "restyle" && wanted.referenceUrl) return { ok: false, error: REART_REFERENCE_WITH_RESTYLE };
   const styleChanged = !stored || !sameReartStyle(stored, wanted);
   const version = stored ? (styleChanged ? stored.version + 1 : stored.version) : 1;
 

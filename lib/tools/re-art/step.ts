@@ -32,11 +32,14 @@ import {
   REART_MODEL_IDS,
   REART_MODEL_NOT_YOURS,
   REART_NO_ART_COPY,
+  REART_REFERENCE_UNREAD,
+  REART_REFERENCE_WITH_RESTYLE,
   REART_SKIP_COPY,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
   canPickReartModel,
   reartArtPrompt,
+  reartBlockedCopy,
   reartEntryState,
   reartGatewayModel,
   reartWordingOf,
@@ -54,6 +57,7 @@ import {
 } from "@/lib/tools/re-art/model";
 import {
   discardReartArtIfUnused,
+  isOwnReferencePicture,
   readCardWordsAdmin,
   readDeckStyleAdmin,
   readMadeForEntryAdmin,
@@ -159,8 +163,27 @@ const OWN_CARD_COLUMNS =
 
 /** The model a run names, as its step paints with it: the gateway id
  *  (undefined: the image door's default and backup), the wording it is sent
- *  and the most of a prompt's body it reads. */
-type StepModel = { gateway: string | undefined; framing: ReartFraming; bodyMax: number; method: ReartMethod };
+ *  and the most of a prompt's body it reads — and what the deck's style
+ *  adds to a paint: its reference picture's address (0214; read just before
+ *  the paint) and what a declined picture is told. */
+type StepModel = {
+  gateway: string | undefined;
+  framing: ReartFraming;
+  bodyMax: number;
+  method: ReartMethod;
+  referenceUrl: string | null;
+  blockedCopy: string | null;
+};
+
+/**
+ * The deck's reference picture, read for a paint: one of the maker's OWN
+ * stored pictures (asked again here — the address is fetched by the
+ * server), from the app's own storage, with fetchStoredArt's limits. Null:
+ * it couldn't be read, and the step stops before any charge.
+ */
+async function readReferencePicture(userId: string, url: string): Promise<RestyleSource | null> {
+  return isOwnReferencePicture(url, userId) ? fetchStoredArt(url) : null;
+}
 
 /** A card's own words are its FRONT's picture: a back face is painted from
  *  the deck's prompt alone. */
@@ -245,10 +268,29 @@ export async function runReartStep(
   if (!stored || stored.version !== plan.style.version || !sameReartStyle(stored, plan.style)) {
     return failed(step, REART_STYLE_CHANGED);
   }
-  const style: ReartStyle = { preset: stored.preset, theme: stored.theme, mode: stored.mode, prompt: stored.prompt };
+  const style: ReartStyle = {
+    preset: stored.preset,
+    theme: stored.theme,
+    mode: stored.mode,
+    prompt: stored.prompt,
+    // The licensed property the deck names and its reference picture
+    // (0214): the stored style's, never the plan's.
+    ...(stored.ipName ? { ipName: stored.ipName } : {}),
+    ...(stored.referenceUrl ? { referenceUrl: stored.referenceUrl } : {}),
+  };
+  // One picture goes with a prompt: the card's own art or the deck's
+  // reference, never both (the planner refuses it too; the plan is its
+  // owner's to write).
+  if (plan.method === "restyle" && style.referenceUrl) return failed(step, REART_REFERENCE_WITH_RESTYLE);
   // The model the run names (the plan's schema holds it to the tool's own
   // list): painted with alone, in the wording that model takes.
-  const model: StepModel = { gateway: reartGatewayModel(plan.model), ...reartWordingOf(plan.model, plan.method), method: plan.method };
+  const model: StepModel = {
+    gateway: reartGatewayModel(plan.model),
+    ...reartWordingOf(plan.model, plan.method, Boolean(style.referenceUrl)),
+    method: plan.method,
+    referenceUrl: style.referenceUrl ?? null,
+    blockedCopy: reartBlockedCopy(style, plan.method),
+  };
 
   // The entry, from the caller's OWN deck again. The deck is embedded by
   // its foreign key's NAME: unnamed, the API refuses the read the day
@@ -299,6 +341,15 @@ export async function runReartStep(
     return failed(step, "This entry has no card to re-art any more.");
   }
 
+  // The deck's reference picture, read BEFORE anything is reserved: a
+  // picture that can't be read stops the step, and nothing is charged.
+  let reference: RestyleSource | undefined;
+  if (model.referenceUrl) {
+    const read = await readReferencePicture(userId, model.referenceUrl);
+    if (!read) return failed(step, REART_REFERENCE_UNREAD);
+    reference = read;
+  }
+
   // A real card: Bulk Customize's one-card core, in the deck's style.
   return customizeSourceStep(
     userId,
@@ -310,6 +361,8 @@ export async function runReartStep(
       aiLabel: "deck_reart_art",
       imageModel: model.gateway,
       restyle: model.method === "restyle",
+      ...(reference ? { reference } : {}),
+      ...(model.blockedCopy ? { blockedCopy: model.blockedCopy } : {}),
       artPrompt: (payload, face) => payloadPrompt(payload, face, style, words, model),
       refusePlanned: (payload) => (payload.card_type === "emblem" ? REART_SKIP_COPY.emblem : null),
       onSaved: async (newCardId, art, models) => {
@@ -523,6 +576,12 @@ async function paintOwnCard(
     if (!found.ok) return found.step;
     sources = found.sources;
   }
+  // The deck's reference picture, read before anything is reserved too.
+  let reference: RestyleSource | null = null;
+  if (model.referenceUrl) {
+    reference = await readReferencePicture(userId, model.referenceUrl);
+    if (!reference) return failed(step, REART_REFERENCE_UNREAD);
+  }
   // Said on the finished step: which picture it started from.
   const startedFrom =
     model.method === "restyle" ? (entryScryfallId ? "Restyled from the real card's art." : "Restyled from the art it had before Re-art.") : null;
@@ -556,9 +615,10 @@ async function paintOwnCard(
       );
       await logAiCall(userId, "deck_reart_art");
       const shape = face === "back" ? artShapeForBackFace(frontFace, back) : artShapeForFace(frontFace);
-      const from = sources[face];
+      const from = sources[face] ?? reference;
       const image = from
-        ? // The card's own art, repainted: the prompt as written.
+        ? // The card's own art, repainted — or a picture painted with the
+          // deck's reference: the prompt as written.
           await restyleWithFallbacks(exactArtPromptLadder(prompt), from, shape, { budgetMs, model: model.gateway })
         : await generateImageWithFallbacks(
             // The maker's own words — and a prompt in the plain wording — are
@@ -574,7 +634,12 @@ async function paintOwnCard(
             shape,
             { budgetMs, model: model.gateway },
           );
-      if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
+      if (!image.ok) {
+        // A deck that names a property, or paints with a reference: a
+        // declined picture is told what that deck can do about it.
+        const declined = image.failure === "art_blocked" && model.blockedCopy;
+        return { ok: false, error: declined ? model.blockedCopy! : image.error, failure: image.failure };
+      }
       const saved = await persistGeneratedArt(image.bytes, image.contentType);
       if (!saved.ok) return { ok: false, error: saved.error, failure: saved.failure };
       stored.push(saved.publicUrl);

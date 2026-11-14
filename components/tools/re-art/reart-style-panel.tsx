@@ -7,12 +7,14 @@ import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
 import { textareaClass } from "@/components/ui/field-classes";
 import { STYLE_PRESETS, SURPRISE_PRESET_ID } from "@/lib/ai/presets";
+import { ReartLicenceFields } from "./reart-licence-fields";
 import {
   REART_PLACEHOLDERS,
   REART_PROMPT_MAX,
   REART_THEME_IDEAS,
   REART_THEME_MAX,
   reartClosingLine,
+  reartIpLine,
   reartPromptNamesCard,
   reartStyleBlock,
   type NormalReartStyle,
@@ -58,6 +60,10 @@ export function ReartStylePanel({
   preview,
   framing = "flux2",
   method = "paint",
+  savedIpName = "",
+  attested = false,
+  onAttested,
+  onPatch,
 }: {
   style: NormalReartStyle;
   onChange: (next: NormalReartStyle) => void;
@@ -85,6 +91,14 @@ export function ReartStylePanel({
   /** What each picture starts from (the studio's choice, for testing): a
    *  restyle's prompt goes with the card's own art, and says so. */
   method?: ReartMethod;
+  /** The licensed property the deck's SAVED style names ('' for none; 0214):
+   *  naming another waits for the maker's confirmation. */
+  savedIpName?: string;
+  /** The maker ticked the sentence for the property the form names. */
+  attested?: boolean;
+  onAttested?: (next: boolean) => void;
+  /** A change to the form as it is when it lands (a finished upload). */
+  onPatch?: (update: (current: NormalReartStyle) => NormalReartStyle) => void;
 }) {
   const themeId = useId();
   const blockId = useId();
@@ -92,6 +106,9 @@ export function ReartStylePanel({
   const themeRef = useRef<HTMLTextAreaElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const custom = style.mode === "custom";
+  /** The line a deck that names a licensed property adds to every prompt. */
+  const ipLine = reartIpLine(style.ipName);
+  const withReference = Boolean(style.referenceUrl) && method === "paint";
 
   /** A brace name put where the caret is (or over the selection). */
   const insert = (token: string) => {
@@ -209,7 +226,10 @@ export function ReartStylePanel({
             <p className="mt-1 text-xs leading-5 text-subtle">
               {method === "restyle"
                 ? "The first and last lines are always added: the card's own art is repainted, and the picture is art for a card, never a card. Here {card} stands for “the same subject” on a card with no words of its own: the picture shows it."
-                : "The last line is always added: the picture is art for a card, never a card."}
+                : withReference
+                  ? "The first and last lines are always added: the picture is painted in the look of your reference picture, and it is art for a card, never a card."
+                  : "The last line is always added: the picture is art for a card, never a card."}
+              {ipLine ? " The line about the licensed property is added before the last." : ""}
               {preview?.partial ? " A real card's flavour and rules text are read when it is painted." : ""}
             </p>
             {preview?.cut ? (
@@ -281,11 +301,25 @@ export function ReartStylePanel({
             <p className="mt-1 text-xs leading-5 text-subtle">
               {method === "restyle"
                 ? "Before it: the card's own art, with the instruction to keep its subject and pose — and the words you give that card."
-                : "Before it: each card's own name, type and flavour — or the words you give that card."}
+                : withReference
+                  ? "Before it: your reference picture, with the instruction to paint in its look, then each card's own name, type and flavour — or the words you give that card."
+                  : "Before it: each card's own name, type and flavour — or the words you give that card."}
             </p>
+            {ipLine ? <p className="mt-1 text-xs leading-5 text-muted">Then: {ipLine}</p> : null}
           </div>
         </>
       )}
+
+      {onAttested && onPatch ? (
+        <ReartLicenceFields
+          style={style}
+          onChange={onChange}
+          onPatch={onPatch}
+          savedIpName={savedIpName}
+          attested={attested}
+          onAttested={onAttested}
+        />
+      ) : null}
 
       {dirty && paintedInSaved > 0 ? (
         <p className="text-xs text-warning">

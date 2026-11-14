@@ -235,6 +235,31 @@ describe("every upload path stores the file without camera metadata", () => {
     await expectNoCameraMetadata(up.body);
   });
 
+  it("a Re-art deck REFERENCE picture is stored upright as WebP, no larger than a model is handed, with no camera metadata (migration 0214)", async () => {
+    // A phone photo, tagged sideways, larger than 2048 px on its long side.
+    const big = await sharp({ create: { width: 3000, height: 1200, channels: 3, background: { r: 120, g: 60, b: 30 } } })
+      .withExifMerge({ IFD0: { Artist: FAKE_OWNER } })
+      .withMetadata({ orientation: 6 })
+      .jpeg()
+      .toBuffer();
+    expect((await uploadCoverServerAction(form(big, "jpeg", { purpose: "reart-reference" }))).ok).toBe(true);
+    const up = lastUpload("set-covers");
+    expect(up.path).toMatch(/\.webp$/);
+    expect(up.contentType).toBe("image/webp");
+    const meta = await sharp(up.body).metadata();
+    // Upright (the sideways tag applied: taller than wide), its long side at the limit.
+    expect([meta.format, meta.orientation]).toEqual(["webp", undefined]);
+    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBe(2048);
+    expect(meta.height).toBeGreaterThan(meta.width ?? 0);
+    await expectNoCameraMetadata(up.body);
+    // A small picture is never enlarged.
+    const small = await cameraPhoto("jpeg");
+    const before = await sharp(small).metadata();
+    expect((await uploadCoverServerAction(form(small, "jpeg", { purpose: "reart-reference" }))).ok).toBe(true);
+    const stored = await sharp(lastUpload("set-covers").body).metadata();
+    expect(Math.max(stored.width ?? 0, stored.height ?? 0)).toBe(Math.max(before.width ?? 0, before.height ?? 0));
+  });
+
   it("a set icon (no purpose) keeps its own shape and format", async () => {
     const png = await cleanPhoto("png");
     expect((await uploadCoverServerAction(form(png, "png"))).ok).toBe(true);

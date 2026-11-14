@@ -34,6 +34,7 @@ export function ReartConfirmDialog({
   input,
   title,
   description,
+  licence,
   onStarted,
 }: {
   open: boolean;
@@ -42,6 +43,9 @@ export function ReartConfirmDialog({
   input: ReartRunInput;
   title: string;
   description: string;
+  /** The style the run paints in names a licensed property, or holds a
+   *  reference picture (0214): said before anything is charged. */
+  licence?: { ipName: string; reference: boolean };
   onStarted: (job: GenerationJobView, skipped: Array<{ name: string; reason: string }>, styleVersion: number) => void;
 }) {
   const [planned, setPlanned] = useState<ReartPlanned | null>(null);
@@ -163,6 +167,15 @@ export function ReartConfirmDialog({
                 // A named model (the studio's picker, for testing): said
                 // before anything is charged.
                 <p className="mt-1 text-sm text-muted">Painted by {reartModelOf(input.model).label}.</p>
+              ) : null}
+              {licence?.reference ? (
+                <p className="mt-1 text-sm text-muted">Each picture is painted with the deck&apos;s reference picture.</p>
+              ) : null}
+              {licence?.ipName ? (
+                <p className="mt-1 text-sm text-muted">
+                  Painted as licensed artwork for <span className="text-foreground">{licence.ipName}</span>, which you
+                  confirmed you hold the rights to. A picture the image service declines is not charged.
+                </p>
               ) : null}
               {planned.inStyle > 0 ? (
                 <p className="mt-1 text-sm text-muted">

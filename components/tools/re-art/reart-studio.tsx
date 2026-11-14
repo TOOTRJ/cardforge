@@ -31,7 +31,9 @@ import {
   REART_SCOPE_VALUES,
   REART_TOOL_SLUG,
   REART_VISIBILITY_VALUES,
+  REART_REFERENCE_WITH_RESTYLE,
   buildReartPrompt,
+  cleanReartIpName,
   normalizeReartStyle,
   reartMethodVerb,
   reartModelLabel,
@@ -87,12 +89,23 @@ const REFRESH_EVERY_MS = 8_000;
 
 type Confirm = { title: string; description: string; input: ReartRunInput };
 
+/** What a run's confirm says of the style it paints in: the licensed
+ *  property it names, and whether a reference picture goes with each prompt. */
+const licenceOf = (style: { ipName?: string; referenceUrl?: string | null } | null | undefined) => ({
+  ipName: cleanReartIpName(style?.ipName),
+  reference: Boolean(style?.referenceUrl),
+});
+
 /** A stored style as the form holds it (no version). */
 const styleOf = (stored: StoredReartStyle): NormalReartStyle => ({
   preset: stored.preset,
   theme: stored.theme,
   mode: stored.mode,
   prompt: stored.prompt,
+  // The licensed property it names and its reference picture (0214): keys
+  // only where the style holds one.
+  ...(stored.ipName ? { ipName: stored.ipName } : {}),
+  ...(stored.referenceUrl ? { referenceUrl: stored.referenceUrl } : {}),
 });
 
 export function ReartStudio({
@@ -138,7 +151,18 @@ export function ReartStudio({
    *  draft (a prompt written and then left for the template — the same
    *  look, but it was dropped on a reload). */
   const dirty = !savedStyle || !sameReartStyleFields(savedStyle, style);
-  const problem = reartStyleProblem(style);
+  /** The maker ticked the sentence about the licensed property the form
+   *  names (0214). Needed — and sent, and recorded by the server — only
+   *  while the deck's saved style doesn't name that property. */
+  const [attested, setAttested] = useState(false);
+  const formIpName = cleanReartIpName(style.ipName);
+  const needsConfirmation = formIpName !== "" && formIpName !== (savedStyle?.ipName ?? "");
+  const problem =
+    reartStyleProblem(style) ??
+    (needsConfirmation && !attested ? "Tick the confirmation under the property's name first." : null);
+  /** What a run that carries the form's style sends with it. */
+  const confirmation = needsConfirmation && attested ? { attested: true } : {};
+  const hasReference = Boolean(style.referenceUrl);
 
   const paintable = useMemo(() => entries.filter((entry) => entry.kind !== "skip"), [entries]);
   const [sample, setSample] = useState<Set<string>>(
@@ -162,9 +186,14 @@ export function ReartStudio({
   /** What each picture of the next run starts from (for testing; 0212):
    *  the prompt alone, or the card's own art. Not part of the style. */
   const [pickedMethod, setMethod] = useState<ReartMethod>(REART_DEFAULT_METHOD);
-  const method: ReartMethod = canPickModel ? pickedMethod : REART_DEFAULT_METHOD;
+  // One picture goes with a prompt: with a reference picture in the style
+  // every picture starts from the prompt (the other chip is off, and says
+  // why) — and the pick is dropped, so removing the picture later never
+  // brings "the card's own art" back unasked (a reset during render).
+  if (hasReference && pickedMethod !== REART_DEFAULT_METHOD) setMethod(REART_DEFAULT_METHOD);
+  const method: ReartMethod = canPickModel && !hasReference ? pickedMethod : REART_DEFAULT_METHOD;
   /** The wording the next run's prompts are in, and the most the model reads. */
-  const { framing, bodyMax } = reartWordingOf(model, method);
+  const { framing, bodyMax } = reartWordingOf(model, method, hasReference);
   const [filter, setFilter] = useState<ReartGridFilter>("all");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -303,13 +332,14 @@ export function ReartStudio({
   const saveStyle = () => {
     setSaveError(null);
     startSaving(async () => {
-      const result = await saveReartStyleAction(deck.id, style);
+      const result = await saveReartStyleAction(deck.id, style, { attested: needsConfirmation && attested });
       if (!result.ok) {
         setSaveError(result.error);
         return;
       }
       setSavedStyle({ ...result.style, version: result.version });
       setStyle(result.style);
+      setAttested(false);
       toast.success("Style saved for this deck.");
       router.refresh();
     });
@@ -462,12 +492,17 @@ export function ReartStudio({
                 ? () => {
                     setStyle(styleOf(savedStyle));
                     setSaveError(null);
+                    setAttested(false);
                   }
                 : undefined
             }
             preview={promptPreview}
             framing={framing}
             method={method}
+            savedIpName={savedStyle?.ipName ?? ""}
+            attested={attested}
+            onAttested={setAttested}
+            onPatch={setStyle}
             problem={problem}
             saveError={saveError}
             // Only another LOOK repaints the cards painted in the saved one.
@@ -509,12 +544,32 @@ export function ReartStudio({
                   ariaDescribedBy={aria["aria-describedby"]}
                   keepCase
                   size="sm"
-                  options={REART_METHODS.map((value) => ({ value, label: REART_METHOD_LABELS[value], description: REART_METHOD_HINTS[value] }))}
+                  options={REART_METHODS.map((value) =>
+                    value === "restyle" && hasReference
+                      ? {
+                          value,
+                          label: REART_METHOD_LABELS[value],
+                          // Off, and its reason is part of its name (a small
+                          // chip draws no description).
+                          badge: <span className="font-normal opacity-80">— not with a reference picture</span>,
+                          disabled: true,
+                        }
+                      : { value, label: REART_METHOD_LABELS[value], description: REART_METHOD_HINTS[value] },
+                  )}
                   value={method}
                   onChange={setMethod}
                 />
               )}
             </FieldGroup>
+            {hasReference && canPickModel ? (
+              <p className="text-xs text-subtle">
+                {REART_REFERENCE_WITH_RESTYLE}{" "}
+                {model === REART_DEFAULT_MODEL
+                  ? "With a reference picture, Automatic paints with Gemini 2.5 Flash Image, a model that can look at a picture. "
+                  : ""}
+                The prompt is sent with the picture, in plain words.
+              </p>
+            ) : null}
             {method === "restyle" ? (
               <p className="text-xs text-subtle">
                 {model === REART_DEFAULT_MODEL
@@ -594,7 +649,7 @@ export function ReartStudio({
                     description: `The deck's style is saved as it is now.${
                       sampleReplacesReart ? " A picture Re-art painted on a sample card is replaced and can't be brought back." : ""
                     } Nothing is charged until you press Paint.`,
-                    input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility, model, method },
+                    input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility, model, method, ...confirmation },
                   });
                 }}
                 aria-disabled={sampleBlocked || lockedReason ? true : undefined}
@@ -668,7 +723,7 @@ export function ReartStudio({
                   openConfirm({
                     title: `Re-art ${deck.title}`,
                     description: "The deck's style is saved as it is now. Nothing is charged until you press Paint.",
-                    input: { deckId: deck.id, style, scope, visibility, model, method },
+                    input: { deckId: deck.id, style, scope, visibility, model, method, ...confirmation },
                   });
                 }}
                 aria-disabled={deckBlocked || lockedReason ? true : undefined}
@@ -782,6 +837,8 @@ export function ReartStudio({
           input={confirm.input}
           title={confirm.title}
           description={confirm.description}
+          // The style the run paints in: the form's, or (one card) the saved one.
+          licence={licenceOf(confirm.input.style ?? savedStyle)}
           onStarted={(next, left, version) => {
             begin(next, left);
             // The style the run paints in is the deck's now.
@@ -789,6 +846,7 @@ export function ReartStudio({
             if (runStyle) {
               setSavedStyle({ ...runStyle, version });
               setStyle(runStyle);
+              setAttested(false);
             }
           }}
         />

@@ -223,6 +223,15 @@ export type CustomizeSourceOptions = {
    *  art". A printing with no art to start from fails before any charge.
    *  The prompt is sent as written (dressed if refused, never swapped). */
   restyle?: boolean;
+  /** Each AI picture is painted WITH this picture (Re-art deck's reference
+   *  picture: the look, never the composition) — the caller read it, and it
+   *  is one of the maker's own. Never together with `restyle`: a face that
+   *  starts from the printing's art is handed that art alone. */
+  reference?: RestyleSource;
+  /** What a picture the image service DECLINED is told, where the caller
+   *  knows more than the image door (Re-art: a deck that names a licensed
+   *  property). Absent: the door's own sentence. */
+  blockedCopy?: string;
   /** After the card is saved and recorded on its source: the caller's own
    *  record — the card, its pictures and the model(s) that painted them. A
    *  note when it didn't land (never a failed step: the card exists). */
@@ -429,10 +438,11 @@ export async function customizeSourceStep(
       await logAiCall(userId, options.aiLabel);
       const title = face === "back" ? (planned.payload.back_face?.title ?? planned.payload.title) : planned.payload.title;
       const shape = face === "back" ? artShapeForBackFace(frontFace, planned.payload.back_face) : artShapeForFace(frontFace);
-      const from = sources[face];
+      const from = sources[face] ?? options.reference;
       const image = from
-        ? // The printing's art, repainted: the prompt as written (the
-          // generic rung would paint a new picture and drop the art).
+        ? // The printing's art, repainted — or a picture painted with the
+          // caller's reference: the prompt as written (the generic rung
+          // would paint a new picture and drop the art).
           await restyleWithFallbacks(exactArtPromptLadder(prompt), from, shape, { budgetMs, model: options.imageModel })
         : await generateImageWithFallbacks(
             exact
@@ -441,7 +451,10 @@ export async function customizeSourceStep(
             shape,
             { budgetMs, model: options.imageModel },
           );
-      if (!image.ok) return { ok: false, error: image.error, failure: image.failure };
+      if (!image.ok) {
+        const declined = image.failure === "art_blocked" && options.blockedCopy;
+        return { ok: false, error: declined ? options.blockedCopy! : image.error, failure: image.failure };
+      }
       const stored = await persistGeneratedArt(image.bytes, image.contentType);
       if (!stored.ok) return { ok: false, error: stored.error, failure: stored.failure };
       painted.push(stored.publicUrl);

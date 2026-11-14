@@ -34,6 +34,8 @@ const m = vi.hoisted(() => ({
   discardUnused: vi.fn(),
   saveWords: vi.fn(),
   card: vi.fn(),
+  storedStyle: vi.fn(),
+  licence: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -84,9 +86,12 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   writePaintedCard: m.writePainted,
   discardReartArtIfUnused: m.discardUnused,
   saveCardWords: m.saveWords,
+  readDeckStyleAdmin: m.storedStyle,
+  styleLicenceCheck: m.licence,
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
+import { REART_IP_NEEDS_CONFIRMATION, REART_IP_TOO_MANY, REART_REFERENCE_NOT_YOURS } from "@/lib/tools/re-art/model";
 import {
   planReartAction,
   restoreReartArtAction,
@@ -143,6 +148,8 @@ beforeEach(() => {
   m.balance.mockResolvedValue(100);
   m.capacity.mockResolvedValue({ used: 10, cap: 50, tier: "pro" });
   m.saveStyle.mockResolvedValue({ ...STYLE, version: 2 });
+  m.storedStyle.mockResolvedValue(null);
+  m.licence.mockResolvedValue(null);
   m.open.mockReturnValue([]);
   m.plan.mockResolvedValue(planned([{ kind: "printing" }, { kind: "own", credits: 2 }]));
 });
@@ -170,7 +177,12 @@ describe("startReartAction", () => {
       { key: "reart:0", label: "Card 0", status: "pending" },
       { key: "reart:1", label: "Card 1", status: "pending", credits: 2 },
     ]);
-    expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, STYLE);
+    // No confirmation came with the run: none is passed on.
+    expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, STYLE, { attested: false });
+    // A style with no property and no reference picture: the plan and the
+    // request are what they were before 0214, key for key.
+    expect(Object.keys(row.request)).not.toContain("licensed");
+    expect(Object.keys(row.request)).not.toContain("reference");
     expect(logged()).toEqual([
       [
         "start",
@@ -423,7 +435,10 @@ describe("saveReartStyleAction", () => {
     m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "Sampler", visibility: "private" });
     expect(await saveReartStyleAction(DECK, STYLE)).toMatchObject({ ok: true, version: 2 });
     expect(logged()).toEqual([
-      ["save_style", { preset: "storybook", theme_chars: STYLE.theme.length, mode: "preset", prompt_chars: 0, version: 2 }],
+      [
+        "save_style",
+        { preset: "storybook", theme_chars: STYLE.theme.length, mode: "preset", prompt_chars: 0, version: 2, licensed: false, reference: false },
+      ],
     ]);
     m.event.mockClear();
     // The maker's own prompt: its length, never its words; the style comes
@@ -431,12 +446,110 @@ describe("saveReartStyleAction", () => {
     m.saveStyle.mockResolvedValue({ ...OWN, version: 3 });
     expect(await saveReartStyleAction(DECK, OWN)).toEqual({ ok: true, style: OWN, version: 3 });
     expect(logged()).toEqual([
-      ["save_style", { preset: "storybook", theme_chars: OWN.theme.length, mode: "custom", prompt_chars: OWN.prompt.length, version: 3 }],
+      [
+        "save_style",
+        { preset: "storybook", theme_chars: OWN.theme.length, mode: "custom", prompt_chars: OWN.prompt.length, version: 3, licensed: false, reference: false },
+      ],
     ]);
     m.event.mockClear();
     m.saveStyle.mockResolvedValue(null);
     expect((await saveReartStyleAction(DECK, STYLE)).ok).toBe(false);
     expect(logged()).toEqual([["save_style_failed", { reason: "not_saved" }]]);
+  });
+});
+
+// A deck that names a LICENSED PROPERTY, or holds a REFERENCE PICTURE
+// (migration 0214): the maker's confirmation travels with the request that
+// first names the property; the server's rule (styleLicenceProblem — its own
+// tests are re-art-server.test.ts) is asked before anything is written; and
+// the log says THAT a deck is licensed or pictured, never the name or the
+// address.
+describe("a licensed property and a reference picture (0214)", () => {
+  const REFERENCE = "https://x.supabase.co/storage/v1/object/public/set-covers/u1/reference.webp";
+  const NAMED = { ...STYLE, ipName: "Emberfall Chronicles", referenceUrl: REFERENCE };
+  const noName = (value: unknown) => expect(JSON.stringify(value)).not.toMatch(/Emberfall|reference\.webp|set-covers/);
+
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "Sampler", visibility: "private" });
+  });
+
+  it("saving a style asks the server's rule with the property the deck names now and the confirmation, then saves with it", async () => {
+    m.storedStyle.mockResolvedValue({ ...STYLE, ipName: "Tidewrights", version: 2 });
+    m.saveStyle.mockResolvedValue({ ...NAMED, version: 3 });
+    expect(await saveReartStyleAction(DECK, NAMED, { attested: true })).toEqual({ ok: true, style: NAMED, version: 3 });
+    expect(m.licence).toHaveBeenCalledWith("u1", "Tidewrights", NAMED, true);
+    expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, NAMED, { attested: true });
+    const [[event, props]] = logged();
+    expect(event).toBe("save_style");
+    expect(props).toMatchObject({ licensed: true, reference: true, version: 3 });
+    noName(props);
+  });
+
+  it("the confirmation is a boolean TRUE or it is none", async () => {
+    for (const attested of [undefined, false, "true", 1, null]) {
+      m.licence.mockClear();
+      m.saveStyle.mockClear();
+      await saveReartStyleAction(DECK, NAMED, { attested });
+      expect(m.licence.mock.calls[0][3]).toBe(false);
+      expect(m.saveStyle.mock.calls[0][3]).toEqual({ attested: false });
+    }
+    // No options at all (a caller from before 0214).
+    m.saveStyle.mockClear();
+    await saveReartStyleAction(DECK, STYLE);
+    expect(m.saveStyle.mock.calls[0][3]).toEqual({ attested: false });
+  });
+
+  it("a style the rule refuses is not saved: the maker is told why, and the log says which rule", async () => {
+    m.licence.mockResolvedValue(REART_IP_NEEDS_CONFIRMATION);
+    expect(await saveReartStyleAction(DECK, NAMED)).toEqual({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
+    expect(m.saveStyle).not.toHaveBeenCalled();
+    expect(logged()).toEqual([["save_style_failed", { reason: "not_confirmed" }]]);
+    m.event.mockClear();
+    m.licence.mockResolvedValue(REART_REFERENCE_NOT_YOURS);
+    expect((await saveReartStyleAction(DECK, NAMED, { attested: true })).ok).toBe(false);
+    expect(logged()).toEqual([["save_style_failed", { reason: "reference_not_own" }]]);
+    m.event.mockClear();
+    // The day's limit on new confirmations: the tools' one word for "too many".
+    m.licence.mockResolvedValue(REART_IP_TOO_MANY);
+    expect(await saveReartStyleAction(DECK, NAMED, { attested: true })).toEqual({ ok: false, error: REART_IP_TOO_MANY });
+    expect(logged()).toEqual([["save_style_failed", { reason: "rate_limited" }]]);
+    expect(m.saveStyle).not.toHaveBeenCalled();
+  });
+
+  it("a run carries the confirmation to the plan and to the save; its plan holds the property and the picture, its request and log only that there is one", async () => {
+    m.plan.mockResolvedValue({ ...planned([{ kind: "own" }]), style: NAMED });
+    m.saveStyle.mockResolvedValue({ ...NAMED, version: 3 });
+    expect((await startReartAction({ deckId: DECK, style: NAMED, attested: true })).ok).toBe(true);
+    expect(m.plan.mock.calls[0][1]).toMatchObject({ attested: true, style: NAMED });
+    expect(m.saveStyle).toHaveBeenCalledWith("u1", DECK, NAMED, { attested: true });
+    const row = m.insert.mock.calls[0][0];
+    // The server-only plan: what the step compares with the deck's stored style.
+    expect(row.plan.style).toEqual({ ...NAMED, version: 3 });
+    // The owner-readable request: that it is licensed and pictured, nothing more.
+    expect(row.request).toMatchObject({ licensed: true, reference: true });
+    noName(row.request);
+    const [[event, props]] = logged();
+    expect(event).toBe("start");
+    noName(props);
+    expect(Object.keys(props ?? {})).toHaveLength(12);
+  });
+
+  it("a run the plan refuses for want of the confirmation starts nothing and saves nothing", async () => {
+    m.plan.mockResolvedValue({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
+    const refused = await startReartAction({ deckId: DECK, style: NAMED });
+    expect(refused).toMatchObject({ ok: false, error: REART_IP_NEEDS_CONFIRMATION });
+    expect(m.plan.mock.calls[0][1].attested).toBeUndefined();
+    expect(m.saveStyle).not.toHaveBeenCalled();
+    expect(m.insert).not.toHaveBeenCalled();
+    // The confirm (the plan action) is told the same, before anything is charged.
+    expect(await planReartAction({ deckId: DECK, style: NAMED })).toMatchObject({ ok: false });
+  });
+
+  it("a style the save refuses after the plan (the record couldn't be written) starts no run", async () => {
+    m.plan.mockResolvedValue({ ...planned([{ kind: "own" }]), style: NAMED });
+    m.saveStyle.mockResolvedValue(null);
+    expect(await startReartAction({ deckId: DECK, style: NAMED, attested: true })).toMatchObject({ ok: false });
+    expect(m.insert).not.toHaveBeenCalled();
   });
 });
 
