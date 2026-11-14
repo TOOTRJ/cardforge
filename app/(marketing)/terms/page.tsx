@@ -21,7 +21,7 @@ export default function TermsPage() {
       eyebrow="Legal"
       title="Terms of Service"
       description="A plain-English overview of the rules for using PipGlyph. This is MVP boilerplate — review with a lawyer before relying on it for anything serious."
-      lastUpdated="November 2026"
+      lastUpdated="May 2026"
     >
       <p className="rounded-md border border-border/60 bg-elevated px-4 py-3 text-foreground">
         <strong>Heads up:</strong> PipGlyph is in active development. These
@@ -75,12 +75,8 @@ export default function TermsPage() {
         <li>Attempt to bypass rate limits, exploit the platform, or scrape data without permission.</li>
         <li>
           Use the AI assistant to generate proprietary or trademarked content
-          you don&apos;t hold the rights to (the assistant is also prompted
-          to refuse, but the responsibility ultimately rests with you). Where
-          a tool lets you name a licensed property, you confirm that you hold
-          its rights or have its rights holder&apos;s permission; we keep
-          that confirmation, may ask you for proof, and may remove the
-          content.
+          (the assistant is also prompted to refuse, but the
+          responsibility ultimately rests with you).
         </li>
       </ul>
 
