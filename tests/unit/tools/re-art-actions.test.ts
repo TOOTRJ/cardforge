@@ -45,6 +45,8 @@ const m = vi.hoisted(() => ({
   revert: vi.fn(),
   bakedBack: vi.fn(),
   credit: vi.fn(),
+  isKept: vi.fn(),
+  exists: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -89,7 +91,8 @@ vi.mock("@/lib/ai/random-art", () => ({ discardGeneratedArt: m.discard }));
 vi.mock("@/lib/cards/actions", () => ({ updateCardAction: m.update }));
 vi.mock("@/lib/cards/faces", () => ({ rowHasBakedBack: m.bakedBack }));
 vi.mock("@/lib/ai/artist-credit", () => ({ aiArtistCredit: m.credit }));
-vi.mock("@/lib/tools/re-art/rolls", () => ({ keepRoll: m.keep, dropRoll: m.drop, pruneRolls: m.prune, claimRoll: m.claim }));
+vi.mock("@/lib/tools/re-art/rolls", () => ({ keepRoll: m.keep, dropRoll: m.drop, pruneRolls: m.prune, claimRoll: m.claim, isKeptPicture: m.isKept }));
+vi.mock("@/lib/tools/re-art/restyle-source", () => ({ storedArtExists: m.exists }));
 vi.mock("@/lib/tools/re-art/server", () => ({
   planReartRun: m.plan,
   saveDeckStyle: m.saveStyle,
@@ -106,7 +109,7 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
-import { REART_IP_NEEDS_CONFIRMATION, REART_IP_TOO_MANY, REART_REFERENCE_NOT_YOURS } from "@/lib/tools/re-art/model";
+import { REART_IP_NEEDS_CONFIRMATION, REART_IP_TOO_MANY, REART_PICTURE_GONE, REART_REFERENCE_NOT_YOURS } from "@/lib/tools/re-art/model";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import {
   chooseReartPictureAction,
@@ -171,6 +174,8 @@ beforeEach(() => {
   m.prune.mockResolvedValue(0);
   m.bakedBack.mockReturnValue(false);
   m.credit.mockResolvedValue("dev_pro");
+  m.isKept.mockResolvedValue(false);
+  m.exists.mockResolvedValue("yes");
   m.paintedRows.mockResolvedValue([]);
   m.open.mockReturnValue([]);
   m.plan.mockResolvedValue(planned([{ kind: "printing" }, { kind: "own", credits: 2 }]));
@@ -652,6 +657,14 @@ describe("restoreReartArtAction", () => {
     expect(logged()).toEqual([["restore", { faces: 2, kept: true }]]);
   });
 
+  it("waits for a run of the deck that is painting right now (the studio holds the button too)", async () => {
+    m.open.mockReturnValue([{ id: "job-9", steps: [{ status: "running", claimed_at: new Date().toISOString() }] }]);
+    expect(await restoreReartArtAction(DECK, CARD)).toMatchObject({ ok: false, code: "BUSY" });
+    expect(m.keep).not.toHaveBeenCalled();
+    expect(m.update).not.toHaveBeenCalled();
+    expect(logged()).toEqual([["restore_failed", { reason: "busy" }]]);
+  });
+
   it("refuses a card whose art changed since, and a card Re-art made", async () => {
     m.card.mockReturnValue({ id: CARD, owner_id: "u1", art_url: ART("hand.png"), back_face: null });
     expect((await restoreReartArtAction(DECK, CARD)).ok).toBe(false);
@@ -784,8 +797,13 @@ describe("chooseReartPictureAction — an earlier picture goes back on the card 
     expect(m.claim).toHaveBeenCalledWith("u1", DECK, CARD, ROLL);
     // The row: the picked picture as the deck's, in the style it was painted
     // in, by whom and how; the art to put back is unchanged (the card showed
-    // Re-art's picture: that row's own).
+    // Re-art's picture: that row's own). It keeps the date the picture was
+    // PAINTED: nothing is painted now.
     expect(m.writePainted.mock.calls[0].slice(0, 3)).toEqual(["u1", DECK, null]);
+    expect(m.writePainted.mock.calls[0][4]).toEqual({ paintedAt: "2026-11-11T10:00:00Z" });
+    // Its file was asked about before anything was written.
+    expect(m.exists).toHaveBeenCalledWith(ART("ai-1.jpg"));
+    expect(m.exists.mock.invocationCallOrder[0]).toBeLessThan(m.writePainted.mock.invocationCallOrder[0]);
     expect(m.writePainted.mock.calls[0][3]).toEqual({
       cardId: CARD,
       entryId: "entry-1",
@@ -825,9 +843,9 @@ describe("chooseReartPictureAction — an earlier picture goes back on the card 
     ]);
     // The card's edit: the art, its fit and credit — nothing else.
     expect(m.update.mock.calls).toEqual([[CARD, { art_url: ART("ai-1.jpg"), art_position: { x: 0.3, y: 0.7, zoom: 1.2 }, artist_credit: "dev_pro (then)" }]]);
-    // Claimed first; named by the row before anything else moves; the
-    // replaced picture kept before the card stops showing it; pruned last.
-    expect(ascending(order(m.claim, m.writePainted, m.keep, m.update, m.prune))).toBe(true);
+    // Claimed first; the replaced picture KEPT before the row stops naming
+    // it; the row before the card's edit; pruned last.
+    expect(ascending(order(m.claim, m.keep, m.writePainted, m.update, m.prune))).toBe(true);
     expect(m.revert).not.toHaveBeenCalled();
     expect(m.drop).not.toHaveBeenCalled();
     expect(m.discardUnused).not.toHaveBeenCalled();
@@ -920,8 +938,10 @@ describe("chooseReartPictureAction — an earlier picture goes back on the card 
     m.update.mockResolvedValue({ ok: false, formError: "No." });
     expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: false, error: "No." });
     expect(m.revert).toHaveBeenCalledWith("u1", DECK, CARD, painted);
-    // The copy of the picture on the card goes back out (the row names it again)…
+    // The copy of the picture on the card goes back out — AFTER the row
+    // names that picture again…
     expect(m.drop).toHaveBeenCalledWith("u1", "roll-kept");
+    expect(m.revert.mock.invocationCallOrder[0]).toBeLessThan(m.drop.mock.invocationCallOrder[0]);
     // …and the picked picture is kept again, whole.
     expect(m.keep).toHaveBeenLastCalledWith("u1", DECK, kept);
     expect(m.prune).not.toHaveBeenCalled();
@@ -936,20 +956,118 @@ describe("chooseReartPictureAction — an earlier picture goes back on the card 
     m.update.mockReset();
     m.keep.mockClear();
     m.revert.mockClear();
+    m.drop.mockClear();
     m.writePainted.mockResolvedValue(false);
     expect((await chooseReartPictureAction(DECK, CARD, ROLL)).ok).toBe(false);
     expect(m.update).not.toHaveBeenCalled();
+    // The row was never written: there is nothing to put back there. The
+    // copy this pick kept comes out; the picked picture is kept again.
     expect(m.revert).not.toHaveBeenCalled();
-    expect(m.keep.mock.calls).toEqual([["u1", DECK, kept]]);
+    expect(m.drop).toHaveBeenCalledWith("u1", "roll-kept");
+    expect(m.keep).toHaveBeenLastCalledWith("u1", DECK, kept);
     expect(logged().at(-1)).toEqual(["choose_picture_failed", { reason: "not_saved" }]);
   });
 
-  it("a kept copy of the picture the card ALREADY shows is simply dropped: nothing changes", async () => {
-    m.claim.mockResolvedValue({ ...kept, artUrl: ART("ai-2.jpg") });
-    expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: true });
-    expect(m.writePainted).not.toHaveBeenCalled();
-    expect(m.update).not.toHaveBeenCalled();
-    expect(m.keep).not.toHaveBeenCalled();
+  // A row written before pictures were kept can name a file the tool removed
+  // since (a re-roll from another deck did, on the old code). A card is
+  // never given a dead picture: the picture comes off the list instead.
+  describe("a picture whose file is no longer in storage", () => {
+    it("a kept one: refused in words, nothing written, and its row stays out (it was claimed)", async () => {
+      m.exists.mockResolvedValue("no");
+      expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: false, error: REART_PICTURE_GONE });
+      expect(m.writePainted).not.toHaveBeenCalled();
+      expect(m.update).not.toHaveBeenCalled();
+      expect(m.keep).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["choose_picture_failed", { reason: "gone" }]]);
+    });
+
+    it("the deck's own last picture: refused, and the row stops naming it (every other field as it was)", async () => {
+      m.card.mockReturnValue({ ...card, art_url: ART("hand.png") });
+      m.exists.mockResolvedValue("no");
+      expect(await chooseReartPictureAction(DECK, CARD, "row")).toEqual({ ok: false, error: REART_PICTURE_GONE });
+      expect(m.update).not.toHaveBeenCalled();
+      expect(m.writePainted).toHaveBeenCalledTimes(1);
+      const [, , jobId, row, options] = m.writePainted.mock.calls[0];
+      expect(jobId).toBe("job-2");
+      expect(row).toMatchObject({
+        cardId: CARD,
+        entryId: "entry-1",
+        styleVersion: 3,
+        artUrl: null,
+        backArtUrl: null,
+        imageModel: null,
+        method: null,
+        made: false,
+        previousArtUrl: ART("mine.png"),
+        previousArtistCredit: "Jane Painter",
+      });
+      expect(options).toEqual({ paintedAt: "2026-11-12T10:00:00Z" });
+    });
+
+    it("storage that didn't answer is NOT “gone”: the claim goes back, nothing changes, and the maker is asked to try again", async () => {
+      m.exists.mockResolvedValue("unknown");
+      const result = await chooseReartPictureAction(DECK, CARD, ROLL);
+      expect(result).toMatchObject({ ok: false });
+      expect(!result.ok && result.error).toMatch(/couldn't check that picture/);
+      expect(m.keep.mock.calls).toEqual([["u1", DECK, kept]]);
+      expect(m.writePainted).not.toHaveBeenCalled();
+      expect(m.update).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["choose_picture_failed", { reason: "storage_unread" }]]);
+    });
+
+    it("a kept BACK that is gone is left out; the front still goes on", async () => {
+      const back = { title: "Back", card_type: "creature", subtypes: [], art_url: ART("ai-2-back.jpg"), artist_credit: "dev_pro" };
+      m.bakedBack.mockReturnValue(true);
+      m.card.mockReturnValue({ ...card, back_face: back });
+      m.claim.mockResolvedValue({ ...kept, backArtUrl: ART("ai-1-back.jpg") });
+      m.exists.mockImplementation(async (url: string) => (url === ART("ai-1-back.jpg") ? "no" : "yes"));
+      expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: true });
+      expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: ART("ai-1.jpg"), backArtUrl: null });
+      expect(Object.keys(m.update.mock.calls[0][1])).not.toContain("back_face");
+    });
+  });
+
+  // A write that stopped half-way (the picture was kept, the row moved on,
+  // the card's edit never landed) leaves the card showing a picture this
+  // deck KEEPS, which no row names. The maker's original must stay the art
+  // to put back — never that AI picture.
+  describe("a card left showing a kept picture by a write that stopped half-way", () => {
+    beforeEach(() => {
+      // The card shows ai-9 (kept); the row has moved on to ai-2.
+      m.card.mockReturnValue({ ...card, art_url: ART("ai-9.jpg") });
+      m.isKept.mockResolvedValue(true);
+    });
+
+    it("picking the deck's last picture keeps the row's own art to put back", async () => {
+      expect(await chooseReartPictureAction(DECK, CARD, "row")).toEqual({ ok: true });
+      expect(m.isKept).toHaveBeenCalledWith("u1", DECK, CARD, ART("ai-9.jpg"));
+      expect(m.writePainted.mock.calls[0][3]).toMatchObject({
+        artUrl: ART("ai-2.jpg"),
+        made: false,
+        previousArtUrl: ART("mine.png"),
+        previousArtistCredit: "Jane Painter",
+      });
+    });
+
+    it("so does picking the very picture the card shows (claimed: it is no longer “kept” when asked)", async () => {
+      m.isKept.mockResolvedValue(false);
+      m.claim.mockResolvedValue({ ...kept, artUrl: ART("ai-9.jpg") });
+      expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: true });
+      expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: ART("ai-9.jpg"), previousArtUrl: ART("mine.png") });
+      // The row's picture is kept in its place, as in any pick.
+      expect(m.keep.mock.calls[0][2]).toMatchObject({ artUrl: ART("ai-2.jpg") });
+    });
+
+    it("art the maker set by hand is their own: it becomes the art to put back (nothing is asked of a row that names the card's art either)", async () => {
+      m.card.mockReturnValue({ ...card, art_url: ART("hand.png"), artist_credit: "Me" });
+      m.isKept.mockResolvedValue(false);
+      await chooseReartPictureAction(DECK, CARD, ROLL);
+      expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("hand.png"), previousArtistCredit: "Me" });
+      m.isKept.mockClear();
+      m.card.mockReturnValue(card);
+      await chooseReartPictureAction(DECK, CARD, ROLL);
+      expect(m.isKept).not.toHaveBeenCalled();
+    });
   });
 });
 

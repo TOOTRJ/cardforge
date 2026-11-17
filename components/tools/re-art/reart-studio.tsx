@@ -856,6 +856,7 @@ export function ReartStudio({
             toast.success(`${earlierEntry.name} shows the picture you picked.`);
             router.refresh();
           }}
+          onGone={() => router.refresh()}
         />
       ) : null}
 

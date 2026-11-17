@@ -6,7 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RelativeTime } from "@/components/ui/local-date";
-import { REART_ROLLS_KEPT_COPY, REART_ROW_PICTURE, type ReartEarlierPicture, type ReartStudioEntry } from "@/lib/tools/re-art/model";
+import {
+  REART_EARLIER_STYLE_COPY,
+  REART_PICTURE_GONE,
+  REART_ROLLS_KEPT_COPY,
+  REART_ROW_PICTURE,
+  type ReartEarlierPicture,
+  type ReartStudioEntry,
+} from "@/lib/tools/re-art/model";
 import { chooseReartPictureAction } from "@/lib/tools/re-art/actions";
 
 /**
@@ -22,6 +29,7 @@ export function ReartEarlierPicturesDialog({
   deckId,
   entry,
   onChosen,
+  onGone,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,9 +37,25 @@ export function ReartEarlierPicturesDialog({
   entry: ReartStudioEntry;
   /** A picture was put on the card (the page re-reads). */
   onChosen: () => void;
+  /** The server took a picture off the list (its file is gone): the page
+   *  re-reads, and the dialog stays open on what is left. */
+  onGone?: () => void;
 }) {
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Pictures that didn't load here (their file may be gone: the server
+   *  decides when one is picked). */
+  const [unloaded, setUnloaded] = useState<ReadonlySet<string>>(new Set());
+  // A refusal belongs to the visit it was said in: opened again, the dialog
+  // starts clean (a reset during render).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setError(null);
+      setUnloaded(new Set());
+    }
+  }
   const [, startTransition] = useTransition();
   /** A picture was just picked: the card's "Earlier pictures" button may be
    *  gone when the page re-reads (none left), so the focus goes to the
@@ -49,6 +73,7 @@ export function ReartEarlierPicturesDialog({
         const result = await chooseReartPictureAction(deckId, card.id, picture.id);
         if (!result.ok) {
           setError(result.error);
+          if (result.error === REART_PICTURE_GONE) onGone?.();
           return;
         }
         picked.current = true;
@@ -100,7 +125,14 @@ export function ReartEarlierPicturesDialog({
             const label = `earlier picture ${index + 1} of ${earlier.length}`;
             return (
               <li key={picture.id} className="flex flex-col gap-2">
-                <Picture url={picture.artUrl} alt={`${entry.name} — ${label}`} />
+                <Picture
+                  url={picture.artUrl}
+                  alt={`${entry.name} — ${label}`}
+                  onError={() => setUnloaded((before) => new Set(before).add(picture.id))}
+                />
+                {unloaded.has(picture.id) ? (
+                  <p className="text-xs text-warning">This picture didn&apos;t load. It may no longer be in storage.</p>
+                ) : null}
                 {picture.backArtUrl ? <Picture url={picture.backArtUrl} alt={`${entry.name} — ${label}, its back face`} small /> : null}
                 <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
                   {picture.id === REART_ROW_PICTURE ? <Badge variant="outline">This deck&apos;s last picture</Badge> : null}
@@ -130,7 +162,10 @@ export function ReartEarlierPicturesDialog({
           })}
         </ul>
 
-        <p className="text-xs leading-5 text-subtle">{REART_ROLLS_KEPT_COPY}</p>
+        <p className="text-xs leading-5 text-subtle">
+          {REART_ROLLS_KEPT_COPY}
+          {earlier.some((picture) => picture.earlierStyle) ? ` ${REART_EARLIER_STYLE_COPY}` : ""}
+        </p>
         </div>
 
         <DialogFooter className="flex-col items-stretch gap-3 sm:flex-col">
@@ -152,7 +187,7 @@ export function ReartEarlierPicturesDialog({
 
 /** One picture in a fixed box: art is wider than tall on most frames and
  *  taller on a few, so it is shown whole, never cropped. */
-function Picture({ url, alt, small = false }: { url: string | null; alt: string; small?: boolean }) {
+function Picture({ url, alt, small = false, onError }: { url: string | null; alt: string; small?: boolean; onError?: () => void }) {
   return (
     <div
       className={
@@ -163,7 +198,7 @@ function Picture({ url, alt, small = false }: { url: string | null; alt: string;
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element -- the maker's own stored art, shown whole
-        <img src={url} alt={alt} loading="lazy" className="h-full w-full object-contain" />
+        <img src={url} alt={alt} loading="lazy" onError={onError} className="h-full w-full object-contain" />
       ) : (
         <span className="text-xs text-subtle">No art</span>
       )}

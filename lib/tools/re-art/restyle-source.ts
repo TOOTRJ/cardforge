@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
+import { ownStorageObject } from "@/lib/media/storage-hosts";
 import type { RestyleSource } from "@/lib/ai/image-gen";
 
 // ---------------------------------------------------------------------------
@@ -33,5 +34,32 @@ export async function fetchStoredArt(url: string | null | undefined): Promise<Re
     return { bytes, contentType };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Whether a picture Re-art has on record is still IN STORAGE — asked before
+ * an earlier picture is put back on a card (0215): a row written before
+ * pictures were kept can name a file the tool removed since (a re-roll from
+ * another deck did), and a card must never be given a dead picture.
+ *
+ *   * "yes": the object answers, or the address isn't one of our storage
+ *     objects at all (a built-in picture: nothing of ours to have removed);
+ *   * "no": storage says it isn't there (a 4xx that is no rate limit);
+ *   * "unknown": storage was busy or didn't answer — never read as "gone".
+ *
+ * A HEAD on the object's own public address (the one host the server may
+ * fetch a card's art from), no redirect followed, five seconds.
+ */
+export async function storedArtExists(url: string | null | undefined): Promise<"yes" | "no" | "unknown"> {
+  if (!url) return "no";
+  if (!ownStorageObject(url)) return "yes";
+  if (!isAllowedServerImageFetchUrl(url)) return "unknown";
+  try {
+    const response = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(5_000), cache: "no-store", redirect: "error" });
+    if (response.ok) return "yes";
+    return response.status >= 400 && response.status < 500 && response.status !== 429 && response.status !== 408 ? "no" : "unknown";
+  } catch {
+    return "unknown";
   }
 }

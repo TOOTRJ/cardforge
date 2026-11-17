@@ -26,7 +26,7 @@ type Call = {
   filters: Array<[string, unknown]>;
   orders: string[];
 };
-type Result = { data?: unknown; error?: { message: string; code?: string } | null };
+type Result = { data?: unknown; count?: number | null; error?: { message: string; code?: string } | null };
 
 const m = vi.hoisted(() => ({
   session: vi.fn(),
@@ -82,7 +82,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/tools/re-art/server", () => ({ discardReartArtIfUnused: m.discardUnused }));
 
-import { claimRoll, dropRoll, keepRoll, pruneRolls, readRolls } from "@/lib/tools/re-art/rolls";
+import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRolls } from "@/lib/tools/re-art/rolls";
 import {
   REART_ROLLS_KEPT,
   REART_ROLLS_KEPT_COPY,
@@ -234,6 +234,60 @@ describe("the art “Put the old art back” goes back to, when a picture of Re-
       made: true,
       previousArtUrl: null,
     });
+  });
+});
+
+describe("…and in a half-finished state: the card shows a picture this deck KEEPS, which no row names", () => {
+  const shown = { artUrl: ART("ai-1.jpg"), artPosition: null, artistCredit: "AI" };
+  const row = {
+    made: false,
+    previousArtUrl: ART("mine.png"),
+    previousArtPosition: { focalX: 0.5 },
+    previousBackArtUrl: null,
+    previousBackArtPosition: null,
+    previousArtistCredit: "Jane Painter",
+    previousBackArtistCredit: null,
+  };
+
+  it("the deck's row still holds the right art to put back: it is carried — never the kept AI picture", () => {
+    expect(reartPreviousArt({ card: shown, back: null, source: undefined, carry: row })).toEqual(row);
+    // Without it (the old rule) the AI picture became the art to go back to,
+    // and the maker's original was named by nothing.
+    expect(reartPreviousArt({ card: shown, back: null, source: undefined }).previousArtUrl).toBe(ART("ai-1.jpg"));
+  });
+
+  it("a row that names the card's art wins over it; none of either is the card's own art, as ever", () => {
+    const other = { ...row, previousArtUrl: ART("first.png") };
+    expect(reartPreviousArt({ card: shown, back: null, source: other, carry: row }).previousArtUrl).toBe(ART("first.png"));
+    expect(reartPreviousArt({ card: shown, back: null, source: null, carry: null }).previousArtUrl).toBe(ART("ai-1.jpg"));
+  });
+});
+
+describe("whether a picture is one of the kept ones", () => {
+  it("is asked with the service role, by deck, card, owner and the picture's exact address, reading no row", async () => {
+    m.admin.mockResolvedValue({ count: 1, error: null });
+    expect(await isKeptPicture(ME, DECK, CARD, ART("ai-1.jpg"))).toBe(true);
+    expect(adminCalls()[0]).toMatchObject({ table: "deck_reart_rolls", op: "select" });
+    expect(adminCalls()[0].filters).toEqual([
+      ["deck_id", DECK],
+      ["card_id", CARD],
+      ["owner_id", ME],
+      ["art_url", ART("ai-1.jpg")],
+    ]);
+    m.admin.mockResolvedValue({ count: 0, error: null });
+    expect(await isKeptPicture(ME, DECK, CARD, ART("ai-1.jpg"))).toBe(false);
+  });
+
+  it("a read that failed, a count that didn't come back, no picture and no service role all answer no", async () => {
+    m.admin.mockResolvedValue({ count: null, error: { message: "boom" } });
+    expect(await isKeptPicture(ME, DECK, CARD, ART("ai-1.jpg"))).toBe(false);
+    m.admin.mockResolvedValue({ count: null, error: null });
+    expect(await isKeptPicture(ME, DECK, CARD, ART("ai-1.jpg"))).toBe(false);
+    m.admin.mockClear();
+    expect(await isKeptPicture(ME, DECK, CARD, null)).toBe(false);
+    m.adminConfigured.mockReturnValue(false);
+    expect(await isKeptPicture(ME, DECK, CARD, ART("ai-1.jpg"))).toBe(false);
+    expect(m.admin).not.toHaveBeenCalled();
   });
 });
 

@@ -29,6 +29,7 @@ import {
   REART_IP_NEEDS_CONFIRMATION,
   REART_IP_TOO_MANY,
   REART_MODEL_NOT_YOURS,
+  REART_PICTURE_GONE,
   REART_ROW_PICTURE,
   REART_TOOL_SLUG,
   canPickReartModel,
@@ -46,7 +47,8 @@ import {
   type ReartCost,
   type ReartRoll,
 } from "@/lib/tools/re-art/model";
-import { claimRoll, dropRoll, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { storedArtExists } from "@/lib/tools/re-art/restyle-source";
 import {
   getOwnedDeck,
   planLines,
@@ -531,6 +533,12 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   }
   const deck = await getOwnedDeck(access.userId, deckId);
   if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  // A run of this deck that is painting right now may be painting this
+  // card (the studio holds the button too).
+  if ((await openRunsOf(access.userId, deck.id)).live) {
+    track(access, "restore_failed", { reason: "busy" });
+    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
+  }
   const painted = (await readPaintedCards(deck.id)).get(cardId);
   if (!painted || painted.made || !painted.previousArtUrl || !painted.artUrl) {
     track(access, "restore_failed", { reason: "no_earlier_art" });
@@ -625,7 +633,8 @@ const NOT_KEPT = "That picture is no longer kept — reload the page.";
  * place; the art "Put the old art back" goes back to is worked out as a
  * paint works it out (reartPreviousArt). Every move names the picture in
  * its new place before the old one lets go, and a refused edit puts all of
- * it back (lib/tools/re-art/rolls.ts).
+ * it back (lib/tools/re-art/rolls.ts). A picture whose file is no longer in
+ * storage is never put on a card: it comes off the list instead.
  */
 export async function chooseReartPictureAction(deckId: unknown, cardId: unknown, pictureId: unknown): Promise<{ ok: true } | ReartFailure> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
@@ -695,50 +704,58 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
       return { ok: false, error: NOT_KEPT };
     }
     chosen = claimed;
-    // Already the card's picture (a write that stopped half-way left it
-    // kept too): there is nothing to change, and the stale copy is gone.
-    if (claimed.artUrl === card.art_url) {
-      revalidatePath(toolHref(REART_TOOL_SLUG));
-      return { ok: true };
+  }
+
+  // Its file must still be in storage: a row written before pictures were
+  // kept can name one the tool removed since, and a card is never given a
+  // dead picture. Gone for good → it comes off the list (a claimed row stays
+  // out; the deck's row stops naming it). Storage that didn't answer is not
+  // "gone": the claim goes back, and nothing changes.
+  const inStorage = await storedArtExists(chosen.artUrl);
+  if (inStorage !== "yes") {
+    if (inStorage === "unknown") {
+      if (claimed) await keepRoll(access.userId, deck.id, claimed);
+      failed("storage_unread");
+      return { ok: false, error: "We couldn't check that picture just now — try again." };
     }
+    if (!claimed && painted) {
+      await writePaintedCard(
+        access.userId,
+        deck.id,
+        painted.jobId,
+        { ...painted, artUrl: null, backArtUrl: null, imageModel: null, method: null },
+        { paintedAt: painted.paintedAt },
+      );
+    }
+    failed("gone");
+    revalidatePath(toolHref(REART_TOOL_SLUG));
+    return { ok: false, error: REART_PICTURE_GONE };
   }
 
   // What "Put the old art back" goes back to from here — as a paint works
-  // it out.
+  // it out. A card that shows a picture this deck keeps for it, which no
+  // row names (the one just claimed included), is in a half-finished state:
+  // this deck's row still holds the right art to put back.
   const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
+  const carry =
+    !source && painted && (claimed?.artUrl === card.art_url || (await isKeptPicture(access.userId, deck.id, card.id, card.art_url)))
+      ? painted
+      : null;
   const previous = reartPreviousArt<Json>({
     card: { artUrl: card.art_url, artPosition: (card.art_position ?? null) as Json | null, artistCredit: card.artist_credit ?? null },
     back: twoFaces
       ? { artUrl: back?.art_url ?? null, artPosition: (back?.art_position ?? null) as Json | null, artistCredit: back?.artist_credit ?? null }
       : null,
     source,
+    carry,
   });
-  const backArtUrl = twoFaces ? chosen.backArtUrl : null;
+  // A kept back whose file is gone is left out (the front still goes on).
+  const backArtUrl = twoFaces && chosen.backArtUrl && (await storedArtExists(chosen.backArtUrl)) === "yes" ? chosen.backArtUrl : null;
 
-  // 1. The deck's row names the picked picture (it is named again before
-  //    anything else moves).
-  const recorded = await writePaintedCard(access.userId, deck.id, null, {
-    cardId: card.id,
-    entryId: painted?.entryId ?? null,
-    styleVersion: chosen.styleVersion,
-    artUrl: chosen.artUrl,
-    backArtUrl,
-    imageModel: chosen.imageModel,
-    method: chosen.method,
-    ...previous,
-  });
-  const putBack = async () => {
-    if (recorded) await revertPaintedCard(access.userId, deck.id, card.id, painted);
-    if (claimed) await keepRoll(access.userId, deck.id, claimed);
-  };
-  if (!recorded) {
-    await putBack();
-    failed("not_saved");
-    return { ok: false, error: "Couldn't change the picture — try again." };
-  }
-  // 2. The picture the row named until now is kept in its place (never the
-  //    picked one itself), with the fit and credit the card has with it
-  //    while the card still shows it.
+  // 1. The picture the row names until now is KEPT first (never the picked
+  //    one itself): it is named in its new place before the row lets go.
+  //    With the fit and credit the card has with it, while the card still
+  //    shows it.
   const replaced = painted?.artUrl && painted.artUrl !== chosen.artUrl ? painted : null;
   const showsRowArt = Boolean(replaced && card.art_url === replaced.artUrl);
   const showsRowBack = Boolean(replaced?.backArtUrl && back?.art_url === replaced.backArtUrl);
@@ -759,6 +776,38 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
       })
     : null;
 
+  // 2. The deck's row names the picked picture — and keeps the date it was
+  //    painted (nothing is painted now).
+  const recorded = await writePaintedCard(
+    access.userId,
+    deck.id,
+    null,
+    {
+      cardId: card.id,
+      entryId: painted?.entryId ?? null,
+      styleVersion: chosen.styleVersion,
+      artUrl: chosen.artUrl,
+      backArtUrl,
+      imageModel: chosen.imageModel,
+      method: chosen.method,
+      ...previous,
+    },
+    { paintedAt: chosen.paintedAt },
+  );
+  // All of it back, each picture named in its old place before the new one
+  // lets go: the row as it was, THEN the copy this pick kept taken out, and
+  // the picked picture kept again.
+  const putBack = async () => {
+    if (recorded) await revertPaintedCard(access.userId, deck.id, card.id, painted);
+    if (kept?.inserted) await dropRoll(access.userId, kept.id);
+    if (claimed) await keepRoll(access.userId, deck.id, claimed);
+  };
+  if (!recorded) {
+    await putBack();
+    failed("not_saved");
+    return { ok: false, error: "Couldn't change the picture — try again." };
+  }
+
   // 3. The card's edit: the art, its fit and credit — nothing else.
   const credit = chosen.artistCredit ?? (await aiArtistCredit()) ?? null;
   const fit = (position: unknown) => (position ?? fitArtToWindow()) as Json;
@@ -773,12 +822,10 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
         : {}),
     });
   } catch (error) {
-    if (kept?.inserted) await dropRoll(access.userId, kept.id);
     await putBack().catch(() => undefined);
     throw error;
   }
   if (!result.ok) {
-    if (kept?.inserted) await dropRoll(access.userId, kept.id);
     await putBack();
     failed("save_failed");
     return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't change the picture." };

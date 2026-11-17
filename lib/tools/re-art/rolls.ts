@@ -94,6 +94,26 @@ export async function readRolls(deckId: string): Promise<Map<string, ReartRoll[]
   return byCard;
 }
 
+/**
+ * Whether `artUrl` is one of the pictures kept for the card on this deck —
+ * asked when a card shows a picture NO deck's row names: that only happens
+ * after a write that stopped half-way (the picture was kept, the row moved
+ * on, the card's edit never landed), and the deck's row then still holds
+ * the right art to put back (model.ts reartPreviousArt `carry`). A read
+ * that failed answers no.
+ */
+export async function isKeptPicture(userId: string, deckId: string, cardId: string, artUrl: string | null | undefined): Promise<boolean> {
+  if (!isAdminConfigured() || !artUrl) return false;
+  const { count, error } = await createAdminClient()
+    .from("deck_reart_rolls")
+    .select("id", { count: "exact", head: true })
+    .eq("deck_id", deckId)
+    .eq("card_id", cardId)
+    .eq("owner_id", userId)
+    .eq("art_url", artUrl);
+  return !error && Number.isFinite(count) && (count as number) > 0;
+}
+
 /** A picture to keep: everything a kept row holds but its id. */
 export type RollToKeep = Omit<ReartRoll, "id">;
 

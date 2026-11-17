@@ -463,6 +463,8 @@ describe("a paint's row is put back when its edit was refused", () => {
       // …and who painted it (0211), and how (0212).
       image_model: "bfl/flux-kontext-pro",
       method: "restyle",
+      // …and WHEN: a row put back is not a paint (0215 shows the date).
+      painted_at: "2026-11-01T00:00:00Z",
     });
   });
 
@@ -800,6 +802,19 @@ describe("who painted a card, and how (0211 deck_reart_cards.image_model, 0212 .
     await writePaintedCard(ME, DECK, "job-1", { ...painted, method: "paint" });
     await writePaintedCard(ME, DECK, "job-1", { ...painted, method: null });
     expect(upserts().slice(1).map((call) => (call.row as { method: string | null }).method)).toEqual(["paint", null]);
+  });
+
+  it("a paint is dated now; a write that paints nothing keeps the date the picture was painted (0215: a picture put back)", async () => {
+    m.admin.mockResolvedValue({ error: null });
+    const before = Date.now();
+    await writePaintedCard(ME, DECK, "job-1", painted);
+    await writePaintedCard(ME, DECK, null, painted, { paintedAt: "2026-11-11T10:00:00Z" });
+    // No date to keep (a row from before it was read): now.
+    await writePaintedCard(ME, DECK, null, painted, { paintedAt: "" });
+    const [paint, putBack, undated] = upserts().map((call) => (call.row as { painted_at: string }).painted_at);
+    expect(Date.parse(paint)).toBeGreaterThanOrEqual(before);
+    expect(putBack).toBe("2026-11-11T10:00:00Z");
+    expect(Date.parse(undated)).toBeGreaterThanOrEqual(before);
   });
 
   it("is held to the column's limit, and an empty name is none (the CHECK takes 1 to 200 characters)", async () => {

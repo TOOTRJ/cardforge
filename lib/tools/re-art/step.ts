@@ -69,7 +69,7 @@ import {
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
-import { dropRoll, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { dropRoll, isKeptPicture, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { backFaceSchema } from "@/lib/validation/card";
 
@@ -550,6 +550,11 @@ async function paintOwnCard(
   // Otherwise the maker's current art is the one to keep.
   const rows = await readPaintedRowsForCardAdmin(userId, card.id);
   const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
+  // A card that shows a picture this deck KEEPS for it, which no row names:
+  // an earlier write stopped half-way (the picture was kept, the row moved
+  // on, the card's edit never landed). This deck's row still holds the
+  // right art to put back; the card's own art is NOT that picture.
+  const carry = !source && painted && (await isKeptPicture(userId, plan.deck_id, card.id, card.art_url)) ? painted : null;
   // (One rule, shared with a pick of an earlier picture: reartPreviousArt.)
   const previous: Previous = reartPreviousArt<Json>({
     card: { artUrl: card.art_url, artPosition: (card.art_position ?? null) as Json | null, artistCredit: card.artist_credit ?? null },
@@ -557,6 +562,7 @@ async function paintOwnCard(
       ? { artUrl: back?.art_url ?? null, artPosition: (back?.art_position ?? null) as Json | null, artistCredit: back?.artist_credit ?? null }
       : null,
     source,
+    carry,
   });
 
   // A restyle's pictures to start from, read BEFORE anything is reserved: a
@@ -701,11 +707,15 @@ async function paintOwnCard(
     // said before (a row left for a picture the card doesn't show reads
     // "has other art now").
     const undo = async () => {
-      await discard();
+      // The row FIRST: it names the new picture(s) until it is put back,
+      // and a picture a row names is offered to go back to.
       if (recorded) await revertPaintedCard(userId, plan.deck_id, card.id, painted);
-      // The row names its picture again: the copy this paint kept goes back
-      // out (its picture is untouched).
+      // The row names its own picture again: the copy this paint kept goes
+      // back out (its picture is untouched).
       if (kept?.inserted) await dropRoll(userId, kept.id);
+      // The new picture(s) go only through the guard: a row that could NOT
+      // be put back still names them, and they then stay.
+      for (const url of stored) await discardReartArtIfUnused(userId, url);
     };
     let result: Awaited<ReturnType<typeof updateCardAction>>;
     try {

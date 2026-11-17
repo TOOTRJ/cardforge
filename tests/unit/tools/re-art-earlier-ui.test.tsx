@@ -58,7 +58,7 @@ vi.mock("@/lib/cards/preview-data", () => ({ cardToPreviewData: () => ({}) }));
 
 import { ReartStudio } from "@/components/tools/re-art/reart-studio";
 import { ReartCardGrid } from "@/components/tools/re-art/reart-card-grid";
-import { REART_ROLLS_KEPT_COPY, REART_ROW_PICTURE } from "@/lib/tools/re-art/model";
+import { REART_EARLIER_STYLE_COPY, REART_PICTURE_GONE, REART_ROLLS_KEPT_COPY, REART_ROW_PICTURE } from "@/lib/tools/re-art/model";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
 const CARD = "00000000-0000-4000-8000-0000000000c1";
@@ -207,7 +207,8 @@ describe("the dialog", () => {
     ]);
     expect(within(dialog).getByText("On the card now")).toBeTruthy();
     expect(within(dialog).getAllByText("Earlier style")).toHaveLength(1);
-    expect(within(dialog).getByText(REART_ROLLS_KEPT_COPY)).toBeTruthy();
+    // How many are kept — and, since one is of an earlier style, what picking it means.
+    expect(within(dialog).getByText(`${REART_ROLLS_KEPT_COPY} ${REART_EARLIER_STYLE_COPY}`)).toBeTruthy();
     expect(dialog.textContent).toContain("Nothing is painted or charged");
     // One button a picture, each named for its picture; none for the one on the card.
     expect(within(dialog).getAllByRole("button", { name: /^Use this one/ })).toHaveLength(2);
@@ -277,6 +278,52 @@ describe("the dialog", () => {
     expect(within(screen.getByRole("dialog")).getByRole("alert").textContent).toBe("That picture is no longer kept — reload the page.");
     expect(h.toastSuccess).not.toHaveBeenCalled();
     expect(h.refresh).not.toHaveBeenCalled();
+  });
+
+  it("says nothing about earlier styles when none of the pictures is of one", async () => {
+    studio([entry({ earlier: [picture("00000000-0000-4000-8000-0000000000f2", 2)] })]);
+    const dialog = await open();
+    expect(within(dialog).getByText(REART_ROLLS_KEPT_COPY)).toBeTruthy();
+    expect(dialog.textContent).not.toContain("the next run over the deck paints that card again");
+  });
+
+  it("a refusal belongs to the visit it was said in: opened again, the dialog starts clean", async () => {
+    h.choose.mockResolvedValue({ ok: false, error: "Couldn't change the picture — try again." });
+    studio();
+    let dialog = await open();
+    await act(async () => {
+      fireEvent.click(within(dialog).getAllByRole("button", { name: /^Use this one/ })[0]);
+    });
+    expect(within(dialog).getByRole("alert")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" })[0]);
+    });
+    await settled();
+    dialog = await open();
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+  });
+
+  it("a picture whose file is gone: the server's words are shown, the dialog stays open, and the page re-reads (it comes off the list)", async () => {
+    h.choose.mockResolvedValue({ ok: false, error: REART_PICTURE_GONE });
+    studio();
+    const dialog = await open();
+    await act(async () => {
+      fireEvent.click(within(dialog).getAllByRole("button", { name: /^Use this one/ })[0]);
+    });
+    expect(within(screen.getByRole("dialog")).getByRole("alert").textContent).toBe(REART_PICTURE_GONE);
+    expect(h.refresh).toHaveBeenCalledTimes(1);
+    expect(h.toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("a picture that didn't load says so under it — and can still be picked (the server decides whether it is gone)", async () => {
+    studio();
+    const dialog = await open();
+    const [, first] = within(dialog).getAllByRole("img");
+    await act(async () => {
+      fireEvent.error(first);
+    });
+    expect(within(dialog).getAllByText("This picture didn't load. It may no longer be in storage.")).toHaveLength(1);
+    expect(within(dialog).getAllByRole("button", { name: /^Use this one/ })).toHaveLength(2);
   });
 
   it("a request that never answered says so, and the buttons work again", async () => {

@@ -499,12 +499,18 @@ export async function readMadeForEntryAdmin(userId: string, deckId: string, entr
   return data?.card_id ?? null;
 }
 
-/** Records (or replaces) a painted card. False when the write failed. */
+/**
+ * Records (or replaces) a painted card. False when the write failed.
+ * `paintedAt`: when the row's picture was painted, for a write that paints
+ * nothing (an earlier picture put back, a row put back as it was) — absent,
+ * now: a paint.
+ */
 export async function writePaintedCard(
   userId: string,
   deckId: string,
   jobId: string | null,
   painted: Omit<PaintedCard, "paintedAt" | "jobId">,
+  options: { paintedAt?: string | null } = {},
 ): Promise<boolean> {
   if (!isAdminConfigured()) return false;
   const row = {
@@ -523,7 +529,7 @@ export async function writePaintedCard(
     previous_back_art_position: painted.previousBackArtPosition,
     previous_artist_credit: painted.previousArtistCredit,
     previous_back_artist_credit: painted.previousBackArtistCredit,
-    painted_at: new Date().toISOString(),
+    painted_at: options.paintedAt || new Date().toISOString(),
     // Who painted (0211) — clipped to the column's limit, never an empty text.
     image_model: painted.imageModel?.trim().slice(0, 200) || null,
   };
@@ -553,7 +559,7 @@ export async function revertPaintedCard(
   before: PaintedCard | null,
 ): Promise<void> {
   if (before) {
-    await writePaintedCard(userId, deckId, before.jobId, before);
+    await writePaintedCard(userId, deckId, before.jobId, before, { paintedAt: before.paintedAt });
     return;
   }
   if (!isAdminConfigured()) return;

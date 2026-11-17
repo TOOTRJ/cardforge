@@ -1345,6 +1345,15 @@ export function reartEarlierPictures(input: {
   return list;
 }
 
+/** What a pick is told when the picture's file is no longer in storage (a
+ *  row from before pictures were kept can name one the tool removed). */
+export const REART_PICTURE_GONE = "That picture is no longer in storage, so it can't be put back. It has been taken off the list.";
+
+/** What "Earlier pictures" says about a picture of a style the deck no
+ *  longer has: the pick takes its style with it. */
+export const REART_EARLIER_STYLE_COPY =
+  "A picture marked “Earlier style” was painted in a style the deck no longer has: the next run over the deck paints that card again.";
+
 /** What "Earlier pictures" says about how many are kept. */
 export const REART_ROLLS_KEPT_COPY = `Up to ${REART_ROLLS_KEPT} earlier pictures are kept for each card. When another is kept, the oldest goes.`;
 
@@ -1356,6 +1365,11 @@ export const REART_ROLLS_KEPT_COPY = `Up to ${REART_ROLLS_KEPT} earlier pictures
  *   * the card shows a picture Re-art painted (`source`: the row, from ANY
  *     of the maker's decks, whose picture it is) → that row's art to put
  *     back, never the AI picture and never lost;
+ *   * the card shows a picture this deck KEEPS for it that no row names
+ *     (`carry`: this deck's row — a write stopped half-way: the picture was
+ *     kept, the row moved on, the card's edit never landed) → that row's
+ *     art to put back. Read as "the maker's own" it made an AI picture the
+ *     art to go back to, and the maker's original was named by nothing;
  *   * otherwise the art the card shows now is the maker's own: that.
  */
 export function reartPreviousArt<Position>(input: {
@@ -1374,6 +1388,17 @@ export function reartPreviousArt<Position>(input: {
       }
     | null
     | undefined;
+  /** This deck's row, when the card's art is one of this deck's KEPT
+   *  pictures for it and no row names it. Absent: not that state. */
+  carry?: {
+    made: boolean;
+    previousArtUrl: string | null;
+    previousArtPosition: Position | null;
+    previousBackArtUrl: string | null;
+    previousBackArtPosition: Position | null;
+    previousArtistCredit: string | null;
+    previousBackArtistCredit: string | null;
+  } | null;
 }): {
   made: boolean;
   previousArtUrl: string | null;
@@ -1383,7 +1408,8 @@ export function reartPreviousArt<Position>(input: {
   previousArtistCredit: string | null;
   previousBackArtistCredit: string | null;
 } {
-  const { card, back, source } = input;
+  const { card, back } = input;
+  const source = input.source ?? input.carry;
   if (source) {
     return {
       made: source.made,
