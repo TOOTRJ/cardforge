@@ -6,11 +6,8 @@ import { formatHasBracket } from "@/lib/decks/deck-details";
 
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  createClient,
-  getCurrentProfile,
-  getCurrentUser,
-} from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { aiArtistCredit } from "@/lib/ai/artist-credit";
 import { storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import {
@@ -185,16 +182,6 @@ import {
 // disabled.
 // ---------------------------------------------------------------------------
 
-/** AI-generated cards credit the GENERATING user as the artist (owner
- *  decision, 2026-07-11) — the art is painted for them, and a blank credit
- *  rendered "Art: Unknown" on every AI card. React-cached profile read, so
- *  batch steps don't pay an extra query each. */
-async function aiArtistCredit(): Promise<string | undefined> {
-  const profile = await getCurrentProfile();
-  const name =
-    profile?.display_name?.trim() || profile?.username?.trim() || "";
-  return name ? name.slice(0, 120) : undefined;
-}
 
 type JobStepStatus = "pending" | "running" | "done" | "failed";
 // RATE_LIMITED (Bulk Customize): not a failure — the step went back to

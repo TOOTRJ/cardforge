@@ -12,6 +12,8 @@ import { OWNER_JOB_COLUMNS } from "@/lib/ai/job-privacy";
 import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { updateCardAction } from "@/lib/cards/actions";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
+import { rowHasBakedBack } from "@/lib/cards/faces";
+import { aiArtistCredit } from "@/lib/ai/artist-credit";
 import { isUuid } from "@/lib/ids";
 import type { CardBackFace } from "@/types/card";
 import type { Json } from "@/types/supabase";
@@ -27,11 +29,13 @@ import {
   REART_IP_NEEDS_CONFIRMATION,
   REART_IP_TOO_MANY,
   REART_MODEL_NOT_YOURS,
+  REART_ROW_PICTURE,
   REART_TOOL_SLUG,
   canPickReartModel,
   cleanReartCardWords,
   reartRunMode,
   reartWordsSaySomething,
+  reartPreviousArt,
   reartRunSchema,
   reartStepKey,
   reartStyleProblem,
@@ -40,14 +44,18 @@ import {
   type NormalReartStyle,
   type ReartCardWords,
   type ReartCost,
+  type ReartRoll,
 } from "@/lib/tools/re-art/model";
+import { claimRoll, dropRoll, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
 import {
-  discardReartArtIfUnused,
   getOwnedDeck,
   planLines,
   planReartRun,
   readDeckStyleAdmin,
+  readPaintedCardAdmin,
   readPaintedCards,
+  readPaintedRowsForCardAdmin,
+  revertPaintedCard,
   saveCardWords,
   saveDeckStyle,
   styleLicenceCheck,
@@ -71,7 +79,10 @@ import type { ReartJobPlan } from "@/lib/tools/re-art/step";
 //     limit for the real cards it makes, the credits, one run of a deck at a
 //     time, then the style and the job row (kind 'deck_reart').
 //   * PUT THE OLD ART BACK edits one of the maker's own cards back to the
-//     picture it had before Re-art painted it.
+//     picture it had before Re-art painted it. The picture it takes off is
+//     KEPT (0215), as a re-roll's is.
+//   * CHOOSE AN EARLIER PICTURE puts one of the pictures Re-art keeps for a
+//     card back on it (0215). Nothing is painted or charged.
 //
 // Each records what it did after the response (recordToolEventLater —
 // counts, choices and codes only, never a deck's or a card's name or the
@@ -282,6 +293,29 @@ export type ReartStarted = {
 /** How long a claimed step counts as painting (claim_job_step's stale window). */
 const STEP_LIVE_MS = 5 * 60_000;
 
+/** The deck's open Re-art runs, and whether one is painting a card right
+ *  now (a step claimed inside the stale window). */
+async function openRunsOf(userId: string, deckId: string): Promise<{ ids: string[]; live: boolean }> {
+  const supabase = await createClient();
+  const { data: open } = await supabase
+    .from("ai_generation_jobs")
+    .select("id, steps")
+    .eq("owner_id", userId)
+    .eq("kind", "deck_reart")
+    .eq("status", "generating")
+    .filter("request->>deck_id", "eq", deckId);
+  const now = Date.now();
+  const live = (open ?? []).some((row) =>
+    (Array.isArray(row.steps) ? (row.steps as Array<{ status?: unknown; claimed_at?: unknown }>) : []).some(
+      (step) =>
+        step?.status === "running" &&
+        typeof step.claimed_at === "string" &&
+        now - new Date(step.claimed_at).getTime() < STEP_LIVE_MS,
+    ),
+  );
+  return { ids: (open ?? []).map((row) => row.id), live };
+}
+
 export async function startReartAction(input: unknown): Promise<ReartStarted | ReartFailure> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
@@ -366,35 +400,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   // is waited for; an older run that stopped is closed, so no card is
   // painted by two runs.
   const supabase = await createClient();
-  const { data: open } = await supabase
-    .from("ai_generation_jobs")
-    .select("id, steps")
-    .eq("owner_id", access.userId)
-    .eq("kind", "deck_reart")
-    .eq("status", "generating")
-    .filter("request->>deck_id", "eq", plan.deck.id);
-  const now = Date.now();
-  const live = (open ?? []).some((row) =>
-    (Array.isArray(row.steps) ? (row.steps as Array<{ status?: unknown; claimed_at?: unknown }>) : []).some(
-      (step) =>
-        step?.status === "running" &&
-        typeof step.claimed_at === "string" &&
-        now - new Date(step.claimed_at).getTime() < STEP_LIVE_MS,
-    ),
-  );
-  if (live) {
+  const open = await openRunsOf(access.userId, plan.deck.id);
+  if (open.live) {
     failed("busy");
     return { ok: false, code: "BUSY", error: "Another run of this deck is still painting a card — wait for it, then try again." };
   }
-  if ((open ?? []).length > 0 && isAdminConfigured()) {
-    await createAdminClient()
-      .from("ai_generation_jobs")
-      .update({ status: "cancelled" })
-      .in(
-        "id",
-        (open ?? []).map((row) => row.id),
-      )
-      .eq("owner_id", access.userId);
+  if (open.ids.length > 0 && isAdminConfigured()) {
+    await createAdminClient().from("ai_generation_jobs").update({ status: "cancelled" }).in("id", open.ids).eq("owner_id", access.userId);
   }
 
   // The style the run paints in becomes the deck's (a property it names
@@ -508,7 +520,8 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
  * picture it had before Re-art first painted it (its art and fit alone, as
  * the paint edited them). The card stays in the run's style as far as a run
  * is concerned — it is shown "kept its own art", and a re-roll paints it
- * again.
+ * again. The picture it takes off is KEPT (0215): the maker can go back to
+ * it from the card's earlier pictures.
  */
 export async function restoreReartArtAction(deckId: unknown, cardId: unknown): Promise<{ ok: true } | ReartFailure> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
@@ -526,7 +539,7 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   const supabase = await createClient();
   const { data: card } = await supabase
     .from("cards")
-    .select("id, owner_id, art_url, back_face")
+    .select("id, owner_id, art_url, art_position, artist_credit, back_face")
     .eq("id", cardId)
     .maybeSingle();
   if (!card || card.owner_id !== access.userId) return { ok: false, error: "That card isn't one of yours." };
@@ -536,6 +549,22 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   }
   const back = (card.back_face ?? null) as CardBackFace | null;
   const restoreBack = Boolean(back && painted.backArtUrl && back.art_url === painted.backArtUrl);
+  // The picture it takes off is kept first (it is the card's and the row's
+  // until the writes below): with the fit and credit the card has with it.
+  const kept = await keepRoll(access.userId, deck.id, {
+    cardId: card.id,
+    styleVersion: painted.styleVersion,
+    jobId: painted.jobId,
+    artUrl: painted.artUrl,
+    artPosition: (card.art_position ?? null) as Json | null,
+    artistCredit: card.artist_credit ?? null,
+    backArtUrl: restoreBack ? painted.backArtUrl : null,
+    backArtPosition: restoreBack ? ((back?.art_position ?? null) as Json | null) : null,
+    backArtistCredit: restoreBack ? (back?.artist_credit ?? null) : null,
+    imageModel: painted.imageModel,
+    method: painted.method,
+    paintedAt: painted.paintedAt,
+  });
   const result = await updateCardAction(card.id, {
     art_url: painted.previousArtUrl,
     art_position: painted.previousArtPosition ?? fitArtToWindow(),
@@ -552,14 +581,14 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
       : {}),
   });
   if (!result.ok) {
+    // The card still shows the picture: it is not an earlier one.
+    if (kept?.inserted) await dropRoll(access.userId, kept.id);
     track(access, "restore_failed", { reason: "save_failed" });
     return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't put the old art back." };
   }
-  // The painted pictures go once nothing else of the maker's shows them (a
-  // remix of this card shares its art file); the row says "kept its own
-  // art" in this style (a full run leaves it alone, a re-roll paints it).
-  await discardReartArtIfUnused(access.userId, painted.artUrl);
-  if (restoreBack && painted.backArtUrl) await discardReartArtIfUnused(access.userId, painted.backArtUrl);
+  // The painted pictures are NOT removed (0215: kept above, to go back to);
+  // the row says "kept its own art" in this style (a full run leaves it
+  // alone, a re-roll paints it).
   await writePaintedCard(access.userId, deck.id, null, {
     cardId: card.id,
     entryId: painted.entryId,
@@ -576,7 +605,192 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     previousArtistCredit: null,
     previousBackArtistCredit: null,
   });
-  track(access, "restore", { faces: restoreBack ? 2 : 1 });
+  // Past the limit the oldest kept picture goes — now that this one is kept.
+  await pruneRolls(access.userId, deck.id, card.id);
+  track(access, "restore", { faces: restoreBack ? 2 : 1, kept: Boolean(kept) });
+  revalidatePath(toolHref(REART_TOOL_SLUG));
+  return { ok: true };
+}
+
+const NOT_KEPT = "That picture is no longer kept — reload the page.";
+
+/**
+ * "Use this one": an EARLIER PICTURE Re-art keeps for one of the maker's
+ * own cards on this deck is put back on the card (migration 0215) — a kept
+ * picture (its id), or the one the deck's row names while the card shows
+ * other art (REART_ROW_PICTURE). Nothing is painted or charged: it is an
+ * edit of the card's art, its fit and artist credit, as a paint's.
+ *
+ * The picture it replaces — the one the deck's row named — is kept in its
+ * place; the art "Put the old art back" goes back to is worked out as a
+ * paint works it out (reartPreviousArt). Every move names the picture in
+ * its new place before the old one lets go, and a refused edit puts all of
+ * it back (lib/tools/re-art/rolls.ts).
+ */
+export async function chooseReartPictureAction(deckId: unknown, cardId: unknown, pictureId: unknown): Promise<{ ok: true } | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (
+    typeof deckId !== "string" ||
+    typeof cardId !== "string" ||
+    typeof pictureId !== "string" ||
+    !isUuid(deckId) ||
+    !isUuid(cardId) ||
+    !(pictureId === REART_ROW_PICTURE || isUuid(pictureId))
+  ) {
+    return { ok: false, error: "That picture couldn't be read." };
+  }
+  const failed = (reason: string) => track(access, "choose_picture_failed", { reason });
+  const deck = await getOwnedDeck(access.userId, deckId);
+  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  // A run of this deck that is painting right now may be painting this
+  // card: its picture is the run's to put on.
+  if ((await openRunsOf(access.userId, deck.id)).live) {
+    failed("busy");
+    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
+  }
+  const supabase = await createClient();
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, owner_id, art_url, art_position, artist_credit, frame_style, back_face")
+    .eq("id", cardId)
+    .maybeSingle();
+  if (!card || card.owner_id !== access.userId) return { ok: false, error: "That card isn't one of yours." };
+  const back = (card.back_face ?? null) as CardBackFace | null;
+  const twoFaces = Boolean(back) && rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face });
+
+  // This deck's row for the card, and every deck's (a card can be in
+  // several): which picture the card shows is Re-art's, and what was there
+  // before.
+  const [painted, rows] = await Promise.all([
+    readPaintedCardAdmin(access.userId, deck.id, card.id),
+    readPaintedRowsForCardAdmin(access.userId, card.id),
+  ]);
+
+  // The picture picked: claimed from the kept ones (nobody else can hold it
+  // now), or the deck's row's own while the card shows other art.
+  let claimed: ReartRoll | null = null;
+  let chosen: Omit<ReartRoll, "id" | "cardId" | "jobId">;
+  if (pictureId === REART_ROW_PICTURE) {
+    if (!painted?.artUrl || painted.artUrl === card.art_url) {
+      failed("not_kept");
+      return { ok: false, error: NOT_KEPT };
+    }
+    chosen = {
+      styleVersion: painted.styleVersion,
+      artUrl: painted.artUrl,
+      artPosition: null,
+      artistCredit: null,
+      backArtUrl: painted.backArtUrl,
+      backArtPosition: null,
+      backArtistCredit: null,
+      imageModel: painted.imageModel,
+      method: painted.method,
+      paintedAt: painted.paintedAt,
+    };
+  } else {
+    claimed = await claimRoll(access.userId, deck.id, card.id, pictureId);
+    if (!claimed) {
+      failed("not_kept");
+      return { ok: false, error: NOT_KEPT };
+    }
+    chosen = claimed;
+    // Already the card's picture (a write that stopped half-way left it
+    // kept too): there is nothing to change, and the stale copy is gone.
+    if (claimed.artUrl === card.art_url) {
+      revalidatePath(toolHref(REART_TOOL_SLUG));
+      return { ok: true };
+    }
+  }
+
+  // What "Put the old art back" goes back to from here — as a paint works
+  // it out.
+  const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
+  const previous = reartPreviousArt<Json>({
+    card: { artUrl: card.art_url, artPosition: (card.art_position ?? null) as Json | null, artistCredit: card.artist_credit ?? null },
+    back: twoFaces
+      ? { artUrl: back?.art_url ?? null, artPosition: (back?.art_position ?? null) as Json | null, artistCredit: back?.artist_credit ?? null }
+      : null,
+    source,
+  });
+  const backArtUrl = twoFaces ? chosen.backArtUrl : null;
+
+  // 1. The deck's row names the picked picture (it is named again before
+  //    anything else moves).
+  const recorded = await writePaintedCard(access.userId, deck.id, null, {
+    cardId: card.id,
+    entryId: painted?.entryId ?? null,
+    styleVersion: chosen.styleVersion,
+    artUrl: chosen.artUrl,
+    backArtUrl,
+    imageModel: chosen.imageModel,
+    method: chosen.method,
+    ...previous,
+  });
+  const putBack = async () => {
+    if (recorded) await revertPaintedCard(access.userId, deck.id, card.id, painted);
+    if (claimed) await keepRoll(access.userId, deck.id, claimed);
+  };
+  if (!recorded) {
+    await putBack();
+    failed("not_saved");
+    return { ok: false, error: "Couldn't change the picture — try again." };
+  }
+  // 2. The picture the row named until now is kept in its place (never the
+  //    picked one itself), with the fit and credit the card has with it
+  //    while the card still shows it.
+  const replaced = painted?.artUrl && painted.artUrl !== chosen.artUrl ? painted : null;
+  const showsRowArt = Boolean(replaced && card.art_url === replaced.artUrl);
+  const showsRowBack = Boolean(replaced?.backArtUrl && back?.art_url === replaced.backArtUrl);
+  const kept = replaced?.artUrl
+    ? await keepRoll(access.userId, deck.id, {
+        cardId: card.id,
+        styleVersion: replaced.styleVersion,
+        jobId: replaced.jobId,
+        artUrl: replaced.artUrl,
+        artPosition: showsRowArt ? ((card.art_position ?? null) as Json | null) : null,
+        artistCredit: showsRowArt ? (card.artist_credit ?? null) : null,
+        backArtUrl: replaced.backArtUrl,
+        backArtPosition: showsRowBack ? ((back?.art_position ?? null) as Json | null) : null,
+        backArtistCredit: showsRowBack ? (back?.artist_credit ?? null) : null,
+        imageModel: replaced.imageModel,
+        method: replaced.method,
+        paintedAt: replaced.paintedAt,
+      })
+    : null;
+
+  // 3. The card's edit: the art, its fit and credit — nothing else.
+  const credit = chosen.artistCredit ?? (await aiArtistCredit()) ?? null;
+  const fit = (position: unknown) => (position ?? fitArtToWindow()) as Json;
+  let result: Awaited<ReturnType<typeof updateCardAction>>;
+  try {
+    result = await updateCardAction(card.id, {
+      art_url: chosen.artUrl,
+      art_position: fit(chosen.artPosition),
+      artist_credit: credit,
+      ...(backArtUrl && back
+        ? { back_face: withBackArt(back, backArtUrl, fit(chosen.backArtPosition), chosen.backArtistCredit ?? credit) }
+        : {}),
+    });
+  } catch (error) {
+    if (kept?.inserted) await dropRoll(access.userId, kept.id);
+    await putBack().catch(() => undefined);
+    throw error;
+  }
+  if (!result.ok) {
+    if (kept?.inserted) await dropRoll(access.userId, kept.id);
+    await putBack();
+    failed("save_failed");
+    return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't change the picture." };
+  }
+  // (One came out, at most one went in: the limit holds. Asked anyway, for
+  // a card that was over it before.)
+  await pruneRolls(access.userId, deck.id, card.id);
+  track(access, "choose_picture", {
+    from: claimed ? "kept" : "row",
+    faces: backArtUrl ? 2 : 1,
+    replaced: Boolean(kept),
+  });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true };
 }

@@ -17,8 +17,8 @@ import type { ReartStudioEntry } from "@/lib/tools/re-art/model";
 //
 // And ONE card at a time: every one-card paint is priced in the confirm
 // first (pressing its link charges nothing), a re-roll says the picture it
-// replaces can't be brought back, and no card is painted while the style
-// form shows a style that isn't saved.
+// replaces is KEPT to go back to (migration 0215), and no card is painted
+// while the style form shows a style that isn't saved.
 // ---------------------------------------------------------------------------
 
 type Runner = {
@@ -559,20 +559,22 @@ describe("one card at a time — priced first, in the saved style, never by a st
     expect(screen.getByText("panel stop")).toBeTruthy();
   });
 
-  it("a re-roll says the picture it replaces can't be brought back", async () => {
-    render(studio(null, { entry: { state: "in_style", artNow: "reart" } }));
+  it("a re-roll says the picture it replaces is kept, and where to go back to it (0215: it used to be gone for good)", async () => {
+    render(studio(null, { entry: { state: "in_style", artNow: "reart", ownPictureOnCard: true } }));
     await press("paint one");
     const dialog = screen.getByRole("dialog", { name: "Re-roll Thornback Wyrm" });
-    expect(dialog.textContent).toContain("can't be brought back");
+    expect(dialog.textContent).toContain("The picture Re-art painted on it is kept: you can go back to it under “Earlier pictures”.");
+    expect(dialog.textContent).not.toContain("can't be brought back");
     expect(dialog.textContent).toContain("Nothing is charged until you press Paint.");
   });
 
-  it("says the same of a picture another deck's run painted, and promises no put-back to a card with no art", async () => {
+  it("a picture another deck's run painted stays with that deck, and a card with no art is promised no put-back", async () => {
     // Never painted on THIS deck, but the art on it is Re-art's (deck B's).
     const { unmount } = render(studio(null, { entry: { state: null, artNow: "reart" } }));
     await press("paint one");
     const other = screen.getByRole("dialog", { name: "Paint Thornback Wyrm" });
-    expect(other.textContent).toContain("can't be brought back");
+    expect(other.textContent).toContain("which Re-art painted for another of your decks. That deck keeps it.");
+    expect(other.textContent).not.toContain("Earlier pictures");
     expect(other.textContent).not.toContain("can be put back");
     unmount();
     render(studio(null, { entry: { state: null, artNow: "none" } }));
@@ -616,12 +618,12 @@ describe("one card at a time — priced first, in the saved style, never by a st
     // The one card is the default sample.
     const { unmount } = render(studio(null, { entry: { state: "earlier", artNow: "reart" } }));
     await press("Paint the sample…");
-    expect(screen.getByRole("dialog").textContent).toContain("A picture Re-art painted on a sample card is replaced and can't be brought back.");
+    expect(screen.getByRole("dialog").textContent).toContain("A picture Re-art painted on a sample card is replaced, and kept to go back to.");
     unmount();
     render(studio());
     await press("Paint the sample…");
     const plain = screen.getByRole("dialog").textContent ?? "";
-    expect(plain).not.toMatch(/brought back/);
+    expect(plain).not.toMatch(/kept to go back to/);
     expect(plain).toContain("Nothing is charged until you press Paint.");
   });
 

@@ -15,9 +15,9 @@ import type { JobStep } from "@/lib/ai/generation-jobs";
 // own art back, is left as it is unless the plan names it; the paint's row
 // is written BEFORE the card's edit (the art to put back is named there
 // before the card stops showing it) and put back if the edit is refused;
-// a picture a re-roll replaced is removed only through the guarded discard
-// (never while another card of the maker's still shows it:
-// re-art-server.test.ts).
+// a picture a re-roll replaced is KEPT as an earlier picture (migration
+// 0215: kept before the row stops naming it, pruned only once the new one
+// has landed — re-art-rolls.test.ts), never removed.
 // ---------------------------------------------------------------------------
 
 const m = vi.hoisted(() => ({
@@ -45,6 +45,9 @@ const m = vi.hoisted(() => ({
   artCrop: vi.fn(),
   storedArt: vi.fn(),
   ownReference: vi.fn(),
+  keep: vi.fn(),
+  drop: vi.fn(),
+  prune: vi.fn(),
   rows: { deck_cards: null as unknown, cards: null as unknown },
   /** The API's own refusal of the entry's read, and what the step selected. */
   entry: { error: null as null | { code: string; message: string }, select: "" },
@@ -79,6 +82,7 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   isOwnReferencePicture: m.ownReference,
   reartBulkChoices: (style: { preset: string }, visibility: string) => ({ art: "ai", artStyle: style.preset, visibility }),
 }));
+vi.mock("@/lib/tools/re-art/rolls", () => ({ keepRoll: m.keep, dropRoll: m.drop, pruneRolls: m.prune }));
 vi.mock("@/lib/tools/bulk-customize/step", () => ({ customizeSourceStep: m.customize }));
 vi.mock("@/lib/cards/actions", () => ({ updateCardAction: m.update }));
 vi.mock("@/lib/decks/card-actions", () => ({ linkDeckCardAction: m.link }));
@@ -178,6 +182,8 @@ beforeEach(() => {
   m.artCrop.mockResolvedValue({ ok: true, bytes: new Uint8Array([5]), contentType: "image/jpeg" });
   m.storedArt.mockResolvedValue({ bytes: new Uint8Array([6]), contentType: "image/png" });
   m.ownReference.mockReturnValue(true);
+  m.keep.mockResolvedValue({ id: "roll-1", inserted: true });
+  m.prune.mockResolvedValue(0);
 });
 
 describe("the step trusts nothing in the plan", () => {
@@ -262,34 +268,83 @@ describe("the maker's own card", () => {
     expect(m.discardUnused).not.toHaveBeenCalled();
   });
 
-  it("a re-roll replaces Re-art's own picture (handed to the guarded discard) and keeps the maker's earlier art", async () => {
-    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg"), artist_credit: "AI" };
-    m.paintedAdmin.mockResolvedValue(ROW());
-    m.paintedRows.mockResolvedValue([ROW()]);
+  it("a re-roll KEEPS Re-art's own picture as an earlier one (0215) — never removes it — and keeps the maker's earlier art to put back", async () => {
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg"), artist_credit: "AI", art_position: { x: 0.4, y: 0.6, zoom: 1.5 } };
+    const before = ROW({ imageModel: "bfl/flux-2-pro", method: "paint", paintedAt: "2026-11-10T10:00:00Z", jobId: "job-0" });
+    m.paintedAdmin.mockResolvedValue(before);
+    m.paintedRows.mockResolvedValue([before]);
     await run(planOf("own", true));
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({
       previousArtUrl: ART("mine.png"),
       previousArtistCredit: "Jane Painter",
       artUrl: ART("ai-new.jpg"),
     });
-    // Never removed outright: only the guarded discard may take it (a remix
-    // of this card, or the card in another deck, can still show it).
-    expect(m.discardUnused).toHaveBeenCalledWith("u1", ART("ai-old.jpg"));
-    expect(m.discardUnused).not.toHaveBeenCalledWith("u1", ART("mine.png"));
+    // Kept: the picture, the fit and credit the card had with it, the style
+    // it was painted in, who painted it, how and when.
+    expect(m.keep.mock.calls).toEqual([
+      [
+        "u1",
+        DECK,
+        {
+          cardId: "card-1",
+          styleVersion: 3,
+          jobId: "job-0",
+          artUrl: ART("ai-old.jpg"),
+          artPosition: { x: 0.4, y: 0.6, zoom: 1.5 },
+          artistCredit: "AI",
+          backArtUrl: null,
+          backArtPosition: null,
+          backArtistCredit: null,
+          imageModel: "bfl/flux-2-pro",
+          method: "paint",
+          paintedAt: "2026-11-10T10:00:00Z",
+        },
+      ],
+    ]);
+    // Nothing is removed: not the replaced picture, not the maker's own.
+    expect(m.discardUnused).not.toHaveBeenCalled();
     expect(m.discard).not.toHaveBeenCalled();
-    // The row FIRST (the art to put back is named there before the card
-    // stops showing it — another step's guard may be asking right then),
-    // the card's edit, and only then the guard, so the card itself no
-    // longer counts.
+    // Kept BEFORE the row stops naming it; the row before the card's edit
+    // (the art to put back is named there before the card stops showing
+    // it); and the oldest kept picture goes only once the new one landed.
+    const [kept] = m.keep.mock.invocationCallOrder;
     const [row] = m.writePainted.mock.invocationCallOrder;
     const [cardEdit] = m.update.mock.invocationCallOrder;
-    const [guard] = m.discardUnused.mock.invocationCallOrder;
+    const [pruned] = m.prune.mock.invocationCallOrder;
+    expect(kept).toBeLessThan(row);
     expect(row).toBeLessThan(cardEdit);
-    expect(cardEdit).toBeLessThan(guard);
+    expect(cardEdit).toBeLessThan(pruned);
+    expect(m.prune).toHaveBeenCalledWith("u1", DECK, "card-1");
     expect(m.revert).not.toHaveBeenCalled();
+    expect(m.drop).not.toHaveBeenCalled();
   });
 
-  it("a two-faced re-roll hands BOTH replaced pictures to the guarded discard", async () => {
+  it("a first paint keeps nothing (there is no picture of Re-art's yet)", async () => {
+    expect((await run(planOf())).status).toBe("done");
+    expect(m.keep).not.toHaveBeenCalled();
+    expect(m.discardUnused).not.toHaveBeenCalled();
+  });
+
+  it("a picture that can't be kept never fails the paint", async () => {
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg") };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
+    m.keep.mockResolvedValue(null);
+    expect(await run(planOf("own", true))).toMatchObject({ status: "done", card_id: "card-1" });
+    expect(m.update).toHaveBeenCalledTimes(1);
+    expect(m.drop).not.toHaveBeenCalled();
+  });
+
+  it("the row's picture is kept even when the card shows OTHER art now — fitted afresh later, with no credit of the card's", async () => {
+    // Painted, then given other art in the editor: the row still names the picture.
+    m.rows.cards = { ...OWN_CARD, art_url: ART("hand.png"), artist_credit: "Me", art_position: { x: 0.1, y: 0.2, zoom: 2 } };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
+    await run(planOf("own", true));
+    expect(m.keep.mock.calls[0][2]).toMatchObject({ artUrl: ART("ai-old.jpg"), artPosition: null, artistCredit: null });
+  });
+
+  it("a two-faced re-roll keeps BOTH replaced pictures together, each with its own fit and credit", async () => {
     m.bakedBack.mockReturnValue(true);
     m.rows.cards = {
       ...OWN_CARD,
@@ -302,10 +357,14 @@ describe("the maker's own card", () => {
     m.paintedRows.mockResolvedValue([row]);
     m.persist.mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-front.jpg") }).mockResolvedValueOnce({ ok: true, publicUrl: ART("ai-back.jpg") });
     await run(planOf("own", true));
-    expect(m.discardUnused.mock.calls).toEqual([
-      ["u1", ART("ai-old.jpg")],
-      ["u1", ART("ai-old-back.jpg")],
-    ]);
+    expect(m.keep).toHaveBeenCalledTimes(1);
+    expect(m.keep.mock.calls[0][2]).toMatchObject({
+      artUrl: ART("ai-old.jpg"),
+      artistCredit: "AI",
+      backArtUrl: ART("ai-old-back.jpg"),
+      backArtistCredit: "AI",
+    });
+    expect(m.discardUnused).not.toHaveBeenCalled();
     // The maker's own earlier back art stays the art to put back.
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("mine.png"), previousBackArtUrl: ART("back.png") });
     expect(m.discard).not.toHaveBeenCalled();
@@ -317,7 +376,10 @@ describe("the maker's own card", () => {
     m.paintedRows.mockResolvedValue([ROW({ artUrl: ART("ai-x.jpg") })]);
     await run(planOf());
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ previousArtUrl: ART("mine.png"), previousArtistCredit: "Jane Painter" });
-    expect(m.discardUnused).toHaveBeenCalledWith("u1", ART("ai-x.jpg"));
+    // That deck's picture is NOT removed and not this deck's to keep: its
+    // own row still names it, where the maker can go back to it.
+    expect(m.discardUnused).not.toHaveBeenCalled();
+    expect(m.keep).not.toHaveBeenCalled();
     expect(m.discard).not.toHaveBeenCalled();
   });
 
@@ -412,6 +474,22 @@ describe("the maker's own card", () => {
     expect(m.discard).toHaveBeenCalledWith("u1", ART("ai-new.jpg"));
     expect(m.discard).not.toHaveBeenCalledWith("u1", ART("ai-old.jpg"));
     expect(m.discardUnused).not.toHaveBeenCalled();
+    // The copy this paint kept goes back out (the row names its picture
+    // again) — AFTER the row is put back — and nothing is pruned: no kept
+    // picture is lost to a paint that never landed.
+    expect(m.drop).toHaveBeenCalledWith("u1", "roll-1");
+    expect(m.revert.mock.invocationCallOrder[0]).toBeLessThan(m.drop.mock.invocationCallOrder[0]);
+    expect(m.prune).not.toHaveBeenCalled();
+  });
+
+  it("a refused re-roll never takes out a kept row it did not put in (the picture was kept already)", async () => {
+    m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg"), artist_credit: "AI" };
+    m.paintedAdmin.mockResolvedValue(ROW());
+    m.paintedRows.mockResolvedValue([ROW()]);
+    m.keep.mockResolvedValue({ id: "roll-9", inserted: false });
+    m.update.mockResolvedValue({ ok: false, formError: "Nope." });
+    expect((await run(planOf("own", true))).status).toBe("failed");
+    expect(m.drop).not.toHaveBeenCalled();
   });
 
   it("an edit that THROWS is undone the same way, and the throw goes on to the credit wrapper", async () => {
@@ -436,6 +514,8 @@ describe("the maker's own card", () => {
     // The art to put back is the card's own; the lost try's picture goes.
     expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: ART("ai-new.jpg"), previousArtUrl: ART("mine.png") });
     expect(m.discardUnused).toHaveBeenCalledWith("u1", ART("ai-lost.jpg"));
+    // …and is never kept as an earlier picture: no card ever showed it.
+    expect(m.keep).not.toHaveBeenCalled();
   });
 
   it("the same row from ANOTHER run is someone's later choice: left as it is", async () => {

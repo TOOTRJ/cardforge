@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Paintbrush, Play, Sparkles } from "lucide-react";
 import { ReartCardWordsDialog } from "./reart-card-words-dialog";
+import { ReartEarlierPicturesDialog } from "./reart-earlier-pictures-dialog";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -141,6 +142,11 @@ export function ReartStudio({
   /** The card whose own words are being written (0209). */
   const [wordsEntry, setWordsEntry] = useState<ReartStudioEntry | null>(null);
   const [wordsOpen, setWordsOpen] = useState(false);
+  /** The card whose earlier pictures are open (0215) — by id, so the dialog
+   *  shows the page's latest reading of it. */
+  const [earlierId, setEarlierId] = useState<string | null>(null);
+  const [earlierOpen, setEarlierOpen] = useState(false);
+  const earlierEntry = earlierId ? (entries.find((entry) => entry.id === earlierId) ?? null) : null;
   const [saving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
   /** The form paints another LOOK than the deck's saved one (or none is
@@ -206,7 +212,8 @@ export function ReartStudio({
   // A sample entry that left the deck drops out of the sample.
   const sampleIds = useMemo(() => [...sample].filter((id) => paintable.some((entry) => entry.id === id)), [sample, paintable]);
   /** A sample card that shows a picture Re-art painted: painting it again
-   *  replaces that picture for good (the sample's confirm says so). */
+   *  replaces that picture — kept to go back to (the sample's confirm says
+   *  so). */
   const sampleReplacesReart = useMemo(
     () => paintable.some((entry) => entry.artNow === "reart" && sampleIds.includes(entry.id)),
     [paintable, sampleIds],
@@ -385,13 +392,16 @@ export function ReartStudio({
     const description =
       entry.kind === "printing"
         ? "It becomes your own card, painted in the deck's saved style."
-        : entry.artNow === "reart"
-          ? "This replaces the picture Re-art painted on it, and that picture can't be brought back."
-          : entry.artNow === "own"
-            ? "Your card gets new art in the deck's saved style. The art it has now can be put back from this page."
-            : // No art, or not known (the other decks couldn't be asked):
-              // nothing is promised either way.
-              "Your card gets new art in the deck's saved style.";
+        : entry.ownPictureOnCard
+          ? // This deck's own picture is on it: a re-roll keeps it (0215).
+            "The picture Re-art painted on it is kept: you can go back to it under “Earlier pictures”."
+          : entry.artNow === "reart"
+            ? "This replaces the picture on it now, which Re-art painted for another of your decks. That deck keeps it."
+            : entry.artNow === "own"
+              ? "Your card gets new art in the deck's saved style. The art it has now can be put back from this page."
+              : // No art, or not known (the other decks couldn't be asked):
+                // nothing is promised either way.
+                "Your card gets new art in the deck's saved style.";
     openConfirm({
       title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
       description: `${description} Nothing is charged until you press Paint.`,
@@ -647,7 +657,7 @@ export function ReartStudio({
                   openConfirm({
                     title: `Paint ${sampleIds.length} sample card${sampleIds.length === 1 ? "" : "s"}`,
                     description: `The deck's style is saved as it is now.${
-                      sampleReplacesReart ? " A picture Re-art painted on a sample card is replaced and can't be brought back." : ""
+                      sampleReplacesReart ? " A picture Re-art painted on a sample card is replaced, and kept to go back to." : ""
                     } Nothing is charged until you press Paint.`,
                     input: { deckId: deck.id, style, entryIds: sampleIds, sample: true, scope: "all", visibility, model, method, ...confirmation },
                   });
@@ -714,7 +724,7 @@ export function ReartStudio({
             </p>
             <p className="text-xs text-muted">
               New art on your own cards shows in every deck that holds them. You can put a card&apos;s old art back from
-              here.
+              here, and go back to a picture Re-art painted earlier.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -805,6 +815,11 @@ export function ReartStudio({
             setWordsEntry(entry);
             setWordsOpen(true);
           }}
+          onEarlier={(entry) => {
+            if (running) return;
+            setEarlierId(entry.id);
+            setEarlierOpen(true);
+          }}
           onRestore={restore}
         />
       </div>
@@ -825,6 +840,20 @@ export function ReartStudio({
             // lands.
             setWordsEntry({ ...wordsEntry, words });
             toast.success(words ? `${wordsEntry.name} has its own words.` : `${wordsEntry.name} is painted from its name and type again.`);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {earlierEntry ? (
+        <ReartEarlierPicturesDialog
+          open={earlierOpen}
+          onOpenChange={setEarlierOpen}
+          deckId={deck.id}
+          entry={earlierEntry}
+          onChosen={() => {
+            setEarlierOpen(false);
+            toast.success(`${earlierEntry.name} shows the picture you picked.`);
             router.refresh();
           }}
         />

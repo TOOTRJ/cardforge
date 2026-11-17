@@ -45,6 +45,7 @@ import {
   reartWordingOf,
   reartPromptIsMakers,
   reartLadderStyle,
+  reartPreviousArt,
   reartStateIsSettled,
   reartStepKey,
   reartStyleSchema,
@@ -68,6 +69,7 @@ import {
   writePaintedCard,
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
+import { dropRoll, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { backFaceSchema } from "@/lib/validation/card";
 
@@ -548,25 +550,14 @@ async function paintOwnCard(
   // Otherwise the maker's current art is the one to keep.
   const rows = await readPaintedRowsForCardAdmin(userId, card.id);
   const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
-  const previous: Previous = source
-    ? {
-        made: source.made,
-        previousArtUrl: source.previousArtUrl,
-        previousArtPosition: source.previousArtPosition,
-        previousBackArtUrl: source.previousBackArtUrl,
-        previousBackArtPosition: source.previousBackArtPosition,
-        previousArtistCredit: source.previousArtistCredit,
-        previousBackArtistCredit: source.previousBackArtistCredit,
-      }
-    : {
-        made: false,
-        previousArtUrl: card.art_url,
-        previousArtPosition: (card.art_position ?? null) as Json | null,
-        previousBackArtUrl: twoFaces ? (back?.art_url ?? null) : null,
-        previousBackArtPosition: twoFaces ? ((back?.art_position ?? null) as Json | null) : null,
-        previousArtistCredit: card.artist_credit ?? null,
-        previousBackArtistCredit: twoFaces ? (back?.artist_credit ?? null) : null,
-      };
+  // (One rule, shared with a pick of an earlier picture: reartPreviousArt.)
+  const previous: Previous = reartPreviousArt<Json>({
+    card: { artUrl: card.art_url, artPosition: (card.art_position ?? null) as Json | null, artistCredit: card.artist_credit ?? null },
+    back: twoFaces
+      ? { artUrl: back?.art_url ?? null, artPosition: (back?.art_position ?? null) as Json | null, artistCredit: back?.artist_credit ?? null }
+      : null,
+    source,
+  });
 
   // A restyle's pictures to start from, read BEFORE anything is reserved: a
   // card with none is told so, and nothing is charged.
@@ -660,6 +651,31 @@ async function paintOwnCard(
       backUrl = paintedBack.url;
     }
 
+    // The picture this deck's row names is KEPT before the row stops naming
+    // it (0215: the maker can go back to it) — with the fit and credit the
+    // card has with it, while the card still shows it. Never the picture of
+    // this run's own try that didn't land: no card ever showed it. A
+    // picture that can't be kept never fails the paint.
+    const showsRowArt = Boolean(painted?.artUrl && card.art_url === painted.artUrl);
+    const showsRowBack = Boolean(painted?.backArtUrl && back?.art_url === painted.backArtUrl);
+    const kept =
+      painted?.artUrl && !unfinished
+        ? await keepRoll(userId, plan.deck_id, {
+            cardId: card.id,
+            styleVersion: painted.styleVersion,
+            jobId: painted.jobId,
+            artUrl: painted.artUrl,
+            artPosition: showsRowArt ? ((card.art_position ?? null) as Json | null) : null,
+            artistCredit: showsRowArt ? (card.artist_credit ?? null) : null,
+            backArtUrl: painted.backArtUrl,
+            backArtPosition: showsRowBack ? ((back?.art_position ?? null) as Json | null) : null,
+            backArtistCredit: showsRowBack ? (back?.artist_credit ?? null) : null,
+            imageModel: painted.imageModel,
+            method: painted.method,
+            paintedAt: painted.paintedAt,
+          })
+        : null;
+
     // The row FIRST, then the card's edit: the row names the art the card
     // shows now as the art to put back, and that picture must be named
     // there before the card stops showing it. A run paints two cards at a
@@ -687,6 +703,9 @@ async function paintOwnCard(
     const undo = async () => {
       await discard();
       if (recorded) await revertPaintedCard(userId, plan.deck_id, card.id, painted);
+      // The row names its picture again: the copy this paint kept goes back
+      // out (its picture is untouched).
+      if (kept?.inserted) await dropRoll(userId, kept.id);
     };
     let result: Awaited<ReturnType<typeof updateCardAction>>;
     try {
@@ -714,17 +733,11 @@ async function paintOwnCard(
       await discardReartArtIfUnused(userId, painted?.artUrl);
       await discardReartArtIfUnused(userId, painted?.backArtUrl);
     }
-    // The picture(s) this one replaced, when Re-art painted them: removed
-    // once nothing else shows them (never the maker's own earlier art,
-    // which is kept — and never a picture another card of theirs still
-    // holds: a remix of this card shares its art file).
-    if (source?.artUrl && source.artUrl !== previous.previousArtUrl) {
-      await discardReartArtIfUnused(userId, source.artUrl);
-    }
-    const replacedBack = twoFaces ? (back?.art_url ?? null) : null;
-    if (replacedBack && rows.some((row) => row.backArtUrl === replacedBack) && replacedBack !== previous.previousBackArtUrl) {
-      await discardReartArtIfUnused(userId, replacedBack);
-    }
+    // The picture this one replaced is NOT removed (0215): this deck's was
+    // kept above; another deck's stays named by that deck's own row, where
+    // the maker can go back to it. Only past the limit does the oldest kept
+    // picture go — now that the new one has landed.
+    await pruneRolls(userId, plan.deck_id, card.id);
     return {
       ...step,
       ...CLEARED,

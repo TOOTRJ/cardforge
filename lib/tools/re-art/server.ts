@@ -610,7 +610,10 @@ export async function readReartPicturesByCard(
  * Whether anything of the caller's still shows, or keeps, the picture at
  * `url`: one of their cards (front or back face — a remix of their OWN card
  * shares its parent's art file, lib/cards/remix-media.ts, and a card can be
- * in several decks), or a Re-art row that holds it as the art to put back.
+ * in several decks), a Re-art row that holds it — as the art to put back,
+ * or as the picture it painted last (0215: a picture can be off its card
+ * and still be the deck's, to go back to) — or a kept earlier picture
+ * (deck_reart_rolls, 0215).
  *
  * Read with the service role and the owner named in every statement (as the
  * step's other reads of these rows): the caller's own read of
@@ -623,7 +626,11 @@ export async function readReartPicturesByCard(
  * The cards are asked BEFORE the rows, never together: a paint writes its
  * row (the art to put back) before it edits the card (step.ts), so a
  * picture another step is taking off a card is named by that card until
- * after its row names it — asked in this order, no moment misses both.
+ * after its row names it — asked in this order, no moment misses both. The
+ * kept pictures are asked LAST for the same reason: a picture is kept
+ * before the row that named it is overwritten (lib/tools/re-art/rolls.ts).
+ * On a database 0215 hasn't reached that last read fails, which reads as
+ * "in use": nothing is removed there until the table exists.
  */
 async function reartArtInUse(userId: string, url: string): Promise<boolean> {
   if (!isAdminConfigured()) return true;
@@ -650,14 +657,21 @@ async function reartArtInUse(userId: string, url: string): Promise<boolean> {
       .select("card_id", { count: "exact", head: true })
       .eq("owner_id", userId)
       .eq("previous_back_art_url", url),
+    admin.from("deck_reart_cards").select("card_id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
+    admin.from("deck_reart_cards").select("card_id", { count: "exact", head: true }).eq("owner_id", userId).eq("back_art_url", url),
   ]);
-  return held(kept);
+  if (held(kept)) return true;
+  const earlier = await Promise.all([
+    admin.from("deck_reart_rolls").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("art_url", url),
+    admin.from("deck_reart_rolls").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("back_art_url", url),
+  ]);
+  return held(earlier);
 }
 
 /**
- * Removes a picture Re-art painted that the tool has just taken OFF a card
- * (a re-roll replaced it, "Put the old art back" replaced it) — only when
- * nothing else of the caller's shows or keeps it. It used to be removed
+ * Removes a picture Re-art painted that nothing is meant to hold any more
+ * (the oldest kept picture past the limit, the picture of a paint that
+ * never landed) — only when nothing else of the caller's shows or keeps it. It used to be removed
  * unasked, which left a remix of the card (the same art file) and any other
  * card holding the picture with a dead link. True when it was removed.
  * Never throws; call it AFTER the card's edit landed, so the card itself no

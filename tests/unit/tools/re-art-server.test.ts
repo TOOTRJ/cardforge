@@ -328,6 +328,12 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
       "cards.back_face->>art_url",
       "deck_reart_cards.previous_art_url",
       "deck_reart_cards.previous_back_art_url",
+      // 0215: the picture a deck's row painted last can be OFF its card and
+      // still the deck's (to go back to); and the kept earlier pictures.
+      "deck_reart_cards.art_url",
+      "deck_reart_cards.back_art_url",
+      "deck_reart_rolls.art_url",
+      "deck_reart_rolls.back_art_url",
     ]);
     for (const call of calls) {
       expect(call.op).toBe("select");
@@ -337,19 +343,30 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
     }
   });
 
-  it("asks the cards BEFORE the rows, never together (a paint writes its row before it edits the card)", async () => {
+  it("asks the cards BEFORE the rows, and the kept pictures LAST — never together (each move names a picture in its new place before the old one lets go)", async () => {
     const asked: string[] = [];
-    let cardsAnswered = 0;
+    const answered = { cards: 0, deck_reart_cards: 0 };
     m.admin.mockImplementation(async (call: Call): Promise<Result> => {
-      // The rows are asked only once both card counts have come back.
-      if (call.table === "deck_reart_cards") expect(cardsAnswered).toBe(2);
+      // The rows are asked only once both card counts have come back; the
+      // kept pictures only once all four row counts have.
+      if (call.table === "deck_reart_cards") expect(answered.cards).toBe(2);
+      if (call.table === "deck_reart_rolls") expect(answered.deck_reart_cards).toBe(4);
       asked.push(call.table);
       await new Promise((resolve) => setTimeout(resolve, 5));
-      if (call.table === "cards") cardsAnswered += 1;
+      if (call.table === "cards" || call.table === "deck_reart_cards") answered[call.table] += 1;
       return { count: 0, error: null };
     });
     expect(await discardReartArtIfUnused(ME, PICTURE)).toBe(true);
-    expect(asked).toEqual(["cards", "cards", "deck_reart_cards", "deck_reart_cards"]);
+    expect(asked).toEqual([
+      "cards",
+      "cards",
+      "deck_reart_cards",
+      "deck_reart_cards",
+      "deck_reart_cards",
+      "deck_reart_cards",
+      "deck_reart_rolls",
+      "deck_reart_rolls",
+    ]);
   });
 
   it.each([
@@ -357,6 +374,10 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
     ["a card shows it on its back face", "cards.back_face->>art_url"],
     ["a Re-art row keeps it as the art to put back", "deck_reart_cards.previous_art_url"],
     ["a Re-art row keeps it as the back's art to put back", "deck_reart_cards.previous_back_art_url"],
+    ["a deck's row names it as the picture it painted last (off its card, to go back to)", "deck_reart_cards.art_url"],
+    ["a deck's row names it as the back it painted last", "deck_reart_cards.back_art_url"],
+    ["it is a kept earlier picture", "deck_reart_rolls.art_url"],
+    ["it is a kept earlier picture's back", "deck_reart_rolls.back_art_url"],
   ])("%s: kept", async (_name, holder) => {
     holders({ [holder]: 1 });
     expect(await discardReartArtIfUnused(ME, PICTURE)).toBe(false);
@@ -375,6 +396,10 @@ describe("a replaced picture is removed only when nothing else shows or keeps it
     ["a count that didn't come back (no error either)", "cards.back_face->>art_url", null],
     ["a rows count that didn't come back", "deck_reart_cards.previous_back_art_url", null],
     ["a count that is no number", "cards.art_url", Number.NaN],
+    // A database 0215 hasn't reached answers the kept pictures with an
+    // error: nothing is removed there until the table exists.
+    ["the kept pictures' table not being there yet", "deck_reart_rolls.art_url", "error" as const],
+    ["a kept-pictures count that didn't come back", "deck_reart_rolls.back_art_url", null],
   ])("fails closed on %s: the picture stays", async (_name, holder, answer) => {
     holders({ [holder]: answer });
     expect(await discardReartArtIfUnused(ME, PICTURE)).toBe(false);
