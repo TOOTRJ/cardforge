@@ -57,6 +57,7 @@ const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
   remix_card: "Card restyle",
   fill_card: "Card fields (creator)",
   deck_reart_art: "Re-art deck art",
+  deck_reart_scene: "Re-art deck scene",
 };
 
 // A ledger row's moment, in the VIEWER's zone (the server's — UTC — put an

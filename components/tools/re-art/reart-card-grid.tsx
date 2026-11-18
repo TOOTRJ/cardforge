@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { History, Loader2, Lock, LockOpen, PenLine, RotateCcw, Undo2, Wand2 } from "lucide-react";
+import { History, Loader2, Lock, LockOpen, PenLine, RotateCcw, Sparkles, Undo2, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
@@ -123,6 +123,9 @@ export function ReartCardGrid({
     onPaint: (entries: ReartStudioEntry[]) => void;
     /** Locks or unlocks the cards named. */
     onLock: (entries: ReartStudioEntry[], lock: boolean) => void;
+    /** Opens "Write scenes…" for the cards named (an AI-written scene a
+     *  card, 0217). Absent: not offered. */
+    onScenes?: (entries: ReartStudioEntry[]) => void;
     /** A lock or unlock is on its way. */
     working: boolean;
   };
@@ -300,6 +303,22 @@ export function ReartCardGrid({
             <LockOpen className="h-4 w-4" aria-hidden />
             Unlock
           </Button>
+          {selection.onScenes ? (
+            <Button
+              variant="outline"
+              size="sm"
+              data-reart-scenes
+              onClick={() => {
+                // A locked card isn't painted: no scene is bought for it.
+                if (!waiting && pickedToPaint.length > 0) selection.onScenes?.(pickedToPaint);
+              }}
+              aria-disabled={waiting || pickedToPaint.length === 0 ? true : undefined}
+              className={waiting || pickedToPaint.length === 0 ? "cursor-not-allowed opacity-60" : undefined}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+              Write scenes…
+            </Button>
+          ) : null}
           <Button
             size="sm"
             onClick={() => {

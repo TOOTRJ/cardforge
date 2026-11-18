@@ -9,7 +9,7 @@ import { getCurrentUsername } from "@/lib/supabase/server";
 import { listDeckPageCards, listMyDecks } from "@/lib/decks/queries";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { getFreshCreditBalance } from "@/lib/ai/rate-limit";
-import { isGatewayConfigured } from "@/lib/ai/provider";
+import { isDesignAiConfigured, isGatewayConfigured } from "@/lib/ai/provider";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import {
@@ -238,6 +238,7 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
         capacity={capacity}
         balance={balance}
         aiAvailable={isGatewayConfigured()}
+        sceneAvailable={isDesignAiConfigured()}
         canPickModel={canPickModel}
         pausedRunId={paused?.id ?? null}
         runs={runs}

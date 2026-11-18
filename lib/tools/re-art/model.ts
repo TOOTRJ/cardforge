@@ -1281,6 +1281,82 @@ export function reartLockedEntries(entries: ReadonlyArray<{ id: string; cardId: 
 }
 
 // ---------------------------------------------------------------------------
+// An AI-written scene for a card (migration 0217; owner 2026-11-18: one
+// credit each)
+//
+// "Write a scene with AI" has a text model write a card's OWN WORDS (0209):
+// what its picture shows — from its name, type, rules and flavour text, the
+// deck's world and whatever the maker typed as direction. The scene is
+// saved as the card's words at once (a paid answer is a saved answer) and
+// is the maker's to edit after. Nothing is painted: the card is painted
+// from it the next time it is painted, at a picture's own price.
+// ---------------------------------------------------------------------------
+
+/** What one scene costs. */
+export const REART_SCENE_CREDITS = 1;
+/** The most a written scene holds — well under a card's own words' limit,
+ *  so the maker has room to add to it. */
+export const REART_SCENE_MAX = 360;
+/** How many cards one "Write scenes…" takes (each is its own request). */
+export const REART_SCENES_AT_ONCE = REART_MAX_CARDS;
+
+/** Said beside the button, before anything is charged. */
+export const REART_SCENE_HELP =
+  "Written from the card's name, type and text, in the deck's world. It replaces this card's words and is saved at once, to be painted in the deck's look. Nothing is painted now.";
+/** …and on a card set to "use only these words". */
+export const REART_SCENE_ONLY_NOTE = "A scene names no style, so “Use only these words” is turned off: the card is painted in the deck's look.";
+
+/** "1 credit" / "12 credits". */
+export function reartSceneCost(cards: number): string {
+  const credits = cards * REART_SCENE_CREDITS;
+  return `${credits} credit${credits === 1 ? "" : "s"}`;
+}
+
+/** The headline of "Write scenes…" for the cards picked. */
+export function reartScenesLine(cards: number): string {
+  return `Writes a scene for ${cards} card${cards === 1 ? "" : "s"} · ${reartSceneCost(cards)}`;
+}
+
+/** …and what it does to words the picked cards already have ("" when none
+ *  has any). */
+export function reartScenesReplaceLine(cards: number, withWords: number): string {
+  if (withWords <= 0) return "";
+  if (cards === 1) return "It has words of its own: they are replaced.";
+  return `${withWords} of them ${withWords === 1 ? "has" : "have"} words of ${withWords === 1 ? "its" : "their"} own: those are replaced.`;
+}
+
+/** A batch leaves the cards that have words of their own alone unless the
+ *  maker says otherwise: what it says about them ("" when none has any). */
+export function reartScenesKeptLine(withWords: number): string {
+  if (withWords <= 0) return "";
+  return `${withWords} card${withWords === 1 ? "" : "s"} picked already ${withWords === 1 ? "has" : "have"} words of ${
+    withWords === 1 ? "its" : "their"
+  } own and ${withWords === 1 ? "is" : "are"} left as ${withWords === 1 ? "it is" : "they are"}.`;
+}
+
+/** The tick box that includes them. */
+export function reartScenesReplaceLabel(withWords: number): string {
+  return `Also replace the words of the ${withWords === 1 ? "card that has its" : `${withWords} cards that have their`} own`;
+}
+
+/** …and to the picked cards set to "use only these words" ("" when none). */
+export function reartScenesOnlyLine(withOnly: number): string {
+  if (withOnly <= 0) return "";
+  return `${withOnly} ${withOnly === 1 ? "is" : "are"} set to “Use only these words”: with a scene ${withOnly === 1 ? "it is" : "they are"} painted in the deck's look again.`;
+}
+
+/** What one request to write a scene answers. */
+export type ReartSceneResult =
+  | { ok: true; words: ReartCardWords; previous: ReartCardWords | null; credits: number | null }
+  | {
+      ok: false;
+      error: string;
+      code?: "INSUFFICIENT_CREDITS" | "RATE_LIMITED" | "NOT_PAINTABLE" | "AI_UNAVAILABLE" | "CREDIT_CHECK_FAILED" | "CLOSED" | "UNREACHABLE";
+      retryAfterSeconds?: number;
+      credits?: number | null;
+    };
+
+// ---------------------------------------------------------------------------
 // Undoing a run
 //
 // "Undo this run" puts each card the run painted back to what it showed

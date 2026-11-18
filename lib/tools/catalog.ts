@@ -265,7 +265,7 @@ export const TOOL_USE_EVENTS: Readonly<Record<ToolSlug, readonly string[]>> = {
   "collection-builder": ["import", "add_card", "draft", "ai_build", "ai_suggest", "save_deck", "buildable_decks"],
   "token-kit": ["kit_built", "token_saved", "kit_exported", "ai_art", "art_uploaded"],
   "bulk-customize": ["start", "customize_one"],
-  "re-art-deck": ["start", "start_sample", "reroll", "paint_one", "paint_selected"],
+  "re-art-deck": ["start", "start_sample", "reroll", "paint_one", "paint_selected", "write_scene"],
   "pip-forge": ["forge", "recolour", "use_as_pip"],
   "custom-symbols": ["create", "edit", "replace_picture"],
   "set-symbol-studio": ["generate", "upload", "recut", "open_png"],
