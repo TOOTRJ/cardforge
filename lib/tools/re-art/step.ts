@@ -27,6 +27,7 @@ import {
   REART_CREDITS_PER_FACE,
   REART_DEFAULT_MODEL,
   REART_DEFAULT_METHOD,
+  REART_LOCKED_SINCE_COPY,
   REART_MAX_CARDS,
   REART_METHODS,
   REART_MODEL_IDS,
@@ -70,6 +71,7 @@ import {
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
 import { dropRoll, isKeptPicture, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { isEntryLockedAdmin } from "@/lib/tools/re-art/locks";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { backFaceSchema } from "@/lib/validation/card";
 
@@ -314,6 +316,14 @@ export async function runReartStep(
   }
   if (!entry) return failed(step, "This card is no longer in your deck.");
   if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
+  // A card locked since the run was planned (0216) is left as it is, and
+  // nothing is charged. A lock that couldn't be read stops the step: it is
+  // never read as "not locked".
+  const locked = await isEntryLockedAdmin(userId, plan.deck_id, entry.id, entry.card_id);
+  if (locked === null) return failed(step, "We couldn't read whether this card is locked — try it again.");
+  if (locked) {
+    return { ...step, ...CLEARED, status: "done", error: undefined, label: entry.name, note: REART_LOCKED_SINCE_COPY };
+  }
   // The card's own words (0209), read here: the plan is the owner's to
   // insert, so it names the entry and never the words. A read that didn't
   // answer stops the step before any charge — never "no words".
@@ -759,6 +769,14 @@ async function paintOwnCard(
       image_model: [...new Set(models)].join(" + ") || null,
       note: [startedFrom, recorded ? null : "New art saved, but its old art can't be put back from the tool."].filter(Boolean).join(" ") || null,
       ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
+      // This step put a new picture on the card (a step that left its card
+      // as it was is done too, and names the card): what an undo of the run
+      // reads.
+      painted: true,
+      // A re-roll: the earlier picture it kept in the card's place — what
+      // an undo of this run puts back. Only when the card was SHOWING it
+      // (a card that showed other art gets that art back instead).
+      ...(kept && showsRowArt ? { kept_roll: kept.id } : {}),
     };
   });
 }

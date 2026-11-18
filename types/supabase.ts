@@ -793,6 +793,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      deck_reart_locks: {
+        Row: {
+          entry_id: string;
+          deck_id: string;
+          owner_id: string;
+          created_at: string;
+        };
+        Insert: {
+          entry_id: string;
+          deck_id: string;
+          owner_id: string;
+          created_at?: string;
+        };
+        Update: {
+          entry_id?: string;
+          deck_id?: string;
+          owner_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       deck_reart_rolls: {
         Row: {
           id: string;

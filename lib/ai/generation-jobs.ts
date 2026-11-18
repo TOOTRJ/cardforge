@@ -251,6 +251,15 @@ export type JobStep = {
   /** Bulk Customize: on a step put back to "pending" (error_code
    *  RATE_LIMITED), how long the runner waits before running it again. */
   retry_after_seconds?: number | null;
+  /** Re-art deck: on a DONE step that re-rolled a card, the id of the
+   *  earlier picture it kept in the card's place (deck_reart_rolls, 0215) —
+   *  what "undo this run" puts back on the card. Absent on every other
+   *  step. */
+  kept_roll?: string | null;
+  /** Re-art deck: true on a DONE step that put a new picture on its card
+   *  (a step that left the card as it was is done too) — what an undo of the
+   *  run reads. */
+  painted?: boolean;
 };
 
 export type GenerationJobRow = {
@@ -3222,6 +3231,10 @@ async function patchJobStep(
     // to clear), so every other kind's patch is as before.
     ...(step.note !== undefined ? { note: step.note } : {}),
     ...(step.retry_after_seconds !== undefined ? { retry_after_seconds: step.retry_after_seconds } : {}),
+    // Re-art deck: the earlier picture a re-roll kept (what an undo of the
+    // run puts back). Only a step that names it writes the key.
+    ...(step.kept_roll ? { kept_roll: step.kept_roll } : {}),
+    ...(step.painted === true ? { painted: true } : {}),
   };
   // The work (credit spend, card insert, image) is already committed by the
   // time we get here — losing this write means a stale reclaim would re-run

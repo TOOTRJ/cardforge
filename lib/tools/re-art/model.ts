@@ -1244,7 +1244,155 @@ export type ReartStudioEntry = {
   /** The card shows the picture THIS deck's row names: a re-roll keeps it
    *  as an earlier picture (0215). */
   ownPictureOnCard?: boolean;
+  /** The card is LOCKED on this deck (0216): the tool leaves its picture as
+   *  it is until it is unlocked. */
+  locked?: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// A locked card (migration 0216)
+//
+// A lock is a deck ENTRY's (a real card's entry has no card of the maker's
+// until a run makes one). While it is there nothing the TOOL does changes
+// that card's picture: a run and a sample skip it and charge nothing; a
+// re-roll, an earlier picture, "old art back" and an undo of a run are
+// refused until it is unlocked. The card's editor is not the tool.
+// ---------------------------------------------------------------------------
+
+/** Why a run leaves a locked card (the confirm's list, a step's note). */
+export const REART_LOCKED_COPY = "Locked — left as it is. Unlock it to change its picture.";
+/** What a one-card action is told on a locked card. */
+export const REART_UNLOCK_FIRST = "This card is locked on this deck — unlock it first.";
+/** What a step says of a card locked AFTER its run started. */
+export const REART_LOCKED_SINCE_COPY = "Locked since this run started — left as it is. Nothing was charged.";
+
+/**
+ * The deck's LOCKED entries as the tool treats them: an entry that is
+ * locked, and every other entry of the deck that holds the SAME card — a
+ * lock is on the card's picture, and two rows of one card show one picture
+ * (painting the card through its unlocked row would change the locked one).
+ */
+export function reartLockedEntries(entries: ReadonlyArray<{ id: string; cardId: string | null | undefined }>, locks: ReadonlySet<string>): Set<string> {
+  const lockedCards = new Set<string>();
+  for (const entry of entries) if (entry.cardId && locks.has(entry.id)) lockedCards.add(entry.cardId);
+  const locked = new Set<string>();
+  for (const entry of entries) if (locks.has(entry.id) || (entry.cardId && lockedCards.has(entry.cardId))) locked.add(entry.id);
+  return locked;
+}
+
+// ---------------------------------------------------------------------------
+// Undoing a run
+//
+// "Undo this run" puts each card the run painted back to what it showed
+// before — while the run's picture is still the one on the card:
+//
+//   * a card the run RE-ROLLED goes back to the earlier picture the run kept
+//     in its place (0215: the step says which, `kept_roll`);
+//   * a card of the maker's own the run painted for the first time gets its
+//     own art back;
+//   * a REAL card the run made the maker's own goes back to being the real
+//     card in the deck (the card the run made stays in My Cards — a later
+//     run uses it again, and never makes a second one).
+//
+// A card painted again since, given other art, or locked is left as it is.
+// Nothing is painted, and no credit is returned: the pictures were painted,
+// and each one the undo takes off is kept to go back to.
+// ---------------------------------------------------------------------------
+
+/** How many cards one request of an undo puts back (each is a card edit). */
+export const REART_UNDO_BATCH = 6;
+
+/** What an undo does to one card of the run. */
+export type ReartUndoKind = "earlier" | "own" | "real";
+
+export const REART_UNDO_SKIP_COPY = {
+  changed: "Painted again or changed since — left as it is.",
+  other_art: "Has other art now — left as it is.",
+  own_back: "It has its own art back already.",
+  real_back: "It is the real card in the deck again already.",
+  locked: "Locked — left as it is.",
+  no_art_before: "It had no art before this run — nothing to go back to.",
+  gone: "No longer one of your cards.",
+} as const;
+export type ReartUndoSkip = keyof typeof REART_UNDO_SKIP_COPY;
+
+/**
+ * What undoing a run does to ONE card it painted — pure, so the plan the
+ * maker confirms and each batch that carries it out read the same answer.
+ *
+ *   * `row`: THIS deck's record of the card. It names the picture Re-art
+ *     has on the card and the run that PAINTED that picture (a pick of an
+ *     earlier picture writes that picture's own run). Only a card whose
+ *     record names this run — and that still shows the run's picture — is
+ *     the run's to undo: a later run or a pick of another picture names
+ *     another, and "old art back" names no picture at all.
+ */
+export function reartUndoOf(input: {
+  jobId: string;
+  /** The run's done step for the card (its `kept_roll`, when it re-rolled). */
+  keptRoll: string | null | undefined;
+  row:
+    | { jobId: string | null; made: boolean; entryId: string | null; artUrl: string | null; previousArtUrl: string | null }
+    | null
+    | undefined;
+  /** The art the card shows now (undefined: the card is gone). */
+  cardArtUrl: string | null | undefined;
+  /** The card is still one of the caller's own. */
+  cardIsOwn: boolean;
+  /** The deck entry the run made the card from is still linked to it. */
+  madeEntryLinked: boolean;
+  /** The ids of the pictures kept for the card on this deck. */
+  keptRollIds: ReadonlySet<string>;
+  locked: boolean;
+}): { kind: ReartUndoKind; rollId?: string } | { skip: ReartUndoSkip } {
+  const { row } = input;
+  if (!input.cardIsOwn) return { skip: "gone" };
+  if (!row) return { skip: "changed" };
+  // "Old art back" (the maker's, or an undo's) leaves a record that names
+  // no picture: the card keeps its own art.
+  if (!row.artUrl && !row.made) return { skip: "own_back" };
+  if (row.jobId !== input.jobId) return { skip: "changed" };
+  if (input.locked) return { skip: "locked" };
+  // A real card the run made the maker's own: back to the real card, while
+  // its entry is still linked to the card the run made.
+  if (row.made && row.entryId) return input.madeEntryLinked ? { kind: "real" } : { skip: "real_back" };
+  if (!row.artUrl || row.artUrl !== input.cardArtUrl) return { skip: "other_art" };
+  if (input.keptRoll && input.keptRollIds.has(input.keptRoll)) return { kind: "earlier", rollId: input.keptRoll };
+  return row.previousArtUrl ? { kind: "own" } : { skip: "no_art_before" };
+}
+
+/** What an undo would do, as the confirm says it. */
+export type ReartUndoPlan = {
+  /** Cards that go back to the earlier picture the run replaced. */
+  earlier: number;
+  /** Cards that get their own art back. */
+  own: number;
+  /** Real cards that go back to being the real card in the deck. */
+  real: number;
+  skipped: Array<{ name: string; reason: string }>;
+};
+
+/** The confirm's headline: "Puts 12 cards back". */
+export function reartUndoLine(plan: Pick<ReartUndoPlan, "earlier" | "own" | "real">): string {
+  const total = plan.earlier + plan.own + plan.real;
+  return total === 0 ? "Nothing of this run is left to undo" : `Puts ${total} card${total === 1 ? "" : "s"} back`;
+}
+
+/** …and what that means, part by part. */
+export function reartUndoDetail(plan: Pick<ReartUndoPlan, "earlier" | "own" | "real">): string[] {
+  const cards = (n: number) => `${n} card${n === 1 ? "" : "s"}`;
+  return [
+    plan.earlier > 0 ? `${cards(plan.earlier)} ${plan.earlier === 1 ? "goes" : "go"} back to the picture ${plan.earlier === 1 ? "it" : "they"} had before this run.` : "",
+    plan.own > 0 ? `${cards(plan.own)} ${plan.own === 1 ? "gets its" : "get their"} own art back.` : "",
+    plan.real > 0
+      ? `${cards(plan.real)} ${plan.real === 1 ? "goes" : "go"} back to being the real card in the deck. The card${plan.real === 1 ? "" : "s"} this run made ${plan.real === 1 ? "stays" : "stay"} in My Cards.`
+      : "",
+  ].filter(Boolean);
+}
+
+/** Said in the undo's confirm, always. */
+export const REART_UNDO_NO_REFUND_COPY =
+  "No credit is returned: the pictures were painted. Each one this takes off a card is kept under “Earlier pictures”.";
 
 // ---------------------------------------------------------------------------
 // A card's earlier pictures (migration 0215)

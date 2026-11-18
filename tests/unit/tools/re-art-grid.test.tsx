@@ -685,6 +685,33 @@ describe("the confirm says which model paints, before anything is charged (0211)
     expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "auto", method: "paint" })).not.toMatch(/starts from the card's own art/);
   });
 
+  it("says how many LOCKED cards the run leaves as they are (0216) — and nothing when none is", async () => {
+    const withLocked = async (locked: number) => {
+      planRun.mockReset();
+      planRun.mockResolvedValue({ ...planned, locked });
+      await act(async () => {
+        render(
+          <ReartConfirmDialog
+            open
+            onOpenChange={() => undefined}
+            input={{ deckId: DECK_ID, scope: "all", visibility: "private" } as ReartRunInput}
+            title="Re-art the deck"
+            description="Nothing is charged until you press Paint."
+            onStarted={() => undefined}
+          />,
+        );
+      });
+      const text = screen.getByRole("dialog").textContent ?? "";
+      cleanup();
+      return text;
+    };
+    expect(await withLocked(1)).toContain("1 locked card is left as it is.");
+    expect(await withLocked(3)).toContain("3 locked cards are left as they are.");
+    expect(await withLocked(0)).not.toMatch(/locked card/);
+    // A plan from before the count existed says nothing.
+    expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private" } as ReartRunInput)).not.toMatch(/locked card/);
+  });
+
   it("Automatic — or no model at all — says nothing about one", async () => {
     expect(await confirm({ deckId: DECK_ID, scope: "all", visibility: "private", model: "auto" })).not.toMatch(/Painted by/);
     cleanup();

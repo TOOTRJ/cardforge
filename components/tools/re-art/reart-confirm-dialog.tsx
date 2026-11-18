@@ -183,6 +183,11 @@ export function ReartConfirmDialog({
                   {planned.inStyle === 1 ? "it is" : "they are"}.
                 </p>
               ) : null}
+              {planned.locked > 0 ? (
+                <p className="mt-1 text-sm text-muted">
+                  {planned.locked} locked card{planned.locked === 1 ? " is" : "s are"} left as {planned.locked === 1 ? "it is" : "they are"}.
+                </p>
+              ) : null}
               {capacityMessage ? (
                 <p className={cn("mt-2 text-xs", capacityMessage.tone === "danger" ? "text-danger" : "text-warning")}>
                   {capacityMessage.message}

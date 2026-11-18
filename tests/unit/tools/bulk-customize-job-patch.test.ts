@@ -115,5 +115,32 @@ describe("the bulk step's patch", () => {
     const patch = s.patched.at(-1)!;
     expect("note" in patch).toBe(false);
     expect("retry_after_seconds" in patch).toBe(false);
+    expect("kept_roll" in patch).toBe(false);
+    expect("painted" in patch).toBe(false);
+  });
+
+  // Re-art deck: a re-roll's done step names the earlier picture it kept in
+  // the card's place — what "undo this run" puts back. The patch is built
+  // key by key: a key it doesn't name never reaches the row.
+  it("writes the earlier picture a re-roll kept, and only for a step that names one", async () => {
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_roll: "roll-1" };
+    await runNextJobStep("job-1", "bulk:0");
+    expect(s.patched.at(-1)!.kept_roll).toBe("roll-1");
+    s.job = bulkJob();
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_roll: null };
+    await runNextJobStep("job-1", "bulk:0");
+    expect("kept_roll" in s.patched.at(-1)!).toBe(false);
+  });
+
+  // …and says that it PAINTED: a step that left its card as it was is done
+  // too, names the card, and is not the run's to undo.
+  it("writes that a step painted, and only for a step that says so", async () => {
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", painted: true };
+    await runNextJobStep("job-1", "bulk:0");
+    expect(s.patched.at(-1)!.painted).toBe(true);
+    s.job = bulkJob();
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1" };
+    await runNextJobStep("job-1", "bulk:0");
+    expect("painted" in s.patched.at(-1)!).toBe(false);
   });
 });
