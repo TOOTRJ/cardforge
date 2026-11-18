@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/ids";
@@ -10,20 +10,16 @@ import { recordToolEventLater } from "@/lib/tools/events";
 import { toolHref } from "@/lib/tools/catalog";
 import { REART_BACKGROUND_UNAVAILABLE, REART_TOOL_SLUG } from "@/lib/tools/re-art/model";
 import { getOwnedDeck } from "@/lib/tools/re-art/server";
-import {
-  FRESH_TOKEN_S,
-  driveBackgroundRuns,
-  kickMs,
-  requestBackgroundStop,
-  startBackground,
-  tokenSecondsLeft,
-} from "@/lib/tools/re-art/background";
+import { FRESH_TOKEN_S, driveBackgroundRuns, kickMs, startBackground, tokenSecondsLeft } from "@/lib/tools/re-art/background";
+import { refreshSessionOnACopy } from "@/lib/tools/re-art/session-refresh";
 import type { JobStep } from "@/lib/ai/generation-jobs";
 
 // ---------------------------------------------------------------------------
-// Handing a Re-art run to the server, and taking it back (migration 0218;
-// lib/tools/re-art/background.ts). Both are the maker's own requests: the
-// hand-over is the one moment the server is given a sign-in to borrow.
+// Handing a Re-art run to the server (migration 0218;
+// lib/tools/re-art/background.ts): the maker's own request, and the one
+// moment the server is given a sign-in to borrow. (Taking it back — Stop —
+// is a plain route, app/api/tools/re-art-deck/stop-background: an action
+// can wait behind a navigation, and a Stop must not.)
 // ---------------------------------------------------------------------------
 
 const NO_ACCESS = "Re-art deck isn't open to you.";
@@ -51,8 +47,15 @@ async function requestUrl(): Promise<string | null> {
  *
  * This request is the run's first driver, after its response: it asks the
  * step door for cards for a few minutes, and the cron takes over from it.
+ *
+ * `first`: the hand-over a run makes as it starts (not Continue's). It is
+ * refused on a run its maker has already stopped — a Stop pressed in the
+ * run's first second reaches the server before this does.
  */
-export async function handReartRunToServerAction(jobId: unknown): Promise<{ ok: true; state: "started" | "already" } | { ok: false; error: string }> {
+export async function handReartRunToServerAction(
+  jobId: unknown,
+  first: unknown = false,
+): Promise<{ ok: true; state: "started" | "already" } | { ok: false; error: string }> {
   const access = await checkToolAccess(REART_TOOL_SLUG);
   if (!access) return { ok: false, error: NO_ACCESS };
   if (typeof jobId !== "string" || !isUuid(jobId)) return { ok: false, error: "That run couldn't be read." };
@@ -74,18 +77,23 @@ export async function handReartRunToServerAction(jobId: unknown): Promise<{ ok: 
   if (job.status !== "generating") return refused("not_running");
   if (!(await getOwnedDeck(access.userId, deckId))) return { ok: false, error: "That run's deck isn't one of yours any more." };
 
-  // The token the server borrows.
+  // The token the server borrows. An early refresh is made on a COPY of
+  // the cookies: one that fails must never sign the maker out (the sign-in
+  // library removes a session whose refresh was refused) — the token they
+  // have is then the one that is borrowed, for the time it has left.
   const { data: held } = await supabase.auth.getSession();
   let accessToken = held.session?.access_token ?? null;
-  if (tokenSecondsLeft(accessToken) < FRESH_TOKEN_S) {
-    const { data: fresh, error } = await supabase.auth.refreshSession();
-    if (!error && fresh.session?.access_token) accessToken = fresh.session.access_token;
+  if (accessToken && tokenSecondsLeft(accessToken) < FRESH_TOKEN_S) {
+    accessToken = (await refreshSessionOnACopy(await cookies())) ?? accessToken;
   }
   if (!accessToken) return refused("no_session");
 
   const url = await requestUrl();
   const steps = (Array.isArray(job.steps) ? job.steps : []) as unknown as JobStep[];
-  const result = await startBackground({ userId: access.userId, jobId: job.id, deckId, accessToken, steps, requestUrl: url });
+  const result = await startBackground({ userId: access.userId, jobId: job.id, deckId, accessToken, steps, requestUrl: url, first: first === true });
+  // Stopped by its maker before this arrived: their action, not a failure
+  // (nothing is logged as one; the page says nothing, it knows).
+  if (!result.ok && result.reason === "stopped") return { ok: false, error: REART_BACKGROUND_UNAVAILABLE };
   if (!result.ok) return refused(result.reason);
   if (result.state === "started") {
     recordToolEventLater({
@@ -98,7 +106,7 @@ export async function handReartRunToServerAction(jobId: unknown): Promise<{ ok: 
   }
   // The first driver. Everything it needs is passed in as plain values:
   // nothing after the response reads this request's session.
-  const preset = { jobId: job.id, accessToken, headers: result.headers };
+  const preset = { jobId: job.id, accessToken, headers: result.headers, origin: result.origin };
   after(async () => {
     try {
       await driveBackgroundRuns({ forMs: kickMs(), only: preset.jobId, requestUrl: url, preset });
@@ -110,14 +118,4 @@ export async function handReartRunToServerAction(jobId: unknown): Promise<{ ok: 
   // can be left, and stops warning about leaving).
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true, state: result.state };
-}
-
-/** The maker's Stop, for the server's part of a run: it asks for no more
- *  cards (the ones being painted finish). */
-export async function stopReartBackgroundAction(jobId: unknown): Promise<{ ok: boolean }> {
-  const access = await checkToolAccess(REART_TOOL_SLUG);
-  if (!access || typeof jobId !== "string" || !isUuid(jobId)) return { ok: false };
-  const ok = await requestBackgroundStop(access.userId, jobId);
-  if (ok) revalidatePath(toolHref(REART_TOOL_SLUG));
-  return { ok };
 }

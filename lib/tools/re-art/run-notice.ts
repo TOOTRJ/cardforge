@@ -6,12 +6,13 @@
 // ---------------------------------------------------------------------------
 
 export type ReartBackgroundState = "running" | "paused" | "stopped" | "finished";
-export type ReartBackgroundReason = "expired" | "error" | "credits" | "capacity" | "stopped";
+export type ReartBackgroundReason = "expired" | "error" | "quota" | "credits" | "capacity" | "stopped";
 
 /** Why a run the server carried is not running any more, in words. */
 export const REART_BACKGROUND_REASON_COPY: Record<ReartBackgroundReason, string> = {
   expired: "the hour your sign-in lasts ran out",
   error: "the cards kept failing to start",
+  quota: "today's AI limit was reached",
   credits: "you ran out of credits",
   capacity: "you ran out of card slots",
   stopped: "you stopped it",

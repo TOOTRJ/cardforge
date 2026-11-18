@@ -186,7 +186,7 @@ export function describeNotification(
           deckTitle: str(payload.deckTitle),
           state: state === "finished" || state === "paused" || state === "stopped" ? state : "stopped",
           reason:
-            reason === "expired" || reason === "error" || reason === "credits" || reason === "capacity" || reason === "stopped"
+            reason === "expired" || reason === "error" || reason === "quota" || reason === "credits" || reason === "capacity" || reason === "stopped"
               ? reason
               : null,
           painted: num(payload.painted) ?? 0,

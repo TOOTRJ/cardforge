@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { describeNotification } from "@/lib/notifications/describe";
+import { REART_BACKGROUND_REASON_COPY } from "@/lib/tools/re-art/run-notice";
 
 // ---------------------------------------------------------------------------
 // Re-art deck — runs the server carries on after their page is closed
@@ -83,7 +84,10 @@ describe("0218 re-art deck: runs that go on without their page", () => {
 
   it("the states and the reasons are the ones the app writes and the bell words", () => {
     expect(code).toMatch(/check \(state in \('running', 'paused', 'stopped', 'finished'\)\)/);
-    expect(code).toMatch(/check \(reason is null or reason in \('expired', 'error', 'credits', 'capacity', 'stopped'\)\)/);
+    expect(code).toMatch(/check \(reason is null or reason in \('expired', 'error', 'quota', 'credits', 'capacity', 'stopped'\)\)/);
+    // …each with words of its own in the bell.
+    for (const reason of ["expired", "error", "quota", "credits", "capacity", "stopped"] as const) expect(REART_BACKGROUND_REASON_COPY[reason], reason).toBeTruthy();
+    expect(Object.keys(REART_BACKGROUND_REASON_COPY).sort()).toEqual(["capacity", "credits", "error", "expired", "quota", "stopped"]);
     expect(code).toMatch(/door_errors integer not null default 0 check \(door_errors between 0 and 1000\)/);
     expect(code).toMatch(/limited_keys text\[\] not null default '\{\}'/);
     // The driver's read is indexed: the runs being carried.
@@ -101,6 +105,28 @@ describe("0218 re-art deck: runs that go on without their page", () => {
     expect(code).toContain("revoke all on public.deck_reart_background_tokens from public, anon, authenticated;");
     expect(code).toContain("grant select, insert, update, delete on public.deck_reart_background_tokens to service_role;");
     expect(code).not.toMatch(/grant [^;]* on public\.deck_reart_background_tokens to (?!service_role)/);
+    // A token nobody ended is found by its own end (the clean-up's read).
+    expect(code).toMatch(/create index if not exists deck_reart_background_tokens_expiry_idx\s+on public\.deck_reart_background_tokens \(expires_at\)/);
+  });
+
+  it("its seed shows the bell's words on a preview — one row, no run and no token (a seeded run could only fail)", () => {
+    const name = readdirSync(join(process.cwd(), "supabase/seeds")).find((f) => /_re_art_background\.sql$/.test(f)) ?? "";
+    expect(name).not.toBe("");
+    const seed = readFileSync(join(process.cwd(), "supabase/seeds", name), "utf8")
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("--"))
+      .join("\n");
+    expect(seed).toMatch(/Refusing to seed dev data/);
+    expect(seed.match(/insert into public\.(\w+)/g)).toEqual(["insert into public.notifications"]);
+    expect(seed).toMatch(/'reart_run'/);
+    expect(seed).toMatch(/not exists \(/);
+    expect(seed).not.toMatch(/deck_reart_background/);
+    // The row reads as a finished run.
+    const words = describeNotification(
+      { type: "reart_run", actor: null, card: null, threadId: null, payload: { deckId: "b0000000-0000-4000-a000-0000000000d1", deckTitle: "Re-art sampler", state: "finished", reason: null, painted: 4, failed: 0, waiting: 0 } } as never,
+      { isAdmin: false },
+    );
+    expect(words.body).toBe("finished re-arting “Re-art sampler”: 4 cards painted.");
   });
 
   it("the job is the row owner's own Re-art run and the deck theirs — asked by a trigger, whoever writes", () => {

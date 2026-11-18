@@ -101,6 +101,13 @@ const WORKERS = 2;
 /** After asking, a driver gives the door this long to claim a card (it then
  *  shows as being painted) or to answer at once, before it looks again. */
 const ASK_SETTLE_MS = 3_000;
+/** …and counts the cards it asked for as being painted for this long, so a
+ *  door slow to start (a cold function) is not asked for the same cards
+ *  again. An ask that answers ends the wait. */
+const ASK_HOLD_MS = 10_000;
+/** A kept token is erased this long after its own end even when no driver
+ *  ended its run (a preview has no cron; a delete that failed). */
+const TOKEN_KEEP_PAST_END_MS = 5 * 60_000;
 /** claim_job_step's own rule: a claim older than this is dead. */
 const STEP_CLAIM_FRESH_MS = 5 * 60_000;
 /** …and the door is asked to take a dead claim back no more often than this. */
@@ -159,22 +166,80 @@ export async function sessionCookieHeader(accessToken: string): Promise<string |
 }
 
 /**
- * The step door the browser's runner calls, at this deployment's own
- * address. Never a host taken from a request on a deployed site (the header
- * is the caller's to write) — only a local dev server is reached by the
- * address it was called on.
+ * The addresses this deployment answers at, the likeliest first. Never a
+ * host taken from a request on a deployed site (the header is the caller's
+ * to write) — only a local dev server is reached by the address it was
+ * called on. Production has a second name for itself; it is NEVER tried
+ * from anywhere else: a preview's session must not be sent to production.
  */
-export function stepDoorUrl(requestUrl: string | null, jobId: string): string {
-  let origin = getSiteBaseUrl();
+export function doorOrigins(requestUrl: string | null): string[] {
   if (requestUrl) {
     try {
       const asked = new URL(requestUrl);
-      if (asked.hostname === "localhost" || asked.hostname === "127.0.0.1" || asked.hostname === "[::1]") origin = asked.origin;
+      if (asked.hostname === "localhost" || asked.hostname === "127.0.0.1" || asked.hostname === "[::1]") return [asked.origin];
     } catch {
       // Not an address: the site's own.
     }
   }
-  return `${origin}/api/ai/jobs/${jobId}/step`;
+  const named = (value: string | undefined): string | null => {
+    const host = value?.trim();
+    return host ? (/^https?:\/\//i.test(host) ? host : `https://${host}`).replace(/\/+$/, "") : null;
+  };
+  // A preview asks its OWN deployment and nothing it was configured with: a
+  // site URL set for previews could be the public site's, and a preview's
+  // session must never be sent there.
+  const origins =
+    process.env.VERCEL_ENV === "preview"
+      ? [named(process.env.VERCEL_BRANCH_URL), named(process.env.VERCEL_URL)]
+      : [getSiteBaseUrl(), process.env.VERCEL_ENV === "production" ? named(process.env.VERCEL_PROJECT_PRODUCTION_URL) : null];
+  return [...new Set(origins.filter((origin): origin is string => Boolean(origin)))];
+}
+
+/** The step door the browser's runner calls, at one of those addresses. */
+export const stepDoorUrl = (origin: string, jobId: string): string => `${origin}/api/ai/jobs/${jobId}/step`;
+
+/** `www.example.com` for `example.com` and back: the one redirect a site
+ *  makes to itself. */
+function sameSiteTwin(from: URL, to: URL): boolean {
+  return from.protocol === to.protocol && from.port === to.port && (to.hostname === `www.${from.hostname}` || from.hostname === `www.${to.hostname}`);
+}
+
+/**
+ * The address at which this deployment's own step door ANSWERS these
+ * headers — asked before a run is taken on, and by each driver before it
+ * asks for a card. A GET claims nothing: the door only takes POST and
+ * answers 405. Null: it can't be reached (a preview behind a wall with no
+ * bypass configured), and a hand-over is then refused at once, in the
+ * page's words, instead of pausing a minute later with a bell row.
+ *
+ * A site that sends its bare name to `www.` (or back) is followed that one
+ * step, by hand: a redirect followed by `fetch` would drop the cookie, and
+ * every card would then be refused as signed out.
+ */
+export async function reachableDoorOrigin(requestUrl: string | null, jobId: string, headers: Record<string, string>): Promise<string | null> {
+  for (const origin of doorOrigins(requestUrl)) {
+    let at = origin;
+    for (let step = 0; step < 2; step += 1) {
+      let response: Response;
+      try {
+        response = await fetch(stepDoorUrl(at, jobId), { method: "GET", headers, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(5_000) });
+      } catch {
+        break;
+      }
+      if (response.status === 405) return at;
+      const location = response.headers.get("location");
+      if (step > 0 || !location || ![301, 302, 307, 308].includes(response.status)) break;
+      try {
+        const from = new URL(at);
+        const to = new URL(location, at);
+        if (!sameSiteTwin(from, to)) break;
+        at = to.origin;
+      } catch {
+        break;
+      }
+    }
+  }
+  return null;
 }
 
 /** The headers of a request to the step door: the session cookie, and — on
@@ -204,7 +269,7 @@ const COLUMNS = "job_id, owner_id, deck_id, state, reason, driver, driven_until,
 const VIEW_COLUMNS = "job_id, state, reason, beat_at";
 
 const STATES: ReadonlyArray<string> = ["running", "paused", "stopped", "finished"];
-const REASONS: ReadonlyArray<string> = ["expired", "error", "credits", "capacity", "stopped"];
+const REASONS: ReadonlyArray<string> = ["expired", "error", "quota", "credits", "capacity", "stopped"];
 const viewOf = (row: Pick<Row, "job_id" | "state" | "reason" | "beat_at">): ReartBackground => ({
   jobId: row.job_id,
   state: (STATES.includes(row.state) ? row.state : "paused") as ReartBackgroundState,
@@ -274,7 +339,8 @@ async function finalize(
     const { data: deck } = await admin.from("decks").select("title").eq("id", row.deck_id).maybeSingle();
     const { error: noticeError } = await admin.from("notifications").insert({
       recipient_id: row.owner_id,
-      actor_id: row.owner_id,
+      // A system row, as the other ones the platform writes: nobody "did" it.
+      actor_id: null,
       type: "reart_run",
       payload: { jobId: row.job_id, deckId: row.deck_id, deckTitle: deck?.title ?? null, state, reason, ...counts },
     });
@@ -292,25 +358,22 @@ async function finalize(
   return true;
 }
 
-/**
- * Whether this deployment can reach its own step door with these headers —
- * asked BEFORE a run is taken on, so a hand-over that could carry nothing
- * (a preview behind a wall with no bypass configured) is refused at once,
- * in the page's words, instead of pausing a minute later with a bell row.
- * A GET claims nothing: the door only takes POST and answers 405.
- */
-async function doorReachable(url: string, headers: Record<string, string>): Promise<boolean> {
-  try {
-    const response = await fetch(url, { method: "GET", headers, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(8_000) });
-    return response.status === 405;
-  } catch {
-    return false;
-  }
-}
-
 export type HandOver =
-  | { ok: true; state: "started" | "already"; headers: Record<string, string> }
-  | { ok: false; reason: "unavailable" | "no_session" | "unreachable" | "not_saved" };
+  | { ok: true; state: "started" | "already"; headers: Record<string, string>; origin: string }
+  | { ok: false; reason: "unavailable" | "no_session" | "unreachable" | "not_saved" | "stopped" };
+
+/** Kept tokens that outlived their own end without a driver ending their
+ *  run (a preview has no cron; a delete that failed) are erased. A sealed
+ *  token past its end opens nothing useful: this is tidiness, and it runs
+ *  wherever something else of this feature runs. */
+export async function eraseExpiredTokens(now: number = Date.now()): Promise<void> {
+  if (!isAdminConfigured()) return;
+  const { error } = await createAdminClient()
+    .from("deck_reart_background_tokens")
+    .delete()
+    .lt("expires_at", new Date(now - TOKEN_KEEP_PAST_END_MS).toISOString());
+  if (error && !missingTable(error)) console.error(`[re-art] expired background tokens not erased: ${error.message}`);
+}
 
 /**
  * Hands a run to the server: the lease row is made (or put back to
@@ -319,6 +382,13 @@ export type HandOver =
  * is carrying right now is "already" (its token is replaced by this fresher
  * one all the same). The caller has checked that the job is the caller's
  * own running Re-art run; `steps` are that job's.
+ *
+ * `first`: the hand-over a run makes as it STARTS. It is refused on a run
+ * the maker has already stopped — a Stop pressed in the run's first second
+ * reaches the server before this does (requestBackgroundStop leaves a
+ * stopped row for exactly this), and must not be undone by it. Continue's
+ * hand-over (not `first`) takes a stopped run up again: that is the maker
+ * asking for it.
  */
 export async function startBackground(input: {
   userId: string;
@@ -327,6 +397,7 @@ export async function startBackground(input: {
   accessToken: string;
   steps: ReadonlyArray<LimitStep>;
   requestUrl: string | null;
+  first?: boolean;
 }): Promise<HandOver> {
   if (!isAdminConfigured()) return { ok: false, reason: "unavailable" };
   if (tokenSecondsLeft(input.accessToken) < MIN_TOKEN_S) return { ok: false, reason: "no_session" };
@@ -335,9 +406,11 @@ export async function startBackground(input: {
   const cookie = await sessionCookieHeader(input.accessToken);
   if (!cookie) return { ok: false, reason: "no_session" };
   const headers = doorHeaders(cookie);
-  if (!(await doorReachable(stepDoorUrl(input.requestUrl, input.jobId), headers))) return { ok: false, reason: "unreachable" };
+  const origin = await reachableDoorOrigin(input.requestUrl, input.jobId, headers);
+  if (!origin) return { ok: false, reason: "unreachable" };
 
   const admin = createAdminClient();
+  await eraseExpiredTokens();
   const refused = (error: { code?: string; message: string }): HandOver => {
     console.error(`[re-art] background run ${input.jobId} not started: ${error.code ?? ""} ${error.message}`);
     return { ok: false, reason: missingTable(error) ? "unavailable" : "not_saved" };
@@ -349,6 +422,7 @@ export async function startBackground(input: {
     .eq("owner_id", input.userId)
     .maybeSingle();
   if (readError) return refused(readError);
+  if (input.first && existing?.state === "stopped") return { ok: false, reason: "stopped" };
   const alive = Boolean(existing && existing.state === "running" && Date.now() - Date.parse(existing.beat_at) < REART_BACKGROUND_STALE_MS);
   const now = new Date().toISOString();
   const running = { state: "running", reason: null, door_errors: 0, limited_keys: limitedKeysOf(input.steps), finished_at: null, beat_at: now };
@@ -368,7 +442,9 @@ export async function startBackground(input: {
     { onConflict: "job_id" },
   );
   if (tokenError) {
-    // Nothing to carry it with: the run is the page's alone, as it always was.
+    // Nothing to carry it with: the run is the page's alone, as it always
+    // was — and an older token kept for it is not left behind.
+    await admin.from("deck_reart_background_tokens").delete().eq("job_id", input.jobId);
     await admin
       .from("deck_reart_background")
       .update({ state: "paused", reason: "error", finished_at: new Date().toISOString() })
@@ -377,7 +453,7 @@ export async function startBackground(input: {
       .eq("state", "running");
     return refused(tokenError);
   }
-  return { ok: true, state: alive ? "already" : "started", headers };
+  return { ok: true, state: alive ? "already" : "started", headers, origin };
 }
 
 /** What one driver did. */
@@ -385,9 +461,10 @@ export type DriveResult = { runs: number; asked: number; ended: number };
 
 /** What a driver remembers of a run while it works (nothing outlives it). */
 type Mem = {
-  /** The token it sends, and the headers made of it. */
+  /** The token it sends, the headers made of it, and where the door answers. */
   token: string | null;
   headers: Record<string, string> | null;
+  origin: string | null;
   /** The AI's per-minute limit: not asked again before this. */
   waitUntil: number;
   /** …or its daily one. */
@@ -399,6 +476,9 @@ type Mem = {
   quotaHeld: boolean;
   /** When the door was last asked to take back a dead claim. */
   staleAsked: number;
+  /** The cards it counts as being painted since its last asks, and until
+   *  when (a door slow to start has not claimed them yet). */
+  hold: { level: number; until: number } | null;
   open: Set<AbortController>;
 };
 
@@ -417,7 +497,7 @@ export async function driveBackgroundRuns(input: {
   forMs: number;
   requestUrl: string | null;
   only?: string;
-  preset?: { jobId: string; accessToken: string; headers: Record<string, string> };
+  preset?: { jobId: string; accessToken: string; headers: Record<string, string>; origin: string };
 }): Promise<DriveResult> {
   if (!isAdminConfigured()) return { runs: 0, asked: 0, ended: 0 };
   const admin = createAdminClient();
@@ -433,7 +513,19 @@ export async function driveBackgroundRuns(input: {
     let mem = mems.get(jobId);
     if (!mem) {
       const given = input.preset?.jobId === jobId ? input.preset : null;
-      mem = { token: given?.accessToken ?? null, headers: given?.headers ?? null, waitUntil: 0, longWait: false, refused: 0, answered: false, quotaHeld: false, staleAsked: 0, open: new Set() };
+      mem = {
+        token: given?.accessToken ?? null,
+        headers: given?.headers ?? null,
+        origin: given?.origin ?? null,
+        waitUntil: 0,
+        longWait: false,
+        refused: 0,
+        answered: false,
+        quotaHeld: false,
+        staleAsked: 0,
+        hold: null,
+        open: new Set(),
+      };
       mems.set(jobId, mem);
     }
     return mem;
@@ -441,12 +533,12 @@ export async function driveBackgroundRuns(input: {
 
   /** One request to the step door, as the browser's runner makes it: no
    *  step is named, so it claims the next card that is waiting. */
-  const ask = async (run: Row, mem: Mem, headers: Record<string, string>): Promise<void> => {
+  const ask = async (run: Row, mem: Mem, origin: string, headers: Record<string, string>, hold: NonNullable<Mem["hold"]>): Promise<void> => {
     const controller = new AbortController();
     mem.open.add(controller);
     asked += 1;
     try {
-      const response = await fetch(stepDoorUrl(input.requestUrl, run.job_id), {
+      const response = await fetch(stepDoorUrl(origin, run.job_id), {
         method: "POST",
         headers,
         body: "{}",
@@ -454,13 +546,15 @@ export async function driveBackgroundRuns(input: {
         redirect: "manual",
         signal: controller.signal,
       });
-      if (response.status === 429) {
+      const body = (await response.json().catch(() => null)) as { ok?: unknown; error?: unknown } | null;
+      // The door's OWN "slow down" (the AI's limits; lib/api/responses.ts) —
+      // a 429 from anything in front of it is a refusal like any other.
+      if (response.status === 429 && body?.ok === false && typeof body.error === "string") {
         const seconds = Math.max(1, Number(response.headers.get("Retry-After")) || 20);
         if (seconds >= LONG_WAIT_S) mem.longWait = true;
         else mem.waitUntil = Date.now() + Math.min(seconds, 60) * 1000;
         return;
       }
-      const body = (await response.json().catch(() => null)) as { ok?: unknown } | null;
       if (response.status === 200 && body?.ok === true) mem.answered = true;
       else mem.refused += 1;
     } catch {
@@ -468,15 +562,29 @@ export async function driveBackgroundRuns(input: {
       if (!closing) mem.refused += 1;
     } finally {
       mem.open.delete(controller);
+      // It answered (or was let go): it is no longer a card the door has
+      // yet to claim. The OTHER asks of its batch still are.
+      hold.level -= 1;
     }
   };
 
-  /** One look at one run. False: another driver holds it. */
-  const tick = async (row: Row): Promise<boolean> => {
+  /** The kept token of a run, opened — null: none is kept (it was erased
+   *  past its end), undefined: it couldn't be read just now. */
+  const keptToken = async (jobId: string): Promise<{ token: string | null } | null | undefined> => {
+    const { data, error } = await admin.from("deck_reart_background_tokens").select("sealed").eq("job_id", jobId).maybeSingle();
+    if (error) return undefined;
+    return data ? { token: openToken(data.sealed, jobId) } : null;
+  };
+
+  /**
+   * One look at one run. "busy": another driver holds it; "again": the
+   * look couldn't be made (a write or a read failed) and is made again.
+   */
+  const tick = async (row: Row): Promise<"worked" | "busy" | "again"> => {
     const now = Date.now();
     // The lease: this driver's already, or nobody's (never held, or let lapse).
     const free = row.driver === driver || !row.driver || !row.driven_until || Date.parse(row.driven_until) < now;
-    if (!free) return false;
+    if (!free) return "busy";
     let claim = admin
       .from("deck_reart_background")
       .update({ driver, driven_until: new Date(now + LEASE_MS).toISOString(), beat_at: new Date(now).toISOString() })
@@ -486,20 +594,22 @@ export async function driveBackgroundRuns(input: {
     claim = row.driver ? claim.eq("driver", row.driver) : claim.is("driver", null);
     claim = row.driven_until ? claim.eq("driven_until", row.driven_until) : claim.is("driven_until", null);
     const { data: held, error: claimError } = await claim.select(COLUMNS);
-    if (claimError || !held || held.length === 0) return false;
+    if (claimError) return "again";
+    // Taken by another driver this instant, or ended (the maker's Stop).
+    if (!held || held.length === 0) return "busy";
     const run = held[0] as Row;
     seen.add(run.job_id);
     const mem = memOf(run.job_id);
 
     const { data: job, error: jobError } = await admin.from("ai_generation_jobs").select("steps, status").eq("id", run.job_id).maybeSingle();
     // A read that failed is not "nothing left": looked at again shortly.
-    if (jobError) return true;
+    if (jobError) return "again";
     const steps = (Array.isArray(job?.steps) ? job.steps : []) as unknown as JobStep[];
     const counts = countsOf(steps);
     const end = async (state: Exclude<ReartBackgroundState, "running">, reason: ReartBackgroundReason | null) => {
       for (const controller of mem.open) controller.abort();
       if (await finalize(run, state, reason, counts)) ended += 1;
-      return true;
+      return "worked" as const;
     };
 
     if (job && counts.waiting === 0) return end("finished", null);
@@ -512,7 +622,7 @@ export async function driveBackgroundRuns(input: {
     if (limited) return end("stopped", limited.error_code === "INSUFFICIENT_CREDITS" ? "credits" : "capacity");
 
     // What the door answered since the last look.
-    if (mem.longWait) return end("paused", "error");
+    if (mem.longWait) return end("paused", "quota");
     if (mem.answered || mem.refused > 0) {
       const doorErrors = mem.answered ? 0 : run.door_errors + mem.refused;
       mem.answered = false;
@@ -527,50 +637,78 @@ export async function driveBackgroundRuns(input: {
 
     // The sign-in it borrows: kept sealed beside the run.
     if (!mem.token) {
-      const { data: kept, error: keptError } = await admin.from("deck_reart_background_tokens").select("sealed").eq("job_id", run.job_id).maybeSingle();
-      if (keptError) return true;
-      mem.token = kept ? openToken(kept.sealed, run.job_id) : null;
-      if (!mem.token) return end("paused", "error");
+      const kept = await keptToken(run.job_id);
+      if (kept === undefined) return "again";
+      // None kept: it was erased past its own end.
+      if (kept === null) return end("paused", "expired");
+      // Kept, and it doesn't open (the server's secret changed).
+      if (!kept.token) return end("paused", "error");
+      mem.token = kept.token;
     }
     // A step's last writes must land while the token lives.
-    if (tokenSecondsLeft(mem.token) < TOKEN_MARGIN_S) return end("paused", "expired");
+    if (tokenSecondsLeft(mem.token) < TOKEN_MARGIN_S) {
+      // …unless a fresher one was kept since this driver read it (the
+      // maker pressed Continue): that is the run's token now.
+      const kept = await keptToken(run.job_id);
+      if (kept === undefined) return "again";
+      const fresher = kept?.token && kept.token !== mem.token && tokenSecondsLeft(kept.token) >= TOKEN_MARGIN_S ? kept.token : null;
+      if (!fresher) return end("paused", "expired");
+      mem.token = fresher;
+      mem.headers = null;
+    }
     if (!mem.headers) {
       // A token the sign-in service refuses now: the maker signed out.
       const cookie = await sessionCookieHeader(mem.token);
       if (!cookie) return end("paused", "error");
       mem.headers = doorHeaders(cookie);
     }
-    if (now < mem.waitUntil) return true;
+    if (!mem.origin) {
+      mem.origin = await reachableDoorOrigin(input.requestUrl, run.job_id, mem.headers);
+      // The door can't be reached just now: a refusal like any other.
+      if (!mem.origin) {
+        mem.refused += 1;
+        return "worked";
+      }
+    }
+    if (now < mem.waitUntil) return "worked";
 
     // Ask for a card wherever fewer than two are being painted — by this
     // driver, another one's last asks, or the page.
     const fresh = (step: JobStep) => typeof step.claimed_at !== "string" || now - Date.parse(step.claimed_at) < STEP_CLAIM_FRESH_MS;
     const pending = steps.filter((step) => step.status === "pending");
-    const painting = steps.filter((step) => step.status === "running" && fresh(step)).length;
+    const painting = Math.max(
+      steps.filter((step) => step.status === "running" && fresh(step)).length,
+      // The cards just asked for, until the door has claimed them.
+      mem.hold && now < mem.hold.until ? mem.hold.level : 0,
+    );
     // A claim that went stale (its request died) is the door's to take
     // back: one ask finds it (and it is not asked over and over).
     const stale = steps.some((step) => step.status === "running" && !fresh(step)) && now - mem.staleAsked >= STALE_ASK_EVERY_MS;
     const want = Math.min(pending.length + (stale ? 1 : 0), Math.max(0, WORKERS - painting));
-    if (want === 0) return true;
-    if (stale) mem.staleAsked = now;
-    // Every waiting card was put back in line by a quota (it says how
-    // long): given that long once, then asked again.
+    if (want === 0) return "worked";
+    // Cards a quota put back in line (they say how long) are given that
+    // long once, then asked for again — never re-asked at every look.
     const quota = pending.filter((step) => step.error_code === "RATE_LIMITED").map((step) => Math.max(1, step.retry_after_seconds ?? 20));
-    if (!stale && quota.length === pending.length && !mem.quotaHeld) {
+    if (!stale && quota.length > 0 && !mem.quotaHeld) {
       mem.quotaHeld = true;
       mem.waitUntil = now + Math.min(Math.min(...quota), 20) * 1000;
-      return true;
+      return "worked";
     }
     mem.quotaHeld = false;
-    const headers = mem.headers;
-    const asks = Array.from({ length: want }, () => ask(run, mem, headers));
+    if (stale) mem.staleAsked = now;
+    const hold = { level: Math.min(WORKERS, painting + want), until: now + ASK_HOLD_MS };
+    mem.hold = hold;
+    const { headers, origin } = mem;
+    const asks = Array.from({ length: want }, () => ask(run, mem, origin, headers, hold));
     // Each either claims a card (it then shows as being painted) or answers
     // at once (nothing to claim, a limit, a refusal): seen at the next look.
     await Promise.race([Promise.all(asks), sleep(ASK_SETTLE_MS)]);
-    return true;
+    return "worked";
   };
 
   try {
+    // Kept tokens nobody ended (no cron on a preview, a failed delete).
+    if (!input.only) await eraseExpiredTokens();
     for (;;) {
       let query = admin.from("deck_reart_background").select(COLUMNS).eq("state", "running");
       if (input.only) query = query.eq("job_id", input.only);
@@ -582,10 +720,19 @@ export async function driveBackgroundRuns(input: {
       const rows = (data ?? []) as Row[];
       // Nothing is being carried: done (the cron's every-minute call ends here).
       if (rows.length === 0) break;
+      // A run that ended (or was stopped, and may be handed over again with
+      // another token) is forgotten: nothing of it is carried over.
+      // (Only when the list is whole: past MAX_RUNS a run that is not
+      // listed this time may simply be waiting its turn.)
+      for (const [jobId, mem] of rows.length < MAX_RUNS ? mems : []) {
+        if (rows.some((row) => row.job_id === jobId)) continue;
+        for (const controller of mem.open) controller.abort();
+        mems.delete(jobId);
+      }
       const lookedAt = Date.now();
-      const worked = await Promise.all(rows.map((row) => tick(row).catch(() => true)));
+      const looks = await Promise.all(rows.map((row) => tick(row).catch(() => "again" as const)));
       // The hand-over's driver, with another driver on its run already: that one carries it.
-      if (input.only && worked.every((held) => !held)) break;
+      if (input.only && looks.every((look) => look === "busy")) break;
       if (Date.now() - startedAt + TICK_MS >= input.forMs) break;
       await sleep(Math.max(500, TICK_MS - (Date.now() - lookedAt)));
     }
@@ -607,6 +754,12 @@ export async function driveBackgroundRuns(input: {
  * asks for another card (a driver takes a run only while it says
  * "running"), and the kept token is erased. The cards being painted
  * finish. No bell row: they pressed it. False when it couldn't be written.
+ *
+ * A Stop can arrive BEFORE the run's hand-over (pressed in its first
+ * second): where the caller's own running Re-art job has no row yet, a
+ * stopped one is written, and the hand-over that follows is refused on it
+ * (startBackground `first`) — the server never starts carrying a run its
+ * maker has already stopped, whether or not the page is still there.
  */
 export async function requestBackgroundStop(userId: string, jobId: string): Promise<boolean> {
   if (!isAdminConfigured()) return false;
@@ -627,6 +780,41 @@ export async function requestBackgroundStop(userId: string, jobId: string): Prom
   if (data && data.length > 0) {
     const { error: tokenError } = await admin.from("deck_reart_background_tokens").delete().eq("job_id", jobId);
     if (tokenError) console.error(`[re-art] background run ${jobId}: its kept token was not erased: ${tokenError.message}`);
+    return true;
+  }
+  // Nothing was running. If the run has no row at all, its hand-over may
+  // still be on its way: leave the Stop where that hand-over will find it.
+  const { data: job, error: jobError } = await admin
+    .from("ai_generation_jobs")
+    .select("request, status")
+    .eq("id", jobId)
+    .eq("owner_id", userId)
+    .eq("kind", "deck_reart")
+    .maybeSingle();
+  if (jobError) return false;
+  const deckId = (job?.request as { deck_id?: unknown } | null)?.deck_id;
+  // Not the caller's run, or a run that is over: nothing to stop.
+  if (!job || job.status !== "generating" || typeof deckId !== "string") return true;
+  const { error: markError } = await admin
+    .from("deck_reart_background")
+    .insert({ job_id: jobId, owner_id: userId, deck_id: deckId, state: "stopped", reason: "stopped", finished_at: now });
+  // A row is there already (it ended some other way, or the hand-over won
+  // the race and this Stop's update above came a moment too soon): one more
+  // try at the running row settles it.
+  if (markError?.code === "23505") {
+    const { error: again } = await admin
+      .from("deck_reart_background")
+      .update({ state: "stopped", reason: "stopped", finished_at: now, driver: null, driven_until: null })
+      .eq("job_id", jobId)
+      .eq("owner_id", userId)
+      .eq("state", "running");
+    if (again) return false;
+    await admin.from("deck_reart_background_tokens").delete().eq("job_id", jobId);
+    return true;
+  }
+  if (markError) {
+    console.error(`[re-art] background run ${jobId}: stop not recorded: ${markError.message}`);
+    return false;
   }
   return true;
 }

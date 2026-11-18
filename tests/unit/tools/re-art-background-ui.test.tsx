@@ -17,7 +17,10 @@ import type { ReartBackground, ReartRunInput, ReartStudioEntry } from "@/lib/too
 //     while the server carries it the page says it can be closed and stops
 //     warning about leaving; a refused hand-over is said, and the run is the
 //     page's alone as it always was;
-//   * Stop means stop: the server's part ends too;
+//   * Stop means stop: the server's part ends too — asked by a plain
+//     request the browser sends even if the tab closes, the leave warning
+//     kept until the server answers, and a Stop that didn't land SAID, with
+//     a way to ask again;
 //   * a page opened on a run the server is carrying shows it going on at
 //     once — never as a paused run to "continue"; one the server is no
 //     longer carrying (the hour ran out, nobody has looked at it lately) is
@@ -76,10 +79,9 @@ vi.mock("@/lib/tools/re-art/actions", () => ({
   restoreReartArtAction: vi.fn(),
   planReartAction: h.plan,
 }));
-vi.mock("@/lib/tools/re-art/background-actions", () => ({
-  handReartRunToServerAction: h.hand,
-  stopReartBackgroundAction: h.stopServer,
-}));
+vi.mock("@/lib/tools/re-art/background-actions", () => ({ handReartRunToServerAction: h.hand }));
+// Stop is a plain request (keepalive), never a server action.
+vi.mock("@/lib/tools/re-art/background-client", () => ({ requestReartBackgroundStop: h.stopServer }));
 vi.mock("@/components/tools/bulk-customize/use-bulk-runner", () => ({
   useBulkRunner: (job: GenerationJobView | null) =>
     job
@@ -151,6 +153,7 @@ import {
   REART_BACKGROUND_LABEL,
   REART_BACKGROUND_ON_COPY,
   REART_BACKGROUND_STALE_MS,
+  REART_BACKGROUND_STOP_FAILED,
   REART_BACKGROUND_UNAVAILABLE,
 } from "@/lib/tools/re-art/model";
 
@@ -249,7 +252,7 @@ beforeEach(() => {
   h.leave.active = false;
   h.realConfirm = false;
   h.hand.mockResolvedValue({ ok: true, state: "started" });
-  h.stopServer.mockResolvedValue({ ok: true });
+  h.stopServer.mockResolvedValue(true);
   vi.stubGlobal("requestAnimationFrame", (run: () => void) => {
     run();
     return 0;
@@ -354,7 +357,8 @@ describe("which runs offer it", () => {
 describe("a run started with the box ticked", () => {
   it("is handed to the server at once; the page then says it can be closed, and stops warning about leaving", async () => {
     await startDeckRun();
-    expect(h.hand.mock.calls).toEqual([[JOB]]);
+    // The run's FIRST hand-over (the server refuses it on a run already stopped).
+    expect(h.hand.mock.calls).toEqual([[JOB, true]]);
     expect(banner()).toBeTruthy();
     expect(banner()!.getAttribute("role")).toBe("status");
     expect(h.leave.active).toBe(false);
@@ -418,18 +422,81 @@ describe("Stop, and trying again", () => {
     expect(h.track.mock.calls.find((call) => call[1] === "stop")![2]).toEqual({ painted: 0, failed: 0, waiting: 3, carried: true });
   });
 
+  it("until the server has ANSWERED the Stop the page keeps warning about leaving — and reads the run again once it has", async () => {
+    let answer: (ok: boolean) => void = () => undefined;
+    h.stopServer.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const view = await startDeckRun();
+    await press("panel stop");
+    // The page's own part is over (paused), the server's not yet known to be.
+    h.runner = runnerOf([step(0, "done"), step(1), step(2)], { running: false, paused: true, runsEnded: 1 });
+    act(() => view.rerender(studio()));
+    expect(h.leave.active).toBe(true);
+    h.refresh.mockClear();
+    await act(async () => answer(true));
+    expect(h.leave.active).toBe(false);
+    expect(h.refresh).toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("a Stop the server did not acknowledge is SAID — it may still be painting — with a way to ask again", async () => {
+    h.stopServer.mockResolvedValue(false);
+    const view = await startDeckRun();
+    await press("panel stop");
+    h.runner = runnerOf([step(0, "done"), step(1), step(2)], { running: false, paused: true, runsEnded: 1 });
+    act(() => view.rerender(studio()));
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain(REART_BACKGROUND_STOP_FAILED);
+    // Asked again, and it lands: the alert goes — and the focus, whose
+    // button went with it, is handed to the run's heading.
+    h.stopServer.mockResolvedValue(true);
+    await press("Stop it");
+    expect(h.stopServer.mock.calls).toEqual([[JOB], [JOB]]);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "The run is paused" }));
+  });
+
   it("Stop pressed while the hand-over is still on its way: the server's part is taken back when the answer arrives — it never paints on after a Stop", async () => {
     let answer: (value: { ok: true; state: "started" }) => void = () => undefined;
     h.hand.mockReturnValue(new Promise((resolve) => (answer = resolve)));
-    await startDeckRun();
+    const view = await startDeckRun();
     await press("panel stop");
     // Asked at once (there may be a server part)…
     expect(h.stopServer.mock.calls).toEqual([[JOB]]);
+    // …and although that Stop was answered, it is not OVER while the
+    // hand-over is still on its way: the page goes on warning about leaving.
+    h.runner = runnerOf([step(0, "done"), step(1), step(2)], { running: false, paused: true, runsEnded: 1 });
+    act(() => view.rerender(studio()));
+    expect(h.leave.active).toBe(true);
     await act(async () => answer({ ok: true, state: "started" }));
-    // …and again once the hand-over had landed after all.
+    // The hand-over had landed after all: taken back.
     expect(h.stopServer.mock.calls).toEqual([[JOB], [JOB]]);
     expect(banner()).toBeNull();
+    expect(h.leave.active).toBe(false);
+    expect(h.toastError).not.toHaveBeenCalled();
+  });
+
+  it("…and when the server refused that late hand-over (it found the Stop), the Stop is simply over: no second request, no error", async () => {
+    let answer: (value: { ok: false; error: string }) => void = () => undefined;
+    h.hand.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const view = await startDeckRun();
+    await press("panel stop");
+    h.runner = runnerOf([step(0, "done"), step(1), step(2)], { running: false, paused: true, runsEnded: 1 });
+    act(() => view.rerender(studio()));
     expect(h.leave.active).toBe(true);
+    await act(async () => answer({ ok: false, error: REART_BACKGROUND_UNAVAILABLE }));
+    expect(h.stopServer.mock.calls).toEqual([[JOB]]);
+    expect(h.leave.active).toBe(false);
+    expect(h.toastError).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("…and a hand-over that never answered is stopped once more, to be sure", async () => {
+    let fail: (reason: Error) => void = () => undefined;
+    h.hand.mockReturnValue(new Promise((_resolve, reject) => (fail = reject)));
+    await startDeckRun();
+    await press("panel stop");
+    await act(async () => fail(new Error("network")));
+    expect(h.stopServer.mock.calls).toEqual([[JOB], [JOB]]);
     expect(h.toastError).not.toHaveBeenCalled();
   });
 
@@ -458,14 +525,20 @@ describe("Stop, and trying again", () => {
     expect(h.track.mock.calls.find((call) => call[1] === "stop")![2]).toEqual({ painted: 0, failed: 0, waiting: 3, carried: false });
   });
 
-  it("trying FAILED cards again is the page's own: a finished run is not handed over again (the server asks for waiting cards only)", async () => {
+  it("trying FAILED cards again is the page's own: a finished run is not handed over again (the server asks for waiting cards only) — and the page does NOT say it can be closed while it retries", async () => {
     const view = await startDeckRun();
+    expect(banner()).toBeTruthy();
     h.runner = runnerOf([step(0, "done"), step(1, "failed"), step(2, "done")], { running: false, runsEnded: 1 });
     act(() => view.rerender(studio()));
     h.hand.mockClear();
     await press("panel again");
     expect(h.retry).toHaveBeenCalledTimes(1);
     expect(h.hand).not.toHaveBeenCalled();
+    // The retry is under way: closing the page would stop it.
+    h.runner = runnerOf([step(0, "done"), step(1, "running"), step(2, "done")], { running: true, runsEnded: 1 });
+    act(() => view.rerender(studio()));
+    expect(banner()).toBeNull();
+    expect(h.leave.active).toBe(true);
   });
 
   it("continuing a run that was handed over hands it over again; one that never was is not", async () => {
@@ -476,7 +549,8 @@ describe("Stop, and trying again", () => {
     h.hand.mockClear();
     await press("panel again");
     expect(h.retry).toHaveBeenCalledTimes(1);
-    expect(h.hand.mock.calls).toEqual([[JOB]]);
+    // Continue's hand-over: the maker asking for it (not a first one).
+    expect(h.hand.mock.calls).toEqual([[JOB, false]]);
     cleanup();
     h.hand.mockClear();
     h.retry.mockClear();
@@ -535,7 +609,7 @@ describe("coming back to the page", () => {
     await press("Continue it");
     expect(screen.getByText("panel stop")).toBeTruthy();
     expect(h.track.mock.calls.filter((call) => call[1] === "continue").map((call) => call[2])).toEqual([{ earlier_visit: true }]);
-    expect(h.hand.mock.calls).toEqual([[JOB]]);
+    expect(h.hand.mock.calls).toEqual([[JOB, false]]);
   });
 
   it("a row that says running but has been quiet too long is a broken chain: not attached to", async () => {

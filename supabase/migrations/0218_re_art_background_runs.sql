@@ -32,8 +32,10 @@
 -- deck_reart_background_tokens — the borrowed access token, ENCRYPTED by
 -- the app (AES-256-GCM under a key derived from the server's own secret,
 -- lib/tools/re-art/token-seal.ts), for as long as the run is carried and no
--- longer: erased when the server's part ends. No API role reads or writes
--- it — no policy, no grant.
+-- longer: erased when the server's part ends, and — where no driver came
+-- back to end it — a few minutes past the token's own end (`expires_at`,
+-- by the next driver or hand-over). No API role reads or writes it — no
+-- policy, no grant.
 --
 -- notifications gains the kind `reart_run`: the bell's row when such a run
 -- finished, stopped or paused. The list is rewritten WHOLE from 0183's, the
@@ -49,10 +51,10 @@ create table if not exists public.deck_reart_background (
   state text not null default 'running'
     check (state in ('running', 'paused', 'stopped', 'finished')),
   -- Why it is not running: the sign-in it borrowed ran out; the step door
-  -- kept refusing; the maker's credits or card slots ran out; the maker
-  -- pressed Stop (or closed the run).
+  -- kept refusing; the day's AI limit was reached; the maker's credits or
+  -- card slots ran out; the maker pressed Stop (or closed the run).
   reason text
-    check (reason is null or reason in ('expired', 'error', 'credits', 'capacity', 'stopped')),
+    check (reason is null or reason in ('expired', 'error', 'quota', 'credits', 'capacity', 'stopped')),
   -- The driver working it now, and until when it holds it (renewed as it works).
   driver uuid,
   driven_until timestamptz,
@@ -121,6 +123,10 @@ create table if not exists public.deck_reart_background_tokens (
   sealed text not null check (char_length(sealed) between 40 and 8000),
   expires_at timestamptz not null
 );
+
+-- The clean-up's read: tokens past their own end.
+create index if not exists deck_reart_background_tokens_expiry_idx
+  on public.deck_reart_background_tokens (expires_at);
 
 comment on table public.deck_reart_background_tokens is
   'Re-art deck beta tool (0218): the ACCESS token a carried run borrows, encrypted by the app (never a refresh token), kept only while the run is carried. No API role reads or writes it.';

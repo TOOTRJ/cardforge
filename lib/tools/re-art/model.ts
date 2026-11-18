@@ -1409,6 +1409,8 @@ export const REART_BACKGROUND_HELP =
   "The run goes on without this page for up to about an hour, on the sign-in you have now. If that runs out first, it pauses and continues when you open this page again. You are told in the bell when it ends.";
 /** Above a run the server is carrying. */
 export const REART_BACKGROUND_ON_COPY = "You can close this page: the run goes on for up to about an hour from when it started, and the bell tells you when it ends.";
+/** Stop didn't reach the server: said, with a way to ask again. */
+export const REART_BACKGROUND_STOP_FAILED = "Stop didn't reach the server, so it may still be painting this run without the page.";
 /** The hand-over didn't happen: the run is the page's alone, as before. */
 export const REART_BACKGROUND_UNAVAILABLE = "This run couldn't be handed to the server, so it paints while this page stays open.";
 

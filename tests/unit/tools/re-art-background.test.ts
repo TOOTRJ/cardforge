@@ -46,7 +46,7 @@ const db = vi.hoisted(() => ({
   rows: [] as Rec[],
   tokens: [] as Rec[],
   notices: [] as Rec[],
-  jobs: new Map<string, { steps: Step[]; status: string }>(),
+  jobs: new Map<string, { steps: Step[]; status: string; owner?: string; kind?: string }>(),
   fail: [] as Array<{ table: string; op: string; error: { message: string; code?: string } }>,
   reads: [] as string[],
 }));
@@ -72,8 +72,11 @@ function fakeClient() {
         if (q.op === "select") db.reads.push(table);
         if (table === "decks") return { data: [{ title: "Embers of the Fen" }], error: null };
         if (table === "ai_generation_jobs") {
-          const job = db.jobs.get(q.filters.find(([column]) => column === "id")?.[2] as string);
-          return { data: job ? [{ steps: job.steps.map((step) => ({ ...step })), status: job.status }] : [], error: null };
+          const asked = (column: string) => q.filters.find(([name]) => name === column)?.[2];
+          const job = db.jobs.get(asked("id") as string);
+          // The job's own owner and kind (the maker's deck_reart run unless a test says otherwise).
+          const mine = job && (asked("owner_id") === undefined || asked("owner_id") === (job.owner ?? "11111111-1111-4111-8111-111111111111")) && (asked("kind") === undefined || asked("kind") === (job.kind ?? "deck_reart"));
+          return { data: job && mine ? [{ steps: job.steps.map((step) => ({ ...step })), status: job.status, request: { deck_id: "33333333-3333-4333-8333-333333333333" } }] : [], error: null };
         }
         const rows = tableOf(table);
         if (!rows) return { data: [], error: null };
@@ -141,7 +144,7 @@ vi.mock("@supabase/ssr", () => ({
     auth: {
       setSession: async (session: { access_token: string; refresh_token: string }) => {
         const answer = await m.setSession(session);
-        if (answer?.ok) options.cookies.setAll([{ name: "sb-abcdefgh-auth-token", value: `base64-${session.access_token.slice(0, 12)}` }]);
+        if (answer?.ok) options.cookies.setAll([{ name: "sb-abcdefgh-auth-token", value: `base64-${session.access_token.slice(0, 40)}` }]);
         return answer?.ok ? { data: { session: { access_token: session.access_token } }, error: null } : { data: { session: null }, error: { message: "bad jwt" } };
       },
     },
@@ -155,9 +158,12 @@ import {
   KICK_MS,
   SWEEP_MS,
   countsOf,
+  doorOrigins,
   driveBackgroundRuns,
+  eraseExpiredTokens,
   kickMs,
   limitedKeysOf,
+  reachableDoorOrigin,
   readBackgrounds,
   requestBackgroundStop,
   sessionCookieHeader,
@@ -174,11 +180,12 @@ const JOB2 = "55555555-5555-4555-8555-555555555555";
 const DECK = "33333333-3333-4333-8333-333333333333";
 const OTHER_DRIVER = "99999999-9999-4999-8999-999999999999";
 const NOW = Date.parse("2026-11-18T12:00:00Z");
-const DOOR = `https://pipglyph.example/api/ai/jobs/${JOB}/step`;
+const SITE = "https://pipglyph.example";
+const DOOR = `${SITE}/api/ai/jobs/${JOB}/step`;
 /** An access token that expires `seconds` from NOW. */
 const token = (seconds: number) => `${Buffer.from("{}").toString("base64url")}.${Buffer.from(JSON.stringify({ exp: NOW / 1000 + seconds, sub: ME })).toString("base64url")}.sig`;
 const HOUR = token(3600);
-const COOKIE = `sb-abcdefgh-auth-token=base64-${HOUR.slice(0, 12)}`;
+const COOKIE = `sb-abcdefgh-auth-token=base64-${HOUR.slice(0, 40)}`;
 const row = (over: Partial<BgRow> = {}): BgRow => ({
   job_id: JOB,
   owner_id: ME,
@@ -199,7 +206,13 @@ const theRow = (jobId = JOB) => db.rows.find((r) => r.job_id === jobId) as unkno
 
 type Sent = { method: string; body?: string; headers: Record<string, string>; signal?: AbortSignal; redirect?: string };
 const fetchMock = vi.fn();
-const net = { probe: 405, busiest: 0 };
+const net = {
+  /** What a GET of the step door answers, by the address asked (default 405: it is there). */
+  probe: (() => new Response(null, { status: 405 })) as (url: string) => Response,
+  busiest: 0,
+  /** How long the door takes to claim a card once asked (a cold start). */
+  claimAfterMs: 0,
+};
 /** The step door: claims the next waiting card and paints it (30 s), as the
  *  real one does — or what `script` says for that card. A request let go by
  *  its caller goes on painting. */
@@ -207,6 +220,7 @@ function door(script: Record<string, Partial<Step>> = {}) {
   m.step.mockImplementation(async (jobId: string) => {
     const job = db.jobs.get(jobId);
     if (!job) return { ok: false, error: "Job not found." };
+    if (net.claimAfterMs > 0) await new Promise((resolve) => setTimeout(resolve, net.claimAfterMs));
     const next = job.status === "generating" ? job.steps.find((step) => step.status === "pending") : undefined;
     if (!next) return { ok: true, job: { steps: job.steps, status: job.status }, inFlight: job.steps.some((s) => s.status === "running") };
     next.status = "running";
@@ -222,7 +236,7 @@ function door(script: Record<string, Partial<Step>> = {}) {
  *  real route does (the AI's limit first, then one step; GET is not its). */
 function network() {
   fetchMock.mockImplementation((url: string, init: Sent) => {
-    if (init.method === "GET") return Promise.resolve(new Response(null, { status: net.probe }));
+    if (init.method === "GET") return Promise.resolve(net.probe(String(url)));
     const work = (async () => {
       const rate = await m.rate();
       if (!rate.ok) return new Response(JSON.stringify({ ok: false, error: rate.message }), { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } });
@@ -269,8 +283,9 @@ beforeEach(() => {
   m.adminConfigured.mockReturnValue(true);
   m.rate.mockResolvedValue({ ok: true });
   m.setSession.mockResolvedValue({ ok: true });
-  net.probe = 405;
+  net.probe = () => new Response(null, { status: 405 });
   net.busiest = 0;
+  net.claimAfterMs = 0;
   door();
   network();
 });
@@ -332,14 +347,84 @@ describe("the token the server borrows", () => {
 
 describe("where a card is asked for", () => {
   it("is the browser's own step door at this deployment's own address — never a host a request on a deployed site named", () => {
-    expect(stepDoorUrl(null, JOB)).toBe(DOOR);
-    expect(stepDoorUrl("https://evil.example/anything", JOB)).toBe(DOOR);
-    expect(stepDoorUrl("not a url", JOB)).toBe(DOOR);
+    expect(doorOrigins(null)).toEqual([SITE]);
+    expect(doorOrigins("https://evil.example/anything")).toEqual([SITE]);
+    expect(doorOrigins("not a url")).toEqual([SITE]);
+    expect(stepDoorUrl(SITE, JOB)).toBe(DOOR);
   });
 
   it("a local dev server is reached by the address it was called on", () => {
-    expect(stepDoorUrl("http://localhost:3111/dashboard", JOB)).toBe(`http://localhost:3111/api/ai/jobs/${JOB}/step`);
-    expect(stepDoorUrl("http://127.0.0.1:3000/", JOB)).toBe(`http://127.0.0.1:3000/api/ai/jobs/${JOB}/step`);
+    expect(doorOrigins("http://localhost:3111/dashboard")).toEqual(["http://localhost:3111"]);
+    expect(doorOrigins("http://127.0.0.1:3000/")).toEqual(["http://127.0.0.1:3000"]);
+  });
+
+  it("a preview asks its OWN deployment and nothing it was configured with — a preview's session must never be sent to the public site", () => {
+    // The site URL (here pipglyph.example) could be set for previews too, and
+    // production's name is set on every deployment: neither is asked.
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "pipglyph-prod.example");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("VERCEL_BRANCH_URL", "cardforge-git-my-branch.vercel.app");
+    vi.stubEnv("VERCEL_URL", "cardforge-abc123.vercel.app");
+    expect(doorOrigins(null)).toEqual(["https://cardforge-git-my-branch.vercel.app", "https://cardforge-abc123.vercel.app"]);
+    vi.stubEnv("VERCEL_BRANCH_URL", "");
+    expect(doorOrigins(null)).toEqual(["https://cardforge-abc123.vercel.app"]);
+    // With no address of its own it asks nobody (the hand-over is then refused).
+    vi.stubEnv("VERCEL_URL", "");
+    expect(doorOrigins(null)).toEqual([]);
+  });
+
+  it("production has a second name for itself, tried only there", () => {
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "pipglyph-prod.example");
+    vi.stubEnv("VERCEL_ENV", "");
+    expect(doorOrigins(null)).toEqual([SITE]);
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(doorOrigins(null)).toEqual([SITE, "https://pipglyph-prod.example"]);
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "pipglyph.example");
+    expect(doorOrigins(null)).toEqual([SITE]);
+  });
+
+  it("the door is found by a GET, which claims nothing (it answers 405): the address that answers is the one used", async () => {
+    const headers = { cookie: COOKIE };
+    expect(await reachableDoorOrigin(null, JOB, headers)).toBe(SITE);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(DOOR);
+    expect(init.method).toBe("GET");
+    expect(init.headers).toBe(headers);
+    expect(init.redirect).toBe("manual");
+    // A wall, a page, an error, no route: not reachable.
+    for (const status of [401, 200, 404, 500]) {
+      net.probe = () => new Response(null, { status });
+      expect(await reachableDoorOrigin(null, JOB, headers)).toBeNull();
+    }
+    fetchMock.mockRejectedValue(new Error("no route"));
+    expect(await reachableDoorOrigin(null, JOB, headers)).toBeNull();
+  });
+
+  it("a site that sends its bare name to www (or back) is followed that ONE step by hand — a redirect followed by fetch would drop the cookie", async () => {
+    const www = "https://www.pipglyph.example";
+    net.probe = (url) =>
+      url.startsWith(`${SITE}/`) ? new Response(null, { status: 308, headers: { location: url.replace(SITE, www) } }) : new Response(null, { status: 405 });
+    expect(await reachableDoorOrigin(null, JOB, { cookie: COOKIE })).toBe(www);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([DOOR, `${www}/api/ai/jobs/${JOB}/step`]);
+    // Anywhere else — a sign-in wall on another host, another site — is not followed: the cookie goes nowhere.
+    for (const elsewhere of ["https://vercel.com/sso-api?url=x", "https://evil.example/x", "http://www.pipglyph.example/x", "https://www.pipglyph.example:8443/x"]) {
+      fetchMock.mockClear();
+      net.probe = () => new Response(null, { status: 307, headers: { location: elsewhere } });
+      expect(await reachableDoorOrigin(null, JOB, { cookie: COOKIE })).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+    // …and a twin that redirects again is not chased.
+    fetchMock.mockClear();
+    net.probe = (url) => new Response(null, { status: 308, headers: { location: url.startsWith(`${SITE}/`) ? url.replace(SITE, www) : url.replace(www, SITE) } });
+    expect(await reachableDoorOrigin(null, JOB, { cookie: COOKIE })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("on production its second name is tried when the first doesn't answer", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "pipglyph-prod.example");
+    net.probe = (url) => new Response(null, { status: url.startsWith("https://pipglyph-prod.example/") ? 405 : 503 });
+    expect(await reachableDoorOrigin(null, JOB, { cookie: COOKIE })).toBe("https://pipglyph-prod.example");
   });
 });
 
@@ -392,7 +477,7 @@ describe("handing a run to the server", () => {
 
   it("makes the run's row and keeps the token SEALED beside it — nothing is asked of the step door yet", async () => {
     const result = await hand();
-    expect(result).toEqual({ ok: true, state: "started", headers: { "content-type": "application/json", cookie: COOKIE } });
+    expect(result).toEqual({ ok: true, state: "started", headers: { "content-type": "application/json", cookie: COOKIE }, origin: SITE });
     expect(db.rows).toHaveLength(1);
     expect(theRow()).toMatchObject({ job_id: JOB, owner_id: ME, deck_id: DECK, state: "running", reason: null, door_errors: 0, limited_keys: [] });
     expect(db.tokens).toHaveLength(1);
@@ -419,8 +504,8 @@ describe("handing a run to the server", () => {
     // A preview behind a wall with no way through: nothing is kept.
     db.rows.length = 0;
     db.tokens.length = 0;
-    for (const wall of [401, 302, 200, 500]) {
-      net.probe = wall;
+    for (const status of [401, 302, 200, 500]) {
+      net.probe = () => new Response(null, { status });
       expect(await hand()).toEqual({ ok: false, reason: "unreachable" });
     }
     fetchMock.mockRejectedValue(new Error("no route"));
@@ -462,6 +547,19 @@ describe("handing a run to the server", () => {
     expect(Date.parse(theRow().beat_at)).toBeGreaterThanOrEqual(NOW);
   });
 
+  it("a run's FIRST hand-over is refused on a run its maker has already stopped (the Stop arrived first); Continue's takes it up", async () => {
+    db.rows.push(row({ state: "stopped", reason: "stopped", finished_at: new Date(NOW - 1_000).toISOString() }));
+    expect(await hand({ first: true })).toEqual({ ok: false, reason: "stopped" });
+    expect(theRow()).toMatchObject({ state: "stopped", reason: "stopped" });
+    expect(db.tokens).toEqual([]);
+    // Continue is the maker asking for it.
+    expect(await hand()).toMatchObject({ ok: true, state: "started" });
+    expect(theRow()).toMatchObject({ state: "running", reason: null });
+    // A first hand-over on a run that ended some OTHER way (paused) goes ahead.
+    db.rows[0] = row({ state: "paused", reason: "expired" });
+    expect(await hand({ first: true })).toMatchObject({ ok: true, state: "started" });
+  });
+
   it("a token with too little left, one the sign-in service refuses, no service role and a write that failed keep NOTHING", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(await hand({ accessToken: token(120) })).toEqual({ ok: false, reason: "no_session" });
@@ -489,7 +587,41 @@ describe("handing a run to the server", () => {
     expect(db.tokens).toEqual([]);
     // No bell row: the maker is looking at the page (it says so there).
     expect(db.notices).toEqual([]);
+    // …and an OLDER token kept for the run is not left behind either.
+    db.rows[0] = row({ state: "paused", reason: "expired" });
+    keep(JOB, token(900));
+    db.fail.push({ table: "deck_reart_background_tokens", op: "upsert", error: { message: "boom" } });
+    expect(await hand()).toEqual({ ok: false, reason: "not_saved" });
+    expect(db.tokens).toEqual([]);
     logged.mockRestore();
+  });
+
+  it("every hand-over erases the kept tokens that outlived their own end (where no cron runs, nothing else would)", async () => {
+    db.tokens.push({ job_id: JOB2, sealed: sealToken(token(-900), JOB2), expires_at: new Date(NOW - 900_000).toISOString() });
+    await hand();
+    expect(db.tokens.map((kept) => kept.job_id)).toEqual([JOB]);
+  });
+});
+
+describe("kept tokens nobody ended", () => {
+  it("are erased a few minutes past their OWN end — never one still in use, never one that only just ended (its run is paused first, with the right reason)", async () => {
+    db.tokens.push(
+      { job_id: "a", sealed: "x".repeat(50), expires_at: new Date(NOW - 6 * 60_000).toISOString() },
+      { job_id: "b", sealed: "x".repeat(50), expires_at: new Date(NOW - 60_000).toISOString() },
+      { job_id: "c", sealed: "x".repeat(50), expires_at: new Date(NOW + 3_000_000).toISOString() },
+    );
+    await eraseExpiredTokens();
+    expect(db.tokens.map((kept) => kept.job_id)).toEqual(["b", "c"]);
+    m.adminConfigured.mockReturnValue(false);
+    await expect(eraseExpiredTokens()).resolves.toBeUndefined();
+  });
+
+  it("the cron's driver does it on every call; the hand-over's own driver leaves it to them", async () => {
+    db.tokens.push({ job_id: "a", sealed: "x".repeat(50), expires_at: new Date(NOW - 6 * 60_000).toISOString() });
+    await drive({ only: JOB, preset: { jobId: JOB, accessToken: HOUR, headers: { cookie: COOKIE }, origin: SITE } });
+    expect(db.tokens).toHaveLength(1);
+    await drive();
+    expect(db.tokens).toEqual([]);
   });
 });
 
@@ -516,7 +648,7 @@ describe("a driver", () => {
     expect(db.notices).toEqual([
       {
         recipient_id: ME,
-        actor_id: ME,
+        actor_id: null,
         type: "reart_run",
         payload: { jobId: JOB, deckId: DECK, deckTitle: "Embers of the Fen", state: "finished", reason: null, painted: 6, failed: 0, waiting: 0 },
       },
@@ -541,8 +673,10 @@ describe("a driver", () => {
     }
     // The cookie is made from the kept token ONCE a driver, and holds no refresh token.
     expect(m.setSession.mock.calls).toEqual([[{ access_token: HOUR, refresh_token: "none" }]]);
-    // Nothing here calls the driver again: no request to anything but the door.
+    // Nothing here calls the driver again: no request to anything but the door
+    // (one GET to find it, then the asks).
     expect(fetchMock.mock.calls.every(([url]) => url === DOOR)).toBe(true);
+    expect(fetchMock.mock.calls.filter(([, init]) => init.method === "GET")).toHaveLength(1);
   });
 
   it("awaits no card: at its time it lets go — the cards being painted go on, the run stays the server's, and the next driver takes it", async () => {
@@ -609,7 +743,7 @@ describe("a driver", () => {
     db.rows.push(row({ driver: OTHER_DRIVER, driven_until: new Date(NOW + 15_000).toISOString() }));
     db.jobs.set(JOB, pendingJob(4));
     const before = Date.now();
-    expect(await drive({ forMs: KICK_MS, only: JOB, preset: { jobId: JOB, accessToken: HOUR, headers: { cookie: COOKIE } } })).toEqual({ runs: 0, asked: 0, ended: 0 });
+    expect(await drive({ forMs: KICK_MS, only: JOB, preset: { jobId: JOB, accessToken: HOUR, headers: { cookie: COOKIE }, origin: SITE } })).toEqual({ runs: 0, asked: 0, ended: 0 });
     expect(Date.now() - before).toBeLessThan(1_000);
   });
 
@@ -619,9 +753,10 @@ describe("a driver", () => {
     keep(JOB2);
     db.jobs.set(JOB, pendingJob(2));
     db.jobs.set(JOB2, pendingJob(2));
-    const result = await drive({ forMs: KICK_MS, only: JOB, preset: { jobId: JOB, accessToken: HOUR, headers: { "content-type": "application/json", cookie: "given-cookie" } } });
+    const result = await drive({ forMs: KICK_MS, only: JOB, preset: { jobId: JOB, accessToken: HOUR, headers: { "content-type": "application/json", cookie: "given-cookie" }, origin: SITE } });
     expect(result).toMatchObject({ runs: 1, ended: 1 });
-    expect(asks().every(([url, init]) => url === DOOR && init.headers.cookie === "given-cookie")).toBe(true);
+    // Every request is an ask (the door was found at the hand-over).
+    expect(fetchMock.mock.calls.every(([url, init]) => url === DOOR && init.method === "POST" && init.headers.cookie === "given-cookie")).toBe(true);
     expect(m.setSession).not.toHaveBeenCalled();
     expect(db.reads).not.toContain("deck_reart_background_tokens");
     // The other run is the cron's.
@@ -639,7 +774,7 @@ describe("a driver", () => {
     expect(await drive({ forMs: 240_000 })).toMatchObject({ runs: 2, ended: 2 });
     const cookieOf = (jobId: string) => [...new Set(asks().filter(([url]) => String(url).includes(jobId)).map(([, init]) => init.headers.cookie))];
     expect(cookieOf(JOB)).toEqual([COOKIE]);
-    expect(cookieOf(JOB2)).toEqual([`sb-abcdefgh-auth-token=base64-${other.slice(0, 12)}`]);
+    expect(cookieOf(JOB2)).toEqual([`sb-abcdefgh-auth-token=base64-${other.slice(0, 40)}`]);
     expect(db.tokens).toEqual([]);
   });
 
@@ -678,11 +813,11 @@ describe("a driver", () => {
     expect(job.steps.filter((s) => s.status === "pending").length).toBeGreaterThanOrEqual(4);
   });
 
-  it("no kept token, or one that doesn't open (the server's secret changed), pauses the run", async () => {
+  it("no kept token (it was erased past its own end) pauses the run as expired; one that doesn't open (the server's secret changed) as an error", async () => {
     db.rows.push(row());
     db.jobs.set(JOB, pendingJob(2));
     expect(await drive()).toMatchObject({ asked: 0, ended: 1 });
-    expect(theRow()).toMatchObject({ state: "paused", reason: "error" });
+    expect(theRow()).toMatchObject({ state: "paused", reason: "expired" });
     db.rows[0] = row();
     db.tokens.push({ job_id: JOB, sealed: sealToken(HOUR, JOB2), expires_at: new Date(NOW + 3_600_000).toISOString() });
     expect(await drive()).toMatchObject({ asked: 0, ended: 1 });
@@ -785,20 +920,108 @@ describe("a driver", () => {
     db.jobs.set(JOB, pendingJob(1));
     m.rate.mockResolvedValue({ ok: false, reason: "per_day", retryAfterSeconds: 3600, message: "Daily quota." });
     m.step.mockClear();
+    db.notices.length = 0;
     await drive();
-    expect(theRow()).toMatchObject({ state: "paused", reason: "error" });
+    expect(theRow()).toMatchObject({ state: "paused", reason: "quota" });
+    expect(db.notices[0].payload).toMatchObject({ state: "paused", reason: "quota" });
     expect(m.step).not.toHaveBeenCalled();
   });
 
-  it("cards a quota put back in line are given the wait they ask for once, then asked for", async () => {
+  it("a 429 that is not the door's own (something in front of it) is a refusal like any other — never “today's AI limit”", async () => {
     db.rows.push(row());
     keep();
-    db.jobs.set(JOB, { steps: [{ key: "reart:0", status: "pending", error_code: "RATE_LIMITED", retry_after_seconds: 8 }], status: "generating" });
+    db.jobs.set(JOB, pendingJob(2));
+    fetchMock.mockImplementation(async (_url: string, init: Sent) =>
+      init.method === "GET" ? new Response(null, { status: 405 }) : new Response("<html>Too many requests</html>", { status: 429, headers: { "Retry-After": "3600" } }),
+    );
+    await drive();
+    expect(theRow()).toMatchObject({ state: "paused", reason: "error" });
+  });
+
+  it("one ask that answers at once does not let the others be asked for twice: never more than two cards at a time", async () => {
+    db.rows.push(row());
+    keep();
+    db.jobs.set(JOB, pendingJob(8));
+    net.claimAfterMs = 7_000;
+    const paint = m.step.getMockImplementation()!;
+    // The first ask is refused at once; the second is a door still starting up.
+    m.step.mockImplementationOnce(async () => ({ ok: false, error: "A hiccup." }));
+    m.step.mockImplementation(paint);
+    const working = driveBackgroundRuns({ forMs: 240_000, requestUrl: null });
+    await vi.advanceTimersByTimeAsync(6_000);
+    // One more was asked for (the refused one's place) — not two.
+    expect(asks()).toHaveLength(3);
+    await settle(working);
+    expect(net.busiest).toBe(2);
+    expect(theRow().state).toBe("finished");
+  });
+
+  it("a door slow to start (a cold function) is not asked for the same cards again while it gets going", async () => {
+    db.rows.push(row());
+    keep();
+    db.jobs.set(JOB, pendingJob(8));
+    // Seven seconds before a card shows as being painted: two looks go by.
+    net.claimAfterMs = 7_000;
+    const working = driveBackgroundRuns({ forMs: 240_000, requestUrl: null });
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(asks()).toHaveLength(2);
+    await settle(working);
+    expect(net.busiest).toBe(2);
+    expect(theRow().state).toBe("finished");
+  });
+
+  it("the door can't be found just now: a refusal like any other — three, and the run is paused", async () => {
+    db.rows.push(row());
+    keep();
+    db.jobs.set(JOB, pendingJob(2));
+    net.probe = () => new Response(null, { status: 503 });
+    expect(await drive()).toMatchObject({ runs: 1, asked: 0, ended: 1 });
+    expect(theRow()).toMatchObject({ state: "paused", reason: "error" });
+  });
+
+  it("a fresher token kept since this driver read its own (the maker pressed Continue) is the run's token: it is not paused on the old one's end, and the new one is not erased", async () => {
+    db.rows.push(row());
+    const old = token(330 + 20);
+    keep(JOB, old);
+    db.jobs.set(JOB, pendingJob(8));
+    const working = driveBackgroundRuns({ forMs: 240_000, requestUrl: null });
+    await vi.advanceTimersByTimeAsync(10_000);
+    // The hand-over again, with a new session's token.
+    const fresh = token(3500);
+    db.tokens[0] = { job_id: JOB, sealed: sealToken(fresh, JOB), expires_at: new Date(NOW + 3_500_000).toISOString() };
+    await settle(working);
+    expect(theRow()).toMatchObject({ state: "finished" });
+    const cookies = [...new Set(asks().map(([, init]) => init.headers.cookie))];
+    expect(cookies).toEqual([`sb-abcdefgh-auth-token=base64-${old.slice(0, 40)}`, `sb-abcdefgh-auth-token=base64-${fresh.slice(0, 40)}`]);
+  });
+
+  it("a run stopped and handed over again within one driver's time starts afresh: nothing of the old sign-in is carried over", async () => {
+    db.rows.push(row(), { ...row(), job_id: JOB2 });
+    keep();
+    keep(JOB2);
+    db.jobs.set(JOB, pendingJob(12));
+    db.jobs.set(JOB2, pendingJob(12));
+    const working = driveBackgroundRuns({ forMs: 120_000, requestUrl: null });
+    await vi.advanceTimersByTimeAsync(10_000);
+    await requestBackgroundStop(ME, JOB);
+    await vi.advanceTimersByTimeAsync(10_000);
+    // Continue: the same row, running again, with another session's token.
+    const next = token(3000);
+    Object.assign(theRow(), { state: "running", reason: null, finished_at: null });
+    keep(JOB, next);
+    await settle(working);
+    const later = asks().filter(([url]) => String(url).includes(JOB)).map(([, init]) => init.headers.cookie);
+    expect(later.at(-1)).toBe(`sb-abcdefgh-auth-token=base64-${next.slice(0, 40)}`);
+  });
+
+  it("cards a quota put back in line are given the wait they ask for once, then asked for — also when other cards wait behind them", async () => {
+    db.rows.push(row());
+    keep();
+    db.jobs.set(JOB, { steps: [{ key: "reart:0", status: "pending", error_code: "RATE_LIMITED", retry_after_seconds: 8 }, { key: "reart:1", status: "pending" }], status: "generating" });
     const looking = driveBackgroundRuns({ forMs: 240_000, requestUrl: null });
     await vi.advanceTimersByTimeAsync(6_000);
     expect(asks()).toEqual([]);
     await settle(looking);
-    expect(asks()).toHaveLength(1);
     expect(theRow().state).toBe("finished");
   });
 
@@ -858,11 +1081,65 @@ describe("the maker's Stop", () => {
   it("is the caller's own run's alone", async () => {
     db.rows.push(row());
     keep();
+    db.jobs.set(JOB, pendingJob(2));
     expect(await requestBackgroundStop("44444444-4444-4444-8444-444444444444", JOB)).toBe(true);
+    expect(db.rows).toHaveLength(1);
     expect(theRow().state).toBe("running");
     expect(db.tokens).toHaveLength(1);
     m.adminConfigured.mockReturnValue(false);
     expect(await requestBackgroundStop(ME, JOB)).toBe(false);
+  });
+
+  it("a Stop that arrives BEFORE the run's hand-over is left where the hand-over will find it: the server never starts carrying a run its maker already stopped", async () => {
+    db.jobs.set(JOB, pendingJob(8));
+    expect(await requestBackgroundStop(ME, JOB)).toBe(true);
+    expect(db.rows).toHaveLength(1);
+    expect(theRow()).toMatchObject({ job_id: JOB, owner_id: ME, deck_id: DECK, state: "stopped", reason: "stopped" });
+    expect(theRow().finished_at).toBeTruthy();
+    // The hand-over lands a moment later — the page may be gone by now.
+    expect(await settle(startBackground({ userId: ME, jobId: JOB, deckId: DECK, accessToken: HOUR, steps: [], requestUrl: null, first: true }))).toEqual({ ok: false, reason: "stopped" });
+    expect(db.tokens).toEqual([]);
+    expect(await drive()).toEqual({ runs: 0, asked: 0, ended: 0 });
+    expect(asks()).toEqual([]);
+  });
+
+  it("…and nothing is left for a run that is over, another kind of job, or somebody else's", async () => {
+    db.jobs.set(JOB, { steps: stepsOf("done"), status: "done" });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(true);
+    db.jobs.set(JOB, { ...pendingJob(2), kind: "deck" });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(true);
+    db.jobs.set(JOB, { ...pendingJob(2), owner: "44444444-4444-4444-8444-444444444444" });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(true);
+    expect(await requestBackgroundStop(ME, JOB2)).toBe(true);
+    expect(db.rows).toEqual([]);
+  });
+
+  it("a Stop and a hand-over that cross: whichever writes second, the run ends stopped", async () => {
+    db.jobs.set(JOB, pendingJob(8));
+    // The hand-over's row appears between the Stop's two writes.
+    db.fail.push({ table: "deck_reart_background", op: "insert", error: { message: "duplicate key", code: "23505" } });
+    db.rows.push(row());
+    keep();
+    // (The Stop's first look found nothing running: simulated by a row it can't see yet.)
+    theRow().state = "paused";
+    const stopping = requestBackgroundStop(ME, JOB);
+    theRow().state = "running";
+    expect(await stopping).toBe(true);
+    expect(theRow()).toMatchObject({ state: "stopped", reason: "stopped" });
+    expect(db.tokens).toEqual([]);
+  });
+
+  it("a Stop that could not be recorded says so (the page then says the server may still be painting)", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    db.jobs.set(JOB, pendingJob(2));
+    db.fail.push({ table: "deck_reart_background", op: "insert", error: { message: "boom" } });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(false);
+    db.fail.push({ table: "ai_generation_jobs", op: "select", error: { message: "timeout" } });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(false);
+    db.rows.push(row());
+    db.fail.push({ table: "deck_reart_background", op: "update", error: { message: "boom" } });
+    expect(await requestBackgroundStop(ME, JOB)).toBe(false);
+    logged.mockRestore();
   });
 
   it("a driver at work notices at its next look and asks for nothing more", async () => {

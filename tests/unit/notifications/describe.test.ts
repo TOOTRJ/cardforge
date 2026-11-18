@@ -531,6 +531,10 @@ describe("describeNotification — a Re-art run the server carried on (0218)", (
     expect(d({ state: "paused", reason: "error", painted: 3, failed: 0, waiting: 1 }).body).toBe(
       "paused re-arting “Embers of the Fen” (the cards kept failing to start): 3 cards painted. 1 card is still to paint — open the deck in Re-art deck to continue.",
     );
+    // The day's AI limit is named as itself.
+    expect(d({ state: "paused", reason: "quota", painted: 9, failed: 0, waiting: 3 }).body).toBe(
+      "paused re-arting “Embers of the Fen” (today's AI limit was reached): 9 cards painted. 3 cards are still to paint — open the deck in Re-art deck to continue.",
+    );
     // A reason the app no longer writes reads as none.
     expect(d({ state: "paused", reason: "broken", painted: 0, failed: 0, waiting: 5 }).body).toMatch(/^paused re-arting “Embers of the Fen” \(it stopped\): 0 cards painted\. 5 cards are still to paint/);
   });

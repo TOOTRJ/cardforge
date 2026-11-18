@@ -9,7 +9,8 @@ import { ReartCardWordsDialog } from "./reart-card-words-dialog";
 import { ReartEarlierPicturesDialog } from "./reart-earlier-pictures-dialog";
 import { ReartUndoDialog } from "./reart-undo-dialog";
 import { ReartScenesDialog } from "./reart-scenes-dialog";
-import { handReartRunToServerAction, stopReartBackgroundAction } from "@/lib/tools/re-art/background-actions";
+import { handReartRunToServerAction } from "@/lib/tools/re-art/background-actions";
+import { requestReartBackgroundStop } from "@/lib/tools/re-art/background-client";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -25,6 +26,7 @@ import {
   reartBackgroundIsLive,
   REART_BACKGROUND_UNAVAILABLE,
   REART_BACKGROUND_ON_COPY,
+  REART_BACKGROUND_STOP_FAILED,
   REART_MAX_CARDS,
   REART_SCENES_AT_ONCE,
   EMPTY_REART_STYLE,
@@ -204,6 +206,10 @@ export function ReartStudio({
   const [keepGoing, setKeepGoing] = useState(true);
   /** The run the server is carrying alongside this page (its job id). */
   const [carried, setCarried] = useState<string | null>(null);
+  /** A Stop of the server's part that hasn't been answered yet (its run),
+   *  and one the server never acknowledged. */
+  const [stopping, setStopping] = useState<string | null>(null);
+  const [stopFailed, setStopFailed] = useState<string | null>(null);
   /** "Write scenes…" for the cards picked in the list (0217). */
   const [scenesFor, setScenesFor] = useState<ReartStudioEntry[] | null>(null);
   const [scenesOpen, setScenesOpen] = useState(false);
@@ -317,7 +323,9 @@ export function ReartStudio({
    *  no cron): this page then paints the rest alone, as it always did. */
   const serverEnded = job !== null && background?.jobId === job.id && !reartBackgroundIsLive(background);
   const carriedNow = job !== null && carried === job.id && !serverEnded;
-  useLeaveWarning(running && !carriedNow);
+  // …and a Stop the server hasn't answered keeps the warning: leaving
+  // before it lands could leave the server painting.
+  useLeaveWarning((running && !carriedNow) || stopping !== null);
 
   // The cards behind the run: re-read as they land (at most every few
   // seconds) and once more when a run ends.
@@ -580,21 +588,53 @@ export function ReartStudio({
   /** Runs the maker pressed Stop on: a hand-over whose answer arrives after
    *  the press must not leave the server painting. */
   const stoppedRuns = useRef(new Set<string>());
-  const handOver = (jobId: string) => {
+  /** Stop, for the server's part of a run. A plain request the browser
+   *  sends even if the tab is closed right after the press (never a server
+   *  action: one waits behind this page's own refreshes, and could be
+   *  lost); the page says so when the server doesn't acknowledge it. */
+  /** Hand-overs that haven't answered yet. */
+  const handingOver = useRef(new Set<string>());
+  const stopServerPart = (jobId: string) => {
+    stoppedRuns.current.add(jobId);
+    setCarried(null);
+    setStopFailed(null);
+    setStopping(jobId);
+    void requestReartBackgroundStop(jobId).then((ok) => {
+      // A hand-over still on its way is taken back when it answers (below):
+      // the Stop is not over — and the page goes on warning about leaving —
+      // until then. (The server refuses that hand-over too: it finds the
+      // Stop this request left for it.)
+      if (ok && handingOver.current.has(jobId)) return;
+      setStopping((now) => (now === jobId ? null : now));
+      if (ok) router.refresh();
+      else setStopFailed(jobId);
+    });
+  };
+  /** `first`: the hand-over a run makes as it starts (not Continue's). */
+  const handOver = (jobId: string, first = false) => {
     handedOver.current.add(jobId);
+    handingOver.current.add(jobId);
     stoppedRuns.current.delete(jobId);
-    void handReartRunToServerAction(jobId)
+    setStopFailed(null);
+    void handReartRunToServerAction(jobId, first)
       .then((result) => {
+        handingOver.current.delete(jobId);
         if (stoppedRuns.current.has(jobId)) {
-          // Stopped while the hand-over was on its way: taken back at once.
-          if (result.ok) void stopReartBackgroundAction(jobId).catch(() => undefined);
+          // Stopped while the hand-over was on its way: taken back at once
+          // if it landed after all; else the Stop is simply over.
+          if (result.ok) stopServerPart(jobId);
+          else setStopping((now) => (now === jobId ? null : now));
           return;
         }
         if (result.ok) setCarried(jobId);
         else toast.error(result.error);
       })
       .catch(() => {
-        if (!stoppedRuns.current.has(jobId)) toast.error(REART_BACKGROUND_UNAVAILABLE);
+        handingOver.current.delete(jobId);
+        // No answer: it may have landed all the same — a stopped run is
+        // stopped once more, to be sure.
+        if (stoppedRuns.current.has(jobId)) stopServerPart(jobId);
+        else toast.error(REART_BACKGROUND_UNAVAILABLE);
       });
   };
 
@@ -640,11 +680,7 @@ export function ReartStudio({
       // being painted is finished). Asked whenever there MAY be one — a
       // hand-over still on its way, a row this page hasn't read lately —
       // never only when the page believes it is being carried.
-      if (job && (carried === job.id || handedOver.current.has(job.id) || background?.jobId === job.id)) {
-        stoppedRuns.current.add(job.id);
-        setCarried(null);
-        void stopReartBackgroundAction(job.id).catch(() => undefined);
-      }
+      if (job && (carried === job.id || handedOver.current.has(job.id) || background?.jobId === job.id)) stopServerPart(job.id);
     },
     retryFailed: () => {
       trackToolEvent(REART_TOOL_SLUG, paused ? "continue" : "retry", {
@@ -653,6 +689,9 @@ export function ReartStudio({
         waiting: waitingCount,
       });
       runner.retryFailed();
+      // Whatever the server carried before, it carries this pass only once
+      // it has said so again (below): until then the page claims nothing.
+      setCarried(null);
       // A paused run that was handed to the server is handed to it again:
       // the cards still waiting are its to ask for. Cards that FAILED are
       // tried again by this page alone (the server asks for waiting cards
@@ -977,6 +1016,22 @@ export function ReartStudio({
                   {REART_BACKGROUND_ON_COPY}
                 </p>
               ) : null}
+              {stopFailed === job.id ? (
+                <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+                  <span className="mr-auto">{REART_BACKGROUND_STOP_FAILED}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // The button goes with its alert: the focus is handed on.
+                      progressRef.current?.focus();
+                      stopServerPart(job.id);
+                    }}
+                  >
+                    Stop it
+                  </Button>
+                </div>
+              ) : null}
               <BulkProgress
                 runner={loggedRunner}
                 total={total}
@@ -1156,7 +1211,7 @@ export function ReartStudio({
           background={confirm.background ? { checked: keepGoing, onChange: setKeepGoing } : undefined}
           onStarted={(next, left, version) => {
             begin(next, left);
-            if (confirm.background && keepGoing) handOver(next.id);
+            if (confirm.background && keepGoing) handOver(next.id, true);
             // The style the run paints in is the deck's now.
             const runStyle = confirm.input.style ? normalizeReartStyle(confirm.input.style) : null;
             if (runStyle) {
