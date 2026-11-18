@@ -11,6 +11,7 @@ import { discardGeneratedArt } from "@/lib/ai/random-art";
 import { isUuid } from "@/lib/ids";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
+import { readLocks } from "@/lib/tools/re-art/locks";
 import type { Json } from "@/types/supabase";
 import { DEFAULT_BULK_CHOICES, type BulkChoices } from "@/lib/tools/bulk-customize/model";
 import { planCustomizedCard } from "@/lib/tools/bulk-customize/planner";
@@ -21,6 +22,7 @@ import {
   REART_IP_CONFIRMATIONS_PER_DAY,
   REART_IP_NEEDS_CONFIRMATION,
   REART_IP_TOO_MANY,
+  REART_LOCKED_COPY,
   REART_MAX_CARDS,
   REART_REFERENCE_NOT_YOURS,
   REART_REFERENCE_WITH_RESTYLE,
@@ -32,6 +34,7 @@ import {
   sameReartStyleFields,
   reartEntryState,
   reartIpStatement,
+  reartLockedEntries,
   reartOwnSourceArt,
   reartStateIsSettled,
   reartStyleProblem,
@@ -736,6 +739,8 @@ export type ReartPlan = {
   skipped: Array<{ name: string; reason: string }>;
   /** Cards left out because they are in this style already. */
   inStyle: number;
+  /** Cards a run over the deck leaves because they are locked (0216). */
+  locked: number;
 };
 
 export type ReartPlanFailure = { ok: false; error: string; code?: "RATE_LIMITED"; retryAfterSeconds?: number };
@@ -780,7 +785,16 @@ export async function planReartRun(
   const styleChanged = !stored || !sameReartStyle(stored, wanted);
   const version = stored ? (styleChanged ? stored.version + 1 : stored.version) : 1;
 
-  const [items, painted, words] = await Promise.all([listDeckPageCards(deck.id), readPaintedCards(deck.id), readCardWords(deck.id)]);
+  const [items, painted, words, locks] = await Promise.all([
+    listDeckPageCards(deck.id),
+    readPaintedCards(deck.id),
+    readCardWords(deck.id),
+    readLocks(deck.id),
+  ]);
+  // A lock that couldn't be read is never "not locked": a run would paint
+  // (and charge for) a card its maker locked.
+  if (!locks) return { ok: false, error: "We couldn't read which cards are locked — try again." };
+  let locked = 0;
   const OWN_WORDS_NOTE = "Its own words.";
   // A restyle starts from a picture: the real card's art for an entry that
   // stands for a printing, else the art the maker's card had before Re-art.
@@ -800,6 +814,13 @@ export async function planReartRun(
   // them again (never makes them twice) — priced as what they are.
   const madeByEntry = new Map(
     [...painted.values()].filter((row) => row.made && row.entryId).map((row) => [row.entryId!, row]),
+  );
+  // A lock is on the card's picture: every row of the deck that holds a
+  // locked card is locked with it — a row whose made card isn't linked
+  // right now included (a run would link it again and paint that card).
+  const lockedEntries = reartLockedEntries(
+    items.map((item) => ({ id: item.entry.id, cardId: item.entry.card_id ?? madeByEntry.get(item.entry.id)?.cardId })),
+    locks,
   );
   const own: ReartPlannedEntry[] = [];
   const printings: DeckItem<DeckPageCard>[] = [];
@@ -821,6 +842,13 @@ export async function planReartRun(
       continue;
     }
     if (!explicit && !scopeTakes(input.scope, classified.kind)) continue;
+    // A locked card (0216) is left as it is, whoever names it: said in the
+    // list when the maker picked it, counted when the run is over the deck.
+    if (lockedEntries.has(entry.id)) {
+      if (explicit) skipped.push({ name: card?.title || entry.name, reason: REART_LOCKED_COPY });
+      else locked += 1;
+      continue;
+    }
     if (classified.kind === "own" && card) {
       if (seenCards.has(card.id)) continue;
       seenCards.add(card.id);
@@ -955,7 +983,7 @@ export async function planReartRun(
     });
     entries = entries.slice(0, REART_MAX_CARDS);
   }
-  return { ok: true, deck, style: wanted, version, styleChanged, entries, skipped, inStyle };
+  return { ok: true, deck, style: wanted, version, styleChanged, entries, skipped, inStyle, locked };
 }
 
 // ---------------------------------------------------------------------------

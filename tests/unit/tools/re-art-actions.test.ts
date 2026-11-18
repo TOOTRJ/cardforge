@@ -47,6 +47,14 @@ const m = vi.hoisted(() => ({
   credit: vi.fn(),
   isKept: vi.fn(),
   exists: vi.fn(),
+  cardLocked: vi.fn(),
+  locks: vi.fn(),
+  setLocks: vi.fn(),
+  rolls: vi.fn(),
+  unlink: vi.fn(),
+  job: vi.fn(),
+  cards: vi.fn(),
+  entries: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -54,12 +62,17 @@ vi.mock("@/lib/tools/queries", () => ({ checkToolAccess: m.access }));
 vi.mock("@/lib/tools/events", () => ({ recordToolEvent: m.event, recordToolEventLater: m.event }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    from: () => {
+    from: (table: string) => {
       const chain = {
         select: () => chain,
         eq: () => chain,
-        maybeSingle: async () => ({ data: m.card(), error: null }),
+        in: () => chain,
+        // One row: a run (an undo reads its own job) or a card.
+        maybeSingle: async () => ({ data: table === "ai_generation_jobs" ? m.job() : m.card(), error: null }),
         filter: async () => ({ data: m.open(), error: null }),
+        // A list, awaited as it stands (an undo's cards and deck entries).
+        then: (resolve: (value: unknown) => unknown) =>
+          Promise.resolve(table === "cards" ? m.cards() : table === "deck_cards" ? m.entries() : { data: [], error: null }).then(resolve),
         insert: (row: unknown) => {
           m.insert(row);
           return {
@@ -91,7 +104,16 @@ vi.mock("@/lib/ai/random-art", () => ({ discardGeneratedArt: m.discard }));
 vi.mock("@/lib/cards/actions", () => ({ updateCardAction: m.update }));
 vi.mock("@/lib/cards/faces", () => ({ rowHasBakedBack: m.bakedBack }));
 vi.mock("@/lib/ai/artist-credit", () => ({ aiArtistCredit: m.credit }));
-vi.mock("@/lib/tools/re-art/rolls", () => ({ keepRoll: m.keep, dropRoll: m.drop, pruneRolls: m.prune, claimRoll: m.claim, isKeptPicture: m.isKept }));
+vi.mock("@/lib/tools/re-art/rolls", () => ({
+  keepRoll: m.keep,
+  dropRoll: m.drop,
+  pruneRolls: m.prune,
+  claimRoll: m.claim,
+  isKeptPicture: m.isKept,
+  readRollsOrNull: m.rolls,
+}));
+vi.mock("@/lib/tools/re-art/locks", () => ({ isCardLocked: m.cardLocked, readLocks: m.locks, setLocks: m.setLocks }));
+vi.mock("@/lib/decks/card-actions", () => ({ unlinkDeckCardAction: m.unlink }));
 vi.mock("@/lib/tools/re-art/restyle-source", () => ({ storedArtExists: m.exists }));
 vi.mock("@/lib/tools/re-art/server", () => ({
   planReartRun: m.plan,
@@ -109,15 +131,26 @@ vi.mock("@/lib/tools/re-art/server", () => ({
   planLines: (plan: { entries: unknown[] }) => plan.entries,
 }));
 
-import { REART_IP_NEEDS_CONFIRMATION, REART_IP_TOO_MANY, REART_PICTURE_GONE, REART_REFERENCE_NOT_YOURS } from "@/lib/tools/re-art/model";
+import {
+  REART_IP_NEEDS_CONFIRMATION,
+  REART_IP_TOO_MANY,
+  REART_PICTURE_GONE,
+  REART_REFERENCE_NOT_YOURS,
+  REART_UNDO_BATCH,
+  REART_UNDO_SKIP_COPY,
+  REART_UNLOCK_FIRST,
+} from "@/lib/tools/re-art/model";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import {
   chooseReartPictureAction,
   planReartAction,
+  planUndoReartRunAction,
   restoreReartArtAction,
   saveReartCardWordsAction,
   saveReartStyleAction,
+  setReartLocksAction,
   startReartAction,
+  undoReartRunAction,
 } from "@/lib/tools/re-art/actions";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
@@ -177,6 +210,12 @@ beforeEach(() => {
   m.isKept.mockResolvedValue(false);
   m.exists.mockResolvedValue("yes");
   m.paintedRows.mockResolvedValue([]);
+  m.cardLocked.mockResolvedValue(false);
+  m.locks.mockResolvedValue(new Set());
+  m.rolls.mockResolvedValue(new Map());
+  m.job.mockReturnValue(null);
+  m.cards.mockReturnValue({ data: [], error: null });
+  m.entries.mockReturnValue({ data: [], error: null });
   m.open.mockReturnValue([]);
   m.plan.mockResolvedValue(planned([{ kind: "printing" }, { kind: "own", credits: 2 }]));
 });
@@ -798,8 +837,9 @@ describe("chooseReartPictureAction — an earlier picture goes back on the card 
     // The row: the picked picture as the deck's, in the style it was painted
     // in, by whom and how; the art to put back is unchanged (the card showed
     // Re-art's picture: that row's own). It keeps the date the picture was
-    // PAINTED: nothing is painted now.
-    expect(m.writePainted.mock.calls[0].slice(0, 3)).toEqual(["u1", DECK, null]);
+    // PAINTED: nothing is painted now — and the RUN that painted it (the
+    // kept picture's own), so an undo of that run still finds the card.
+    expect(m.writePainted.mock.calls[0].slice(0, 3)).toEqual(["u1", DECK, "job-1"]);
     expect(m.writePainted.mock.calls[0][4]).toEqual({ paintedAt: "2026-11-11T10:00:00Z" });
     // Its file was asked about before anything was written.
     expect(m.exists).toHaveBeenCalledWith(ART("ai-1.jpg"));
@@ -1134,5 +1174,533 @@ describe("saveReartCardWordsAction — one card's own words (0209)", () => {
     m.saveWords.mockResolvedValue(false);
     expect((await saveReartCardWordsAction(DECK, ENTRY, { text: WORDS })).ok).toBe(false);
     expect(logged()).toEqual([["save_card_words_failed", { reason: "not_saved" }]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LOCKED cards (migration 0216): while a card is locked on the deck, nothing
+// the tool does changes its picture. The one-card actions are refused — and
+// a lock that couldn't be READ is never "not locked".
+// ---------------------------------------------------------------------------
+
+describe("a locked card is left as it is by every one-card action (0216)", () => {
+  const CARD = "00000000-0000-4000-8000-0000000000c1";
+  const ROLL = "00000000-0000-4000-8000-0000000000f1";
+
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "S", visibility: "private" });
+  });
+
+  it("“old art back” and “use this one” are refused in words; nothing is read, kept, claimed or written", async () => {
+    m.cardLocked.mockResolvedValue(true);
+    expect(await restoreReartArtAction(DECK, CARD)).toEqual({ ok: false, error: REART_UNLOCK_FIRST });
+    expect(await chooseReartPictureAction(DECK, CARD, ROLL)).toEqual({ ok: false, error: REART_UNLOCK_FIRST });
+    expect(m.cardLocked.mock.calls).toEqual([
+      [DECK, CARD],
+      [DECK, CARD],
+    ]);
+    for (const fn of [m.painted, m.paintedAdmin, m.keep, m.claim, m.update, m.writePainted, m.revert]) expect(fn).not.toHaveBeenCalled();
+    expect(logged()).toEqual([
+      ["restore_failed", { reason: "locked" }],
+      ["choose_picture_failed", { reason: "locked" }],
+    ]);
+  });
+
+  it("a lock that couldn't be read stops them too", async () => {
+    m.cardLocked.mockResolvedValue(null);
+    expect(await restoreReartArtAction(DECK, CARD)).toEqual({ ok: false, error: "We couldn't read whether this card is locked — try again." });
+    expect((await chooseReartPictureAction(DECK, CARD, ROLL)).ok).toBe(false);
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.claim).not.toHaveBeenCalled();
+    expect(logged()).toEqual([
+      ["restore_failed", { reason: "lock_unread" }],
+      ["choose_picture_failed", { reason: "lock_unread" }],
+    ]);
+  });
+});
+
+describe("setReartLocksAction — locking and unlocking cards (0216)", () => {
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "S", visibility: "private" });
+    m.setLocks.mockResolvedValue(2);
+  });
+
+  it("a closed tool, a body that can't be read and another's deck lock nothing", async () => {
+    m.access.mockResolvedValueOnce(null);
+    expect((await setReartLocksAction(DECK, [ID(1)], true)).ok).toBe(false);
+    for (const bad of [
+      ["not-a-deck", [ID(1)], true],
+      [DECK, [], true],
+      [DECK, ["not-an-entry"], true],
+      [DECK, [ID(1), 7], true],
+      [DECK, ID(1), true],
+      [DECK, [ID(1)], "yes"],
+      [DECK, [ID(1)], undefined],
+      [DECK, Array.from({ length: 501 }, (_, i) => ID(i + 1)), true],
+    ] as const) {
+      expect((await setReartLocksAction(bad[0], bad[1], bad[2])).ok).toBe(false);
+    }
+    m.deck.mockResolvedValueOnce(null);
+    expect((await setReartLocksAction(DECK, [ID(1)], true)).ok).toBe(false);
+    expect(m.setLocks).not.toHaveBeenCalled();
+    expect(m.event).not.toHaveBeenCalled();
+  });
+
+  it("locks the entries named on the caller's own deck, and says how many it changed", async () => {
+    expect(await setReartLocksAction(DECK, [ID(1), ID(2)], true)).toEqual({ ok: true, changed: 2 });
+    expect(m.setLocks).toHaveBeenCalledWith("u1", DECK, [ID(1), ID(2)], true);
+    expect(logged()).toEqual([["lock", { cards: 2 }]]);
+  });
+
+  it("unlocks them the same way", async () => {
+    m.setLocks.mockResolvedValue(1);
+    expect(await setReartLocksAction(DECK, [ID(1)], false)).toEqual({ ok: true, changed: 1 });
+    expect(m.setLocks).toHaveBeenCalledWith("u1", DECK, [ID(1)], false);
+    expect(logged()).toEqual([["unlock", { cards: 1 }]]);
+  });
+
+  it("a write that failed says so and is `lock_failed` / `unlock_failed`", async () => {
+    m.setLocks.mockResolvedValue(null);
+    expect(await setReartLocksAction(DECK, [ID(1)], true)).toEqual({ ok: false, error: "Couldn't lock that card — try again." });
+    expect(await setReartLocksAction(DECK, [ID(1), ID(2)], false)).toEqual({ ok: false, error: "Couldn't unlock those cards — try again." });
+    expect(logged()).toEqual([
+      ["lock_failed", { reason: "not_saved" }],
+      ["unlock_failed", { reason: "not_saved" }],
+    ]);
+  });
+});
+
+describe("a run and locks, as the plan and the log read them (0216)", () => {
+  it("the confirm says how many locked cards the run leaves", async () => {
+    m.plan.mockResolvedValue({ ...planned([{ kind: "own" }]), locked: 3 });
+    expect(await planReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: true, locked: 3 });
+    // A planner that names none (a run of named cards) is 0.
+    m.plan.mockResolvedValue(planned([{ kind: "own" }]));
+    expect(await planReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: true, locked: 0 });
+  });
+
+  it("a run whose every card is locked says so (it used to say none of them can be re-arted)", async () => {
+    m.plan.mockResolvedValue({ ...planned([]), skipped: [], locked: 4 });
+    expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, error: "Every card of this run is locked — unlock one to paint it." });
+    m.plan.mockResolvedValue({ ...planned([]), skipped: [], locked: 1, inStyle: 3 });
+    expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, error: "Every card of this run is locked or in the deck's style already." });
+    expect(m.insert).not.toHaveBeenCalled();
+  });
+
+  it("several named cards at once (the studio's selection) are `paint_selected`; one stays a first paint or a re-roll", async () => {
+    m.plan.mockResolvedValue(planned([{ kind: "own" }, { kind: "own", paintedBefore: true }]));
+    await startReartAction({ deckId: DECK, style: STYLE, entryIds: [ID(1), ID(2)] });
+    m.plan.mockResolvedValue(planned([{ kind: "own" }]));
+    await startReartAction({ deckId: DECK, style: STYLE, entryIds: [ID(1)] });
+    expect(logged().map(([event]) => event)).toEqual(["paint_selected", "paint_one"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UNDOING a run: every card the run painted goes back to what it showed
+// before — while the run's record of it is still the latest and its picture
+// is still on the card (model.ts reartUndoOf). Read afresh for the confirm
+// and for every batch; nothing is painted and no credit is returned.
+// ---------------------------------------------------------------------------
+
+describe("undoing a run", () => {
+  const JOB = "00000000-0000-4000-8000-00000000a001";
+  const C = (n: number) => `00000000-0000-4000-8000-0000000000c${n}`;
+  const R = (n: number) => `00000000-0000-4000-8000-0000000000f${n}`;
+  const ART = (n: string) => `https://x.supabase.co/storage/v1/object/public/card-art/u1/${n}`;
+  const rowOf = (n: number, over: Record<string, unknown> = {}) => ({
+    cardId: C(n),
+    entryId: null,
+    styleVersion: 2,
+    artUrl: ART(`ai-${n}.jpg`),
+    backArtUrl: null,
+    made: false,
+    previousArtUrl: ART(`mine-${n}.png`),
+    previousArtPosition: null,
+    previousBackArtUrl: null,
+    previousBackArtPosition: null,
+    previousArtistCredit: "Jane Painter",
+    previousBackArtistCredit: null,
+    paintedAt: "2026-11-12T10:00:00Z",
+    jobId: JOB,
+    imageModel: "bfl/flux-2-pro",
+    method: "paint" as const,
+    ...over,
+  });
+  /** The maker's cards were there before the run started (a card the run MADE is newer: `created_at`). */
+  const cardOf = (n: number, over: Record<string, unknown> = {}) => ({
+    id: C(n),
+    owner_id: "u1",
+    title: `Card ${n}`,
+    art_url: ART(`ai-${n}.jpg`),
+    created_at: "2026-11-01T00:00:00Z",
+    ...over,
+  });
+  const RUN_STARTED = "2026-11-12T09:00:00Z";
+  /** The picture a re-roll of card n replaced, and the kept row that holds it. */
+  const before = (n: number) => ART(`before-${n}.jpg`);
+  const keptFor = (n: number, id = R(n)) => [C(n), [{ id, artUrl: before(n) }]] as const;
+  /** A done step that PAINTED its card (the step says so since undo exists). */
+  const step = (n: number, over: Record<string, unknown> = {}) => ({ status: "done", card_id: C(n), label: `Step ${n}`, painted: true, ...over });
+  const run = (steps: unknown[]) =>
+    m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: { deck_id: DECK }, steps, created_at: RUN_STARTED });
+  const deckHas = (rows: Array<ReturnType<typeof rowOf>>, cards: Array<ReturnType<typeof cardOf>>, entries: Array<{ id: string; card_id: string }> = []) => {
+    m.painted.mockResolvedValue(new Map(rows.map((row) => [row.cardId, row])));
+    m.cards.mockReturnValue({ data: cards, error: null });
+    m.entries.mockReturnValue({ data: entries, error: null });
+  };
+
+  beforeEach(() => {
+    m.deck.mockResolvedValue({ id: DECK, slug: "s", title: "S", visibility: "private" });
+    m.painted.mockResolvedValue(new Map());
+    m.update.mockResolvedValue({ ok: true, cardId: C(1), slug: "c" });
+    m.writePainted.mockResolvedValue(true);
+    m.unlink.mockResolvedValue({ ok: true, deckCardId: ID(1) });
+  });
+
+  describe("the confirm (planUndoReartRunAction)", () => {
+    it("a closed tool, an id that doesn't read, a run that isn't the caller's own Re-art run, a deck that isn't theirs any more", async () => {
+      m.access.mockResolvedValueOnce(null);
+      expect((await planUndoReartRunAction(JOB)).ok).toBe(false);
+      for (const bad of ["not-a-run", null, 7, undefined]) expect((await planUndoReartRunAction(bad)).ok).toBe(false);
+      // No such run of theirs.
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "That run isn't one of yours." });
+      // A run whose request names no deck.
+      m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: {}, steps: [step(1)], created_at: RUN_STARTED });
+      expect((await planUndoReartRunAction(JOB)).ok).toBe(false);
+      run([step(1)]);
+      m.deck.mockResolvedValueOnce(null);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "That run's deck isn't one of yours any more." });
+      expect(m.event).not.toHaveBeenCalled();
+    });
+
+    it("counts what would go back, kind by kind, and names what is left and why — and changes nothing", async () => {
+      run([
+        step(1, { kept_art: before(1) }), // re-rolled: the earlier picture the run kept
+        step(2), // a first paint: its own art back
+        { status: "done", card_id: C(3), label: "Step 3", linked: true }, // a real card the run made: the real card back
+        step(4), // locked since
+        step(5), // painted again by a later run
+        step(6), // shows other art now
+        step(7), // had no art before
+        { status: "failed", card_id: C(8), label: "Failed" }, // never painted
+        { status: "done", card_id: null, label: "Locked since" }, // names no card
+        // Done, names its card, painted NOTHING (already in the style — another
+        // run's picture): not this run's to undo, and not listed either.
+        { status: "done", card_id: C(9), label: "Left as it was" },
+        step(1, { kept_art: before(1) }), // the same card twice is once
+      ]);
+      deckHas(
+        [
+          rowOf(1),
+          rowOf(2),
+          rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null }),
+          rowOf(4),
+          rowOf(5, { jobId: "00000000-0000-4000-8000-00000000a002" }),
+          rowOf(6),
+          rowOf(7, { previousArtUrl: null }),
+          rowOf(9, { jobId: "00000000-0000-4000-8000-00000000a000" }),
+        ],
+        [cardOf(1), cardOf(2), cardOf(3), cardOf(4), cardOf(5), cardOf(6, { art_url: ART("hand.png") }), cardOf(7), cardOf(9)],
+        [
+          { id: ID(3), card_id: C(3) },
+          { id: ID(4), card_id: C(4) },
+        ],
+      );
+      m.rolls.mockResolvedValue(new Map([[C(1), [{ id: R(9), artUrl: ART("other.jpg") }, { id: R(1), artUrl: before(1) }]]]));
+      m.locks.mockResolvedValue(new Set([ID(4)]));
+
+      expect(await planUndoReartRunAction(JOB)).toEqual({
+        ok: true,
+        earlier: 1,
+        own: 1,
+        real: 1,
+        skipped: [
+          { name: "Card 4", reason: REART_UNDO_SKIP_COPY.locked },
+          { name: "Card 5", reason: REART_UNDO_SKIP_COPY.changed },
+          { name: "Card 6", reason: REART_UNDO_SKIP_COPY.other_art },
+          { name: "Card 7", reason: REART_UNDO_SKIP_COPY.no_art_before },
+        ],
+      });
+      for (const fn of [m.update, m.keep, m.claim, m.writePainted, m.unlink, m.event]) expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("a card that is gone is named by its step; a run that painted nothing has nothing to undo", async () => {
+      run([step(1)]);
+      deckHas([rowOf(1)], []);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: true, earlier: 0, own: 0, real: 0, skipped: [{ name: "Step 1", reason: REART_UNDO_SKIP_COPY.gone }] });
+      run([{ status: "done", card_id: null }, { status: "failed", card_id: C(1), painted: true }]);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: true, earlier: 0, own: 0, real: 0, skipped: [] });
+    });
+
+    it("a card already put back says so: its own art back, the real card back", async () => {
+      run([step(1), { status: "done", card_id: C(3), label: "Step 3", linked: true }]);
+      deckHas(
+        // “Old art back” (the maker's, or an undo's) leaves a row that names no picture and no run.
+        [rowOf(1, { artUrl: null, previousArtUrl: null, jobId: null }), rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })],
+        [cardOf(1, { art_url: ART("mine-1.png") }), cardOf(3)],
+        [], // the made card's entry is the real card again
+      );
+      expect(await planUndoReartRunAction(JOB)).toEqual({
+        ok: true,
+        earlier: 0,
+        own: 0,
+        real: 0,
+        skipped: [
+          { name: "Card 1", reason: REART_UNDO_SKIP_COPY.own_back },
+          { name: "Card 3", reason: REART_UNDO_SKIP_COPY.real_back },
+        ],
+      });
+    });
+
+    it("a run from before steps said what they did is told by the deck's rows: a card whose row still names the run", async () => {
+      run([
+        { status: "done", card_id: C(1), label: "Step 1" }, // painted by this run: its row says so
+        { status: "done", card_id: C(2), label: "Step 2" }, // left as it was, or painted again since: unknown — not listed
+        { status: "done", card_id: C(3), label: "Step 3" }, // a card this run MADE (it is newer than the run's start)
+        { status: "done", card_id: C(4), label: "Step 4" }, // a card an EARLIER run made, re-rolled by this one
+      ]);
+      const made = { made: true, previousArtUrl: null };
+      deckHas(
+        [rowOf(1), rowOf(2, { jobId: "00000000-0000-4000-8000-00000000a002" }), rowOf(3, { ...made, entryId: ID(3) }), rowOf(4, { ...made, entryId: ID(4) })],
+        [cardOf(1), cardOf(2), cardOf(3, { created_at: "2026-11-12T09:03:00Z" }), cardOf(4, { created_at: "2026-11-10T08:00:00Z" })],
+        [
+          { id: ID(3), card_id: C(3) },
+          { id: ID(4), card_id: C(4) },
+        ],
+      );
+      expect(await planUndoReartRunAction(JOB)).toEqual({
+        ok: true,
+        earlier: 0,
+        own: 1,
+        real: 1,
+        // The re-rolled made card is never unlinked; such a run kept no
+        // record of the picture it replaced.
+        skipped: [{ name: "Card 4", reason: REART_UNDO_SKIP_COPY.earlier_gone }],
+      });
+    });
+
+    it("a run that RE-ROLLED cards an earlier run made puts their earlier pictures back — it never unlinks them from the deck", async () => {
+      // The check's finding. Run J made the cards from real cards; this run
+      // re-rolled them (their records still say `made`).
+      run([step(1, { kept_art: before(1) }), step(2, { kept_art: before(2) })]);
+      const made = { made: true, previousArtUrl: null };
+      deckHas(
+        [rowOf(1, { ...made, entryId: ID(1) }), rowOf(2, { ...made, entryId: ID(2) })],
+        [cardOf(1, { created_at: "2026-11-10T08:00:00Z" }), cardOf(2, { created_at: "2026-11-10T08:00:00Z" })],
+        [
+          { id: ID(1), card_id: C(1) },
+          { id: ID(2), card_id: C(2) },
+        ],
+      );
+      // Card 2's earlier picture was kept again under ANOTHER row since (a
+      // pick that didn't land): found by its address all the same.
+      m.rolls.mockResolvedValue(new Map([keptFor(1), keptFor(2, R(8))]));
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: true, earlier: 2, own: 0, real: 0, skipped: [] });
+
+      m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", frame_style: { template: "m15" }, back_face: null });
+      m.paintedAdmin.mockResolvedValue(rowOf(1, { ...made, entryId: ID(1) }));
+      m.claim.mockImplementation(async (_user: string, _deck: string, cardId: string, rollId: string) => ({
+        id: rollId,
+        cardId,
+        styleVersion: 1,
+        jobId: "job-0",
+        artUrl: before(1),
+        artPosition: null,
+        artistCredit: "dev_pro",
+        backArtUrl: null,
+        backArtPosition: null,
+        backArtistCredit: null,
+        imageModel: null,
+        method: "paint",
+        paintedAt: "2026-11-10T08:00:00Z",
+      }));
+      expect(await undoReartRunAction(JOB)).toMatchObject({ ok: true, undone: 2, failed: [] });
+      expect(m.unlink).not.toHaveBeenCalled();
+      expect(m.claim.mock.calls.map((call) => call[3])).toEqual([R(1), R(8)]);
+      expect(logged().at(-1)).toEqual(["undo_run", { undone: 2, earlier: 2, own: 0, real: 0, failed: 0, remaining: 0, left: 0 }]);
+    });
+
+    it("kept pictures that couldn't be READ: no plan at all — a re-rolled card would silently get its own art instead", async () => {
+      run([step(1, { kept_art: before(1) })]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.rolls.mockResolvedValue(null);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      expect(m.update).not.toHaveBeenCalled();
+    });
+
+    it("a run over a long deck reads its cards a hundred at a time", async () => {
+      const C3 = (n: number) => `00000000-0000-4000-8000-0000000d${String(n).padStart(4, "0")}`;
+      const numbers = Array.from({ length: 230 }, (_, i) => i + 1);
+      run(numbers.map((n) => ({ status: "done", card_id: C3(n), label: `Step ${n}`, painted: true })));
+      m.painted.mockResolvedValue(new Map(numbers.map((n) => [C3(n), rowOf(1, { cardId: C3(n), artUrl: ART("ai.jpg") })])));
+      m.cards.mockReturnValue({ data: numbers.map((n) => ({ id: C3(n), owner_id: "u1", title: `Card ${n}`, art_url: ART("ai.jpg") })), error: null });
+      expect(await planUndoReartRunAction(JOB)).toMatchObject({ ok: true, own: 230 });
+      // 230 cards: three reads of the cards and three of the deck's entries.
+      expect(m.cards).toHaveBeenCalledTimes(3);
+      expect(m.entries).toHaveBeenCalledTimes(3);
+    });
+
+    it("locks, cards or entries that couldn't be read: no plan at all (never “nothing is locked”)", async () => {
+      run([step(1)]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.locks.mockResolvedValueOnce(null);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      m.cards.mockReturnValueOnce({ data: null, error: { message: "boom" } });
+      expect((await planUndoReartRunAction(JOB)).ok).toBe(false);
+      m.entries.mockReturnValueOnce({ data: null, error: { message: "boom" } });
+      expect((await planUndoReartRunAction(JOB)).ok).toBe(false);
+    });
+  });
+
+  describe("the undo itself (undoReartRunAction)", () => {
+    it("a closed tool, ids that don't read and a run that isn't theirs undo nothing", async () => {
+      m.access.mockResolvedValueOnce(null);
+      expect((await undoReartRunAction(JOB)).ok).toBe(false);
+      for (const bad of [
+        ["not-a-run", []],
+        [JOB, "c1"],
+        [JOB, ["not-a-card"]],
+        [JOB, [C(1), 3]],
+        [JOB, Array.from({ length: 501 }, () => C(1))],
+      ] as const) {
+        expect((await undoReartRunAction(bad[0], bad[1])).ok).toBe(false);
+      }
+      expect((await undoReartRunAction(JOB)).ok).toBe(false);
+      for (const fn of [m.update, m.keep, m.claim, m.unlink, m.event]) expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("a run of the deck that is painting right now holds its cards: wait for it", async () => {
+      run([step(1)]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.open.mockReturnValue([{ id: "job-9", steps: [{ status: "running", claimed_at: new Date().toISOString() }] }]);
+      expect(await undoReartRunAction(JOB)).toMatchObject({ ok: false, code: "BUSY" });
+      expect(m.update).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["undo_run_failed", { reason: "busy" }]]);
+    });
+
+    it("a first paint gets its own art back — the picture it takes off is kept — and no credit is touched", async () => {
+      run([step(1)]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", back_face: null });
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: 1, failed: [], remaining: 0 });
+      expect(m.cardLocked).toHaveBeenCalledWith(DECK, C(1));
+      expect(m.update.mock.calls[0][0]).toBe(C(1));
+      expect(m.update.mock.calls[0][1]).toMatchObject({ art_url: ART("mine-1.png"), artist_credit: "Jane Painter" });
+      expect(m.keep.mock.calls[0][2]).toMatchObject({ cardId: C(1), artUrl: ART("ai-1.jpg"), jobId: JOB });
+      expect(m.balance).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["undo_run", { undone: 1, earlier: 0, own: 1, real: 0, failed: 0, remaining: 0, left: 0 }]]);
+    });
+
+    it("a re-rolled card goes back to the earlier picture the run kept", async () => {
+      run([step(1, { kept_art: before(1) })]);
+      const row = rowOf(1, { entryId: "entry-1" });
+      deckHas([row], [cardOf(1)]);
+      m.rolls.mockResolvedValue(new Map([keptFor(1)]));
+      m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", frame_style: { template: "m15" }, back_face: null });
+      m.paintedAdmin.mockResolvedValue(row);
+      m.paintedRows.mockResolvedValue([row]);
+      m.claim.mockResolvedValue({
+        id: R(1),
+        cardId: C(1),
+        styleVersion: 1,
+        jobId: "job-0",
+        artUrl: ART("ai-0.jpg"),
+        artPosition: null,
+        artistCredit: "dev_pro",
+        backArtUrl: null,
+        backArtPosition: null,
+        backArtistCredit: null,
+        imageModel: "bfl/flux-2-pro",
+        method: "paint",
+        paintedAt: "2026-11-11T10:00:00Z",
+      });
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: 1, failed: [], remaining: 0 });
+      expect(m.claim).toHaveBeenCalledWith("u1", DECK, C(1), R(1));
+      expect(m.update.mock.calls[0][1]).toMatchObject({ art_url: ART("ai-0.jpg") });
+      // The deck's row names that picture under the run that painted IT —
+      // so that run can be undone next.
+      expect(m.writePainted.mock.calls[0].slice(0, 3)).toEqual(["u1", DECK, "job-0"]);
+      expect(m.writePainted.mock.calls[0][3]).toMatchObject({ artUrl: ART("ai-0.jpg") });
+      expect(logged()).toEqual([["undo_run", { undone: 1, earlier: 1, own: 0, real: 0, failed: 0, remaining: 0, left: 0 }]]);
+    });
+
+    it("a real card the run made goes back to the real card: its entry is unlinked through the deck's own action, and the made card is left alone", async () => {
+      run([{ status: "done", card_id: C(3), label: "Step 3", linked: true }]);
+      deckHas([rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })], [cardOf(3)], [{ id: ID(3), card_id: C(3) }]);
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: 1, failed: [], remaining: 0 });
+      expect(m.unlink.mock.calls).toEqual([[ID(3)]]);
+      for (const fn of [m.update, m.keep, m.claim, m.discard, m.discardUnused]) expect(fn).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["undo_run", { undone: 1, earlier: 0, own: 0, real: 1, failed: 0, remaining: 0, left: 0 }]]);
+    });
+
+    it("puts back a few cards a request and says how many remain; the cards named in `skip` are not tried again", async () => {
+      const count = REART_UNDO_BATCH + 3;
+      const numbers = Array.from({ length: count }, (_, i) => i + 1);
+      const C2 = (n: number) => `00000000-0000-4000-8000-0000000c${String(n).padStart(4, "0")}`;
+      run(numbers.map((n) => ({ status: "done", card_id: C2(n), label: `Step ${n}`, painted: true })));
+      m.painted.mockResolvedValue(new Map(numbers.map((n) => [C2(n), rowOf(1, { cardId: C2(n), artUrl: ART("ai.jpg") })])));
+      m.cards.mockReturnValue({ data: numbers.map((n) => ({ id: C2(n), owner_id: "u1", title: `Card ${n}`, art_url: ART("ai.jpg") })), error: null });
+      m.card.mockReturnValue({ id: C2(1), owner_id: "u1", art_url: ART("ai.jpg"), art_position: null, artist_credit: "dev_pro", back_face: null });
+
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: REART_UNDO_BATCH, failed: [], remaining: 3 });
+      expect(m.update).toHaveBeenCalledTimes(REART_UNDO_BATCH);
+      // The cards it tried, in the run's order (each asks its lock first).
+      const tried = () => m.cardLocked.mock.calls.map(([, cardId]) => cardId);
+      expect(tried()).toEqual(numbers.slice(0, REART_UNDO_BATCH).map(C2));
+
+      m.cardLocked.mockClear();
+      m.event.mockClear();
+      expect(await undoReartRunAction(JOB, [C2(1), C2(2)])).toMatchObject({ ok: true, undone: REART_UNDO_BATCH, remaining: 1 });
+      expect(tried()).toEqual(numbers.slice(2, 2 + REART_UNDO_BATCH).map(C2));
+      expect(logged()).toEqual([["undo_run", { undone: REART_UNDO_BATCH, earlier: 0, own: REART_UNDO_BATCH, real: 0, failed: 0, remaining: 1, left: 0 }]]);
+    });
+
+    it("a card that can't be put back is left as it is and named with its id — in words of ours — while the others go back", async () => {
+      run([step(1), step(2), { status: "done", card_id: C(3), label: "Step 3", linked: true }]);
+      deckHas(
+        [rowOf(1), rowOf(2), rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })],
+        [cardOf(1), cardOf(2), cardOf(3)],
+        [{ id: ID(3), card_id: C(3) }],
+      );
+      const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      // Card 1's edit is refused; card 2's throws; the real card's unlink fails with the database's words.
+      m.card.mockImplementation(() => ({ id: C(1), owner_id: "u1", art_url: ART(`ai-${m.card.mock.calls.length}.jpg`), art_position: null, artist_credit: "dev_pro", back_face: null }));
+      m.update.mockResolvedValueOnce({ ok: false, formError: "No." }).mockRejectedValueOnce(new Error("boom"));
+      m.unlink.mockResolvedValue({ ok: false, error: 'new row violates row-level security policy for table "deck_cards"' });
+      const result = await undoReartRunAction(JOB);
+      expect(result).toMatchObject({ ok: true, undone: 0, remaining: 0 });
+      if (!result.ok) throw new Error("unreachable");
+      expect(result.failed.map((failure) => [failure.name, failure.cardId])).toEqual([
+        ["Card 1", C(1)],
+        ["Card 2", C(2)],
+        ["Card 3", C(3)],
+      ]);
+      expect(result.failed[2].reason).toBe("The real card couldn't be put back in the deck — try again.");
+      for (const failure of result.failed) expect(failure.reason).not.toMatch(/row-level|boom|violates/);
+      expect(logged()).toEqual([["undo_run", { undone: 0, earlier: 0, own: 0, real: 0, failed: 3, remaining: 0, left: 0 }]]);
+      logs.mockRestore();
+    });
+
+    it("what the plan leaves as it is is never touched, and counted in the log", async () => {
+      run([step(1), step(4)]);
+      deckHas([rowOf(1), rowOf(4)], [cardOf(1), cardOf(4)], [{ id: ID(4), card_id: C(4) }]);
+      m.locks.mockResolvedValue(new Set([ID(4)]));
+      m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", back_face: null });
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: 1, failed: [], remaining: 0 });
+      expect(m.cardLocked.mock.calls).toEqual([[DECK, C(1)]]);
+      expect(m.update).toHaveBeenCalledTimes(1);
+      expect(logged()).toEqual([["undo_run", { undone: 1, earlier: 0, own: 1, real: 0, failed: 0, remaining: 0, left: 1 }]]);
+    });
+
+    it("a run whose cards couldn't be read undoes nothing and is `undo_run_failed`", async () => {
+      run([step(1)]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.locks.mockResolvedValue(null);
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      expect(m.update).not.toHaveBeenCalled();
+      expect(logged()).toEqual([["undo_run_failed", { reason: "unread" }]]);
+    });
   });
 });

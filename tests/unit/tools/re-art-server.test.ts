@@ -133,6 +133,7 @@ import {
   REART_IP_CONFIRMATIONS_PER_DAY,
   REART_IP_NEEDS_CONFIRMATION,
   REART_IP_TOO_MANY,
+  REART_LOCKED_COPY,
   REART_NO_ART_COPY,
   REART_REFERENCE_NOT_YOURS,
   REART_REFERENCE_WITH_RESTYLE,
@@ -160,7 +161,7 @@ describe("the plan — a card is in the style only while it still shows the styl
   });
   const row = (artUrl: string | null) => ({
     card_id: CARD,
-    entry_id: null,
+    entry_id: null as string | null,
     style_version: 3,
     art_url: artUrl,
     back_art_url: null,
@@ -294,6 +295,91 @@ describe("the plan — a card is in the style only while it still shows the styl
     deckWith(ART("ai-1.jpg"), row(ART("ai-1.jpg")));
     const named = await plan([ENTRY]);
     expect(named.ok && named.entries).toEqual([expect.objectContaining({ kind: "own", repaint: true, paintedBefore: true })]);
+  });
+
+  describe("a locked card (0216 deck_reart_locks)", () => {
+    /** The deck above, with its one card's entry locked (or the lock read failing). */
+    function locked(answer: Result = { data: [{ entry_id: ENTRY }] }) {
+      const base = m.query.getMockImplementation() as (call: Call) => Promise<Result>;
+      m.query.mockImplementation(async (call: Call) => (call.table === "deck_reart_locks" ? answer : base(call)));
+    }
+
+    it("a run over the deck leaves it as it is and counts it — it is not painted, priced or listed", async () => {
+      deckWith(ART("mine.png"), null);
+      locked();
+      expect(await plan()).toMatchObject({ ok: true, entries: [], skipped: [], inStyle: 0, locked: 1 });
+      // The locks are the deck's, read through the caller's own session.
+      const read = m.query.mock.calls.map(([call]) => call as Call).find((call) => call.table === "deck_reart_locks");
+      expect(read?.filters).toEqual([["deck_id", DECK]]);
+    });
+
+    it("…whatever it shows: a card already in the style, or changed since, is counted as locked, not as in the style", async () => {
+      deckWith(ART("ai-1.jpg"), row(ART("ai-1.jpg")));
+      locked();
+      expect(await plan()).toMatchObject({ ok: true, entries: [], inStyle: 0, locked: 1 });
+    });
+
+    it("NAMED (a re-roll, a selection, a sample): refused in words, never painted", async () => {
+      deckWith(ART("mine.png"), null);
+      locked();
+      expect(await plan([ENTRY])).toMatchObject({
+        ok: true,
+        entries: [],
+        locked: 0,
+        skipped: [{ name: "Archivist of Lost Hours", reason: REART_LOCKED_COPY }],
+      });
+    });
+
+    it("a lock on another entry changes nothing; a deck with none plans as it always did", async () => {
+      deckWith(ART("mine.png"), null);
+      locked({ data: [{ entry_id: "00000000-0000-4000-8000-0000000000e9" }] });
+      const result = await plan();
+      expect(result).toMatchObject({ ok: true, locked: 0 });
+      expect(result.ok && result.entries).toHaveLength(1);
+    });
+
+    it("a lock is on the card's picture: the card's OTHER row on the deck is locked with it", async () => {
+      const OTHER = "00000000-0000-4000-8000-0000000000e2";
+      deckWith(ART("mine.png"), null);
+      const one = item(ART("mine.png"));
+      // The same card on a second row (the sideboard); only the first is locked.
+      m.items.mockResolvedValue([one, { ...one, entry: { ...one.entry, id: OTHER, board: "side" } }]);
+      locked();
+      expect(await plan()).toMatchObject({ ok: true, entries: [], locked: 2 });
+      expect(await plan([OTHER])).toMatchObject({ ok: true, entries: [], skipped: [{ reason: REART_LOCKED_COPY }] });
+    });
+
+    it("…and so is a row whose MADE card isn't linked right now (a run would link it again and paint that card)", async () => {
+      const REAL = "00000000-0000-4000-8000-0000000000e3";
+      // The card on its own row (locked), and a real card's row that an
+      // earlier run made the SAME card from, unlinked since.
+      deckWith(ART("ai-1.jpg"), { ...row(ART("ai-1.jpg")), made: true, entry_id: REAL });
+      const one = item(ART("ai-1.jpg"));
+      m.items.mockResolvedValue([
+        one,
+        { entry: { ...one.entry, id: REAL, name: "Krenko, Mob Boss", card_id: null, scryfall_id: "89fcc35b-76fa-4408-8620-a1e11b2caf1f" }, card: null, cardOwner: null },
+      ]);
+      locked();
+      const named = await plan([REAL]);
+      expect(named).toMatchObject({ ok: true, entries: [], skipped: [{ name: "Krenko, Mob Boss", reason: REART_LOCKED_COPY }] });
+      expect(await plan()).toMatchObject({ ok: true, entries: [], locked: 2 });
+    });
+
+    it("locks that couldn't be READ plan nothing — a run would paint, and charge for, a card its maker locked", async () => {
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      deckWith(ART("mine.png"), null);
+      locked({ data: null, error: { message: "connection reset", code: "08006" } });
+      expect(await plan()).toEqual({ ok: false, error: "We couldn't read which cards are locked — try again." });
+      logged.mockRestore();
+    });
+
+    it("a database 0216 hasn't reached has no locks: the plan is main's", async () => {
+      deckWith(ART("mine.png"), null);
+      locked({ data: null, error: { message: "no such table", code: "PGRST205" } });
+      const result = await plan();
+      expect(result).toMatchObject({ ok: true, locked: 0 });
+      expect(result.ok && result.entries).toHaveLength(1);
+    });
   });
 });
 

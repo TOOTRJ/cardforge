@@ -251,6 +251,19 @@ export type JobStep = {
   /** Bulk Customize: on a step put back to "pending" (error_code
    *  RATE_LIMITED), how long the runner waits before running it again. */
   retry_after_seconds?: number | null;
+  /** Re-art deck: on a DONE step that re-rolled a card, the ADDRESS of the
+   *  earlier picture it kept in the card's place — what an undo of the run
+   *  puts back (an address, not the kept row's id: a picture kept again
+   *  under another row is still found). */
+  kept_art?: string | null;
+  /** Re-art deck: true when the step LINKED a card to its deck entry — it
+   *  made the card from a real card, or linked again one an earlier run
+   *  made. Only such a step's undo puts the real card back. */
+  linked?: boolean;
+  /** Re-art deck: true on a DONE step that put a new picture on its card
+   *  (a step that left the card as it was is done too) — what an undo of the
+   *  run reads. */
+  painted?: boolean;
 };
 
 export type GenerationJobRow = {
@@ -3222,6 +3235,12 @@ async function patchJobStep(
     // to clear), so every other kind's patch is as before.
     ...(step.note !== undefined ? { note: step.note } : {}),
     ...(step.retry_after_seconds !== undefined ? { retry_after_seconds: step.retry_after_seconds } : {}),
+    // Re-art deck: what an undo of the run reads — the earlier picture a
+    // re-roll kept, that the step painted, that it linked a card to its
+    // entry. Only a step that says one writes its key.
+    ...(step.kept_art ? { kept_art: step.kept_art } : {}),
+    ...(step.painted === true ? { painted: true } : {}),
+    ...(step.linked === true ? { linked: true } : {}),
   };
   // The work (credit spend, card insert, image) is already committed by the
   // time we get here — losing this write means a stale reclaim would re-run

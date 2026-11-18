@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Loader2, Paintbrush, Play, Sparkles } from "lucide-react";
 import { ReartCardWordsDialog } from "./reart-card-words-dialog";
 import { ReartEarlierPicturesDialog } from "./reart-earlier-pictures-dialog";
+import { ReartUndoDialog } from "./reart-undo-dialog";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -18,6 +19,7 @@ import { remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-cop
 import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { trackToolEvent } from "@/lib/tools/track-client";
 import {
+  REART_MAX_CARDS,
   EMPTY_REART_STYLE,
   REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
@@ -57,7 +59,7 @@ import {
   type ReartStudioEntry,
   type ReartVisibility,
 } from "@/lib/tools/re-art/model";
-import { restoreReartArtAction, saveReartStyleAction } from "@/lib/tools/re-art/actions";
+import { restoreReartArtAction, saveReartStyleAction, setReartLocksAction } from "@/lib/tools/re-art/actions";
 import type { ReartRun, StoredReartStyle } from "@/lib/tools/re-art/server";
 import { ReartStylePanel } from "./reart-style-panel";
 import { ReartConfirmDialog } from "./reart-confirm-dialog";
@@ -170,7 +172,15 @@ export function ReartStudio({
   const confirmation = needsConfirmation && attested ? { attested: true } : {};
   const hasReference = Boolean(style.referenceUrl);
 
-  const paintable = useMemo(() => entries.filter((entry) => entry.kind !== "skip"), [entries]);
+  /** The cards the tool can paint — a LOCKED one (0216) is never one of a
+   *  run's, a sample's or a count's, though it stays in the list. */
+  const paintable = useMemo(() => entries.filter((entry) => entry.kind !== "skip" && !entry.locked), [entries]);
+  /** The cards picked with "Select cards" (0216), by entry. */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [locking, startLocking] = useTransition();
+  /** The run whose undo is open. */
+  const [undoRun, setUndoRun] = useState<string | null>(null);
+  const [undoOpen, setUndoOpen] = useState(false);
   const [sample, setSample] = useState<Set<string>>(
     () =>
       new Set(
@@ -406,6 +416,58 @@ export function ReartStudio({
       title: `${entry.state ? "Re-roll" : "Paint"} ${entry.name}`,
       description: `${description} Nothing is charged until you press Paint.`,
       input: { deckId: deck.id, entryIds: [entry.id], scope: "all", visibility, model, method },
+    });
+  };
+
+  // Several cards at once (the list's selection): each is painted in the
+  // deck's SAVED style, as one card is, and priced in the confirm first.
+  const paintSelected = (picked: ReartStudioEntry[]) => {
+    if (running || busy || picked.length === 0) return;
+    if (paintBlocked) {
+      toast.error(paintBlocked);
+      return;
+    }
+    if (picked.length === 1) {
+      paintOne(picked[0]);
+      return;
+    }
+    // One run names at most this many cards (the plan's own limit): said
+    // here, in words, rather than refused as a run that "couldn't be read".
+    if (picked.length > REART_MAX_CARDS) {
+      toast.error(`A selection paints up to ${REART_MAX_CARDS} cards at a time — you picked ${picked.length}. Pick fewer, or use “Re-art the deck…”.`);
+      return;
+    }
+    const keeps = picked.some((entry) => entry.ownPictureOnCard);
+    openConfirm({
+      title: `Paint ${picked.length} selected cards`,
+      description: `Each is painted in the deck's saved style.${
+        keeps ? " A picture Re-art painted on one of them is kept: you can go back to it under “Earlier pictures”." : ""
+      } Nothing is charged until you press Paint.`,
+      input: { deckId: deck.id, entryIds: picked.map((entry) => entry.id), scope: "all", visibility, model, method },
+    });
+  };
+
+  const setLocks = (picked: ReartStudioEntry[], lock: boolean) => {
+    if (running || locking || picked.length === 0) return;
+    startLocking(async () => {
+      try {
+        const result = await setReartLocksAction(
+          deck.id,
+          picked.map((entry) => entry.id),
+          lock,
+        );
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        const what = picked.length === 1 ? picked[0].name : `${picked.length} cards`;
+        toast.success(lock ? `${what} locked: the tool leaves ${picked.length === 1 ? "it" : "them"} as ${picked.length === 1 ? "it is" : "they are"}.` : `${what} unlocked.`);
+        // A card just locked leaves the sample: a sample never paints it.
+        if (lock) setSample((prev) => new Set([...prev].filter((id) => !picked.some((entry) => entry.id === id))));
+        router.refresh();
+      } catch {
+        toast.error("We couldn't reach PipGlyph — try again.");
+      }
     });
   };
 
@@ -789,7 +851,16 @@ export function ReartStudio({
             </section>
           ) : null}
 
-          {runs.length > 0 ? <ReartRunList runs={runs} /> : null}
+          {runs.length > 0 ? (
+            <ReartRunList
+              runs={runs}
+              undoHeld={running}
+              onUndo={(run) => {
+                setUndoRun(run.id);
+                setUndoOpen(true);
+              }}
+            />
+          ) : null}
         </div>
 
         <ReartCardGrid
@@ -821,6 +892,13 @@ export function ReartStudio({
             setEarlierOpen(true);
           }}
           onRestore={restore}
+          selection={{
+            selected,
+            onSelected: setSelected,
+            onPaint: paintSelected,
+            onLock: setLocks,
+            working: locking,
+          }}
         />
       </div>
 
@@ -857,6 +935,22 @@ export function ReartStudio({
             router.refresh();
           }}
           onGone={() => router.refresh()}
+        />
+      ) : null}
+
+      {undoRun ? (
+        <ReartUndoDialog
+          open={undoOpen}
+          onOpenChange={setUndoOpen}
+          runId={undoRun}
+          onUndone={(undone, failedCount) => {
+            if (undone > 0) {
+              toast.success(
+                `${undone} card${undone === 1 ? "" : "s"} put back.${failedCount > 0 ? ` ${failedCount} couldn't be: the dialog says why.` : ""}`,
+              );
+            }
+            router.refresh();
+          }}
         />
       ) : null}
 

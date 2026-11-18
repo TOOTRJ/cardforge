@@ -27,6 +27,7 @@ import {
   REART_CREDITS_PER_FACE,
   REART_DEFAULT_MODEL,
   REART_DEFAULT_METHOD,
+  REART_LOCKED_SINCE_COPY,
   REART_MAX_CARDS,
   REART_METHODS,
   REART_MODEL_IDS,
@@ -70,6 +71,7 @@ import {
   type PaintedCard,
 } from "@/lib/tools/re-art/server";
 import { dropRoll, isKeptPicture, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { isEntryLockedAdmin } from "@/lib/tools/re-art/locks";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
 import { backFaceSchema } from "@/lib/validation/card";
 
@@ -314,6 +316,19 @@ export async function runReartStep(
   }
   if (!entry) return failed(step, "This card is no longer in your deck.");
   if (entry.board === "maybe") return failed(step, REART_SKIP_COPY.maybeboard);
+  // A real card a Re-art run already MADE from this entry whose link didn't
+  // land (or that was unlinked since — by the maker, or by an undo): read
+  // here, before the lock is asked, because a lock is on the card's picture
+  // and another row of the deck may hold that made card.
+  const madeId = entry.card_id ? null : await readMadeForEntryAdmin(userId, plan.deck_id, entry.id);
+  // A card locked since the run was planned (0216) is left as it is, and
+  // nothing is charged. A lock that couldn't be read stops the step: it is
+  // never read as "not locked".
+  const locked = await isEntryLockedAdmin(userId, plan.deck_id, entry.id, entry.card_id ?? madeId);
+  if (locked === null) return failed(step, "We couldn't read whether this card is locked — try it again.");
+  if (locked) {
+    return { ...step, ...CLEARED, status: "done", error: undefined, label: entry.name, note: REART_LOCKED_SINCE_COPY };
+  }
   // The card's own words (0209), read here: the plan is the owner's to
   // insert, so it names the entry and never the words. A read that didn't
   // answer stops the step before any charge — never "no words".
@@ -322,22 +337,22 @@ export async function runReartStep(
   const words = wordsRead.words;
 
   let cardId = entry.card_id;
-  // A real card a Re-art run already MADE from this entry whose link didn't
-  // land (or that the maker unlinked since): linked again, never made (or
-  // charged) a second time.
-  if (!cardId) {
-    const made = await readMadeForEntryAdmin(userId, plan.deck_id, entry.id);
-    if (made) {
-      const linked = await linkDeckCardAction(entry.id, made, { surface: "deck" });
-      if (!linked.ok) return failed(step, "This card was made earlier but couldn't be linked to its entry — link it from the deck page.");
-      cardId = made;
-    }
+  // The made card is linked again, never made (or charged) a second time.
+  let linkedNow = false;
+  if (!cardId && madeId) {
+    const linked = await linkDeckCardAction(entry.id, madeId, { surface: "deck" });
+    if (!linked.ok) return failed(step, "This card was made earlier but couldn't be linked to its entry — link it from the deck page.");
+    cardId = madeId;
+    linkedNow = true;
   }
 
   // An entry that is (now) linked to a card: the own-card path — a real
   // card another run already made lands here too, and is found in style.
   if (cardId) {
-    return paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, entry.scryfall_id, planned.repaint, words, model, deps);
+    const result = await paintOwnCard(userId, jobId, step, plan, style, stored.version, cardId, entry.scryfall_id, planned.repaint, words, model, deps);
+    // This step linked the card to its entry — whatever the paint came to,
+    // the link stands: an undo of the run puts the real card back.
+    return linkedNow ? { ...result, linked: true } : result;
   }
   if (planned.kind !== "printing" || !entry.scryfall_id) {
     return failed(step, "This entry has no card to re-art any more.");
@@ -352,8 +367,10 @@ export async function runReartStep(
     reference = read;
   }
 
-  // A real card: Bulk Customize's one-card core, in the deck's style.
-  return customizeSourceStep(
+  // A real card: Bulk Customize's one-card core, in the deck's style. A
+  // step that made the card linked it to its entry: an undo of the run puts
+  // the real card back.
+  const made = await customizeSourceStep(
     userId,
     jobId,
     step,
@@ -389,6 +406,7 @@ export async function runReartStep(
     },
     deps,
   );
+  return made.status === "done" && made.card_id ? { ...made, linked: true } : made;
 }
 
 type Previous = Pick<
@@ -759,6 +777,16 @@ async function paintOwnCard(
       image_model: [...new Set(models)].join(" + ") || null,
       note: [startedFrom, recorded ? null : "New art saved, but its old art can't be put back from the tool."].filter(Boolean).join(" ") || null,
       ...(result.forcedPrivate ? { forced_private: result.forcedPrivate } : {}),
+      // This step put a new picture on the card (a step that left its card
+      // as it was is done too, and names the card): what an undo of the run
+      // reads.
+      painted: true,
+      // A re-roll: the earlier picture it kept in the card's place — what
+      // an undo of this run puts back. Only when the card was SHOWING it
+      // (a card that showed other art gets that art back instead). Its
+      // address, not the kept row's id: kept again under another row (a
+      // pick that didn't land) it is still the picture to go back to.
+      ...(kept && showsRowArt && painted?.artUrl ? { kept_art: painted.artUrl } : {}),
     };
   });
 }

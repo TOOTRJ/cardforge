@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+import { chunkIds } from "@/lib/supabase/select-all-rows";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { describeCapacity, remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-copy";
 import { isBillingEnabled } from "@/lib/billing/flags";
@@ -32,12 +33,16 @@ import {
   REART_PICTURE_GONE,
   REART_ROW_PICTURE,
   REART_TOOL_SLUG,
+  REART_UNDO_BATCH,
+  REART_UNDO_SKIP_COPY,
+  REART_UNLOCK_FIRST,
   canPickReartModel,
   cleanReartCardWords,
   reartRunMode,
   reartWordsSaySomething,
   reartPreviousArt,
   reartRunSchema,
+  reartUndoOf,
   reartStepKey,
   reartStyleProblem,
   reartStyleSchema,
@@ -46,8 +51,12 @@ import {
   type ReartCardWords,
   type ReartCost,
   type ReartRoll,
+  type ReartUndoKind,
+  type ReartUndoPlan,
 } from "@/lib/tools/re-art/model";
-import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls } from "@/lib/tools/re-art/rolls";
+import { isCardLocked, readLocks, setLocks } from "@/lib/tools/re-art/locks";
+import { unlinkDeckCardAction } from "@/lib/decks/card-actions";
+import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRollsOrNull } from "@/lib/tools/re-art/rolls";
 import { storedArtExists } from "@/lib/tools/re-art/restyle-source";
 import {
   getOwnedDeck,
@@ -62,6 +71,7 @@ import {
   saveDeckStyle,
   styleLicenceCheck,
   writePaintedCard,
+  type ReartDeck,
   type ReartPlanLine,
 } from "@/lib/tools/re-art/server";
 import type { ReartJobPlan } from "@/lib/tools/re-art/step";
@@ -85,6 +95,9 @@ import type { ReartJobPlan } from "@/lib/tools/re-art/step";
 //     KEPT (0215), as a re-roll's is.
 //   * CHOOSE AN EARLIER PICTURE puts one of the pictures Re-art keeps for a
 //     card back on it (0215). Nothing is painted or charged.
+//   * LOCK / UNLOCK keeps the tool off a card's picture (0216).
+//   * UNDO A RUN puts each card a run painted back to what it showed before
+//     — planned first (the confirm), then carried out a few cards a request.
 //
 // Each records what it did after the response (recordToolEventLater —
 // counts, choices and codes only, never a deck's or a card's name or the
@@ -226,6 +239,8 @@ export type ReartPlanned = {
   lines: ReartPlanLine[];
   skipped: Array<{ name: string; reason: string }>;
   inStyle: number;
+  /** Locked cards a run over the deck leaves as they are (0216). */
+  locked: number;
   styleChanged: boolean;
   cost: ReartCost;
   capacity: CardCapacity | null;
@@ -276,6 +291,7 @@ export async function planReartAction(input: unknown): Promise<ReartPlanned | Re
     lines,
     skipped: plan.skipped,
     inStyle: plan.inStyle,
+    locked: plan.locked ?? 0,
     styleChanged: plan.styleChanged,
     cost,
     capacity,
@@ -352,9 +368,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
       ok: false,
       error:
         plan.skipped.length === 0
-          ? plan.inStyle > 0
-            ? "Every card of this run is in the deck's style already."
-            : "None of these cards can be re-arted."
+          ? plan.locked > 0
+            ? plan.inStyle > 0
+              ? "Every card of this run is locked or in the deck's style already."
+              : "Every card of this run is locked — unlock one to paint it."
+            : plan.inStyle > 0
+              ? "Every card of this run is in the deck's style already."
+              : "None of these cards can be re-arted."
           : plan.inStyle > 0 || plan.skipped.length > 1
             ? "No card of this run is waiting to be painted."
             : plan.skipped[0].reason,
@@ -497,7 +517,9 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   // a card Re-art has painted on this deck before is a `reroll` (the job's
   // own `request.reroll` says only "named cards", and is left as it is).
   const firstPaint = reroll && plan.entries.every((entry) => !entry.paintedBefore);
-  track(access, parsed.data.sample ? "start_sample" : reroll ? (firstPaint ? "paint_one" : "reroll") : "start", {
+  // Several named cards at once (the studio's selection) are `paint_selected`.
+  const several = reroll && (parsed.data.entryIds?.length ?? 0) > 1;
+  track(access, parsed.data.sample ? "start_sample" : several ? "paint_selected" : reroll ? (firstPaint ? "paint_one" : "reroll") : "start", {
     cards: plan.entries.length,
     makes,
     credits,
@@ -517,32 +539,33 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
   return { ok: true, job: jobRow as unknown as GenerationJobView, skipped: plan.skipped, credits, version: saved.version };
 }
 
+/** What a one-card core answers: what it did, or why not (`reason`: the
+ *  code the tool's log takes). */
+type CoreFailure = { ok: false; error: string; reason?: string; code?: "BUSY" };
+
+/** A card locked on the deck (0216) is left as it is by every one-card
+ *  action; a lock that couldn't be read is never "not locked". */
+async function lockRefusal(deckId: string, cardId: string): Promise<CoreFailure | null> {
+  const locked = await isCardLocked(deckId, cardId);
+  if (locked === null) return { ok: false, reason: "lock_unread", error: "We couldn't read whether this card is locked — try again." };
+  return locked ? { ok: false, reason: "locked", error: REART_UNLOCK_FIRST } : null;
+}
+
 /**
- * "Put the old art back": one of the maker's own cards, edited back to the
- * picture it had before Re-art first painted it (its art and fit alone, as
- * the paint edited them). The card stays in the run's style as far as a run
- * is concerned — it is shown "kept its own art", and a re-roll paints it
- * again. The picture it takes off is KEPT (0215): the maker can go back to
- * it from the card's earlier pictures.
+ * "Put the old art back" for ONE card — shared by its own action and by an
+ * undo of a run. The caller has passed the tool's gate, owns the deck and
+ * found no run painting.
  */
-export async function restoreReartArtAction(deckId: unknown, cardId: unknown): Promise<{ ok: true } | ReartFailure> {
-  const access = await checkToolAccess(REART_TOOL_SLUG);
-  if (!access) return { ok: false, error: NO_ACCESS };
-  if (typeof deckId !== "string" || typeof cardId !== "string" || !isUuid(deckId) || !isUuid(cardId)) {
-    return { ok: false, error: "That card couldn't be read." };
-  }
-  const deck = await getOwnedDeck(access.userId, deckId);
-  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
-  // A run of this deck that is painting right now may be painting this
-  // card (the studio holds the button too).
-  if ((await openRunsOf(access.userId, deck.id)).live) {
-    track(access, "restore_failed", { reason: "busy" });
-    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
-  }
+async function restoreCore(
+  userId: string,
+  deck: ReartDeck,
+  cardId: string,
+): Promise<{ ok: true; faces: number; kept: boolean } | CoreFailure> {
+  const lock = await lockRefusal(deck.id, cardId);
+  if (lock) return lock;
   const painted = (await readPaintedCards(deck.id)).get(cardId);
   if (!painted || painted.made || !painted.previousArtUrl || !painted.artUrl) {
-    track(access, "restore_failed", { reason: "no_earlier_art" });
-    return { ok: false, error: "There's no earlier art to put back on this card." };
+    return { ok: false, reason: "no_earlier_art", error: "There's no earlier art to put back on this card." };
   }
   const supabase = await createClient();
   const { data: card } = await supabase
@@ -550,16 +573,15 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     .select("id, owner_id, art_url, art_position, artist_credit, back_face")
     .eq("id", cardId)
     .maybeSingle();
-  if (!card || card.owner_id !== access.userId) return { ok: false, error: "That card isn't one of yours." };
+  if (!card || card.owner_id !== userId) return { ok: false, error: "That card isn't one of yours." };
   if (card.art_url !== painted.artUrl) {
-    track(access, "restore_failed", { reason: "art_changed" });
-    return { ok: false, error: "This card has other art now — change it in the card's editor." };
+    return { ok: false, reason: "art_changed", error: "This card has other art now — change it in the card's editor." };
   }
   const back = (card.back_face ?? null) as CardBackFace | null;
   const restoreBack = Boolean(back && painted.backArtUrl && back.art_url === painted.backArtUrl);
   // The picture it takes off is kept first (it is the card's and the row's
   // until the writes below): with the fit and credit the card has with it.
-  const kept = await keepRoll(access.userId, deck.id, {
+  const kept = await keepRoll(userId, deck.id, {
     cardId: card.id,
     styleVersion: painted.styleVersion,
     jobId: painted.jobId,
@@ -590,14 +612,13 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
   });
   if (!result.ok) {
     // The card still shows the picture: it is not an earlier one.
-    if (kept?.inserted) await dropRoll(access.userId, kept.id);
-    track(access, "restore_failed", { reason: "save_failed" });
-    return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't put the old art back." };
+    if (kept?.inserted) await dropRoll(userId, kept.id);
+    return { ok: false, reason: "save_failed", error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't put the old art back." };
   }
   // The painted pictures are NOT removed (0215: kept above, to go back to);
   // the row says "kept its own art" in this style (a full run leaves it
   // alone, a re-roll paints it).
-  await writePaintedCard(access.userId, deck.id, null, {
+  await writePaintedCard(userId, deck.id, null, {
     cardId: card.id,
     entryId: painted.entryId,
     styleVersion: painted.styleVersion,
@@ -614,8 +635,38 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
     previousBackArtistCredit: null,
   });
   // Past the limit the oldest kept picture goes — now that this one is kept.
-  await pruneRolls(access.userId, deck.id, card.id);
-  track(access, "restore", { faces: restoreBack ? 2 : 1, kept: Boolean(kept) });
+  await pruneRolls(userId, deck.id, card.id);
+  return { ok: true, faces: restoreBack ? 2 : 1, kept: Boolean(kept) };
+}
+
+/**
+ * "Put the old art back": one of the maker's own cards, edited back to the
+ * picture it had before Re-art first painted it (its art and fit alone, as
+ * the paint edited them). The card stays in the run's style as far as a run
+ * is concerned — it is shown "kept its own art", and a re-roll paints it
+ * again. The picture it takes off is KEPT (0215): the maker can go back to
+ * it from the card's earlier pictures. A locked card (0216) is refused.
+ */
+export async function restoreReartArtAction(deckId: unknown, cardId: unknown): Promise<{ ok: true } | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (typeof deckId !== "string" || typeof cardId !== "string" || !isUuid(deckId) || !isUuid(cardId)) {
+    return { ok: false, error: "That card couldn't be read." };
+  }
+  const deck = await getOwnedDeck(access.userId, deckId);
+  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  // A run of this deck that is painting right now may be painting this
+  // card (the studio holds the button too).
+  if ((await openRunsOf(access.userId, deck.id)).live) {
+    track(access, "restore_failed", { reason: "busy" });
+    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
+  }
+  const result = await restoreCore(access.userId, deck, cardId);
+  if (!result.ok) {
+    if (result.reason) track(access, "restore_failed", { reason: result.reason });
+    return { ok: false, error: result.error };
+  }
+  track(access, "restore", { faces: result.faces, kept: result.kept });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true };
 }
@@ -623,48 +674,25 @@ export async function restoreReartArtAction(deckId: unknown, cardId: unknown): P
 const NOT_KEPT = "That picture is no longer kept — reload the page.";
 
 /**
- * "Use this one": an EARLIER PICTURE Re-art keeps for one of the maker's
- * own cards on this deck is put back on the card (migration 0215) — a kept
- * picture (its id), or the one the deck's row names while the card shows
- * other art (REART_ROW_PICTURE). Nothing is painted or charged: it is an
- * edit of the card's art, its fit and artist credit, as a paint's.
- *
- * The picture it replaces — the one the deck's row named — is kept in its
- * place; the art "Put the old art back" goes back to is worked out as a
- * paint works it out (reartPreviousArt). Every move names the picture in
- * its new place before the old one lets go, and a refused edit puts all of
- * it back (lib/tools/re-art/rolls.ts). A picture whose file is no longer in
- * storage is never put on a card: it comes off the list instead.
+ * "Use this one" for ONE card — shared by its own action and by an undo of
+ * a run. The caller has passed the tool's gate, owns the deck and found no
+ * run painting.
  */
-export async function chooseReartPictureAction(deckId: unknown, cardId: unknown, pictureId: unknown): Promise<{ ok: true } | ReartFailure> {
-  const access = await checkToolAccess(REART_TOOL_SLUG);
-  if (!access) return { ok: false, error: NO_ACCESS };
-  if (
-    typeof deckId !== "string" ||
-    typeof cardId !== "string" ||
-    typeof pictureId !== "string" ||
-    !isUuid(deckId) ||
-    !isUuid(cardId) ||
-    !(pictureId === REART_ROW_PICTURE || isUuid(pictureId))
-  ) {
-    return { ok: false, error: "That picture couldn't be read." };
-  }
-  const failed = (reason: string) => track(access, "choose_picture_failed", { reason });
-  const deck = await getOwnedDeck(access.userId, deckId);
-  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
-  // A run of this deck that is painting right now may be painting this
-  // card: its picture is the run's to put on.
-  if ((await openRunsOf(access.userId, deck.id)).live) {
-    failed("busy");
-    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
-  }
+async function chooseCore(
+  userId: string,
+  deck: ReartDeck,
+  cardId: string,
+  pictureId: string,
+): Promise<{ ok: true; from: "kept" | "row"; faces: number; replaced: boolean } | CoreFailure> {
+  const lock = await lockRefusal(deck.id, cardId);
+  if (lock) return lock;
   const supabase = await createClient();
   const { data: card } = await supabase
     .from("cards")
     .select("id, owner_id, art_url, art_position, artist_credit, frame_style, back_face")
     .eq("id", cardId)
     .maybeSingle();
-  if (!card || card.owner_id !== access.userId) return { ok: false, error: "That card isn't one of yours." };
+  if (!card || card.owner_id !== userId) return { ok: false, error: "That card isn't one of yours." };
   const back = (card.back_face ?? null) as CardBackFace | null;
   const twoFaces = Boolean(back) && rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face });
 
@@ -672,19 +700,24 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   // several): which picture the card shows is Re-art's, and what was there
   // before.
   const [painted, rows] = await Promise.all([
-    readPaintedCardAdmin(access.userId, deck.id, card.id),
-    readPaintedRowsForCardAdmin(access.userId, card.id),
+    readPaintedCardAdmin(userId, deck.id, card.id),
+    readPaintedRowsForCardAdmin(userId, card.id),
   ]);
 
   // The picture picked: claimed from the kept ones (nobody else can hold it
   // now), or the deck's row's own while the card shows other art.
   let claimed: ReartRoll | null = null;
   let chosen: Omit<ReartRoll, "id" | "cardId" | "jobId">;
+  // The run that PAINTED the picked picture: the deck's row names it with
+  // the picture, so an undo of that run still finds the card (an undo of a
+  // re-roll puts the first run's picture back — and the first run can then
+  // be undone too).
+  let chosenJobId: string | null = null;
   if (pictureId === REART_ROW_PICTURE) {
     if (!painted?.artUrl || painted.artUrl === card.art_url) {
-      failed("not_kept");
-      return { ok: false, error: NOT_KEPT };
+      return { ok: false, reason: "not_kept", error: NOT_KEPT };
     }
+    chosenJobId = painted.jobId ?? null;
     chosen = {
       styleVersion: painted.styleVersion,
       artUrl: painted.artUrl,
@@ -698,12 +731,12 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
       paintedAt: painted.paintedAt,
     };
   } else {
-    claimed = await claimRoll(access.userId, deck.id, card.id, pictureId);
+    claimed = await claimRoll(userId, deck.id, card.id, pictureId);
     if (!claimed) {
-      failed("not_kept");
-      return { ok: false, error: NOT_KEPT };
+      return { ok: false, reason: "not_kept", error: NOT_KEPT };
     }
     chosen = claimed;
+    chosenJobId = claimed.jobId ?? null;
   }
 
   // Its file must still be in storage: a row written before pictures were
@@ -714,22 +747,20 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   const inStorage = await storedArtExists(chosen.artUrl);
   if (inStorage !== "yes") {
     if (inStorage === "unknown") {
-      if (claimed) await keepRoll(access.userId, deck.id, claimed);
-      failed("storage_unread");
-      return { ok: false, error: "We couldn't check that picture just now — try again." };
+      if (claimed) await keepRoll(userId, deck.id, claimed);
+      return { ok: false, reason: "storage_unread", error: "We couldn't check that picture just now — try again." };
     }
     if (!claimed && painted) {
       await writePaintedCard(
-        access.userId,
+        userId,
         deck.id,
         painted.jobId,
         { ...painted, artUrl: null, backArtUrl: null, imageModel: null, method: null },
         { paintedAt: painted.paintedAt },
       );
     }
-    failed("gone");
     revalidatePath(toolHref(REART_TOOL_SLUG));
-    return { ok: false, error: REART_PICTURE_GONE };
+    return { ok: false, reason: "gone", error: REART_PICTURE_GONE };
   }
 
   // What "Put the old art back" goes back to from here — as a paint works
@@ -738,7 +769,7 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   // this deck's row still holds the right art to put back.
   const source = card.art_url ? rows.find((row) => row.artUrl && row.artUrl === card.art_url) : undefined;
   const carry =
-    !source && painted && (claimed?.artUrl === card.art_url || (await isKeptPicture(access.userId, deck.id, card.id, card.art_url)))
+    !source && painted && (claimed?.artUrl === card.art_url || (await isKeptPicture(userId, deck.id, card.id, card.art_url)))
       ? painted
       : null;
   const previous = reartPreviousArt<Json>({
@@ -760,7 +791,7 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   const showsRowArt = Boolean(replaced && card.art_url === replaced.artUrl);
   const showsRowBack = Boolean(replaced?.backArtUrl && back?.art_url === replaced.backArtUrl);
   const kept = replaced?.artUrl
-    ? await keepRoll(access.userId, deck.id, {
+    ? await keepRoll(userId, deck.id, {
         cardId: card.id,
         styleVersion: replaced.styleVersion,
         jobId: replaced.jobId,
@@ -779,9 +810,9 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   // 2. The deck's row names the picked picture — and keeps the date it was
   //    painted (nothing is painted now).
   const recorded = await writePaintedCard(
-    access.userId,
+    userId,
     deck.id,
-    null,
+    chosenJobId,
     {
       cardId: card.id,
       entryId: painted?.entryId ?? null,
@@ -798,14 +829,13 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   // lets go: the row as it was, THEN the copy this pick kept taken out, and
   // the picked picture kept again.
   const putBack = async () => {
-    if (recorded) await revertPaintedCard(access.userId, deck.id, card.id, painted);
-    if (kept?.inserted) await dropRoll(access.userId, kept.id);
-    if (claimed) await keepRoll(access.userId, deck.id, claimed);
+    if (recorded) await revertPaintedCard(userId, deck.id, card.id, painted);
+    if (kept?.inserted) await dropRoll(userId, kept.id);
+    if (claimed) await keepRoll(userId, deck.id, claimed);
   };
   if (!recorded) {
     await putBack();
-    failed("not_saved");
-    return { ok: false, error: "Couldn't change the picture — try again." };
+    return { ok: false, reason: "not_saved", error: "Couldn't change the picture — try again." };
   }
 
   // 3. The card's edit: the art, its fit and credit — nothing else.
@@ -827,17 +857,306 @@ export async function chooseReartPictureAction(deckId: unknown, cardId: unknown,
   }
   if (!result.ok) {
     await putBack();
-    failed("save_failed");
-    return { ok: false, error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't change the picture." };
+    return { ok: false, reason: "save_failed", error: result.formError ?? Object.values(result.fieldErrors ?? {})[0] ?? "Couldn't change the picture." };
   }
   // (One came out, at most one went in: the limit holds. Asked anyway, for
   // a card that was over it before.)
-  await pruneRolls(access.userId, deck.id, card.id);
-  track(access, "choose_picture", {
-    from: claimed ? "kept" : "row",
-    faces: backArtUrl ? 2 : 1,
-    replaced: Boolean(kept),
-  });
+  await pruneRolls(userId, deck.id, card.id);
+  return { ok: true, from: claimed ? "kept" : "row", faces: backArtUrl ? 2 : 1, replaced: Boolean(kept) };
+}
+
+/**
+ * "Use this one": an EARLIER PICTURE Re-art keeps for one of the maker's
+ * own cards on this deck is put back on the card (migration 0215) — a kept
+ * picture (its id), or the one the deck's row names while the card shows
+ * other art (REART_ROW_PICTURE). Nothing is painted or charged: it is an
+ * edit of the card's art, its fit and artist credit, as a paint's.
+ *
+ * The picture it replaces — the one the deck's row named — is kept in its
+ * place; the art "Put the old art back" goes back to is worked out as a
+ * paint works it out (reartPreviousArt). Every move names the picture in
+ * its new place before the old one lets go, and a refused edit puts all of
+ * it back (lib/tools/re-art/rolls.ts). A picture whose file is no longer in
+ * storage is never put on a card: it comes off the list instead. A locked
+ * card (0216) is refused.
+ */
+export async function chooseReartPictureAction(deckId: unknown, cardId: unknown, pictureId: unknown): Promise<{ ok: true } | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (
+    typeof deckId !== "string" ||
+    typeof cardId !== "string" ||
+    typeof pictureId !== "string" ||
+    !isUuid(deckId) ||
+    !isUuid(cardId) ||
+    !(pictureId === REART_ROW_PICTURE || isUuid(pictureId))
+  ) {
+    return { ok: false, error: "That picture couldn't be read." };
+  }
+  const deck = await getOwnedDeck(access.userId, deckId);
+  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  // A run of this deck that is painting right now may be painting this
+  // card: its picture is the run's to put on.
+  if ((await openRunsOf(access.userId, deck.id)).live) {
+    track(access, "choose_picture_failed", { reason: "busy" });
+    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
+  }
+  const result = await chooseCore(access.userId, deck, cardId, pictureId);
+  if (!result.ok) {
+    if (result.reason) track(access, "choose_picture_failed", { reason: result.reason });
+    return { ok: false, error: result.error };
+  }
+  track(access, "choose_picture", { from: result.from, faces: result.faces, replaced: result.replaced });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return { ok: true };
 }
+
+/**
+ * Locks or unlocks cards of the deck (migration 0216), by deck ENTRY: while
+ * an entry is locked the tool leaves its picture as it is. Nothing is
+ * painted or charged.
+ */
+export async function setReartLocksAction(
+  deckId: unknown,
+  entryIds: unknown,
+  locked: unknown,
+): Promise<{ ok: true; changed: number } | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (
+    typeof deckId !== "string" ||
+    !isUuid(deckId) ||
+    typeof locked !== "boolean" ||
+    !Array.isArray(entryIds) ||
+    entryIds.length === 0 ||
+    entryIds.length > 500 ||
+    !entryIds.every((id) => typeof id === "string" && isUuid(id))
+  ) {
+    return { ok: false, error: "Those cards couldn't be read." };
+  }
+  const deck = await getOwnedDeck(access.userId, deckId);
+  if (!deck) return { ok: false, error: "That deck isn't one of yours." };
+  const changed = await setLocks(access.userId, deck.id, entryIds as string[], locked);
+  if (changed === null) {
+    track(access, locked ? "lock_failed" : "unlock_failed", { reason: "not_saved" });
+    return { ok: false, error: `Couldn't ${locked ? "lock" : "unlock"} ${entryIds.length === 1 ? "that card" : "those cards"} — try again.` };
+  }
+  track(access, locked ? "lock" : "unlock", { cards: changed });
+  revalidatePath(toolHref(REART_TOOL_SLUG));
+  return { ok: true, changed };
+}
+
+// ---------------------------------------------------------------------------
+// Undoing a run
+// ---------------------------------------------------------------------------
+
+type UndoStep = { name: string; cardId: string; kind: ReartUndoKind; rollId?: string; entryId?: string };
+
+/**
+ * What undoing run `jobId` would do, card by card — read afresh every time
+ * (the plan the maker confirms and each batch that carries it out). The
+ * run is one of the caller's own Re-art runs, on a deck that is still
+ * theirs; every card is judged by reartUndoOf.
+ */
+async function undoStepsOf(
+  userId: string,
+  jobId: string,
+): Promise<{ ok: true; deck: ReartDeck; todo: UndoStep[]; skipped: Array<{ name: string; reason: string }> } | CoreFailure> {
+  const supabase = await createClient();
+  const { data: job } = await supabase
+    .from("ai_generation_jobs")
+    .select("id, owner_id, kind, status, request, steps, created_at")
+    .eq("id", jobId)
+    .eq("owner_id", userId)
+    .eq("kind", "deck_reart")
+    .maybeSingle();
+  const deckId = (job?.request as { deck_id?: unknown } | null)?.deck_id;
+  if (!job || typeof deckId !== "string" || !isUuid(deckId)) return { ok: false, error: "That run isn't one of yours." };
+  const deck = await getOwnedDeck(userId, deckId);
+  if (!deck) return { ok: false, error: "That run's deck isn't one of yours any more." };
+
+  // The run's done steps that name a card. Which of them PAINTED is told
+  // below: a step that left its card as it was (already in the style, kept
+  // its own art) names the card too, and is not the run's to undo.
+  const steps = (Array.isArray(job.steps) ? job.steps : []) as Array<{
+    status?: unknown;
+    card_id?: unknown;
+    label?: unknown;
+    kept_art?: unknown;
+    painted?: unknown;
+    linked?: unknown;
+  }>;
+  const done = steps.filter((step) => step?.status === "done" && typeof step.card_id === "string" && isUuid(step.card_id as string));
+  if (done.length === 0) return { ok: true, deck, todo: [], skipped: [] };
+  const cardIds = [...new Set(done.map((step) => step.card_id as string))];
+
+  // A run can hold a whole deck: its cards are asked for a hundred at a
+  // time (a longer `in` list no longer fits a request line).
+  const parts = chunkIds(cardIds);
+  const [rows, rolls, locks, cardsRead, entriesRead] = await Promise.all([
+    readPaintedCards(deck.id),
+    readRollsOrNull(deck.id),
+    readLocks(deck.id),
+    Promise.all(parts.map((ids) => supabase.from("cards").select("id, owner_id, title, art_url, created_at").in("id", ids))),
+    Promise.all(parts.map((ids) => supabase.from("deck_cards").select("id, card_id").eq("deck_id", deck.id).in("card_id", ids))),
+  ]);
+  // Locks or kept pictures that couldn't be read are never "none": an undo
+  // would change a locked card, or give a re-rolled card its own art where
+  // the plan said the earlier picture.
+  if (!locks || !rolls || cardsRead.some((read) => read.error) || entriesRead.some((read) => read.error)) {
+    return { ok: false, reason: "unread", error: "We couldn't read this run's cards — try again." };
+  }
+  const cards = new Map(
+    cardsRead
+      .flatMap((read) => (read.data ?? []) as Array<{ id: string; owner_id: string; title: string; art_url: string | null; created_at: string | null }>)
+      .map((card) => [card.id, card]),
+  );
+  const runStarted = typeof job.created_at === "string" ? Date.parse(job.created_at) : NaN;
+  const entries = entriesRead.flatMap((read) => (read.data ?? []) as Array<{ id: string; card_id: string | null }>);
+
+  const todo: UndoStep[] = [];
+  const skipped: Array<{ name: string; reason: string }> = [];
+  const seen = new Set<string>();
+  for (const step of done) {
+    const cardId = step.card_id as string;
+    if (seen.has(cardId)) continue;
+    seen.add(cardId);
+    const card = cards.get(cardId);
+    const row = rows.get(cardId);
+    // A step says what it did (`painted`, `linked` — written since undo
+    // exists); a run from before that is told by the deck's row alone — the
+    // card is the run's while its row still names the run. A step that
+    // neither painted nor linked is neither undone nor listed.
+    const marked = step.painted === true || step.linked === true;
+    if (!marked && row?.jobId !== job.id) continue;
+    const name = card?.title || (typeof step.label === "string" ? step.label : "A card");
+    const cardEntries = entries.filter((entry) => entry.card_id === cardId);
+    // Did THIS run link the card to its entry? The step says so; for a run
+    // from before steps said anything, a card made after the run started
+    // was made by it (a card an earlier run made was only re-rolled).
+    const cardMade = card?.created_at ? Date.parse(card.created_at) : NaN;
+    const stepLinked = step.linked === true || (!marked && Boolean(row?.made) && Number.isFinite(runStarted) && cardMade >= runStarted);
+    // The picture the step replaced, while this deck still keeps it for the
+    // card — found by its address.
+    const keptArt = typeof step.kept_art === "string" ? step.kept_art : null;
+    const keptRoll = keptArt ? (rolls.get(cardId) ?? []).find((roll) => roll.artUrl === keptArt) : undefined;
+    const verdict = reartUndoOf({
+      jobId: job.id,
+      stepLinked,
+      keptRollId: keptRoll?.id ?? null,
+      row,
+      cardArtUrl: card?.art_url,
+      cardIsOwn: Boolean(card && card.owner_id === userId),
+      madeEntryLinked: Boolean(row?.entryId && cardEntries.some((entry) => entry.id === row.entryId)),
+      locked: cardEntries.some((entry) => locks.has(entry.id)),
+    });
+    if ("skip" in verdict) skipped.push({ name, reason: REART_UNDO_SKIP_COPY[verdict.skip] });
+    else todo.push({ name, cardId, kind: verdict.kind, rollId: verdict.rollId, entryId: row?.entryId ?? undefined });
+  }
+  return { ok: true, deck, todo, skipped };
+}
+
+const countsOf = (todo: ReadonlyArray<UndoStep>) => ({
+  earlier: todo.filter((step) => step.kind === "earlier").length,
+  own: todo.filter((step) => step.kind === "own").length,
+  real: todo.filter((step) => step.kind === "real").length,
+});
+
+/** The undo's confirm: what it would put back, and what it leaves. Nothing
+ *  is changed. */
+export async function planUndoReartRunAction(jobId: unknown): Promise<({ ok: true } & ReartUndoPlan) | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (typeof jobId !== "string" || !isUuid(jobId)) return { ok: false, error: "That run couldn't be read." };
+  const plan = await undoStepsOf(access.userId, jobId);
+  if (!plan.ok) return { ok: false, error: plan.error };
+  return { ok: true, ...countsOf(plan.todo), skipped: plan.skipped };
+}
+
+export type ReartUndone = {
+  ok: true;
+  /** Cards this request put back. */
+  undone: number;
+  /** Cards it could not put back, and why (they are left as they are; the
+   *  studio names them in `skip` when it asks again). */
+  failed: Array<{ name: string; reason: string; cardId: string }>;
+  /** Cards still to put back (ask again). */
+  remaining: number;
+};
+
+/**
+ * Carries out an undo of run `jobId`, a few cards a request
+ * (REART_UNDO_BATCH: each is a card edit) — the studio asks again while
+ * cards remain. Every request plans afresh, so a card already put back is
+ * never touched twice, and a card that can't be put back is skipped
+ * (`skip`: the cards an earlier request of this undo failed on).
+ *
+ * Nothing is painted and no credit is returned. Each picture taken off a
+ * card is kept (0215), so an undo can itself be undone card by card.
+ */
+export async function undoReartRunAction(jobId: unknown, skip: unknown = []): Promise<ReartUndone | ReartFailure> {
+  const access = await checkToolAccess(REART_TOOL_SLUG);
+  if (!access) return { ok: false, error: NO_ACCESS };
+  if (
+    typeof jobId !== "string" ||
+    !isUuid(jobId) ||
+    !Array.isArray(skip) ||
+    skip.length > 500 ||
+    !skip.every((id) => typeof id === "string" && isUuid(id))
+  ) {
+    return { ok: false, error: "That run couldn't be read." };
+  }
+  const plan = await undoStepsOf(access.userId, jobId);
+  if (!plan.ok) {
+    if (plan.reason) track(access, "undo_run_failed", { reason: plan.reason });
+    return { ok: false, error: plan.error };
+  }
+  // A run of this deck that is painting right now holds its cards.
+  if ((await openRunsOf(access.userId, plan.deck.id)).live) {
+    track(access, "undo_run_failed", { reason: "busy" });
+    return { ok: false, code: "BUSY", error: "A run of this deck is painting a card — wait for it, then try again." };
+  }
+  const skipping = new Set(skip as string[]);
+  const todo = plan.todo.filter((step) => !skipping.has(step.cardId));
+  const batch = todo.slice(0, REART_UNDO_BATCH);
+  const failed: Array<{ name: string; reason: string; cardId: string }> = [];
+  const did = { earlier: 0, own: 0, real: 0 };
+  for (const step of batch) {
+    let result: { ok: true } | { ok: false; error: string };
+    try {
+      if (step.kind === "earlier" && step.rollId) result = await chooseCore(access.userId, plan.deck, step.cardId, step.rollId);
+      else if (step.kind === "own") result = await restoreCore(access.userId, plan.deck, step.cardId);
+      else if (step.kind === "real" && step.entryId) {
+        // The deck's own unlink (its owner check, its revalidation). What it
+        // refuses is said in the undo's words, never the database's.
+        const unlinked = await unlinkDeckCardAction(step.entryId);
+        if (!unlinked.ok) console.error(`[re-art] undo of card ${step.cardId} (run ${jobId}): entry ${step.entryId} not unlinked: ${unlinked.error}`);
+        result = unlinked.ok ? { ok: true } : { ok: false, error: "The real card couldn't be put back in the deck — try again." };
+      }
+      else result = { ok: false, error: "Nothing to go back to." };
+    } catch (error) {
+      console.error(`[re-art] undo of card ${step.cardId} (run ${jobId}) failed:`, error);
+      result = { ok: false, error: "It couldn't be put back — try again." };
+    }
+    if (result.ok) did[step.kind] += 1;
+    else failed.push({ name: step.name, reason: result.error, cardId: step.cardId });
+  }
+  const undone = did.earlier + did.own + did.real;
+  track(access, "undo_run", {
+    undone,
+    earlier: did.earlier,
+    own: did.own,
+    real: did.real,
+    failed: failed.length,
+    remaining: todo.length - batch.length,
+    left: plan.skipped.length,
+  });
+  revalidatePath(toolHref(REART_TOOL_SLUG));
+  return {
+    ok: true,
+    undone,
+    failed,
+    remaining: todo.length - batch.length,
+  };
+}
+

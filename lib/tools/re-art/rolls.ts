@@ -78,20 +78,31 @@ function rollOf(row: RollRow): ReartRoll {
   };
 }
 
-/** The deck's kept pictures (the owner's session), by card id. A read that
- *  failed lists none (the studio then offers none — never a wrong one). */
-export async function readRolls(deckId: string): Promise<Map<string, ReartRoll[]>> {
+/**
+ * The deck's kept pictures (the owner's session), by card id — or NULL when
+ * the read failed: for a caller that decides something by them (an undo
+ * goes back to a kept picture, and must never take "couldn't read" for
+ * "none kept"). A database 0215 hasn't reached keeps none.
+ */
+export async function readRollsOrNull(deckId: string): Promise<Map<string, ReartRoll[]> | null> {
   const byCard = new Map<string, ReartRoll[]>();
   const supabase = await createClient();
   const { data, error } = await supabase.from("deck_reart_rolls").select(ROLL_COLUMNS).eq("deck_id", deckId).order("painted_at", { ascending: false });
   if (error) {
-    if (!missingTable(error)) console.error(`[re-art] kept pictures of deck ${deckId} not read: ${error.code ?? ""} ${error.message}`);
-    return byCard;
+    if (missingTable(error)) return byCard;
+    console.error(`[re-art] kept pictures of deck ${deckId} not read: ${error.code ?? ""} ${error.message}`);
+    return null;
   }
   for (const row of (data ?? []) as unknown as RollRow[]) {
     byCard.set(row.card_id, [...(byCard.get(row.card_id) ?? []), rollOf(row)]);
   }
   return byCard;
+}
+
+/** …for the studio: a read that failed lists none (it then offers none —
+ *  never a wrong one). */
+export async function readRolls(deckId: string): Promise<Map<string, ReartRoll[]>> {
+  return (await readRollsOrNull(deckId)) ?? new Map<string, ReartRoll[]>();
 }
 
 /**
@@ -158,6 +169,9 @@ export async function keepRoll(userId: string, deckId: string, roll: RollToKeep)
       .eq("owner_id", userId)
       .eq("art_url", roll.artUrl)
       .maybeSingle();
+    // Kept again NOW: the limit drops the pictures kept longest ago, and
+    // must not count this one among them (pruneRolls).
+    if (kept) await admin.from("deck_reart_rolls").update({ kept_at: new Date().toISOString() }).eq("id", kept.id).eq("owner_id", userId);
     return kept ? { id: kept.id, inserted: false } : null;
   }
   if (!missingTable(error)) console.warn(`[re-art] earlier picture of card ${roll.cardId} on deck ${deckId} not kept: ${error?.code ?? ""} ${error?.message ?? "no row"}`);
@@ -198,11 +212,15 @@ export async function dropRoll(userId: string, rollId: string): Promise<void> {
 }
 
 /**
- * Past REART_ROLLS_KEPT, the card's OLDEST kept pictures on this deck are
- * dropped: their rows first (delete … returning — only a row this call
- * took out is its to remove), then each picture through the guarded discard
- * (never one a card still shows, a deck's row names, or another kept row
- * holds). Returns how many rows were dropped. Never throws.
+ * Past REART_ROLLS_KEPT, the pictures of the card kept LONGEST AGO on this
+ * deck are dropped — by when each was KEPT, never by when it was painted: a
+ * picture painted long ago that was put back on the card and has just been
+ * taken off again is the newest kept one, and the one the maker (or an undo
+ * of the run) goes back to next. Their rows first (delete … returning —
+ * only a row this call took out is its to remove), then each picture
+ * through the guarded discard (never one a card still shows, a deck's row
+ * names, or another kept row holds). Returns how many rows were dropped.
+ * Never throws.
  */
 export async function pruneRolls(userId: string, deckId: string, cardId: string): Promise<number> {
   if (!isAdminConfigured()) return 0;
@@ -214,8 +232,8 @@ export async function pruneRolls(userId: string, deckId: string, cardId: string)
       .eq("deck_id", deckId)
       .eq("card_id", cardId)
       .eq("owner_id", userId)
-      .order("painted_at", { ascending: false })
-      .order("kept_at", { ascending: false });
+      .order("kept_at", { ascending: false })
+      .order("painted_at", { ascending: false });
     if (error || !data) return 0;
     const extra = data.slice(REART_ROLLS_KEPT).map((row) => row.id);
     if (extra.length === 0) return 0;
