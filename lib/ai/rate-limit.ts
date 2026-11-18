@@ -62,7 +62,10 @@ export type AiActionLabel =
   | "deck_reart_art"
   // Pip Forge (beta tool, migration 0192): one pip and its colour card.
   | "forge_pip"
-  | "suggest_collection_commander";
+  | "suggest_collection_commander"
+  // Re-art deck (migration 0217): one scene written for a card — its own
+  // words, which its next picture is painted from.
+  | "deck_reart_scene";
 
 // Per-user daily quotas for the image-generating flows — enforced ONLY when
 // billing is DISABLED (previews, local), where image calls aren't credit-
@@ -267,6 +270,10 @@ export const AI_ACTION_COST: Partial<Record<AiActionLabel, number>> = {
    *  their own cards support a deck (the Collection Deck Builder's "Suggest
    *  a commander"). */
   suggest_collection_commander: 1,
+  /** One credit: the scene one card's picture shows, written by the text
+   *  model and saved as the card's own words (Re-art deck, owner
+   *  2026-11-18). The picture painted from it is charged as a picture. */
+  deck_reart_scene: 1,
 };
 
 export type CreditSpendResult =

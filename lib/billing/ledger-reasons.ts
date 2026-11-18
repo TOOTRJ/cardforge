@@ -37,6 +37,7 @@ const LABELS: Record<string, string> = {
   bulk_customize_art: "Bulk Customize AI art",
   draft_table_sheet: "Table sheet AI draft",
   deck_reart_art: "Re-art deck AI art",
+  deck_reart_scene: "Re-art deck AI scene",
   forge_pip: "Pip Forge pip",
   suggest_collection_commander: "Commander suggestions",
   analyze_deck: "Deck analysis",

@@ -1281,6 +1281,60 @@ export function reartLockedEntries(entries: ReadonlyArray<{ id: string; cardId: 
 }
 
 // ---------------------------------------------------------------------------
+// An AI-written scene for a card (migration 0217; owner 2026-11-18: one
+// credit each)
+//
+// "Write a scene with AI" has a text model write a card's OWN WORDS (0209):
+// what its picture shows — from its name, type, rules and flavour text, the
+// deck's world and whatever the maker typed as direction. The scene is
+// saved as the card's words at once (a paid answer is a saved answer) and
+// is the maker's to edit after. Nothing is painted: the card is painted
+// from it the next time it is painted, at a picture's own price.
+// ---------------------------------------------------------------------------
+
+/** What one scene costs. */
+export const REART_SCENE_CREDITS = 1;
+/** The most a written scene holds — well under a card's own words' limit,
+ *  so the maker has room to add to it. */
+export const REART_SCENE_MAX = 360;
+/** How many cards one "Write scenes…" takes (each is its own request). */
+export const REART_SCENES_AT_ONCE = REART_MAX_CARDS;
+
+/** Said beside the button, before anything is charged. */
+export const REART_SCENE_HELP =
+  "Written from the card's name, type and text, in the deck's world — what you have typed here is used as direction. It replaces this card's words and is saved at once. Nothing is painted.";
+
+/** "1 credit" / "12 credits". */
+export function reartSceneCost(cards: number): string {
+  const credits = cards * REART_SCENE_CREDITS;
+  return `${credits} credit${credits === 1 ? "" : "s"}`;
+}
+
+/** The headline of "Write scenes…" for the cards picked. */
+export function reartScenesLine(cards: number): string {
+  return `Writes a scene for ${cards} card${cards === 1 ? "" : "s"} · ${reartSceneCost(cards)}`;
+}
+
+/** …and what it does to words the picked cards already have ("" when none
+ *  has any). */
+export function reartScenesReplaceLine(cards: number, withWords: number): string {
+  if (withWords <= 0) return "";
+  if (cards === 1) return "It has words of its own: they are replaced.";
+  return `${withWords} of them ${withWords === 1 ? "has" : "have"} words of ${withWords === 1 ? "its" : "their"} own: those are replaced.`;
+}
+
+/** What one request to write a scene answers. */
+export type ReartSceneResult =
+  | { ok: true; words: ReartCardWords; previous: ReartCardWords | null; credits: number | null }
+  | {
+      ok: false;
+      error: string;
+      code?: "INSUFFICIENT_CREDITS" | "RATE_LIMITED" | "NOT_PAINTABLE" | "AI_UNAVAILABLE" | "UNREACHABLE";
+      retryAfterSeconds?: number;
+      credits?: number | null;
+    };
+
+// ---------------------------------------------------------------------------
 // Undoing a run
 //
 // "Undo this run" puts each card the run painted back to what it showed

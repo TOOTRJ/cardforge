@@ -32,7 +32,7 @@ const SOURCES: Record<ToolSlug, string[]> = {
   "collection-builder": ["lib/tools/collection", "app/api/tools/collection-builder", "app/(app)/dashboard/tools/collection-builder"],
   "token-kit": ["lib/tools/token-kit", "components/tools/token-kit", "app/api/ai/jobs/route.ts"],
   "bulk-customize": ["lib/tools/bulk-customize"],
-  "re-art-deck": ["lib/tools/re-art"],
+  "re-art-deck": ["lib/tools/re-art", "app/api/tools/re-art-deck"],
   "pip-forge": ["lib/tools/pip-forge", "app/api/tools/pip-forge"],
   "custom-symbols": ["lib/symbols/actions.ts"],
   "set-symbol-studio": ["lib/tools/set-symbol", "app/api/tools/set-symbol-studio", "components/tools/set-symbol-studio"],

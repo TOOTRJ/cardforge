@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +15,9 @@ import { FieldGroup } from "@/components/creator/field-group";
 import { textareaClass } from "@/components/ui/field-classes";
 import {
   REART_CARD_WORDS_MAX,
+  REART_SCENE_HELP,
   buildReartPrompt,
+  reartSceneCost,
   reartStateIsSettled,
   type ReartCardWords,
   type ReartFraming,
@@ -24,6 +26,7 @@ import {
   type ReartStyle,
 } from "@/lib/tools/re-art/model";
 import { saveReartCardWordsAction } from "@/lib/tools/re-art/actions";
+import { requestReartScene } from "@/lib/tools/re-art/scene-client";
 
 // ---------------------------------------------------------------------------
 // One card's own words (migration 0209): what its picture shows, written by
@@ -31,6 +34,12 @@ import { saveReartCardWordsAction } from "@/lib/tools/re-art/actions";
 // its whole prompt. The dialog shows the prompt exactly as it would be sent,
 // built by the one function the step paints with (reartArtPrompt). Saving
 // paints nothing and charges nothing.
+//
+// "Write a scene with AI" (migration 0217, one credit) has the text model
+// write the words: the server SAVES them as the card's words before it
+// answers, so the box then shows what is stored. What the maker had typed
+// is the writer's direction, and stays one press away ("Put back what I
+// typed") until the dialog closes.
 // ---------------------------------------------------------------------------
 
 export function ReartCardWordsDialog({
@@ -43,6 +52,7 @@ export function ReartCardWordsDialog({
   bodyMax,
   method = "paint",
   onSaved,
+  scene,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,13 +69,28 @@ export function ReartCardWordsDialog({
    *  card's own art. */
   method?: ReartMethod;
   onSaved: (words: ReartCardWords | null) => void;
+  /** "Write a scene with AI" (one credit). Absent: not offered (no text
+   *  model here, or a run that starts from the card's own art, where the
+   *  words say what CHANGES, not a scene). */
+  scene?: {
+    /** A scene was written and SAVED as the card's words (the dialog stays
+     *  open on it). `credits`: the balance after, where it is known. */
+    onWritten: (words: ReartCardWords, credits: number | null) => void;
+    /** The maker has no credit left for one. */
+    onOutOfCredits?: () => void;
+  };
 }) {
   const [text, setText] = useState(entry.words?.text ?? "");
   const [only, setOnly] = useState(entry.words?.only ?? false);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  const [writing, setWriting] = useState(false);
+  /** A scene was written for this card in this opening: what the box held
+   *  before it (the way back). */
+  const [written, setWritten] = useState<{ entryId: string; before: string } | null>(null);
   const onlyId = useId();
   const previewId = useId();
+  const sceneHelpId = useId();
 
   // Every OPENING starts from the card's stored words — another card, the
   // same card after a save or a removal, or a draft that was abandoned
@@ -78,6 +103,9 @@ export function ReartCardWordsDialog({
     setText(entry.words?.text ?? "");
     setOnly(entry.words?.only ?? false);
     setError(null);
+    // The way back to what was typed lasts for this opening of this card
+    // (the page re-reading the scene just written is not a new opening).
+    if (!open || written?.entryId !== entry.id) setWritten(null);
   }
 
   const words: ReartCardWords | null = text.trim() ? { text, only } : null;
@@ -107,8 +135,27 @@ export function ReartCardWordsDialog({
     });
   };
 
+  const writeScene = async () => {
+    if (!scene || writing || saving) return;
+    setError(null);
+    setWriting(true);
+    const before = text;
+    const result = await requestReartScene({ deckId, entryId: entry.id, note: text, only });
+    setWriting(false);
+    if (!result.ok) {
+      setError(result.error);
+      if (result.code === "INSUFFICIENT_CREDITS") scene.onOutOfCredits?.();
+      return;
+    }
+    setText(result.words.text);
+    setOnly(result.words.only);
+    setWritten({ entryId: entry.id, before });
+    scene.onWritten(result.words, result.credits);
+  };
+  const busy = saving || writing;
+
   return (
-    <Dialog open={open} onOpenChange={(next) => (!saving ? onOpenChange(next) : undefined)}>
+    <Dialog open={open} onOpenChange={(next) => (!busy ? onOpenChange(next) : undefined)}>
       <DialogContent size="lg" className="max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Words for {entry.name}</DialogTitle>
@@ -134,11 +181,52 @@ export function ReartCardWordsDialog({
               onChange={(event) => setText(event.target.value.slice(0, REART_CARD_WORDS_MAX))}
               placeholder="e.g. an old goblin librarian asleep on a heap of overdue books, one candle burning low"
               className={textareaClass(false)}
+              readOnly={writing}
+              aria-busy={writing ? true : undefined}
             />
           </FieldGroup>
           <p className="-mt-2 text-right text-xs tabular-nums text-subtle">
             {text.length} of {REART_CARD_WORDS_MAX}
           </p>
+
+          {scene ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-border/50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void writeScene()}
+                  aria-disabled={busy ? true : undefined}
+                  aria-describedby={sceneHelpId}
+                  className={busy ? "cursor-not-allowed opacity-60" : undefined}
+                >
+                  {writing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+                  {writing ? "Writing the scene…" : `Write a scene with AI · ${reartSceneCost(1)}`}
+                </Button>
+                {written && written.before.trim() && written.before.trim() !== text.trim() ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    // The box only: the scene stays the card's stored words
+                    // (and the dialog goes on saying so) until Save.
+                    onClick={() => setText(written.before)}
+                    disabled={busy}
+                  >
+                    Put back what I typed
+                  </Button>
+                ) : null}
+              </div>
+              <p id={sceneHelpId} className="text-xs leading-5 text-muted">
+                {REART_SCENE_HELP}
+              </p>
+              {written ? (
+                <p role="status" className="text-xs leading-5 text-foreground">
+                  Scene written and saved ({reartSceneCost(1)}): it is this card&apos;s words now. To store what the box
+                  shows instead, press Save words.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <label htmlFor={onlyId} className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
             <input
@@ -191,19 +279,20 @@ export function ReartCardWordsDialog({
 
         <DialogFooter className="flex-wrap gap-2">
           {entry.words ? (
-            <Button variant="ghost" className="mr-auto" onClick={() => save(null)} disabled={saving}>
+            <Button variant="ghost" className="mr-auto" onClick={() => save(null)} disabled={busy}>
               Remove its words
             </Button>
           ) : null}
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancel
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            {/* After a scene there is nothing to cancel: it is saved. */}
+            {written ? "Done" : "Cancel"}
           </Button>
           <Button
             onClick={() => {
-              if (changed && !saving) save(words);
+              if (changed && !busy) save(words);
             }}
-            aria-disabled={!changed || saving ? true : undefined}
-            className={!changed || saving ? "cursor-not-allowed opacity-60" : undefined}
+            aria-disabled={!changed || busy ? true : undefined}
+            className={!changed || busy ? "cursor-not-allowed opacity-60" : undefined}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
             Save words

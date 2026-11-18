@@ -264,6 +264,8 @@ describe("CREDIT_REASON_TOOLS", () => {
       draft_table_sheet: "rule0-sheet",
       bulk_customize_art: "bulk-customize",
       deck_reart_art: "re-art-deck",
+      // An AI-written scene for a card (0217): Re-art deck's too.
+      deck_reart_scene: "re-art-deck",
     });
     expect(Object.keys(TOOL_CODE).sort()).toEqual([...new Set(Object.values(CREDIT_REASON_TOOLS))].sort());
   });

@@ -50,6 +50,7 @@ export const CREDIT_REASON_TOOLS: Readonly<Record<string, ToolSlug>> = {
   draft_table_sheet: "rule0-sheet",
   bulk_customize_art: "bulk-customize",
   deck_reart_art: "re-art-deck",
+  deck_reart_scene: "re-art-deck",
 };
 
 export type CreditTotals = {

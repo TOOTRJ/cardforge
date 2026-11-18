@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Paintbrush, Play, Sparkles } from "lucide-react";
 import { ReartCardWordsDialog } from "./reart-card-words-dialog";
 import { ReartEarlierPicturesDialog } from "./reart-earlier-pictures-dialog";
 import { ReartUndoDialog } from "./reart-undo-dialog";
+import { ReartScenesDialog } from "./reart-scenes-dialog";
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { FieldGroup } from "@/components/creator/field-group";
@@ -20,6 +21,7 @@ import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { trackToolEvent } from "@/lib/tools/track-client";
 import {
   REART_MAX_CARDS,
+  REART_SCENES_AT_ONCE,
   EMPTY_REART_STYLE,
   REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
@@ -119,6 +121,7 @@ export function ReartStudio({
   capacity,
   balance,
   aiAvailable,
+  sceneAvailable = false,
   canPickModel = false,
   pausedRunId,
   runs,
@@ -130,6 +133,8 @@ export function ReartStudio({
   capacity: CardCapacity | null;
   balance: number | null;
   aiAvailable: boolean;
+  /** A text model is configured: "Write a scene with AI" (0217) is offered. */
+  sceneAvailable?: boolean;
   /** The viewer may name the model that paints (admins and testers —
    *  canPickReartModel; the server holds the same rule). Absent: the picker
    *  isn't shown and every run is Automatic. */
@@ -181,6 +186,9 @@ export function ReartStudio({
   /** The run whose undo is open. */
   const [undoRun, setUndoRun] = useState<string | null>(null);
   const [undoOpen, setUndoOpen] = useState(false);
+  /** "Write scenes…" for the cards picked in the list (0217). */
+  const [scenesFor, setScenesFor] = useState<ReartStudioEntry[] | null>(null);
+  const [scenesOpen, setScenesOpen] = useState(false);
   const [sample, setSample] = useState<Set<string>>(
     () =>
       new Set(
@@ -445,6 +453,21 @@ export function ReartStudio({
       } Nothing is charged until you press Paint.`,
       input: { deckId: deck.id, entryIds: picked.map((entry) => entry.id), scope: "all", visibility, model, method },
     });
+  };
+
+  // An AI-written scene (0217) is the card's own words — a SCENE: offered
+  // where a text model is configured and the run paints from the prompt (a
+  // run that starts from the card's own art reads the words as what
+  // CHANGES in that picture).
+  const canScene = sceneAvailable && method === "paint";
+  const writeScenes = (picked: ReartStudioEntry[]) => {
+    if (running || busy || picked.length === 0) return;
+    if (picked.length > REART_SCENES_AT_ONCE) {
+      toast.error(`Scenes are written for up to ${REART_SCENES_AT_ONCE} cards at a time — you picked ${picked.length}. Pick fewer.`);
+      return;
+    }
+    setScenesFor(picked);
+    setScenesOpen(true);
   };
 
   const setLocks = (picked: ReartStudioEntry[], lock: boolean) => {
@@ -897,6 +920,7 @@ export function ReartStudio({
             onSelected: setSelected,
             onPaint: paintSelected,
             onLock: setLocks,
+            ...(canScene ? { onScenes: writeScenes } : {}),
             working: locking,
           }}
         />
@@ -920,6 +944,39 @@ export function ReartStudio({
             toast.success(words ? `${wordsEntry.name} has its own words.` : `${wordsEntry.name} is painted from its name and type again.`);
             router.refresh();
           }}
+          scene={
+            canScene
+              ? {
+                  // The scene is the card's words already (the server saved
+                  // it): the dialog stays open on it, and the list re-reads.
+                  onWritten: (words) => {
+                    setWordsEntry({ ...wordsEntry, words });
+                    toast.success(`${wordsEntry.name} has an AI-written scene. It is used the next time the card is painted.`);
+                    router.refresh();
+                  },
+                  onOutOfCredits: () => upgrade.open("credits", "reart_deck"),
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {scenesFor ? (
+        <ReartScenesDialog
+          open={scenesOpen}
+          onOpenChange={setScenesOpen}
+          deckId={deck.id}
+          entries={scenesFor}
+          balance={balance}
+          onDone={(written, failedCount) => {
+            if (written > 0) {
+              toast.success(
+                `${written} scene${written === 1 ? "" : "s"} written.${failedCount > 0 ? ` ${failedCount} card${failedCount === 1 ? "" : "s"} got none: the dialog says why.` : ""}`,
+              );
+              router.refresh();
+            }
+          }}
+          onOutOfCredits={() => upgrade.open("credits", "reart_deck")}
         />
       ) : null}
 
