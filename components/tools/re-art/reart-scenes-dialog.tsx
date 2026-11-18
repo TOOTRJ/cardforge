@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
 import {
   REART_SCENE_CREDITS,
   reartScenesLine,
+  reartScenesOnlyLine,
   reartScenesReplaceLine,
   type ReartCardWords,
   type ReartStudioEntry,
 } from "@/lib/tools/re-art/model";
-import { requestReartScene, sceneFailureStopsBatch, scenesCredits } from "@/lib/tools/re-art/scene-client";
+import { SCENE_FAILURES_IN_A_ROW, requestReartScene, sceneFailureStopsBatch, scenesCredits } from "@/lib/tools/re-art/scene-client";
 
 /**
  * "Write scenes…" for the cards picked in the list: an AI-written scene a
@@ -21,7 +22,11 @@ import { requestReartScene, sceneFailureStopsBatch, scenesCredits } from "@/lib/
  * saved as its card's own words as it is written, so stopping — or closing
  * the tab — loses nothing that was paid for. A card whose scene can't be
  * written is named with why and the rest go on; out of credits (or of the
- * AI's limit) it stops and says so. Nothing is painted.
+ * AI's limit), or after a few cards in a row got none, it stops and says
+ * so. Leaving the page stops it too: nothing is charged with no screen to
+ * say so. The studio takes each card that got its scene out of the
+ * selection, so pressing "Write scenes…" again goes on with the rest —
+ * never pays twice for a card already done. Nothing is painted.
  */
 export function ReartScenesDialog({
   open,
@@ -52,6 +57,19 @@ export function ReartScenesDialog({
   const [stopped, setStopped] = useState<string | null>(null);
   const stop = useRef(false);
   const [stopping, setStopping] = useState(false);
+  // Leaving the page (an in-app Back, the studio gone) stops the batch: the
+  // request on its way is finished by the server — its scene saved — and
+  // no further card is asked for.
+  const abort = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      stop.current = true;
+      abort.current?.abort();
+    };
+  }, []);
 
   // Each opening starts afresh (reset during render).
   const key = open ? entries.map((entry) => entry.id).join(",") : null;
@@ -68,6 +86,7 @@ export function ReartScenesDialog({
   const total = entries.length;
   const cost = scenesCredits(total);
   const replaced = entries.filter((entry) => entry.words).length;
+  const onlyWords = entries.filter((entry) => entry.words?.only).length;
   const short = balance !== null && balance < cost;
   const running = phase === "running";
 
@@ -78,18 +97,26 @@ export function ReartScenesDialog({
     setStopped(null);
     setFailures([]);
     setPhase("running");
+    const controller = new AbortController();
+    abort.current = controller;
     let written = 0;
+    let inARow = 0;
     const failed: Array<{ name: string; reason: string }> = [];
     for (let at = 0; at < entries.length; at += 1) {
+      if (!mounted.current) return;
+      const left = entries.length - at;
       if (stop.current) {
-        setStopped(`Stopped. ${entries.length - at} card${entries.length - at === 1 ? " was" : "s were"} left as ${entries.length - at === 1 ? "it is" : "they are"}.`);
+        setStopped(`Stopped. ${left} card${left === 1 ? " was" : "s were"} left as ${left === 1 ? "it is" : "they are"}.`);
         break;
       }
       setProgress({ written, at });
       const entry = entries[at];
-      const result = await requestReartScene({ deckId, entryId: entry.id });
+      const result = await requestReartScene({ deckId, entryId: entry.id, signal: controller.signal });
+      // The screen is gone: say nothing more (the scene, if written, is saved).
+      if (!mounted.current) return;
       if (result.ok) {
         written += 1;
+        inARow = 0;
         onWritten?.(entry.id, result.words);
         continue;
       }
@@ -101,6 +128,13 @@ export function ReartScenesDialog({
       }
       failed.push({ name: entry.name, reason: result.error });
       setFailures([...failed]);
+      inARow += 1;
+      // Card after card with no scene is the writer being down, not the
+      // cards: stop rather than fail (and refund) the whole selection.
+      if (inARow >= SCENE_FAILURES_IN_A_ROW && at < entries.length - 1) {
+        setStopped(`Stopped: ${SCENE_FAILURES_IN_A_ROW} cards in a row got no scene. Try again in a little while.`);
+        break;
+      }
     }
     setProgress({ written, at: entries.length });
     setPhase("done");
@@ -132,6 +166,7 @@ export function ReartScenesDialog({
           <div className="rounded-lg border border-border/60 bg-elevated/40 p-4">
             <p className="text-base font-semibold tabular-nums text-foreground">{reartScenesLine(total)}</p>
             {replaced > 0 ? <p className="mt-1 text-sm text-muted">{reartScenesReplaceLine(total, replaced)}</p> : null}
+            {onlyWords > 0 ? <p className="mt-1 text-sm text-muted">{reartScenesOnlyLine(onlyWords)}</p> : null}
             <p className="mt-1 text-sm text-muted">
               Nothing is painted. Each scene is saved as its card&apos;s own words as it is written — change it under the
               card&apos;s “Edit its words…”. The picture painted from it later costs a picture&apos;s own credit.
@@ -155,6 +190,11 @@ export function ReartScenesDialog({
             <p role="status" className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm tabular-nums text-foreground">
               {progress.written} scene{progress.written === 1 ? "" : "s"} written and saved
               {progress.written > 0 ? ` (${scenesCredits(progress.written)} credit${scenesCredits(progress.written) === 1 ? "" : "s"})` : ""}.
+              {progress.written < total
+                ? ` The ${total - progress.written} card${total - progress.written === 1 ? "" : "s"} without one ${
+                    total - progress.written === 1 ? "is" : "are"
+                  } still selected: press “Write scenes…” again for ${total - progress.written === 1 ? "it" : "them"}.`
+                : ""}
             </p>
           ) : null}
           {stopped ? (
@@ -165,7 +205,7 @@ export function ReartScenesDialog({
           {failures.length > 0 ? (
             <div role="status" className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
               <p className="font-medium">
-                {failures.length} card{failures.length === 1 ? "" : "s"} got no scene (nothing was charged for {failures.length === 1 ? "it" : "them"}):
+                {failures.length} card{failures.length === 1 ? "" : "s"} got no scene:
               </p>
               <ul className="mt-1 flex max-h-40 flex-col gap-0.5 overflow-y-auto">
                 {failures.map((failure, index) => (

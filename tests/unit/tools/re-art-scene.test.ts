@@ -119,6 +119,7 @@ import {
   REART_SCENE_SYSTEM,
   cleanReartScene,
   reartSceneBrief,
+  reartSceneSaysSomething,
   writeReartScene,
 } from "@/lib/tools/re-art/scene";
 import {
@@ -126,8 +127,10 @@ import {
   REART_SCENE_CREDITS,
   REART_SCENE_HELP,
   REART_SCENE_MAX,
+  REART_SCENE_ONLY_NOTE,
   reartSceneCost,
   reartScenesLine,
+  reartScenesOnlyLine,
   reartScenesReplaceLine,
 } from "@/lib/tools/re-art/model";
 
@@ -176,8 +179,13 @@ describe("what a scene costs, in words", () => {
   it("says before anything is charged that the words are replaced, saved at once, and that nothing is painted", () => {
     expect(REART_SCENE_HELP).toMatch(/replaces this card's words/);
     expect(REART_SCENE_HELP).toMatch(/saved at once/);
-    expect(REART_SCENE_HELP).toMatch(/Nothing is painted/);
-    expect(REART_SCENE_HELP).toMatch(/what you have typed here is used as direction/);
+    expect(REART_SCENE_HELP).toMatch(/painted in the deck's look/);
+    expect(REART_SCENE_HELP).toMatch(/Nothing is painted now/);
+    // A card set to “use only these words” is told what a scene does to that.
+    expect(REART_SCENE_ONLY_NOTE).toMatch(/“Use only these words” is turned off/);
+    expect(reartScenesOnlyLine(0)).toBe("");
+    expect(reartScenesOnlyLine(1)).toBe("1 is set to “Use only these words”: with a scene it is painted in the deck's look again.");
+    expect(reartScenesOnlyLine(3)).toBe("3 are set to “Use only these words”: with a scene they are painted in the deck's look again.");
     expect(reartScenesReplaceLine(5, 0)).toBe("");
     expect(reartScenesReplaceLine(1, 1)).toBe("It has words of its own: they are replaced.");
     expect(reartScenesReplaceLine(5, 1)).toBe("1 of them has words of its own: those are replaced.");
@@ -203,12 +211,12 @@ describe("the brief the writer is given", () => {
     expect(brief).toContain("The deck's world: a haunted fen");
     // The look is context, never something to repeat.
     expect(brief).toMatch(/It will be painted as: .+ \(context only: do not name it\)\./);
-    expect(brief).not.toMatch(/The maker's note/);
+    expect(brief).not.toMatch(/The maker's direction/);
   });
 
-  it("carries the maker's note as direction, clean and bounded", () => {
+  it("carries the maker's direction, clean and bounded", () => {
     const brief = reartSceneBrief(subject, style, "  asleep on a heap\n\nof overdue books  ");
-    expect(brief).toContain("The maker's note for this card: asleep on a heap of overdue books");
+    expect(brief).toContain("The maker's direction for this card: asleep on a heap of overdue books");
     expect(reartSceneBrief(subject, style, "x".repeat(2000)).length).toBeLessThan(1600);
   });
 
@@ -236,7 +244,7 @@ describe("the brief the writer is given", () => {
       /fully clothed/,
       /no real people/,
       /A land is a place/,
-      /When the maker gives a note, follow it/,
+      /When the maker gives a direction, follow it/,
     ]) {
       expect(REART_SCENE_SYSTEM).toMatch(rule);
     }
@@ -244,8 +252,10 @@ describe("the brief the writer is given", () => {
 });
 
 describe("a scene as it is stored", () => {
-  it("is one clean line, without the quotation marks the writer wrapped it in", () => {
+  it("is one clean line, without the PAIR of quotation marks the writer wrapped it in — a lone mark belongs to the text", () => {
     expect(cleanReartScene(`  “A heron\n stands in the reeds.”  `)).toBe("A heron stands in the reeds.");
+    expect(cleanReartScene(`A sign nailed to the gate reads 'Beware`)).toBe(`A sign nailed to the gate reads 'Beware`);
+    expect(cleanReartScene(`"Halt," says the guard at the gate.`)).toBe(`"Halt," says the guard at the gate.`);
   });
 
   it("past its limit it ends on a whole sentence, else a whole word — never mid-word", () => {
@@ -259,22 +269,60 @@ describe("a scene as it is stored", () => {
     expect(word.endsWith("very")).toBe(true);
   });
 
+  it("text with no space to go back to (a language written without them) is cut AT the limit — it was cut to one character", () => {
+    const cjk = "霧の沼に立つ青い鷺。".repeat(60);
+    const cut = cleanReartScene(cjk);
+    expect([...cut].length).toBeGreaterThan(300);
+    expect(cut.length).toBeLessThanOrEqual(REART_SCENE_MAX);
+    // A short scene in such a language is a scene.
+    expect(cleanReartScene("霧の沼に立つ青い鷺と古い礼拝堂。")).toBe("霧の沼に立つ青い鷺と古い礼拝堂。");
+  });
+
   it("nothing a picture can show is empty (the route refunds it)", () => {
     for (const nothing of ["", "   ", "…", "“”", ". . .", null, undefined]) expect(cleanReartScene(nothing)).toBe("");
+  });
+
+  it("the writer DECLINING is not a scene — it would be saved, charged for and painted from in a batch nobody reads", () => {
+    for (const refusal of [
+      "I'm sorry, but I can't help with that request.",
+      "I’m sorry, I can’t write that.",
+      "I cannot comply with this request.",
+      "I can not help with that.",
+      "Sorry, that isn't something I can describe.",
+      "As an AI, I am unable to depict this.",
+      "I am unable to write a scene for this card.",
+      "Unable to write this scene.",
+      "N/A",
+      "n/a",
+      "None",
+      "Nothing.",
+      "No scene.",
+      // Too little to paint from.
+      "A goblin.",
+      "Goblin chieftain",
+    ]) {
+      expect(cleanReartScene(refusal), refusal).toBe("");
+      expect(reartSceneSaysSomething(refusal), refusal).toBe(false);
+    }
+    // A scene that merely begins with one of those words is a scene.
+    expect(cleanReartScene("Nothing stirs in the drowned chapel but one candle, guttering on the altar.")).not.toBe("");
+    expect(cleanReartScene("None of the goblins notice the wyrm uncoiling in the rafters above their feast.")).not.toBe("");
   });
 
   it("the writer hands back the clean scene, and throws on one that says nothing", async () => {
     m.scene = `"${SCENE}"`;
     expect(await writeReartScene({ name: "Goblin Chieftain", typeLine: "Creature — Goblin", rulesText: null, flavorText: null }, null, null)).toBe(SCENE);
-    m.scene = " … ";
-    await expect(writeReartScene({ name: "Goblin Chieftain", typeLine: null, rulesText: null, flavorText: null }, null, null)).rejects.toMatchObject({ name: "AiOutputError" });
+    for (const nothing of [" … ", "I'm sorry, but I can't help with that request."]) {
+      m.scene = nothing;
+      await expect(writeReartScene({ name: "Goblin Chieftain", typeLine: null, rulesText: null, flavorText: null }, null, null)).rejects.toMatchObject({ name: "AiOutputError" });
+    }
   });
 });
 
 describe("POST /api/tools/re-art-deck/scene", () => {
-  it("a closed tool answers 404 and records nothing", async () => {
+  it("a closed tool answers 404 (with a code a batch stops on) and records nothing", async () => {
     m.access = null;
-    expect((await answer(BODY)).status).toBe(404);
+    expect(await answer(BODY)).toMatchObject({ status: 404, body: { ok: false, code: "CLOSED" } });
     expect(m.events).toEqual([]);
     expect(m.spends).toEqual([]);
   });
@@ -285,7 +333,6 @@ describe("POST /api/tools/re-art-deck/scene", () => {
       [() => undefined, "not json", 400, "invalid"],
       [() => undefined, { deckId: "nope", entryId: ENTRY }, 400, "invalid"],
       [() => undefined, { ...BODY, note: "x".repeat(REART_CARD_WORDS_MAX * 2 + 1) }, 400, "invalid"],
-      [() => undefined, { ...BODY, only: "yes" }, 400, "invalid"],
       [() => (m.deck = null), BODY, 404, "not_owner"],
       [() => (m.entryError = { message: "boom" }), BODY, 503, "unread"],
       [() => (m.entry = null), BODY, 404, "gone"],
@@ -374,15 +421,21 @@ describe("POST /api/tools/re-art-deck/scene", () => {
     expect(brief).toContain("Type: Legendary Creature — Human Wizard");
     expect(brief).toContain("What it does: Flying");
     expect(brief).toContain("Its flavour text: Every hour is filed somewhere.");
-    expect(brief).toContain("The maker's note for this card: asleep on a heap of overdue books");
+    expect(brief).toContain("The maker's direction for this card: asleep on a heap of overdue books");
   });
 
-  it("replaces the words the card had and hands them back; “only these words” stays as stored unless the request says", async () => {
+  it("replaces the words the card had and hands them back (the dialog's way back)", async () => {
+    m.stored = { ok: true, words: { text: "an old librarian", only: false } };
+    expect((await answer(BODY)).body).toMatchObject({ words: { text: SCENE, only: false }, previous: { text: "an old librarian", only: false } });
+  });
+
+  it("a scene is NEVER “use only these words”: it names no style, so alone it would be painted out of the deck's look", async () => {
+    // The card was set to it; a request can't ask for it either.
     m.stored = { ok: true, words: { text: "an old librarian", only: true } };
-    expect((await answer(BODY)).body).toMatchObject({ words: { text: SCENE, only: true }, previous: { text: "an old librarian", only: true } });
-    expect((await answer({ ...BODY, only: false })).body).toMatchObject({ words: { only: false } });
-    m.stored = { ok: true, words: null };
-    expect((await answer({ ...BODY, only: true })).body).toMatchObject({ words: { only: true } });
+    expect((await answer(BODY)).body).toMatchObject({ words: { text: SCENE, only: false }, previous: { text: "an old librarian", only: true } });
+    expect((await answer({ ...BODY, only: true })).body).toMatchObject({ words: { only: false } });
+    expect(m.writes.every((write) => (write.words as { only: boolean }).only === false)).toBe(true);
+    expect(m.events.at(-1)).toMatchObject({ event: "write_scene", props: { was_only: true } });
   });
 
   it("a failed call hands the credit back, saves nothing and settles nothing", async () => {
@@ -445,7 +498,7 @@ describe("POST /api/tools/re-art-deck/scene", () => {
     m.stored = { ok: true, words: { text: "an old librarian", only: false } };
     await answer({ ...BODY, note: "asleep on a heap of overdue books" });
     expect(eventsOf()).toEqual([
-      ["write_scene", { kind: "printing", had_words: true, note: true, chars: SCENE.length, only: false, credits: 1, ms: expect.any(Number) }],
+      ["write_scene", { kind: "printing", had_words: true, was_only: false, note: true, chars: SCENE.length, credits: 1, ms: expect.any(Number) }],
     ]);
     const told = JSON.stringify(m.events);
     for (const secret of ["goblin", "Goblin", "librarian", "overdue", "chieftain", ENTRY, DECK]) expect(told).not.toContain(secret);

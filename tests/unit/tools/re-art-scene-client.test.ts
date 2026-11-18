@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REART_SCENE_ENDPOINT, requestReartScene, sceneFailureStopsBatch, scenesCredits } from "@/lib/tools/re-art/scene-client";
+import {
+  REART_SCENE_ENDPOINT,
+  SCENE_FAILURES_IN_A_ROW,
+  requestReartScene,
+  sceneFailureStopsBatch,
+  scenesCredits,
+} from "@/lib/tools/re-art/scene-client";
 
 // ---------------------------------------------------------------------------
 // The browser's side of "Write a scene with AI": one request a card, and
@@ -21,7 +27,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("requestReartScene", () => {
-  it("posts the deck and the entry — the note and “only” ride along only when given", async () => {
+  it("posts the deck and the entry — the direction rides along only when one is given, and nothing else", async () => {
     fetchMock.mockResolvedValue(json({ ok: true, words: { text: "A heron in the reeds.", only: false }, previous: null, credits: 4 }));
     expect(await requestReartScene({ deckId: DECK, entryId: ENTRY })).toEqual({
       ok: true,
@@ -33,11 +39,20 @@ describe("requestReartScene", () => {
     expect(url).toBe(REART_SCENE_ENDPOINT);
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual({ deckId: DECK, entryId: ENTRY });
-    await requestReartScene({ deckId: DECK, entryId: ENTRY, note: "  at dawn ", only: true });
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ deckId: DECK, entryId: ENTRY, note: "  at dawn ", only: true });
-    // A note that says nothing isn't sent.
-    await requestReartScene({ deckId: DECK, entryId: ENTRY, note: "   ", only: false });
-    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ deckId: DECK, entryId: ENTRY, only: false });
+    await requestReartScene({ deckId: DECK, entryId: ENTRY, note: "  at dawn " });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ deckId: DECK, entryId: ENTRY, note: "  at dawn " });
+    // A direction that says nothing isn't sent.
+    await requestReartScene({ deckId: DECK, entryId: ENTRY, note: "   " });
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ deckId: DECK, entryId: ENTRY });
+  });
+
+  it("carries the caller's signal: a batch whose screen is gone asks for no more — and an aborted request is “couldn't reach”, never a throw", async () => {
+    const controller = new AbortController();
+    fetchMock.mockImplementation(async (_url: string, init: { signal?: AbortSignal }) => {
+      expect(init.signal).toBe(controller.signal);
+      throw new DOMException("The operation was aborted.", "AbortError");
+    });
+    expect(await requestReartScene({ deckId: DECK, entryId: ENTRY, signal: controller.signal })).toMatchObject({ ok: false, code: "UNREACHABLE" });
   });
 
   it("hands back the words the card had before, so the dialog can offer the way back", async () => {
@@ -50,6 +65,10 @@ describe("requestReartScene", () => {
     expect(await requestReartScene({ deckId: DECK, entryId: ENTRY })).toEqual({ ok: false, code: "INSUFFICIENT_CREDITS", error: "You're out of credits.", credits: 0 });
     fetchMock.mockResolvedValue(json({ ok: false, code: "RATE_LIMITED", error: "Slow down.", retryAfterSeconds: 60 }, 429));
     expect(await requestReartScene({ deckId: DECK, entryId: ENTRY })).toMatchObject({ ok: false, code: "RATE_LIMITED", retryAfterSeconds: 60 });
+    fetchMock.mockResolvedValue(json({ ok: false, code: "CLOSED", error: "Re-art deck isn't open to you." }, 404));
+    expect(await requestReartScene({ deckId: DECK, entryId: ENTRY })).toMatchObject({ ok: false, code: "CLOSED" });
+    fetchMock.mockResolvedValue(json({ ok: false, code: "CREDIT_CHECK_FAILED", error: "We couldn't check your credits." }, 503));
+    expect(await requestReartScene({ deckId: DECK, entryId: ENTRY })).toMatchObject({ ok: false, code: "CREDIT_CHECK_FAILED" });
     // A code the browser doesn't act on is words alone.
     fetchMock.mockResolvedValue(json({ ok: false, code: "design_unreadable", error: "The AI's answer couldn't be read." }, 502));
     const result = await requestReartScene({ deckId: DECK, entryId: ENTRY });
@@ -74,9 +93,11 @@ describe("requestReartScene", () => {
 
 describe("a batch of scenes", () => {
   it("stops on a failure the next card would meet too; one card's own failure lets the rest go on", () => {
-    for (const code of ["INSUFFICIENT_CREDITS", "RATE_LIMITED", "AI_UNAVAILABLE", "UNREACHABLE"] as const) {
+    for (const code of ["INSUFFICIENT_CREDITS", "RATE_LIMITED", "AI_UNAVAILABLE", "CREDIT_CHECK_FAILED", "CLOSED", "UNREACHABLE"] as const) {
       expect(sceneFailureStopsBatch({ ok: false, error: "x", code })).toBe(true);
     }
+    // …and a few cards in a row with no scene stop it too (the writer is down).
+    expect(SCENE_FAILURES_IN_A_ROW).toBe(3);
     expect(sceneFailureStopsBatch({ ok: false, error: "The AI's answer couldn't be read." })).toBe(false);
     expect(sceneFailureStopsBatch({ ok: false, error: "Emblems keep their art.", code: "NOT_PAINTABLE" })).toBe(false);
   });

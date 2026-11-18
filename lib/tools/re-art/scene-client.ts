@@ -26,10 +26,10 @@ function wordsOf(value: unknown): ReartCardWords | null {
 export async function requestReartScene(input: {
   deckId: string;
   entryId: string;
-  /** What the maker typed: direction for the writer. */
+  /** The maker's direction for the writer. */
   note?: string;
-  /** "Use only these words" as the dialog shows it (absent: as stored). */
-  only?: boolean;
+  /** Aborted when the screen that asked is gone (the request the server
+   *  already has is finished there, and its scene saved). */
   signal?: AbortSignal;
 }): Promise<ReartSceneResult> {
   let response: Response;
@@ -41,7 +41,6 @@ export async function requestReartScene(input: {
         deckId: input.deckId,
         entryId: input.entryId,
         ...(input.note?.trim() ? { note: input.note } : {}),
-        ...(typeof input.only === "boolean" ? { only: input.only } : {}),
       }),
       signal: input.signal,
     });
@@ -68,7 +67,14 @@ export async function requestReartScene(input: {
   return {
     ok: false,
     error: typeof body.error === "string" && body.error ? body.error : "The scene couldn't be written — try again.",
-    ...(code === "INSUFFICIENT_CREDITS" || code === "RATE_LIMITED" || code === "NOT_PAINTABLE" || code === "AI_UNAVAILABLE" ? { code } : {}),
+    ...(code === "INSUFFICIENT_CREDITS" ||
+    code === "RATE_LIMITED" ||
+    code === "NOT_PAINTABLE" ||
+    code === "AI_UNAVAILABLE" ||
+    code === "CREDIT_CHECK_FAILED" ||
+    code === "CLOSED"
+      ? { code }
+      : {}),
     ...(typeof body.retryAfterSeconds === "number" ? { retryAfterSeconds: body.retryAfterSeconds } : {}),
     credits,
   };
@@ -76,8 +82,19 @@ export async function requestReartScene(input: {
 
 /** Whether a failure ends a batch (the next card would fail the same way). */
 export function sceneFailureStopsBatch(result: Extract<ReartSceneResult, { ok: false }>): boolean {
-  return result.code === "INSUFFICIENT_CREDITS" || result.code === "RATE_LIMITED" || result.code === "AI_UNAVAILABLE" || result.code === "UNREACHABLE";
+  return (
+    result.code === "INSUFFICIENT_CREDITS" ||
+    result.code === "RATE_LIMITED" ||
+    result.code === "AI_UNAVAILABLE" ||
+    result.code === "CREDIT_CHECK_FAILED" ||
+    result.code === "CLOSED" ||
+    result.code === "UNREACHABLE"
+  );
 }
+
+/** A batch also stops when this many cards in a row got no scene — an AI
+ *  provider that is down fails each card (and refunds it) one by one. */
+export const SCENE_FAILURES_IN_A_ROW = 3;
 
 /** What a batch of `cards` scenes costs, in credits. */
 export const scenesCredits = (cards: number) => cards * REART_SCENE_CREDITS;

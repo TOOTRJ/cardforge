@@ -46,7 +46,7 @@ export const REART_SCENE_SYSTEM = [
   "Name no art style, medium, artist, camera or rendering: the deck's look is added separately.",
   "No text, lettering, logos, borders or card frames in the picture. Everyone is fully clothed. No gore, no real people, no brands, and no characters or places from books, films, games or other franchises unless the deck's world is given as one.",
   "A land is a place: describe the place. An instant or a sorcery is an event: show the spell happening. An artifact or equipment is the object, in use or at rest. A creature or a planeswalker is a figure in a moment of action or stillness that fits what the card does.",
-  "Fit the deck's world when one is given. When the maker gives a note, follow it: it is what they want to see.",
+  "Fit the deck's world when one is given. When the maker gives a direction, follow it: it is what they want to see.",
 ].join(" ");
 
 export type SceneSubject = {
@@ -81,24 +81,53 @@ export function reartSceneBrief(subject: SceneSubject, style: ReartStyle | null,
         ? `The deck's world: ${flat(clean?.theme, 300)}`
         : null,
     clean?.mode !== "custom" && preset ? `It will be painted as: ${preset.label} (context only: do not name it).` : null,
-    direction ? `The maker's note for this card: ${direction}` : null,
+    direction ? `The maker's direction for this card: ${direction}` : null,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
+/** The writer declining — in a scene's place (how the answer BEGINS). */
+const DECLINES =
+  /^(?:i['’]?m sorry|i am sorry|sorry[,.! ]|i can(?:['’]t|not| not)\b|i['’]?m (?:unable|not able)|i am (?:unable|not able)|i (?:won['’]t|will not)\b|as an ai\b|unable to\b|cannot (?:help|comply|write|assist))/i;
+/** …or saying it has nothing (the WHOLE answer: a scene may begin "Nothing
+ *  stirs in the drowned chapel…"). */
+const SAYS_NOTHING = /^(?:n\s*\/?\s*a|none|nothing|no scene|unknown)[.!…]*$/i;
+
+/**
+ * Whether the text is a SCENE: enough to paint from, and not the writer
+ * declining ("I'm sorry, but I can't help with that"), which would be
+ * saved, charged for and painted from in a batch nobody reads. A language
+ * written without spaces counts by its characters.
+ */
+export function reartSceneSaysSomething(text: string): boolean {
+  if (!reartWordsSaySomething(text) || DECLINES.test(text.trim()) || SAYS_NOTHING.test(text.trim())) return false;
+  const words = text.trim().split(/\s+/).length;
+  return words >= 4 || (words < 4 && !/\s/.test(text.trim()) && [...text.trim()].length >= 8);
+}
+
 /** A scene as it is stored: clean, within the scene's limit, ending on a
- *  whole word. Empty when the writer said nothing a picture can show. */
+ *  whole sentence or word. Empty when it is no scene at all. */
 export function cleanReartScene(text: string | null | undefined): string {
   const flatText = cleanReartCardWords(text).replace(/\s+/g, " ").trim();
-  // Quotation marks the writer wrapped the whole scene in say nothing.
-  const bare = flatText.replace(/^["“”'‘’]+|["“”'‘’]+$/g, "").trim();
-  if (bare.length <= REART_SCENE_MAX) return reartWordsSaySomething(bare) ? bare : "";
-  // Past the limit: back to the last sentence end, else the last whole word.
+  // A PAIR of quotation marks round the whole scene says nothing; a lone
+  // mark at one end belongs to the text.
+  const paired = /^["“‘'](.+)["”’']$/.exec(flatText);
+  const bare = (paired ? paired[1] : flatText).trim();
+  if (bare.length <= REART_SCENE_MAX) return reartSceneSaysSomething(bare) ? bare : "";
+  // Past the limit: back to the last sentence end, else the last whole
+  // word — and where there is no space to go back to (a language written
+  // without them), the limit itself.
   const head = bare.slice(0, REART_SCENE_MAX);
   const stop = Math.max(head.lastIndexOf(". "), head.lastIndexOf("! "), head.lastIndexOf("? "));
-  const cut = stop >= REART_SCENE_MAX / 2 ? head.slice(0, stop + 1) : head.slice(0, Math.max(head.lastIndexOf(" "), 1)).replace(/[,;:—–-]+$/, "").trim();
-  return reartWordsSaySomething(cut) ? cut : "";
+  const space = head.lastIndexOf(" ");
+  const cut =
+    stop >= REART_SCENE_MAX / 2
+      ? head.slice(0, stop + 1)
+      : space >= REART_SCENE_MAX / 2
+        ? head.slice(0, space).replace(/[,;:—–-]+$/, "").trim()
+        : head.trim();
+  return reartSceneSaysSomething(cut) ? cut : "";
 }
 
 /** Thrown when the writer answered, but with nothing a picture can show. */

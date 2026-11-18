@@ -60,11 +60,8 @@ const LABEL = REART_SCENE_AI_LABEL;
 const bodySchema = z.object({
   deckId: z.uuid(),
   entryId: z.uuid(),
-  /** The maker's direction for the scene (what they typed in the box). */
+  /** The maker's direction for the scene (what they want to see). */
   note: z.string().max(REART_CARD_WORDS_MAX * 2).optional(),
-  /** "Use only these words for this card", as the dialog shows it — absent
-   *  (a batch): the card keeps the choice it has. */
-  only: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
   }
   const access = await checkToolAccess(REART_TOOL_SLUG);
   if (!access) {
-    return NextResponse.json({ ok: false, error: "Re-art deck isn't open to you." }, { status: 404 });
+    return NextResponse.json({ ok: false, code: "CLOSED", error: "Re-art deck isn't open to you." }, { status: 404 });
   }
   const refused = (reason: string, props: ToolEventProps = {}) =>
     recordToolEventLater({ slug: REART_TOOL_SLUG, userId: access.userId, event: REART_SCENE_FAILED_EVENT, access: access.via, props: { reason, ...props } });
@@ -152,15 +149,18 @@ export async function POST(request: Request) {
     refused("not_paintable", { why: classified.reason });
     return NextResponse.json({ ok: false, code: "NOT_PAINTABLE", error: classified.message }, { status: 400 });
   }
-  // The words the card has now: the scene replaces them, and "only these
-  // words" stays as it is unless the request says. A read that didn't
-  // answer stops here — never "none", which would silently drop the choice.
+  // The words the card has now: the scene replaces them, and they are
+  // handed back (the dialog's way back). A read that didn't answer stops
+  // here — never "none", which would lose them without a word.
   const stored = await readCardWordsAdmin(access.userId, deck.id, entry.id);
   if (!stored.ok) {
     refused("unread");
     return NextResponse.json({ ok: false, error: "This card's own words couldn't be read — try again." }, { status: 503 });
   }
-  const only = parsed.data.only ?? stored.words?.only ?? false;
+  // A scene names no style — the deck's look is added to it — so it is
+  // never "use only these words": a card that was would be painted from the
+  // scene ALONE, out of the deck's style, at a picture's price.
+  const only = false;
   const note = cleanReartCardWords(parsed.data.note) || null;
   const style = await readDeckStyle(deck.id);
   const own = classified.kind === "own" ? card : null;
@@ -176,7 +176,12 @@ export async function POST(request: Request) {
     rulesText: own?.rules_text ?? null,
     flavorText: own?.flavor_text ?? null,
   };
-  const about: ToolEventProps = { kind: classified.kind, had_words: Boolean(stored.words), note: Boolean(note) };
+  const about: ToolEventProps = {
+    kind: classified.kind,
+    had_words: Boolean(stored.words),
+    was_only: Boolean(stored.words?.only),
+    note: Boolean(note),
+  };
 
   const rate = await checkAiRateLimit(access.userId);
   if (!rate.ok) {
@@ -253,7 +258,7 @@ export async function POST(request: Request) {
     userId: access.userId,
     event: REART_SCENE_EVENT,
     access: access.via,
-    props: { ...about, chars: scene.length, only, credits: spend.charged ? REART_SCENE_CREDITS : 0, ms: Date.now() - startedAt },
+    props: { ...about, chars: scene.length, credits: spend.charged ? REART_SCENE_CREDITS : 0, ms: Date.now() - startedAt },
   });
   revalidatePath(toolHref(REART_TOOL_SLUG));
   return NextResponse.json({ ok: true, words, previous: stored.words, credits: await getFreshCreditBalance() });

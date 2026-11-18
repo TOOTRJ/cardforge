@@ -12,10 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldGroup } from "@/components/creator/field-group";
-import { textareaClass } from "@/components/ui/field-classes";
+import { inputClass, textareaClass } from "@/components/ui/field-classes";
+import { cn } from "@/lib/utils";
 import {
   REART_CARD_WORDS_MAX,
   REART_SCENE_HELP,
+  REART_SCENE_ONLY_NOTE,
   buildReartPrompt,
   reartSceneCost,
   reartStateIsSettled,
@@ -37,9 +39,11 @@ import { requestReartScene } from "@/lib/tools/re-art/scene-client";
 //
 // "Write a scene with AI" (migration 0217, one credit) has the text model
 // write the words: the server SAVES them as the card's words before it
-// answers, so the box then shows what is stored. What the maker had typed
-// is the writer's direction, and stays one press away ("Put back what I
-// typed") until the dialog closes.
+// answers, so the box then shows what is stored. The maker's direction has a
+// box of its own (never the words' box: pressing again would hand the
+// writer its own last scene back as the direction). The words the card had
+// — in the box, or stored — stay one press away ("Put back the words it
+// had") until the dialog closes.
 // ---------------------------------------------------------------------------
 
 export function ReartCardWordsDialog({
@@ -78,6 +82,10 @@ export function ReartCardWordsDialog({
     onWritten: (words: ReartCardWords, credits: number | null) => void;
     /** The maker has no credit left for one. */
     onOutOfCredits?: () => void;
+    /** Why a scene can't be written right now (the form shows a style that
+     *  isn't saved: the scene is written for the deck's SAVED world), or
+     *  null. */
+    blocked?: string | null;
   };
 }) {
   const [text, setText] = useState(entry.words?.text ?? "");
@@ -85,12 +93,17 @@ export function ReartCardWordsDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   const [writing, setWriting] = useState(false);
-  /** A scene was written for this card in this opening: what the box held
-   *  before it (the way back). */
-  const [written, setWritten] = useState<{ entryId: string; before: string } | null>(null);
+  /** The maker's direction for the writer (optional). */
+  const [direction, setDirection] = useState("");
+  /** A scene was written for this card in this opening: the words the card
+   *  had before it — what the box held, else what was stored (the way
+   *  back) — and whether it was set to "only these words". */
+  const [written, setWritten] = useState<{ entryId: string; before: string; beforeOnly: boolean } | null>(null);
   const onlyId = useId();
   const previewId = useId();
   const sceneHelpId = useId();
+  const sceneBlockedId = useId();
+  const directionId = useId();
 
   // Every OPENING starts from the card's stored words — another card, the
   // same card after a save or a removal, or a draft that was abandoned
@@ -103,9 +116,12 @@ export function ReartCardWordsDialog({
     setText(entry.words?.text ?? "");
     setOnly(entry.words?.only ?? false);
     setError(null);
-    // The way back to what was typed lasts for this opening of this card
+    // The way back, and the direction, last for this opening of this card
     // (the page re-reading the scene just written is not a new opening).
-    if (!open || written?.entryId !== entry.id) setWritten(null);
+    if (!open || written?.entryId !== entry.id) {
+      setWritten(null);
+      setDirection("");
+    }
   }
 
   const words: ReartCardWords | null = text.trim() ? { text, only } : null;
@@ -136,11 +152,11 @@ export function ReartCardWordsDialog({
   };
 
   const writeScene = async () => {
-    if (!scene || writing || saving) return;
+    if (!scene || scene.blocked || writing || saving) return;
     setError(null);
     setWriting(true);
-    const before = text;
-    const result = await requestReartScene({ deckId, entryId: entry.id, note: text, only });
+    const box = { text, only };
+    const result = await requestReartScene({ deckId, entryId: entry.id, note: direction });
     setWriting(false);
     if (!result.ok) {
       setError(result.error);
@@ -149,10 +165,20 @@ export function ReartCardWordsDialog({
     }
     setText(result.words.text);
     setOnly(result.words.only);
-    setWritten({ entryId: entry.id, before });
+    // The way back: the words the box held; with an empty box, the words
+    // the card had STORED (the server hands them back) — never lost without
+    // a word. The first scene's way back is kept when another is written.
+    setWritten((earlier) =>
+      earlier?.entryId === entry.id
+        ? earlier
+        : box.text.trim()
+          ? { entryId: entry.id, before: box.text, beforeOnly: box.only }
+          : { entryId: entry.id, before: result.previous?.text ?? "", beforeOnly: result.previous?.only ?? false },
+    );
     scene.onWritten(result.words, result.credits);
   };
   const busy = saving || writing;
+  const sceneOff = busy || Boolean(scene?.blocked);
 
   return (
     <Dialog open={open} onOpenChange={(next) => (!busy ? onOpenChange(next) : undefined)}>
@@ -160,8 +186,8 @@ export function ReartCardWordsDialog({
         <DialogHeader>
           <DialogTitle>Words for {entry.name}</DialogTitle>
           <DialogDescription>
-            Write what this card&apos;s picture shows. Nothing is painted or charged here: the words are used the next
-            time the card is painted.
+            Write what this card&apos;s picture shows. Nothing is painted here, and saving your own words is free: the
+            words are used the next time the card is painted.
           </DialogDescription>
         </DialogHeader>
 
@@ -191,17 +217,30 @@ export function ReartCardWordsDialog({
 
           {scene ? (
             <div className="flex flex-col gap-2 rounded-lg border border-border/50 p-3">
+              <label htmlFor={directionId} className="flex flex-col gap-1 text-xs text-muted">
+                Direction for the writer (optional)
+                <input
+                  id={directionId}
+                  type="text"
+                  value={direction}
+                  maxLength={REART_CARD_WORDS_MAX}
+                  onChange={(event) => setDirection(event.target.value.slice(0, REART_CARD_WORDS_MAX))}
+                  placeholder="e.g. seen from above at dawn"
+                  className={inputClass(false)}
+                  readOnly={writing}
+                />
+              </label>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => void writeScene()}
-                  aria-disabled={busy ? true : undefined}
-                  aria-describedby={sceneHelpId}
-                  className={busy ? "cursor-not-allowed opacity-60" : undefined}
+                  aria-disabled={sceneOff ? true : undefined}
+                  aria-describedby={cn(sceneHelpId, scene.blocked && sceneBlockedId)}
+                  className={sceneOff ? "cursor-not-allowed opacity-60" : undefined}
                 >
                   {writing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-                  {writing ? "Writing the scene…" : `Write a scene with AI · ${reartSceneCost(1)}`}
+                  {writing ? "Writing the scene…" : written ? `Write another scene · ${reartSceneCost(1)}` : `Write a scene with AI · ${reartSceneCost(1)}`}
                 </Button>
                 {written && written.before.trim() && written.before.trim() !== text.trim() ? (
                   <Button
@@ -209,20 +248,28 @@ export function ReartCardWordsDialog({
                     size="sm"
                     // The box only: the scene stays the card's stored words
                     // (and the dialog goes on saying so) until Save.
-                    onClick={() => setText(written.before)}
+                    onClick={() => {
+                      setText(written.before);
+                      setOnly(written.beforeOnly);
+                    }}
                     disabled={busy}
                   >
-                    Put back what I typed
+                    Put back the words it had
                   </Button>
                 ) : null}
               </div>
               <p id={sceneHelpId} className="text-xs leading-5 text-muted">
                 {REART_SCENE_HELP}
               </p>
+              {scene.blocked ? (
+                <p id={sceneBlockedId} className="text-xs leading-5 text-warning">
+                  {scene.blocked}
+                </p>
+              ) : null}
               {written ? (
                 <p role="status" className="text-xs leading-5 text-foreground">
                   Scene written and saved ({reartSceneCost(1)}): it is this card&apos;s words now. To store what the box
-                  shows instead, press Save words.
+                  shows instead, press Save words.{written.beforeOnly ? ` ${REART_SCENE_ONLY_NOTE}` : ""}
                 </p>
               ) : null}
             </div>
@@ -284,8 +331,9 @@ export function ReartCardWordsDialog({
             </Button>
           ) : null}
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-            {/* After a scene there is nothing to cancel: it is saved. */}
-            {written ? "Done" : "Cancel"}
+            {/* After a scene there is nothing to cancel — it is saved — unless
+                the box was changed since: that draft is what Cancel drops. */}
+            {written && !changed ? "Done" : "Cancel"}
           </Button>
           <Button
             onClick={() => {

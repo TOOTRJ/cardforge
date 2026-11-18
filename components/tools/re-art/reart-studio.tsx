@@ -460,13 +460,35 @@ export function ReartStudio({
   // run that starts from the card's own art reads the words as what
   // CHANGES in that picture).
   const canScene = sceneAvailable && method === "paint";
+  // A scene is written for the deck's SAVED world: while the form shows a
+  // style that isn't saved, it waits (as one card's paint does).
+  const sceneBlocked = !savedStyle
+    ? "Save the deck's style first: a scene is written for the deck's saved world."
+    : lookChanged
+      ? "You changed the style. Save it or undo your changes first: a scene is written for the deck's saved world."
+      : null;
   const writeScenes = (picked: ReartStudioEntry[]) => {
     if (running || busy || picked.length === 0) return;
-    if (picked.length > REART_SCENES_AT_ONCE) {
-      toast.error(`Scenes are written for up to ${REART_SCENES_AT_ONCE} cards at a time — you picked ${picked.length}. Pick fewer.`);
+    if (sceneBlocked) {
+      toast.error(sceneBlocked);
       return;
     }
-    setScenesFor(picked);
+    // One scene a CARD: a card on two rows of the deck is painted once,
+    // from its first row's words — a scene for the second would be paid
+    // for and never painted.
+    const cardsSeen = new Set<string>();
+    const once = picked.filter((entry) => {
+      const cardId = entry.card?.id;
+      if (!cardId) return true;
+      if (cardsSeen.has(cardId)) return false;
+      cardsSeen.add(cardId);
+      return true;
+    });
+    if (once.length > REART_SCENES_AT_ONCE) {
+      toast.error(`Scenes are written for up to ${REART_SCENES_AT_ONCE} cards at a time — you picked ${once.length}. Pick fewer.`);
+      return;
+    }
+    setScenesFor(once);
     setScenesOpen(true);
   };
 
@@ -955,6 +977,7 @@ export function ReartStudio({
                     router.refresh();
                   },
                   onOutOfCredits: () => upgrade.open("credits", "reart_deck"),
+                  blocked: sceneBlocked,
                 }
               : undefined
           }
@@ -968,6 +991,15 @@ export function ReartStudio({
           deckId={deck.id}
           entries={scenesFor}
           balance={balance}
+          // A card that got its scene leaves the selection: pressing "Write
+          // scenes…" again goes on with the rest, and never pays twice.
+          onWritten={(entryId) =>
+            setSelected((prev) => {
+              const next = new Set(prev);
+              next.delete(entryId);
+              return next;
+            })
+          }
           onDone={(written, failedCount) => {
             if (written > 0) {
               toast.success(

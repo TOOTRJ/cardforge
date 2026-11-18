@@ -21,7 +21,10 @@
 //     collection, gated by has_tool_access and an admin's release; the Rule
 //     0 table sheet's "Draft with AI" (POST /api/tools/rule0-sheet/draft,
 //     label `draft_table_sheet`) writes a deck's game plan and win
-//     conditions for its owner, gated the same way.
+//     conditions for its owner, gated the same way; Re-art deck's runs
+//     (label `deck_reart_art`) and its "Write a scene with AI" (POST
+//     /api/tools/re-art-deck/scene, label `deck_reart_scene`) paint, and
+//     write the scene for, the cards of the owner's own deck.
 //
 // Turning the SERVER back on is this one constant. The deck pages show the
 // same words on greyed "Coming soon" controls
