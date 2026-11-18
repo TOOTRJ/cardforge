@@ -1238,7 +1238,199 @@ export type ReartStudioEntry = {
   flavorText: string | null;
   /** What painting it costs (a real card's is confirmed at plan time). */
   credits: number;
+  /** The earlier pictures Re-art keeps for the card on this deck (0215),
+   *  newest first — what "Earlier pictures" offers. Absent or empty: none. */
+  earlier?: ReartEarlierPicture[];
+  /** The card shows the picture THIS deck's row names: a re-roll keeps it
+   *  as an earlier picture (0215). */
+  ownPictureOnCard?: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// A card's earlier pictures (migration 0215)
+//
+// A re-roll, and "Put the old art back", KEEP the picture they take off a
+// card (they used to remove it for good): a few per card and deck, the
+// oldest dropped past that. The maker can go back to any of them — it costs
+// nothing (no picture is painted).
+// ---------------------------------------------------------------------------
+
+/** How many earlier pictures are kept for one card on one deck (besides the
+ *  one the deck's row names). A fourth drops the oldest. */
+export const REART_ROLLS_KEPT = 3;
+
+/** The id of the picture the deck's own ROW names when the card doesn't
+ *  show it ("has other art now"): offered beside the kept ones, though it
+ *  is no row of theirs. */
+export const REART_ROW_PICTURE = "row";
+
+/** One earlier picture as the studio offers it. */
+export type ReartEarlierPicture = {
+  /** A kept picture's id, or REART_ROW_PICTURE. */
+  id: string;
+  artUrl: string;
+  /** A two-faced card's back picture, kept with its front. */
+  backArtUrl: string | null;
+  /** Who painted it, in words (for those who can name the model), or null. */
+  paintedBy: string | null;
+  /** It was repainted from the card's own art (0212). */
+  restyled: boolean;
+  /** Painted in another style than the deck's saved one. */
+  earlierStyle: boolean;
+  paintedAt: string;
+};
+
+/** A kept picture as the server holds it (deck_reart_rolls). */
+export type ReartRoll = {
+  id: string;
+  cardId: string;
+  styleVersion: number;
+  jobId: string | null;
+  artUrl: string;
+  artPosition: unknown;
+  artistCredit: string | null;
+  backArtUrl: string | null;
+  backArtPosition: unknown;
+  backArtistCredit: string | null;
+  imageModel: string | null;
+  method: ReartMethod | null;
+  paintedAt: string;
+};
+
+/**
+ * The pictures "Earlier pictures" offers for one card, newest first — pure,
+ * so the page's reading is tested:
+ *
+ *   * the picture the deck's row names, while the card shows OTHER art (the
+ *     maker's editor, a run of another deck): the way back to "in this
+ *     style";
+ *   * the kept pictures — never one the card shows now, and never the row's
+ *     own twice (a write that stopped half-way can leave both).
+ */
+export function reartEarlierPictures(input: {
+  painted:
+    | { artUrl: string | null; backArtUrl: string | null; styleVersion: number; imageModel: string | null; method: ReartMethod | null; paintedAt: string }
+    | null
+    | undefined;
+  rolls: ReadonlyArray<ReartRoll>;
+  /** The art the card shows now. */
+  cardArtUrl: string | null | undefined;
+  /** The deck's style version (null: no style saved). */
+  styleVersion: number | null;
+  /** The viewer may see who painted a picture (canPickReartModel). */
+  namesModel: boolean;
+}): ReartEarlierPicture[] {
+  const { painted, cardArtUrl } = input;
+  const view = (
+    id: string,
+    from: { artUrl: string; backArtUrl: string | null; styleVersion: number; imageModel: string | null; method: ReartMethod | null; paintedAt: string },
+  ): ReartEarlierPicture => ({
+    id,
+    artUrl: from.artUrl,
+    backArtUrl: from.backArtUrl,
+    paintedBy: input.namesModel ? reartModelLabel(from.imageModel) : null,
+    restyled: input.namesModel && from.method === "restyle",
+    earlierStyle: input.styleVersion === null || from.styleVersion !== input.styleVersion,
+    paintedAt: from.paintedAt,
+  });
+  const list: ReartEarlierPicture[] = [];
+  const rowArt = painted?.artUrl ?? null;
+  if (painted && rowArt && rowArt !== cardArtUrl) list.push(view(REART_ROW_PICTURE, { ...painted, artUrl: rowArt }));
+  const seen = new Set<string>([...(cardArtUrl ? [cardArtUrl] : []), ...(rowArt ? [rowArt] : [])]);
+  for (const roll of [...input.rolls].sort((a, b) => b.paintedAt.localeCompare(a.paintedAt))) {
+    if (seen.has(roll.artUrl)) continue;
+    seen.add(roll.artUrl);
+    list.push(view(roll.id, roll));
+  }
+  return list;
+}
+
+/** What a pick is told when the picture's file is no longer in storage (a
+ *  row from before pictures were kept can name one the tool removed). */
+export const REART_PICTURE_GONE = "That picture is no longer in storage, so it can't be put back. It has been taken off the list.";
+
+/** What "Earlier pictures" says about a picture of a style the deck no
+ *  longer has: the pick takes its style with it. */
+export const REART_EARLIER_STYLE_COPY =
+  "A picture marked “Earlier style” was painted in a style the deck no longer has: the next run over the deck paints that card again.";
+
+/** What "Earlier pictures" says about how many are kept. */
+export const REART_ROLLS_KEPT_COPY = `Up to ${REART_ROLLS_KEPT} earlier pictures are kept for each card. When another is kept, the oldest goes.`;
+
+/**
+ * The art a card goes back to with "Put the old art back", worked out when
+ * a picture of Re-art's is put ON the card (a paint, or a pick of an earlier
+ * picture) — pure, shared by the step and the pick:
+ *
+ *   * the card shows a picture Re-art painted (`source`: the row, from ANY
+ *     of the maker's decks, whose picture it is) → that row's art to put
+ *     back, never the AI picture and never lost;
+ *   * the card shows a picture this deck KEEPS for it that no row names
+ *     (`carry`: this deck's row — a write stopped half-way: the picture was
+ *     kept, the row moved on, the card's edit never landed) → that row's
+ *     art to put back. Read as "the maker's own" it made an AI picture the
+ *     art to go back to, and the maker's original was named by nothing;
+ *   * otherwise the art the card shows now is the maker's own: that.
+ */
+export function reartPreviousArt<Position>(input: {
+  card: { artUrl: string | null; artPosition: Position | null; artistCredit: string | null };
+  /** The card's back face as it is now (a two-faced card), or null. */
+  back: { artUrl: string | null; artPosition: Position | null; artistCredit: string | null } | null;
+  source:
+    | {
+        made: boolean;
+        previousArtUrl: string | null;
+        previousArtPosition: Position | null;
+        previousBackArtUrl: string | null;
+        previousBackArtPosition: Position | null;
+        previousArtistCredit: string | null;
+        previousBackArtistCredit: string | null;
+      }
+    | null
+    | undefined;
+  /** This deck's row, when the card's art is one of this deck's KEPT
+   *  pictures for it and no row names it. Absent: not that state. */
+  carry?: {
+    made: boolean;
+    previousArtUrl: string | null;
+    previousArtPosition: Position | null;
+    previousBackArtUrl: string | null;
+    previousBackArtPosition: Position | null;
+    previousArtistCredit: string | null;
+    previousBackArtistCredit: string | null;
+  } | null;
+}): {
+  made: boolean;
+  previousArtUrl: string | null;
+  previousArtPosition: Position | null;
+  previousBackArtUrl: string | null;
+  previousBackArtPosition: Position | null;
+  previousArtistCredit: string | null;
+  previousBackArtistCredit: string | null;
+} {
+  const { card, back } = input;
+  const source = input.source ?? input.carry;
+  if (source) {
+    return {
+      made: source.made,
+      previousArtUrl: source.previousArtUrl,
+      previousArtPosition: source.previousArtPosition,
+      previousBackArtUrl: source.previousBackArtUrl,
+      previousBackArtPosition: source.previousBackArtPosition,
+      previousArtistCredit: source.previousArtistCredit,
+      previousBackArtistCredit: source.previousBackArtistCredit,
+    };
+  }
+  return {
+    made: false,
+    previousArtUrl: card.artUrl,
+    previousArtPosition: card.artPosition,
+    previousBackArtUrl: back ? back.artUrl : null,
+    previousBackArtPosition: back ? back.artPosition : null,
+    previousArtistCredit: card.artistCredit,
+    previousBackArtistCredit: back ? back.artistCredit : null,
+  };
+}
 
 /** Words for an entry's state. */
 export function reartStateLabel(entry: Pick<ReartStudioEntry, "kind" | "state" | "skipMessage">): string {

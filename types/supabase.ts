@@ -793,6 +793,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      deck_reart_rolls: {
+        Row: {
+          id: string;
+          deck_id: string;
+          card_id: string;
+          owner_id: string;
+          style_version: number;
+          job_id: string | null;
+          art_url: string;
+          art_position: Json | null;
+          artist_credit: string | null;
+          back_art_url: string | null;
+          back_art_position: Json | null;
+          back_artist_credit: string | null;
+          image_model: string | null;
+          method: string | null;
+          painted_at: string;
+          kept_at: string;
+        };
+        Insert: {
+          id?: string;
+          deck_id: string;
+          card_id: string;
+          owner_id: string;
+          style_version: number;
+          job_id?: string | null;
+          art_url: string;
+          art_position?: Json | null;
+          artist_credit?: string | null;
+          back_art_url?: string | null;
+          back_art_position?: Json | null;
+          back_artist_credit?: string | null;
+          image_model?: string | null;
+          method?: string | null;
+          painted_at: string;
+          kept_at?: string;
+        };
+        Update: {
+          id?: string;
+          deck_id?: string;
+          card_id?: string;
+          owner_id?: string;
+          style_version?: number;
+          job_id?: string | null;
+          art_url?: string;
+          art_position?: Json | null;
+          artist_credit?: string | null;
+          back_art_url?: string | null;
+          back_art_position?: Json | null;
+          back_artist_credit?: string | null;
+          image_model?: string | null;
+          method?: string | null;
+          painted_at?: string;
+          kept_at?: string;
+        };
+        Relationships: [];
+      };
       deck_reart_cards: {
         Row: {
           deck_id: string;

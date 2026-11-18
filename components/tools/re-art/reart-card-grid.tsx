@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, PenLine, RotateCcw, Undo2, Wand2 } from "lucide-react";
+import { History, Loader2, PenLine, RotateCcw, Undo2, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { CardTile } from "@/components/cards/card-tile";
@@ -52,6 +52,7 @@ export function ReartCardGrid({
   paintBlocked = null,
   onPaintOne,
   onEditWords,
+  onEarlier,
   onRestore,
 }: {
   entries: ReartStudioEntry[];
@@ -71,6 +72,8 @@ export function ReartCardGrid({
   onPaintOne: (entry: ReartStudioEntry) => void;
   /** Opens the card's own words (0209). Absent: not offered. */
   onEditWords?: (entry: ReartStudioEntry) => void;
+  /** Opens the card's earlier pictures (0215). Absent: not offered. */
+  onEarlier?: (entry: ReartStudioEntry) => void;
   onRestore: (entry: ReartStudioEntry) => void;
 }) {
   const counts = { all: entries.length, todo: 0, done: 0, skipped: 0 };
@@ -191,6 +194,7 @@ export function ReartCardGrid({
                           the note above the cards. */}
                       <button
                         type="button"
+                        data-reart-paint={entry.id}
                         onClick={() => {
                           if (!locked && !busy) onPaintOne(entry);
                         }}
@@ -228,6 +232,24 @@ export function ReartCardGrid({
                         >
                           <PenLine className="h-3.5 w-3.5" aria-hidden />
                           {entry.words ? "Edit its words…" : "Its own words…"}
+                          <span className="sr-only"> — {entry.name}</span>
+                        </button>
+                      ) : null}
+                      {onEarlier && entry.earlier && entry.earlier.length > 0 ? (
+                        <button
+                          type="button"
+                          data-earlier-pictures={entry.id}
+                          onClick={() => {
+                            if (!locked && !busy) onEarlier(entry);
+                          }}
+                          aria-disabled={locked || Boolean(busy) ? true : undefined}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-sm text-xs text-muted underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60",
+                            locked || busy ? "cursor-not-allowed opacity-60" : "hover:text-foreground hover:underline",
+                          )}
+                        >
+                          <History className="h-3.5 w-3.5" aria-hidden />
+                          Earlier pictures ({entry.earlier.length})…
                           <span className="sr-only"> — {entry.name}</span>
                         </button>
                       ) : null}

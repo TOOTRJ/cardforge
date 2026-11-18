@@ -24,7 +24,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/scryfall/client", () => ({ fetchScryfallImage: m.fetchImage, assessPrintImageQuality: m.quality }));
 vi.mock("@/lib/scryfall/rate-limit", () => ({ logScryfallCall: m.log }));
 
-import { fetchStoredArt } from "@/lib/tools/re-art/restyle-source";
+import { fetchStoredArt, storedArtExists } from "@/lib/tools/re-art/restyle-source";
 import { fetchScryfallArtCrop } from "@/lib/scryfall/art-crop";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -149,5 +149,64 @@ describe("a printing's art", () => {
     expect(await fetchScryfallArtCrop("u1", card(), "front")).toMatchObject({ ok: false, error: expect.stringMatching(/can't be used/) });
     // None of them spent the quota: only a picture in hand does.
     expect(m.log).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Whether a picture Re-art has on record is still in storage (0215) — asked
+// before an earlier picture is put back on a card. A row from before
+// pictures were kept can name a file the tool removed since; a card must
+// never be given a dead picture, and "storage was busy" must never read as
+// "gone" (the picture would be taken off the list for good).
+// ---------------------------------------------------------------------------
+
+describe("whether a stored picture is still there", () => {
+  const status = (code: number) => ({ ok: code >= 200 && code < 300, status: code, headers: new Headers() }) as unknown as Response;
+  let fetched: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetched = vi.fn();
+    vi.stubGlobal("fetch", fetched);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks the object's own address with a HEAD — no body, no redirect followed, five seconds", async () => {
+    fetched.mockResolvedValue(status(200));
+    expect(await storedArtExists(OWN)).toBe("yes");
+    expect(fetched).toHaveBeenCalledTimes(1);
+    const [address, options] = fetched.mock.calls[0];
+    expect(address).toBe(OWN);
+    expect(options).toMatchObject({ method: "HEAD", redirect: "error", cache: "no-store" });
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("storage saying it isn't there is “no”", async () => {
+    for (const code of [400, 404, 410]) {
+      fetched.mockResolvedValue(status(code));
+      expect(await storedArtExists(OWN), String(code)).toBe("no");
+    }
+  });
+
+  it("storage that is busy, broken or silent is “unknown” — never “no”", async () => {
+    for (const code of [408, 429, 500, 502, 503]) {
+      fetched.mockResolvedValue(status(code));
+      expect(await storedArtExists(OWN), String(code)).toBe("unknown");
+    }
+    fetched.mockRejectedValue(new Error("timeout"));
+    expect(await storedArtExists(OWN)).toBe("unknown");
+  });
+
+  it("a picture that is no object of our storage (a built-in one) was never ours to remove: “yes”, and nothing is requested", async () => {
+    for (const url of ["https://pipglyph.com/defaults/banners/banner-07.webp", "https://elsewhere.example/art.png", "/defaults/avatars/avatar-01.webp"]) {
+      expect(await storedArtExists(url), url).toBe("yes");
+    }
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it("no address at all is “no”", async () => {
+    expect(await storedArtExists(null)).toBe("no");
+    expect(await storedArtExists("")).toBe("no");
+    expect(fetched).not.toHaveBeenCalled();
   });
 });

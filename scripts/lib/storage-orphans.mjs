@@ -109,6 +109,11 @@ export const URL_SOURCES = [
     columns: ["art_url", "back_art_url", "previous_art_url", "previous_back_art_url"],
     note: "Re-art deck (0191): the picture it painted on a card, and the card's own earlier art kept for \"Put the old art back\" (card-art) — no card holds that one any more",
   },
+  {
+    table: "deck_reart_rolls",
+    columns: ["art_url", "back_art_url"],
+    note: "Re-art deck (0215): a card's earlier pictures, kept so the maker can go back to one (card-art) — no card and no deck_reart_cards row holds them; the server drops the oldest past its limit, and the picture with it",
+  },
 ];
 
 /** PostgREST/OpenAPI `format`s that can't hold a string. Everything else —

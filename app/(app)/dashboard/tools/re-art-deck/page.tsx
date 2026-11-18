@@ -21,12 +21,14 @@ import {
   readReartPicturesByCard,
   bucketOfItem,
 } from "@/lib/tools/re-art/server";
+import { readRolls } from "@/lib/tools/re-art/rolls";
 import {
   REART_CREDITS_PER_FACE,
   canPickReartModel,
   classifyReartEntry,
   reartArtIsOnCard,
   reartCardFacts,
+  reartEarlierPictures,
   reartModelLabel,
   type ReartStudioEntry,
 } from "@/lib/tools/re-art/model";
@@ -122,10 +124,12 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const [items, style, painted, words, runs, username, capacity, balance] = await Promise.all([
+  const [items, style, painted, rolls, words, runs, username, capacity, balance] = await Promise.all([
     listDeckPageCards(deck.id),
     readDeckStyle(deck.id),
     readPaintedCards(deck.id),
+    // The earlier pictures Re-art keeps for each card (0215).
+    readRolls(deck.id),
     readCardWords(deck.id),
     listReartRuns(entry.userId, deck.id),
     getCurrentUsername(),
@@ -191,6 +195,19 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
       rulesText: own?.rules_text ?? null,
       flavorText: own?.flavor_text ?? null,
       credits: own ? REART_CREDITS_PER_FACE * (rowHasBakedBack(own) ? 2 : 1) : REART_CREDITS_PER_FACE,
+      // A re-roll keeps the picture on the card when it is this deck's own.
+      ownPictureOnCard: Boolean(own && done && reartArtIsOnCard(done, own.art_url)),
+      // The pictures the maker can go back to: the kept ones, and this
+      // deck's own last picture while the card shows other art.
+      earlier: own
+        ? reartEarlierPictures({
+            painted: done,
+            rolls: rolls.get(own.id) ?? [],
+            cardArtUrl: own.art_url,
+            styleVersion: style?.version ?? null,
+            namesModel: canPickModel,
+          })
+        : [],
     };
   });
 
