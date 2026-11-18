@@ -129,8 +129,10 @@ import {
   REART_SCENE_MAX,
   REART_SCENE_ONLY_NOTE,
   reartSceneCost,
+  reartScenesKeptLine,
   reartScenesLine,
   reartScenesOnlyLine,
+  reartScenesReplaceLabel,
   reartScenesReplaceLine,
 } from "@/lib/tools/re-art/model";
 
@@ -190,6 +192,12 @@ describe("what a scene costs, in words", () => {
     expect(reartScenesReplaceLine(1, 1)).toBe("It has words of its own: they are replaced.");
     expect(reartScenesReplaceLine(5, 1)).toBe("1 of them has words of its own: those are replaced.");
     expect(reartScenesReplaceLine(5, 3)).toBe("3 of them have words of their own: those are replaced.");
+    // A batch leaves such cards alone unless the maker ticks the box.
+    expect(reartScenesKeptLine(0)).toBe("");
+    expect(reartScenesKeptLine(1)).toBe("1 card picked already has words of its own and is left as it is.");
+    expect(reartScenesKeptLine(4)).toBe("4 cards picked already have words of their own and are left as they are.");
+    expect(reartScenesReplaceLabel(1)).toBe("Also replace the words of the card that has its own");
+    expect(reartScenesReplaceLabel(4)).toBe("Also replace the words of the 4 cards that have their own");
   });
 
   it("a scene leaves the maker room to add to it", () => {
@@ -256,6 +264,8 @@ describe("a scene as it is stored", () => {
     expect(cleanReartScene(`  “A heron\n stands in the reeds.”  `)).toBe("A heron stands in the reeds.");
     expect(cleanReartScene(`A sign nailed to the gate reads 'Beware`)).toBe(`A sign nailed to the gate reads 'Beware`);
     expect(cleanReartScene(`"Halt," says the guard at the gate.`)).toBe(`"Halt," says the guard at the gate.`);
+    // Marks round its first and last WORDS are the text's own too.
+    expect(cleanReartScene(`'Halt' is carved over the gate, and under it 'or else'`)).toBe(`'Halt' is carved over the gate, and under it 'or else'`);
   });
 
   it("past its limit it ends on a whole sentence, else a whole word — never mid-word", () => {
@@ -274,8 +284,11 @@ describe("a scene as it is stored", () => {
     const cut = cleanReartScene(cjk);
     expect([...cut].length).toBeGreaterThan(300);
     expect(cut.length).toBeLessThanOrEqual(REART_SCENE_MAX);
-    // A short scene in such a language is a scene.
+    // A short scene in such a language is a scene — with a space between
+    // its sentences, or a Latin name in it, too (it counted as "three words").
     expect(cleanReartScene("霧の沼に立つ青い鷺と古い礼拝堂。")).toBe("霧の沼に立つ青い鷺と古い礼拝堂。");
+    expect(cleanReartScene("霧の沼に立つ青い鷺。 古い礼拝堂の前で夜明けを待つ。")).not.toBe("");
+    expect(cleanReartScene("雾中的沼泽里，Krenko 站在古老的礼拜堂前。")).not.toBe("");
   });
 
   it("nothing a picture can show is empty (the route refunds it)", () => {
@@ -292,6 +305,13 @@ describe("a scene as it is stored", () => {
       "As an AI, I am unable to depict this.",
       "I am unable to write a scene for this card.",
       "Unable to write this scene.",
+      "I apologize, but I cannot describe this card.",
+      "Unfortunately, I can't write a scene for that.",
+      "I'm afraid I can't help with this one.",
+      "My apologies, that is not something I can write.",
+      "I do not feel comfortable writing this scene.",
+      "This request goes against my guidelines.",
+      "I must decline to write that scene.",
       "N/A",
       "n/a",
       "None",
@@ -307,6 +327,8 @@ describe("a scene as it is stored", () => {
     // A scene that merely begins with one of those words is a scene.
     expect(cleanReartScene("Nothing stirs in the drowned chapel but one candle, guttering on the altar.")).not.toBe("");
     expect(cleanReartScene("None of the goblins notice the wyrm uncoiling in the rafters above their feast.")).not.toBe("");
+    expect(cleanReartScene("Unable to rise, a wounded griffin drags one wing through the ash of the burnt orchard.")).not.toBe("");
+    expect(cleanReartScene("Sorry-eyed hounds wait at the gate of the drowned manor, rain beading on their coats.")).not.toBe("");
   });
 
   it("the writer hands back the clean scene, and throws on one that says nothing", async () => {

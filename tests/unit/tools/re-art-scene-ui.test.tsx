@@ -321,10 +321,12 @@ describe("“Write a scene with AI” in a card's own words", () => {
 describe("“Write scenes…” for the cards picked in the list", () => {
   const cards = () => [
     entry(1, { name: "Thornback Wyrm" }),
-    entry(2, { name: "Mossy Fen", words: { text: "a drowned chapel", only: false } }),
+    entry(2, { name: "Mossy Fen" }),
     entry(3, { name: "Sol Ring", locked: true }),
     entry(4, { name: "Archivist" }),
+    entry(5, { name: "Old Library", words: { text: "a drowned chapel", only: false } }),
   ];
+  const replaceBox = (dialog: HTMLElement) => within(dialog).getByRole("checkbox", { name: /Also replace the words of/ }) as HTMLInputElement;
   const pick = (...names: string[]) => {
     fireEvent.click(button("Select cards"));
     for (const name of names) fireEvent.click(box("Select", name));
@@ -342,18 +344,52 @@ describe("“Write scenes…” for the cards picked in the list", () => {
     const dialog = await openScenes();
     const text = dialog.textContent ?? "";
     expect(text).toContain("Writes a scene for 2 cards · 2 credits");
-    expect(text).toContain("1 of them has words of its own: those are replaced.");
-    expect(text).not.toContain("Use only these words");
+    expect(text).not.toContain("words of");
     expect(text).toContain("Nothing is painted.");
     expect(text).toContain("Nothing is charged until you press Write.");
     expect(within(dialog).getByRole("button", { name: "Write 2 scenes" })).toBeTruthy();
+    expect(within(dialog).queryByRole("checkbox")).toBeNull();
     expect(h.scene).not.toHaveBeenCalled();
+  });
+
+  it("a card that already has words of its own is LEFT AS IT IS unless the maker ticks the box — a bulk action never overwrites written words unasked", async () => {
+    studio(cards());
+    pick("Thornback Wyrm", "Old Library");
+    const dialog = await openScenes();
+    expect(dialog.textContent).toContain("Writes a scene for 1 card · 1 credit");
+    expect(dialog.textContent).toContain("1 card picked already has words of its own and is left as it is.");
+    expect(replaceBox(dialog).checked).toBe(false);
+    fireEvent.click(replaceBox(dialog));
+    expect(dialog.textContent).toContain("Writes a scene for 2 cards · 2 credits");
+    expect(dialog.textContent).toContain("1 of them has words of its own: those are replaced.");
+    expect(dialog.textContent).not.toContain("is left as it is.");
+    fireEvent.click(replaceBox(dialog));
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "Write 1 scene" }));
+    });
+    expect(h.scene.mock.calls.map(([input]) => input.entryId)).toEqual([E(1)]);
+  });
+
+  it("with only such cards picked there is nothing to write until the box is ticked", async () => {
+    studio(cards());
+    pick("Old Library");
+    const dialog = await openScenes();
+    expect(dialog.textContent).toContain("No scene to write");
+    const write = within(dialog).getByRole("button", { name: "Write 0 scenes" });
+    expect(off(write)).toBe(true);
+    fireEvent.click(write);
+    expect(h.scene).not.toHaveBeenCalled();
+    fireEvent.click(replaceBox(dialog));
+    expect(within(dialog).getByRole("button", { name: "Write 1 scene" })).toBeTruthy();
   });
 
   it("says so when a picked card is set to “use only these words”: with a scene it is painted in the deck's look again", async () => {
     studio([entry(1, { name: "Thornback Wyrm", words: { text: "a wyrm, alone", only: true } }), entry(2, { name: "Mossy Fen" })]);
     pick("Thornback Wyrm", "Mossy Fen");
     const dialog = await openScenes();
+    // Only once its words are to be replaced (left alone, nothing changes for it).
+    expect(dialog.textContent).not.toContain("Use only these words");
+    fireEvent.click(replaceBox(dialog));
     expect(dialog.textContent).toContain("1 is set to “Use only these words”: with a scene it is painted in the deck's look again.");
   });
 
@@ -419,10 +455,10 @@ describe("“Write scenes…” for the cards picked in the list", () => {
     // The card it stopped on isn't "a card that got no scene": nothing was wrong with it.
     expect(dialog.textContent).not.toContain("got no scene");
     expect(h.upgrade).toHaveBeenCalledWith("credits", "reart_deck");
-    expect(dialog.textContent).toContain("The 2 cards without one are still selected: press “Write scenes…” again for them.");
+    expect(dialog.textContent).toContain("2 cards have none yet: press “Write scenes…” again for them — the cards that have a scene are left as they are.");
   });
 
-  it("pressing “Write scenes…” again after a stop goes on with the REST — it never pays twice for a card already done", async () => {
+  it("pressing “Write scenes…” again after a stop goes on with the REST — it never pays twice for a card already done — and the selection is left as it was", async () => {
     h.scene.mockResolvedValueOnce(written()).mockResolvedValueOnce({ ok: false, code: "INSUFFICIENT_CREDITS", error: "You're out of credits." });
     studio(cards());
     pick("Thornback Wyrm", "Mossy Fen", "Archivist");
@@ -434,13 +470,14 @@ describe("“Write scenes…” for the cards picked in the list", () => {
       fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" })[0]);
     });
     await settled();
-    // The card that got its scene left the selection.
-    expect(bar().getByRole("status").textContent).toBe("2 selected");
-    expect(box("Select", "Thornback Wyrm").checked).toBe(false);
+    // Still picked: “Paint selected…” paints the same cards from their scenes.
+    expect(bar().getByRole("status").textContent).toBe("3 selected");
     h.scene.mockReset();
     h.scene.mockResolvedValue(written());
+    // The page hasn't even re-read yet: the card that got its scene is known all the same.
     dialog = await openScenes();
     expect(dialog.textContent).toContain("Writes a scene for 2 cards · 2 credits");
+    expect(dialog.textContent).toContain("1 card picked already has words of its own and is left as it is.");
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "Write 2 scenes" }));
     });

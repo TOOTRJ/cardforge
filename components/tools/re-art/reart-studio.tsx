@@ -189,6 +189,10 @@ export function ReartStudio({
   /** "Write scenes…" for the cards picked in the list (0217). */
   const [scenesFor, setScenesFor] = useState<ReartStudioEntry[] | null>(null);
   const [scenesOpen, setScenesOpen] = useState(false);
+  /** Cards a batch wrote a scene for on this page: they have words of their
+   *  own now, whatever the list last read says (the page's re-read may not
+   *  have landed when "Write scenes…" is pressed again). */
+  const [sceneWritten, setSceneWritten] = useState<ReadonlySet<string>>(new Set());
   const [sample, setSample] = useState<Set<string>>(
     () =>
       new Set(
@@ -991,15 +995,12 @@ export function ReartStudio({
           deckId={deck.id}
           entries={scenesFor}
           balance={balance}
-          // A card that got its scene leaves the selection: pressing "Write
-          // scenes…" again goes on with the rest, and never pays twice.
-          onWritten={(entryId) =>
-            setSelected((prev) => {
-              const next = new Set(prev);
-              next.delete(entryId);
-              return next;
-            })
-          }
+          // A card that got its scene has words of its own now: pressing
+          // "Write scenes…" again leaves it alone (never paid for twice)
+          // unless the maker asks to replace. The selection stays as it
+          // was, so "Paint selected…" paints these cards from their scenes.
+          withWords={sceneWritten}
+          onWritten={(entryId) => setSceneWritten((prev) => new Set([...prev, entryId]))}
           onDone={(written, failedCount) => {
             if (written > 0) {
               toast.success(

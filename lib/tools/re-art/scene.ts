@@ -87,23 +87,27 @@ export function reartSceneBrief(subject: SceneSubject, style: ReartStyle | null,
     .join("\n");
 }
 
-/** The writer declining — in a scene's place (how the answer BEGINS). */
+/** The writer declining — in a scene's place (how the answer BEGINS). A
+ *  scene may begin "Unable to rise, a wounded griffin…": only a refusal's
+ *  own verbs follow "unable to" here. */
 const DECLINES =
-  /^(?:i['’]?m sorry|i am sorry|sorry[,.! ]|i can(?:['’]t|not| not)\b|i['’]?m (?:unable|not able)|i am (?:unable|not able)|i (?:won['’]t|will not)\b|as an ai\b|unable to\b|cannot (?:help|comply|write|assist))/i;
+  /^(?:i['’]?m sorry|i am sorry|sorry[,.! ]|my apologies|i apologi[sz]e|unfortunately,? i\b|i['’]?m afraid i\b|i am afraid i\b|i can(?:['’]t|not| not)\b|i['’]?m (?:unable|not able)|i am (?:unable|not able)|i (?:won['’]t|will not|must decline|do not feel|don['’]t feel)\b|as an ai\b|this request (?:goes against|violates|is not)|unable to (?:help|comply|write|assist|provide|create|generate|describe|fulfil+)\b|cannot (?:help|comply|write|assist))/i;
 /** …or saying it has nothing (the WHOLE answer: a scene may begin "Nothing
  *  stirs in the drowned chapel…"). */
 const SAYS_NOTHING = /^(?:n\s*\/?\s*a|none|nothing|no scene|unknown)[.!…]*$/i;
+/** Writing that sets no spaces between words (Japanese, Chinese, Korean…). */
+const UNSPACED_SCRIPT = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
 
 /**
  * Whether the text is a SCENE: enough to paint from, and not the writer
  * declining ("I'm sorry, but I can't help with that"), which would be
- * saved, charged for and painted from in a batch nobody reads. A language
- * written without spaces counts by its characters.
+ * saved, charged for and painted from in a batch nobody reads. Writing
+ * that sets no spaces between words counts by its characters.
  */
 export function reartSceneSaysSomething(text: string): boolean {
-  if (!reartWordsSaySomething(text) || DECLINES.test(text.trim()) || SAYS_NOTHING.test(text.trim())) return false;
-  const words = text.trim().split(/\s+/).length;
-  return words >= 4 || (words < 4 && !/\s/.test(text.trim()) && [...text.trim()].length >= 8);
+  const scene = text.trim();
+  if (!reartWordsSaySomething(scene) || DECLINES.test(scene) || SAYS_NOTHING.test(scene)) return false;
+  return scene.split(/\s+/).length >= 4 || (UNSPACED_SCRIPT.test(scene) && [...scene].length >= 8);
 }
 
 /** A scene as it is stored: clean, within the scene's limit, ending on a
@@ -111,9 +115,10 @@ export function reartSceneSaysSomething(text: string): boolean {
 export function cleanReartScene(text: string | null | undefined): string {
   const flatText = cleanReartCardWords(text).replace(/\s+/g, " ").trim();
   // A PAIR of quotation marks round the whole scene says nothing; a lone
-  // mark at one end belongs to the text.
+  // mark at one end — or marks round its first and last words — belong to
+  // the text.
   const paired = /^["“‘'](.+)["”’']$/.exec(flatText);
-  const bare = (paired ? paired[1] : flatText).trim();
+  const bare = (paired && !/["“”‘’']/.test(paired[1]) ? paired[1] : flatText).trim();
   if (bare.length <= REART_SCENE_MAX) return reartSceneSaysSomething(bare) ? bare : "";
   // Past the limit: back to the last sentence end, else the last whole
   // word — and where there is no space to go back to (a language written

@@ -1325,6 +1325,20 @@ export function reartScenesReplaceLine(cards: number, withWords: number): string
   return `${withWords} of them ${withWords === 1 ? "has" : "have"} words of ${withWords === 1 ? "its" : "their"} own: those are replaced.`;
 }
 
+/** A batch leaves the cards that have words of their own alone unless the
+ *  maker says otherwise: what it says about them ("" when none has any). */
+export function reartScenesKeptLine(withWords: number): string {
+  if (withWords <= 0) return "";
+  return `${withWords} card${withWords === 1 ? "" : "s"} picked already ${withWords === 1 ? "has" : "have"} words of ${
+    withWords === 1 ? "its" : "their"
+  } own and ${withWords === 1 ? "is" : "are"} left as ${withWords === 1 ? "it is" : "they are"}.`;
+}
+
+/** The tick box that includes them. */
+export function reartScenesReplaceLabel(withWords: number): string {
+  return `Also replace the words of the ${withWords === 1 ? "card that has its" : `${withWords} cards that have their`} own`;
+}
+
 /** …and to the picked cards set to "use only these words" ("" when none). */
 export function reartScenesOnlyLine(withOnly: number): string {
   if (withOnly <= 0) return "";
