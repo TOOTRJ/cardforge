@@ -793,6 +793,69 @@ export type Database = {
         };
         Relationships: [];
       };
+      deck_reart_background: {
+        Row: {
+          job_id: string;
+          owner_id: string;
+          deck_id: string;
+          state: string;
+          reason: string | null;
+          driver: string | null;
+          driven_until: string | null;
+          beat_at: string;
+          door_errors: number;
+          limited_keys: string[];
+          started_at: string;
+          finished_at: string | null;
+        };
+        Insert: {
+          job_id: string;
+          owner_id: string;
+          deck_id: string;
+          state?: string;
+          reason?: string | null;
+          driver?: string | null;
+          driven_until?: string | null;
+          beat_at?: string;
+          door_errors?: number;
+          limited_keys?: string[];
+          started_at?: string;
+          finished_at?: string | null;
+        };
+        Update: {
+          job_id?: string;
+          owner_id?: string;
+          deck_id?: string;
+          state?: string;
+          reason?: string | null;
+          driver?: string | null;
+          driven_until?: string | null;
+          beat_at?: string;
+          door_errors?: number;
+          limited_keys?: string[];
+          started_at?: string;
+          finished_at?: string | null;
+        };
+        Relationships: [];
+      };
+      deck_reart_background_tokens: {
+        Row: {
+          job_id: string;
+          sealed: string;
+          expires_at: string;
+        };
+        Insert: {
+          job_id: string;
+          sealed: string;
+          expires_at: string;
+        };
+        Update: {
+          job_id?: string;
+          sealed?: string;
+          expires_at?: string;
+        };
+        Relationships: [];
+      };
       deck_reart_locks: {
         Row: {
           entry_id: string;

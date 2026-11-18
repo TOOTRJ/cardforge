@@ -1,6 +1,7 @@
 import { formatDateIn } from "@/lib/format/dates";
 import { formatMoney } from "@/lib/format/money";
 import { isUuid } from "@/lib/ids";
+import { reartRunNotice } from "@/lib/tools/re-art/run-notice";
 
 // ---------------------------------------------------------------------------
 // One source of copy + deep link for every notification kind. Shared by the
@@ -171,6 +172,28 @@ export function describeNotification(
           ? `took back ${d} from your bank${note ? ` (${note})` : ""}.`
           : `banked ${d} for you${note ? ` (${note})` : ""} — start a plan and they're its free period, or apply them to the plan you have, any time from your billing page.`,
         href: "/dashboard/billing#banked-days",
+      };
+    }
+    case "reart_run": {
+      // A Re-art run the server carried on after its page was closed (0218):
+      // how many cards were painted, and why it stopped if it did.
+      const state = str(payload.state);
+      const reason = str(payload.reason);
+      const deckId = str(payload.deckId);
+      return {
+        subject: "Re-art deck",
+        body: reartRunNotice({
+          deckTitle: str(payload.deckTitle),
+          state: state === "finished" || state === "paused" || state === "stopped" ? state : "stopped",
+          reason:
+            reason === "expired" || reason === "error" || reason === "quota" || reason === "credits" || reason === "capacity" || reason === "stopped"
+              ? reason
+              : null,
+          painted: num(payload.painted) ?? 0,
+          failed: num(payload.failed) ?? 0,
+          waiting: num(payload.waiting) ?? 0,
+        }),
+        href: deckId && isUuid(deckId) ? `/dashboard/tools/re-art-deck?deck=${deckId}` : "/dashboard/tools/re-art-deck",
       };
     }
     case "tool_access": {

@@ -23,6 +23,7 @@ import {
 } from "@/lib/tools/re-art/server";
 import { readRolls } from "@/lib/tools/re-art/rolls";
 import { readLocks } from "@/lib/tools/re-art/locks";
+import { readBackgrounds } from "@/lib/tools/re-art/background";
 import {
   REART_CREDITS_PER_FACE,
   canPickReartModel,
@@ -51,6 +52,10 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+// The page's server actions run under this limit. The hand-over of a run to
+// the server (0218) goes on working for a few minutes AFTER its response —
+// it is the run's first driver (lib/tools/re-art/background.ts KICK_MS).
+export const maxDuration = 300;
 
 export default async function ReartDeckPage({ searchParams }: { searchParams: Promise<{ deck?: string | string[] }> }) {
   const entry = await openTool("re-art-deck");
@@ -126,7 +131,7 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const [items, style, painted, rolls, locks, words, runs, username, capacity, balance] = await Promise.all([
+  const [items, style, painted, rolls, locks, backgrounds, words, runs, username, capacity, balance] = await Promise.all([
     listDeckPageCards(deck.id),
     readDeckStyle(deck.id),
     readPaintedCards(deck.id),
@@ -135,6 +140,8 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
     // The cards locked on this deck (0216). A read that failed shows none
     // locked; the server asks again before it changes any card.
     readLocks(deck.id),
+    // The runs the server is carrying, or carried (0218).
+    readBackgrounds(deck.id),
     readCardWords(deck.id),
     listReartRuns(entry.userId, deck.id),
     getCurrentUsername(),
@@ -241,6 +248,7 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
         sceneAvailable={isDesignAiConfigured()}
         canPickModel={canPickModel}
         pausedRunId={paused?.id ?? null}
+        background={paused ? (backgrounds.get(paused.id) ?? null) : null}
         runs={runs}
       />
     </ToolShell>

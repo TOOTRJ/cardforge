@@ -1357,6 +1357,64 @@ export type ReartSceneResult =
     };
 
 // ---------------------------------------------------------------------------
+// A run that keeps going after its page is closed (migration 0218; owner
+// 2026-11-18)
+//
+// Every step of a run works under the maker's own sign-in, and the browser
+// asks for each one — so a run stopped when its page closed. With "Keep
+// painting if I close this page" the SERVER carries the run on too: one
+// request works a few cards and hands on to the next, each carrying the
+// access token the browser had when the run started (never its refresh
+// token; never refreshed — "borrow the sign-in", the owner's choice: no new
+// identity is created). So it lasts as long as that one token, about an
+// hour; past that, or when a hand-off fails, the run PAUSES and continues
+// when its maker opens the page again, as it always did. The page, while
+// open, goes on asking for steps as before: the two work side by side (a
+// step is claimed by exactly one of them).
+// ---------------------------------------------------------------------------
+
+export {
+  REART_BACKGROUND_REASON_COPY,
+  reartRunNotice,
+  type ReartBackgroundReason,
+  type ReartBackgroundState,
+} from "@/lib/tools/re-art/run-notice";
+import type { ReartBackgroundReason, ReartBackgroundState } from "@/lib/tools/re-art/run-notice";
+
+/** The server's part of a run, as the studio reads it. */
+export type ReartBackground = {
+  jobId: string;
+  state: ReartBackgroundState;
+  reason: ReartBackgroundReason | null;
+  /** When a driver last looked at it. */
+  beatAt: string;
+};
+
+/** A run that says it is running and that no driver has looked at for this
+ *  long is not being carried: the cron looks every minute (a missed call or
+ *  two is not "stopped"), and where there is no cron — a preview, a laptop —
+ *  the hand-over's own driver works for a few minutes and then nobody does. */
+export const REART_BACKGROUND_STALE_MS = 3 * 60_000;
+
+/** Whether the server is carrying the run on right now. */
+export function reartBackgroundIsLive(row: Pick<ReartBackground, "state" | "beatAt"> | null | undefined, now: number = Date.now()): boolean {
+  if (!row || row.state !== "running") return false;
+  const beat = Date.parse(row.beatAt);
+  return Number.isFinite(beat) && now - beat < REART_BACKGROUND_STALE_MS;
+}
+
+/** The confirm's tick box, and what it means — said before the run starts. */
+export const REART_BACKGROUND_LABEL = "Keep painting if I close this page";
+export const REART_BACKGROUND_HELP =
+  "The run goes on without this page for up to about an hour, on the sign-in you have now. If that runs out first, it pauses and continues when you open this page again. You are told in the bell when it ends.";
+/** Above a run the server is carrying. */
+export const REART_BACKGROUND_ON_COPY = "You can close this page: the run goes on for up to about an hour from when it started, and the bell tells you when it ends.";
+/** Stop didn't reach the server: said, with a way to ask again. */
+export const REART_BACKGROUND_STOP_FAILED = "Stop didn't reach the server, so it may still be painting this run without the page.";
+/** The hand-over didn't happen: the run is the page's alone, as before. */
+export const REART_BACKGROUND_UNAVAILABLE = "This run couldn't be handed to the server, so it paints while this page stays open.";
+
+// ---------------------------------------------------------------------------
 // Undoing a run
 //
 // "Undo this run" puts each card the run painted back to what it showed

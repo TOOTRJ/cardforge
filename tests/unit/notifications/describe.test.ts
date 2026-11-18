@@ -510,6 +510,59 @@ describe("describeNotification — deck likes and cards added to decks", () => {
 // trial ending at 03:00 UTC was "Sep 29" in the HTML and "Sep 28" in a
 // Mountain-time browser: React's hydration error #418. The zone is the
 // caller's to name now.
+describe("describeNotification — a Re-art run the server carried on (0218)", () => {
+  const DECK = "33333333-3333-4333-8333-333333333333";
+  const d = (payload: Record<string, unknown>) =>
+    describeNotification({ type: "reart_run", actor: null, card: null, threadId: null, payload: { deckId: DECK, deckTitle: "Embers of the Fen", ...payload } }, { isAdmin: false });
+
+  it("finished: how many cards were painted (and how many weren't), linking the deck in the tool", () => {
+    expect(d({ state: "finished", reason: null, painted: 64, failed: 0, waiting: 0 })).toEqual({
+      subject: "Re-art deck",
+      body: "finished re-arting “Embers of the Fen”: 64 cards painted.",
+      href: `/dashboard/tools/re-art-deck?deck=${DECK}`,
+    });
+    expect(d({ state: "finished", painted: 1, failed: 2, waiting: 0 }).body).toBe("finished re-arting “Embers of the Fen”: 1 card painted, 2 didn't.");
+  });
+
+  it("paused: WHY, what was painted, and that the rest waits for the maker — the hour is said plainly", () => {
+    expect(d({ state: "paused", reason: "expired", painted: 40, failed: 1, waiting: 23 }).body).toBe(
+      "paused re-arting “Embers of the Fen” (the hour your sign-in lasts ran out): 40 cards painted, 1 didn't. 23 cards are still to paint — open the deck in Re-art deck to continue.",
+    );
+    expect(d({ state: "paused", reason: "error", painted: 3, failed: 0, waiting: 1 }).body).toBe(
+      "paused re-arting “Embers of the Fen” (the cards kept failing to start): 3 cards painted. 1 card is still to paint — open the deck in Re-art deck to continue.",
+    );
+    // The day's AI limit is named as itself.
+    expect(d({ state: "paused", reason: "quota", painted: 9, failed: 0, waiting: 3 }).body).toBe(
+      "paused re-arting “Embers of the Fen” (today's AI limit was reached): 9 cards painted. 3 cards are still to paint — open the deck in Re-art deck to continue.",
+    );
+    // A reason the app no longer writes reads as none.
+    expect(d({ state: "paused", reason: "broken", painted: 0, failed: 0, waiting: 5 }).body).toMatch(/^paused re-arting “Embers of the Fen” \(it stopped\): 0 cards painted\. 5 cards are still to paint/);
+  });
+
+  it("stopped on a plan limit: which one — never a promise that it will go on by itself", () => {
+    expect(d({ state: "stopped", reason: "credits", painted: 5, failed: 1, waiting: 10 }).body).toBe(
+      "stopped re-arting “Embers of the Fen” (you ran out of credits): 5 cards painted, 1 didn't. 10 cards are still to paint — open the deck in Re-art deck to continue.",
+    );
+    expect(d({ state: "stopped", reason: "capacity", painted: 5, failed: 0, waiting: 0 }).body).toBe("stopped re-arting “Embers of the Fen” (you ran out of card slots): 5 cards painted.");
+  });
+
+  it("a payload it can't read still says something true, and never links anywhere but the tool", () => {
+    const odd = describeNotification({ type: "reart_run", actor: null, card: null, threadId: null, payload: { deckId: "../admin", state: "nope", reason: "nope", painted: "x" } }, { isAdmin: false });
+    expect(odd.href).toBe("/dashboard/tools/re-art-deck");
+    expect(odd.body).toBe("stopped re-arting your deck (it stopped): 0 cards painted.");
+    expect(describeNotification({ type: "reart_run", actor: null, card: null, threadId: null }, { isAdmin: false }).href).toBe("/dashboard/tools/re-art-deck");
+  });
+
+  it("reads as one sentence after its subject, in the bell, the page and the toast", () => {
+    expect(
+      notificationSentence(
+        { type: "reart_run", actor: null, card: null, threadId: null, payload: { deckId: DECK, deckTitle: "Embers of the Fen", state: "finished", painted: 4, failed: 0, waiting: 0 } },
+        { isAdmin: false },
+      ),
+    ).toBe("Re-art deck finished re-arting “Embers of the Fen”: 4 cards painted.");
+  });
+});
+
 describe("describeNotification — the zone its dates are printed in", () => {
   const item = {
     actor: null,
