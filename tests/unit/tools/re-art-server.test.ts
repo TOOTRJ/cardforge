@@ -161,7 +161,7 @@ describe("the plan — a card is in the style only while it still shows the styl
   });
   const row = (artUrl: string | null) => ({
     card_id: CARD,
-    entry_id: null,
+    entry_id: null as string | null,
     style_version: 3,
     art_url: artUrl,
     back_art_url: null,
@@ -347,6 +347,22 @@ describe("the plan — a card is in the style only while it still shows the styl
       locked();
       expect(await plan()).toMatchObject({ ok: true, entries: [], locked: 2 });
       expect(await plan([OTHER])).toMatchObject({ ok: true, entries: [], skipped: [{ reason: REART_LOCKED_COPY }] });
+    });
+
+    it("…and so is a row whose MADE card isn't linked right now (a run would link it again and paint that card)", async () => {
+      const REAL = "00000000-0000-4000-8000-0000000000e3";
+      // The card on its own row (locked), and a real card's row that an
+      // earlier run made the SAME card from, unlinked since.
+      deckWith(ART("ai-1.jpg"), { ...row(ART("ai-1.jpg")), made: true, entry_id: REAL });
+      const one = item(ART("ai-1.jpg"));
+      m.items.mockResolvedValue([
+        one,
+        { entry: { ...one.entry, id: REAL, name: "Krenko, Mob Boss", card_id: null, scryfall_id: "89fcc35b-76fa-4408-8620-a1e11b2caf1f" }, card: null, cardOwner: null },
+      ]);
+      locked();
+      const named = await plan([REAL]);
+      expect(named).toMatchObject({ ok: true, entries: [], skipped: [{ name: "Krenko, Mob Boss", reason: REART_LOCKED_COPY }] });
+      expect(await plan()).toMatchObject({ ok: true, entries: [], locked: 2 });
     });
 
     it("locks that couldn't be READ plan nothing — a run would paint, and charge for, a card its maker locked", async () => {

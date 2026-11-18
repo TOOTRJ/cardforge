@@ -110,7 +110,7 @@ vi.mock("@/lib/tools/re-art/rolls", () => ({
   pruneRolls: m.prune,
   claimRoll: m.claim,
   isKeptPicture: m.isKept,
-  readRolls: m.rolls,
+  readRollsOrNull: m.rolls,
 }));
 vi.mock("@/lib/tools/re-art/locks", () => ({ isCardLocked: m.cardLocked, readLocks: m.locks, setLocks: m.setLocks }));
 vi.mock("@/lib/decks/card-actions", () => ({ unlinkDeckCardAction: m.unlink }));
@@ -1279,6 +1279,14 @@ describe("a run and locks, as the plan and the log read them (0216)", () => {
     expect(await planReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: true, locked: 0 });
   });
 
+  it("a run whose every card is locked says so (it used to say none of them can be re-arted)", async () => {
+    m.plan.mockResolvedValue({ ...planned([]), skipped: [], locked: 4 });
+    expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, error: "Every card of this run is locked — unlock one to paint it." });
+    m.plan.mockResolvedValue({ ...planned([]), skipped: [], locked: 1, inStyle: 3 });
+    expect(await startReartAction({ deckId: DECK, style: STYLE })).toMatchObject({ ok: false, error: "Every card of this run is locked or in the deck's style already." });
+    expect(m.insert).not.toHaveBeenCalled();
+  });
+
   it("several named cards at once (the studio's selection) are `paint_selected`; one stays a first paint or a re-roll", async () => {
     m.plan.mockResolvedValue(planned([{ kind: "own" }, { kind: "own", paintedBefore: true }]));
     await startReartAction({ deckId: DECK, style: STYLE, entryIds: [ID(1), ID(2)] });
@@ -1319,10 +1327,23 @@ describe("undoing a run", () => {
     method: "paint" as const,
     ...over,
   });
-  const cardOf = (n: number, over: Record<string, unknown> = {}) => ({ id: C(n), owner_id: "u1", title: `Card ${n}`, art_url: ART(`ai-${n}.jpg`), ...over });
+  /** The maker's cards were there before the run started (a card the run MADE is newer: `created_at`). */
+  const cardOf = (n: number, over: Record<string, unknown> = {}) => ({
+    id: C(n),
+    owner_id: "u1",
+    title: `Card ${n}`,
+    art_url: ART(`ai-${n}.jpg`),
+    created_at: "2026-11-01T00:00:00Z",
+    ...over,
+  });
+  const RUN_STARTED = "2026-11-12T09:00:00Z";
+  /** The picture a re-roll of card n replaced, and the kept row that holds it. */
+  const before = (n: number) => ART(`before-${n}.jpg`);
+  const keptFor = (n: number, id = R(n)) => [C(n), [{ id, artUrl: before(n) }]] as const;
   /** A done step that PAINTED its card (the step says so since undo exists). */
   const step = (n: number, over: Record<string, unknown> = {}) => ({ status: "done", card_id: C(n), label: `Step ${n}`, painted: true, ...over });
-  const run = (steps: unknown[]) => m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: { deck_id: DECK }, steps });
+  const run = (steps: unknown[]) =>
+    m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: { deck_id: DECK }, steps, created_at: RUN_STARTED });
   const deckHas = (rows: Array<ReturnType<typeof rowOf>>, cards: Array<ReturnType<typeof cardOf>>, entries: Array<{ id: string; card_id: string }> = []) => {
     m.painted.mockResolvedValue(new Map(rows.map((row) => [row.cardId, row])));
     m.cards.mockReturnValue({ data: cards, error: null });
@@ -1345,7 +1366,7 @@ describe("undoing a run", () => {
       // No such run of theirs.
       expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "That run isn't one of yours." });
       // A run whose request names no deck.
-      m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: {}, steps: [step(1)] });
+      m.job.mockReturnValue({ id: JOB, owner_id: "u1", kind: "deck_reart", status: "completed", request: {}, steps: [step(1)], created_at: RUN_STARTED });
       expect((await planUndoReartRunAction(JOB)).ok).toBe(false);
       run([step(1)]);
       m.deck.mockResolvedValueOnce(null);
@@ -1355,9 +1376,9 @@ describe("undoing a run", () => {
 
     it("counts what would go back, kind by kind, and names what is left and why — and changes nothing", async () => {
       run([
-        step(1, { kept_roll: R(1) }), // re-rolled: the earlier picture the run kept
+        step(1, { kept_art: before(1) }), // re-rolled: the earlier picture the run kept
         step(2), // a first paint: its own art back
-        step(3), // a real card the run made: the real card back
+        { status: "done", card_id: C(3), label: "Step 3", linked: true }, // a real card the run made: the real card back
         step(4), // locked since
         step(5), // painted again by a later run
         step(6), // shows other art now
@@ -1367,7 +1388,7 @@ describe("undoing a run", () => {
         // Done, names its card, painted NOTHING (already in the style — another
         // run's picture): not this run's to undo, and not listed either.
         { status: "done", card_id: C(9), label: "Left as it was" },
-        step(1, { kept_roll: R(1) }), // the same card twice is once
+        step(1, { kept_art: before(1) }), // the same card twice is once
       ]);
       deckHas(
         [
@@ -1386,7 +1407,7 @@ describe("undoing a run", () => {
           { id: ID(4), card_id: C(4) },
         ],
       );
-      m.rolls.mockResolvedValue(new Map([[C(1), [{ id: R(1) }, { id: R(9) }]]]));
+      m.rolls.mockResolvedValue(new Map([[C(1), [{ id: R(9), artUrl: ART("other.jpg") }, { id: R(1), artUrl: before(1) }]]]));
       m.locks.mockResolvedValue(new Set([ID(4)]));
 
       expect(await planUndoReartRunAction(JOB)).toEqual({
@@ -1413,7 +1434,7 @@ describe("undoing a run", () => {
     });
 
     it("a card already put back says so: its own art back, the real card back", async () => {
-      run([step(1), step(3)]);
+      run([step(1), { status: "done", card_id: C(3), label: "Step 3", linked: true }]);
       deckHas(
         // “Old art back” (the maker's, or an undo's) leaves a row that names no picture and no run.
         [rowOf(1, { artUrl: null, previousArtUrl: null, jobId: null }), rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })],
@@ -1432,13 +1453,81 @@ describe("undoing a run", () => {
       });
     });
 
-    it("a run from before steps said what they painted is told by the deck's rows: a card whose row still names the run", async () => {
+    it("a run from before steps said what they did is told by the deck's rows: a card whose row still names the run", async () => {
       run([
         { status: "done", card_id: C(1), label: "Step 1" }, // painted by this run: its row says so
         { status: "done", card_id: C(2), label: "Step 2" }, // left as it was, or painted again since: unknown — not listed
+        { status: "done", card_id: C(3), label: "Step 3" }, // a card this run MADE (it is newer than the run's start)
+        { status: "done", card_id: C(4), label: "Step 4" }, // a card an EARLIER run made, re-rolled by this one
       ]);
-      deckHas([rowOf(1), rowOf(2, { jobId: "00000000-0000-4000-8000-00000000a002" })], [cardOf(1), cardOf(2)]);
-      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: true, earlier: 0, own: 1, real: 0, skipped: [] });
+      const made = { made: true, previousArtUrl: null };
+      deckHas(
+        [rowOf(1), rowOf(2, { jobId: "00000000-0000-4000-8000-00000000a002" }), rowOf(3, { ...made, entryId: ID(3) }), rowOf(4, { ...made, entryId: ID(4) })],
+        [cardOf(1), cardOf(2), cardOf(3, { created_at: "2026-11-12T09:03:00Z" }), cardOf(4, { created_at: "2026-11-10T08:00:00Z" })],
+        [
+          { id: ID(3), card_id: C(3) },
+          { id: ID(4), card_id: C(4) },
+        ],
+      );
+      expect(await planUndoReartRunAction(JOB)).toEqual({
+        ok: true,
+        earlier: 0,
+        own: 1,
+        real: 1,
+        // The re-rolled made card is never unlinked; such a run kept no
+        // record of the picture it replaced.
+        skipped: [{ name: "Card 4", reason: REART_UNDO_SKIP_COPY.earlier_gone }],
+      });
+    });
+
+    it("a run that RE-ROLLED cards an earlier run made puts their earlier pictures back — it never unlinks them from the deck", async () => {
+      // The check's finding. Run J made the cards from real cards; this run
+      // re-rolled them (their records still say `made`).
+      run([step(1, { kept_art: before(1) }), step(2, { kept_art: before(2) })]);
+      const made = { made: true, previousArtUrl: null };
+      deckHas(
+        [rowOf(1, { ...made, entryId: ID(1) }), rowOf(2, { ...made, entryId: ID(2) })],
+        [cardOf(1, { created_at: "2026-11-10T08:00:00Z" }), cardOf(2, { created_at: "2026-11-10T08:00:00Z" })],
+        [
+          { id: ID(1), card_id: C(1) },
+          { id: ID(2), card_id: C(2) },
+        ],
+      );
+      // Card 2's earlier picture was kept again under ANOTHER row since (a
+      // pick that didn't land): found by its address all the same.
+      m.rolls.mockResolvedValue(new Map([keptFor(1), keptFor(2, R(8))]));
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: true, earlier: 2, own: 0, real: 0, skipped: [] });
+
+      m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", frame_style: { template: "m15" }, back_face: null });
+      m.paintedAdmin.mockResolvedValue(rowOf(1, { ...made, entryId: ID(1) }));
+      m.claim.mockImplementation(async (_user: string, _deck: string, cardId: string, rollId: string) => ({
+        id: rollId,
+        cardId,
+        styleVersion: 1,
+        jobId: "job-0",
+        artUrl: before(1),
+        artPosition: null,
+        artistCredit: "dev_pro",
+        backArtUrl: null,
+        backArtPosition: null,
+        backArtistCredit: null,
+        imageModel: null,
+        method: "paint",
+        paintedAt: "2026-11-10T08:00:00Z",
+      }));
+      expect(await undoReartRunAction(JOB)).toMatchObject({ ok: true, undone: 2, failed: [] });
+      expect(m.unlink).not.toHaveBeenCalled();
+      expect(m.claim.mock.calls.map((call) => call[3])).toEqual([R(1), R(8)]);
+      expect(logged().at(-1)).toEqual(["undo_run", { undone: 2, earlier: 2, own: 0, real: 0, failed: 0, remaining: 0, left: 0 }]);
+    });
+
+    it("kept pictures that couldn't be READ: no plan at all — a re-rolled card would silently get its own art instead", async () => {
+      run([step(1, { kept_art: before(1) })]);
+      deckHas([rowOf(1)], [cardOf(1)]);
+      m.rolls.mockResolvedValue(null);
+      expect(await planUndoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      expect(await undoReartRunAction(JOB)).toEqual({ ok: false, error: "We couldn't read this run's cards — try again." });
+      expect(m.update).not.toHaveBeenCalled();
     });
 
     it("a run over a long deck reads its cards a hundred at a time", async () => {
@@ -1505,10 +1594,10 @@ describe("undoing a run", () => {
     });
 
     it("a re-rolled card goes back to the earlier picture the run kept", async () => {
-      run([step(1, { kept_roll: R(1) })]);
+      run([step(1, { kept_art: before(1) })]);
       const row = rowOf(1, { entryId: "entry-1" });
       deckHas([row], [cardOf(1)]);
-      m.rolls.mockResolvedValue(new Map([[C(1), [{ id: R(1) }]]]));
+      m.rolls.mockResolvedValue(new Map([keptFor(1)]));
       m.card.mockReturnValue({ id: C(1), owner_id: "u1", art_url: ART("ai-1.jpg"), art_position: null, artist_credit: "dev_pro", frame_style: { template: "m15" }, back_face: null });
       m.paintedAdmin.mockResolvedValue(row);
       m.paintedRows.mockResolvedValue([row]);
@@ -1538,7 +1627,7 @@ describe("undoing a run", () => {
     });
 
     it("a real card the run made goes back to the real card: its entry is unlinked through the deck's own action, and the made card is left alone", async () => {
-      run([step(3)]);
+      run([{ status: "done", card_id: C(3), label: "Step 3", linked: true }]);
       deckHas([rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })], [cardOf(3)], [{ id: ID(3), card_id: C(3) }]);
       expect(await undoReartRunAction(JOB)).toEqual({ ok: true, undone: 1, failed: [], remaining: 0 });
       expect(m.unlink.mock.calls).toEqual([[ID(3)]]);
@@ -1569,7 +1658,7 @@ describe("undoing a run", () => {
     });
 
     it("a card that can't be put back is left as it is and named with its id — in words of ours — while the others go back", async () => {
-      run([step(1), step(2), step(3)]);
+      run([step(1), step(2), { status: "done", card_id: C(3), label: "Step 3", linked: true }]);
       deckHas(
         [rowOf(1), rowOf(2), rowOf(3, { made: true, entryId: ID(3), previousArtUrl: null })],
         [cardOf(1), cardOf(2), cardOf(3)],

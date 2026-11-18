@@ -62,6 +62,7 @@ function clientOf(answerOf: (call: Call) => Promise<Result>) {
           call.filters.push([column, value]);
           return chain;
         },
+        limit: () => chain,
         then: (resolve: (value: Result) => unknown, reject?: (reason: unknown) => unknown) => answer().then(resolve, reject),
       };
       return chain;
@@ -85,6 +86,7 @@ import {
   reartLockedEntries,
   reartUndoDetail,
   reartUndoLine,
+  reartUndoNote,
   reartUndoOf,
 } from "@/lib/tools/re-art/model";
 
@@ -130,23 +132,24 @@ describe("reading the deck's locks (the studio, the plan)", () => {
 });
 
 describe("whether one entry is locked (a step)", () => {
-  it("is asked with the service role, by entry, deck and owner, reading no row", async () => {
-    m.admin.mockResolvedValue({ count: 1, error: null });
+  it("is asked with the service role, by entry, deck and owner — one row is enough", async () => {
+    m.admin.mockResolvedValue({ data: [{ entry_id: E(1) }], error: null });
     expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBe(true);
     expect(adminCalls()).toHaveLength(1);
-    expect(adminCalls()[0]).toMatchObject({ table: "deck_reart_locks", head: true });
+    // Rows, not a HEAD count (see the deploy-window case below).
+    expect(adminCalls()[0]).toMatchObject({ table: "deck_reart_locks", head: false });
     expect(adminCalls()[0].filters).toEqual([
       ["entry_id", [E(1)]],
       ["deck_id", DECK],
       ["owner_id", ME],
     ]);
-    m.admin.mockResolvedValue({ count: 0, error: null });
+    m.admin.mockResolvedValue({ data: [], error: null });
     expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBe(false);
   });
 
   it("an entry that holds a CARD is locked by a lock on any row of the deck that holds the same card (one picture)", async () => {
     m.admin.mockImplementation(async (call: Call) =>
-      call.table === "deck_cards" ? { data: [{ id: E(1) }, { id: E(2) }], error: null } : { count: 1, error: null },
+      call.table === "deck_cards" ? { data: [{ id: E(1) }, { id: E(2) }], error: null } : { data: [{ entry_id: E(2) }], error: null },
     );
     expect(await isEntryLockedAdmin(ME, DECK, E(1), CARD)).toBe(true);
     const [siblings, locks] = adminCalls();
@@ -154,25 +157,27 @@ describe("whether one entry is locked (a step)", () => {
     expect(locks.filters[0]).toEqual(["entry_id", [E(1), E(2)]]);
     // The card's rows couldn't be read: not “not locked”.
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    m.admin.mockImplementation(async (call: Call) => (call.table === "deck_cards" ? { data: null, error: { message: "boom" } } : { count: 0, error: null }));
+    m.admin.mockImplementation(async (call: Call) => (call.table === "deck_cards" ? { data: null, error: { message: "boom" } } : { data: [], error: null }));
     expect(await isEntryLockedAdmin(ME, DECK, E(1), CARD)).toBeNull();
     logged.mockRestore();
   });
 
-  it("a read that didn't answer is null (the step stops before any charge): an error, a missing count, no service role", async () => {
+  it("a read that didn't answer is null (the step stops before any charge): an error, no rows at all, no service role", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    m.admin.mockResolvedValue({ count: null, error: { message: "boom" } });
+    m.admin.mockResolvedValue({ data: null, error: { message: "boom" } });
     expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBeNull();
-    m.admin.mockResolvedValue({ count: null, error: null });
+    m.admin.mockResolvedValue({ data: null, error: null });
     expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBeNull();
     m.adminConfigured.mockReturnValue(false);
     expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBeNull();
     logged.mockRestore();
   });
 
-  it("a database the migration hasn't reached has no locks: not locked", async () => {
-    m.admin.mockResolvedValue({ count: null, error: { message: "no such table", code: "42P01" } });
-    expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBe(false);
+  it("a database the migration hasn't reached has no locks: not locked — as the API really says it (an error with a code; a HEAD count would carry none and stop every paint)", async () => {
+    for (const code of ["PGRST205", "42P01"]) {
+      m.admin.mockResolvedValue({ data: null, error: { message: "Could not find the table 'public.deck_reart_locks' in the schema cache", code } });
+      expect(await isEntryLockedAdmin(ME, DECK, E(1))).toBe(false);
+    }
   });
 });
 
@@ -315,20 +320,20 @@ describe("what an undo does to one card of a run", () => {
   const of = (over: Partial<Parameters<typeof reartUndoOf>[0]> = {}) =>
     reartUndoOf({
       jobId: JOB,
-      keptRoll: null,
+      stepLinked: false,
+      keptRollId: null,
       row,
       cardArtUrl: ART("ai-2.jpg"),
       cardIsOwn: true,
       madeEntryLinked: false,
-      keptRollIds: new Set(),
       locked: false,
       ...over,
     });
 
   it("a card the run RE-ROLLED goes back to the earlier picture the run kept — while that picture is still kept", () => {
-    expect(of({ keptRoll: "roll-1", keptRollIds: new Set(["roll-1", "roll-0"]) })).toEqual({ kind: "earlier", rollId: "roll-1" });
-    // No longer kept (picked since, or dropped past the limit): its own art instead.
-    expect(of({ keptRoll: "roll-1", keptRollIds: new Set(["roll-0"]) })).toEqual({ kind: "own" });
+    expect(of({ keptRollId: "roll-1" })).toEqual({ kind: "earlier", rollId: "roll-1" });
+    // No longer kept (dropped past the limit): its own art instead.
+    expect(of({ keptRollId: null })).toEqual({ kind: "own" });
   });
 
   it("a card painted for the first time gets its own art back; one that had none has nothing to go back to", () => {
@@ -336,13 +341,38 @@ describe("what an undo does to one card of a run", () => {
     expect(of({ row: { ...row, previousArtUrl: null } })).toEqual({ skip: "no_art_before" });
   });
 
-  it("a real card the run made goes back to the real card — while its entry is still linked to the card the run made", () => {
+  describe("a card Re-art made (its record says so for good)", () => {
     const made = { ...row, made: true, entryId: E(1), previousArtUrl: null };
-    expect(of({ row: made, madeEntryLinked: true })).toEqual({ kind: "real" });
-    // Whatever art the made card shows now: the entry is what goes back.
-    expect(of({ row: made, madeEntryLinked: true, cardArtUrl: ART("hand.png") })).toEqual({ kind: "real" });
-    // Unlinked since (an undo did it, or the maker): the real card is back already.
-    expect(of({ row: made, madeEntryLinked: false })).toEqual({ skip: "real_back" });
+
+    it("the run that LINKED it to its entry puts the real card back — while the entry is still linked to it", () => {
+      expect(of({ row: made, stepLinked: true, madeEntryLinked: true })).toEqual({ kind: "real" });
+      // Whatever art the made card shows now: the entry is what goes back.
+      expect(of({ row: made, stepLinked: true, madeEntryLinked: true, cardArtUrl: ART("hand.png") })).toEqual({ kind: "real" });
+      // Unlinked since (an undo did it, or the maker): the real card is back already.
+      expect(of({ row: made, stepLinked: true, madeEntryLinked: false })).toEqual({ skip: "real_back" });
+      expect(of({ row: { ...made, entryId: null }, stepLinked: true, madeEntryLinked: false })).toEqual({ skip: "real_back" });
+    });
+
+    it("a run that only RE-ROLLED it never unlinks it: the earlier picture goes back on the card (an earlier run made it)", () => {
+      // The check's finding: run J made the card, run K re-rolled it — undoing
+      // K used to plan “back to the real card” and unlink it from the deck.
+      expect(of({ row: made, keptRollId: "roll-1", madeEntryLinked: true })).toEqual({ kind: "earlier", rollId: "roll-1" });
+      // …and with the earlier picture no longer on record there is nothing to
+      // go back to: a made card has no art of the maker's. Never the real card.
+      expect(of({ row: made, keptRollId: null, madeEntryLinked: true })).toEqual({ skip: "earlier_gone" });
+      expect(of({ row: made, keptRollId: "roll-1", madeEntryLinked: true, cardArtUrl: ART("hand.png") })).toEqual({ skip: "other_art" });
+    });
+
+    it("a card a later run painted again is that run's: left as it is, linked or re-rolled", () => {
+      const later = { ...made, jobId: "job-2" };
+      expect(of({ row: later, stepLinked: true, madeEntryLinked: true })).toEqual({ skip: "changed" });
+      expect(of({ row: later, keptRollId: "roll-1", madeEntryLinked: true })).toEqual({ skip: "changed" });
+    });
+
+    it("locked: left as it is", () => {
+      expect(of({ row: made, stepLinked: true, madeEntryLinked: true, locked: true })).toEqual({ skip: "locked" });
+      expect(of({ row: made, keptRollId: "roll-1", madeEntryLinked: true, locked: true })).toEqual({ skip: "locked" });
+    });
   });
 
   it("only a card whose record names THIS run's picture is the run's to undo", () => {
@@ -365,12 +395,11 @@ describe("what an undo does to one card of a run", () => {
 
   it("a locked card is left as it is; a card that is gone, or no longer the caller's, too", () => {
     expect(of({ locked: true })).toEqual({ skip: "locked" });
-    expect(of({ locked: true, row: { ...row, made: true, entryId: E(1) }, madeEntryLinked: true })).toEqual({ skip: "locked" });
     expect(of({ cardIsOwn: false })).toEqual({ skip: "gone" });
   });
 
   it("every reason has its words", () => {
-    expect(Object.keys(REART_UNDO_SKIP_COPY).sort()).toEqual(["changed", "gone", "locked", "no_art_before", "other_art", "own_back", "real_back"]);
+    expect(Object.keys(REART_UNDO_SKIP_COPY).sort()).toEqual(["changed", "earlier_gone", "gone", "locked", "no_art_before", "other_art", "own_back", "real_back"]);
     for (const words of Object.values(REART_UNDO_SKIP_COPY)) expect(words.length).toBeGreaterThan(10);
   });
 });
@@ -383,19 +412,23 @@ describe("the undo's confirm, in words", () => {
     expect(reartUndoDetail({ earlier: 3, own: 1, real: 2 })).toEqual([
       "3 cards go back to the picture they had before this run.",
       "1 card gets its own art back.",
-      "2 cards go back to being the real card in the deck. The cards this run made stay in My Cards.",
+      // (Made by this run, or linked again by it: "made from them" is true of both.)
+      "2 cards go back to being the real card in the deck. The cards made from them stay in My Cards.",
     ]);
     expect(reartUndoDetail({ earlier: 1, own: 2, real: 1 })).toEqual([
       "1 card goes back to the picture it had before this run.",
       "2 cards get their own art back.",
-      "1 card goes back to being the real card in the deck. The card this run made stays in My Cards.",
+      "1 card goes back to being the real card in the deck. The card made from it stays in My Cards.",
     ]);
     expect(reartUndoDetail({ earlier: 0, own: 0, real: 0 })).toEqual([]);
   });
 
-  it("says that no credit comes back, and that what it takes off is kept", () => {
-    expect(REART_UNDO_NO_REFUND_COPY).toMatch(/No credit is returned/);
-    expect(REART_UNDO_NO_REFUND_COPY).toMatch(/kept under “Earlier pictures”/);
+  it("says that no credit comes back — and that what it takes off a card is kept, only when it takes a picture off one", () => {
+    expect(REART_UNDO_NO_REFUND_COPY).toBe("No credit is returned: the pictures were painted.");
+    expect(reartUndoNote({ earlier: 1, own: 0 })).toBe(`${REART_UNDO_NO_REFUND_COPY} Each picture this takes off a card is kept under “Earlier pictures”.`);
+    expect(reartUndoNote({ earlier: 0, own: 2 })).toMatch(/kept under “Earlier pictures”/);
+    // A real card going back takes no picture off a card: the card it was painted on keeps it.
+    expect(reartUndoNote({ earlier: 0, own: 0 })).toBe(REART_UNDO_NO_REFUND_COPY);
     expect(REART_UNDO_BATCH).toBeGreaterThan(0);
     expect(REART_UNDO_BATCH).toBeLessThanOrEqual(10);
   });

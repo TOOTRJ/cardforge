@@ -1287,16 +1287,22 @@ export function reartLockedEntries(entries: ReadonlyArray<{ id: string; cardId: 
 // before — while the run's picture is still the one on the card:
 //
 //   * a card the run RE-ROLLED goes back to the earlier picture the run kept
-//     in its place (0215: the step says which, `kept_roll`);
+//     in its place (0215: the step says which, `kept_art` — its address, so
+//     a picture kept again under another row is still found) — a card an
+//     EARLIER run made included: only the run that linked a card to its
+//     entry puts the real card back;
 //   * a card of the maker's own the run painted for the first time gets its
 //     own art back;
-//   * a REAL card the run made the maker's own goes back to being the real
-//     card in the deck (the card the run made stays in My Cards — a later
-//     run uses it again, and never makes a second one).
+//   * a REAL card the run linked to its entry — it made the card, or linked
+//     again one an earlier run made (the step says so, `linked`) — goes back
+//     to being the real card in the deck. The card stays in My Cards, with
+//     the deck's record of it: a later run that NAMES the entry links it
+//     again and paints it, and never makes a second card; a run over the
+//     deck in the same style counts it as painted and leaves it.
 //
 // A card painted again since, given other art, or locked is left as it is.
 // Nothing is painted, and no credit is returned: the pictures were painted,
-// and each one the undo takes off is kept to go back to.
+// and each one the undo takes off a card is kept to go back to.
 // ---------------------------------------------------------------------------
 
 /** How many cards one request of an undo puts back (each is a card edit). */
@@ -1310,6 +1316,7 @@ export const REART_UNDO_SKIP_COPY = {
   other_art: "Has other art now — left as it is.",
   own_back: "It has its own art back already.",
   real_back: "It is the real card in the deck again already.",
+  earlier_gone: "The picture it had before this run isn't on record any more — pick one under “Earlier pictures”.",
   locked: "Locked — left as it is.",
   no_art_before: "It had no art before this run — nothing to go back to.",
   gone: "No longer one of your cards.",
@@ -1326,11 +1333,20 @@ export type ReartUndoSkip = keyof typeof REART_UNDO_SKIP_COPY;
  *     record names this run — and that still shows the run's picture — is
  *     the run's to undo: a later run or a pick of another picture names
  *     another, and "old art back" names no picture at all.
+ *   * `stepLinked`: the run's step LINKED the card to its deck entry (it
+ *     made the card from a real card, or linked again one an earlier run
+ *     made). Only then does the real card go back — never for a card the
+ *     run merely re-rolled, whichever run made it (its record says `made`
+ *     for good).
  */
 export function reartUndoOf(input: {
   jobId: string;
-  /** The run's done step for the card (its `kept_roll`, when it re-rolled). */
-  keptRoll: string | null | undefined;
+  /** The run's step linked the card to its entry (see above). */
+  stepLinked: boolean;
+  /** The kept picture the run's step replaced on the card, while it is
+   *  still kept (its row's id) — null: the step replaced none, or it is no
+   *  longer kept. */
+  keptRollId: string | null | undefined;
   row:
     | { jobId: string | null; made: boolean; entryId: string | null; artUrl: string | null; previousArtUrl: string | null }
     | null
@@ -1339,25 +1355,31 @@ export function reartUndoOf(input: {
   cardArtUrl: string | null | undefined;
   /** The card is still one of the caller's own. */
   cardIsOwn: boolean;
-  /** The deck entry the run made the card from is still linked to it. */
+  /** The deck entry the card was linked to by a run is still linked to it. */
   madeEntryLinked: boolean;
-  /** The ids of the pictures kept for the card on this deck. */
-  keptRollIds: ReadonlySet<string>;
   locked: boolean;
 }): { kind: ReartUndoKind; rollId?: string } | { skip: ReartUndoSkip } {
   const { row } = input;
   if (!input.cardIsOwn) return { skip: "gone" };
   if (!row) return { skip: "changed" };
+  if (input.stepLinked) {
+    // Back to the real card, while its entry is still linked to the card —
+    // and while the card's record is still this run's (a later run that
+    // painted it again made it that run's to undo).
+    if (!row.entryId || !input.madeEntryLinked) return { skip: "real_back" };
+    if (row.jobId !== input.jobId) return { skip: "changed" };
+    return input.locked ? { skip: "locked" } : { kind: "real" };
+  }
   // "Old art back" (the maker's, or an undo's) leaves a record that names
   // no picture: the card keeps its own art.
   if (!row.artUrl && !row.made) return { skip: "own_back" };
   if (row.jobId !== input.jobId) return { skip: "changed" };
   if (input.locked) return { skip: "locked" };
-  // A real card the run made the maker's own: back to the real card, while
-  // its entry is still linked to the card the run made.
-  if (row.made && row.entryId) return input.madeEntryLinked ? { kind: "real" } : { skip: "real_back" };
   if (!row.artUrl || row.artUrl !== input.cardArtUrl) return { skip: "other_art" };
-  if (input.keptRoll && input.keptRollIds.has(input.keptRoll)) return { kind: "earlier", rollId: input.keptRoll };
+  if (input.keptRollId) return { kind: "earlier", rollId: input.keptRollId };
+  // A card Re-art made has no art of the maker's to put back: without the
+  // earlier picture there is nothing to go back to.
+  if (row.made) return { skip: "earlier_gone" };
   return row.previousArtUrl ? { kind: "own" } : { skip: "no_art_before" };
 }
 
@@ -1385,14 +1407,21 @@ export function reartUndoDetail(plan: Pick<ReartUndoPlan, "earlier" | "own" | "r
     plan.earlier > 0 ? `${cards(plan.earlier)} ${plan.earlier === 1 ? "goes" : "go"} back to the picture ${plan.earlier === 1 ? "it" : "they"} had before this run.` : "",
     plan.own > 0 ? `${cards(plan.own)} ${plan.own === 1 ? "gets its" : "get their"} own art back.` : "",
     plan.real > 0
-      ? `${cards(plan.real)} ${plan.real === 1 ? "goes" : "go"} back to being the real card in the deck. The card${plan.real === 1 ? "" : "s"} this run made ${plan.real === 1 ? "stays" : "stay"} in My Cards.`
+      ? `${cards(plan.real)} ${plan.real === 1 ? "goes" : "go"} back to being the real card in the deck. The card${plan.real === 1 ? "" : "s"} made from ${plan.real === 1 ? "it stays" : "them stay"} in My Cards.`
       : "",
   ].filter(Boolean);
 }
 
 /** Said in the undo's confirm, always. */
-export const REART_UNDO_NO_REFUND_COPY =
-  "No credit is returned: the pictures were painted. Each one this takes off a card is kept under “Earlier pictures”.";
+export const REART_UNDO_NO_REFUND_COPY = "No credit is returned: the pictures were painted.";
+/** …and, when the undo takes a picture off a card (a real card going back
+ *  takes none off: the card it was painted on keeps it). */
+export const REART_UNDO_KEPT_COPY = "Each picture this takes off a card is kept under “Earlier pictures”.";
+
+/** The confirm's small print for this undo. */
+export function reartUndoNote(plan: Pick<ReartUndoPlan, "earlier" | "own">): string {
+  return plan.earlier + plan.own > 0 ? `${REART_UNDO_NO_REFUND_COPY} ${REART_UNDO_KEPT_COPY}` : REART_UNDO_NO_REFUND_COPY;
+}
 
 // ---------------------------------------------------------------------------
 // A card's earlier pictures (migration 0215)
@@ -1503,7 +1532,7 @@ export const REART_EARLIER_STYLE_COPY =
   "A picture marked “Earlier style” was painted in a style the deck no longer has: the next run over the deck paints that card again.";
 
 /** What "Earlier pictures" says about how many are kept. */
-export const REART_ROLLS_KEPT_COPY = `Up to ${REART_ROLLS_KEPT} earlier pictures are kept for each card. When another is kept, the oldest goes.`;
+export const REART_ROLLS_KEPT_COPY = `Up to ${REART_ROLLS_KEPT} earlier pictures are kept for each card. When another is kept, the one kept longest ago goes.`;
 
 /**
  * The art a card goes back to with "Put the old art back", worked out when

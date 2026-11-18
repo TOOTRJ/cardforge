@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { REART_UNDO_NO_REFUND_COPY, reartUndoDetail, reartUndoLine, type ReartUndoPlan } from "@/lib/tools/re-art/model";
+import { reartUndoDetail, reartUndoLine, reartUndoNote, type ReartUndoPlan } from "@/lib/tools/re-art/model";
 import { planUndoReartRunAction, undoReartRunAction } from "@/lib/tools/re-art/actions";
 
 /**
@@ -13,7 +13,8 @@ import { planUndoReartRunAction, undoReartRunAction } from "@/lib/tools/re-art/a
  * anything changes — then the undo itself, a few cards a request (each is a
  * card edit), with its progress. Nothing is painted and no credit is
  * returned; each picture it takes off a card is kept (0215), so an undo can
- * be undone card by card.
+ * be undone card by card. The deck's saved style is not a run's: undoing a
+ * run leaves it as it is.
  */
 export function ReartUndoDialog({
   open,
@@ -166,7 +167,7 @@ export function ReartUndoDialog({
                     {line}
                   </p>
                 ))}
-                {total > 0 ? <p className="mt-2 text-xs leading-5 text-subtle">{REART_UNDO_NO_REFUND_COPY}</p> : null}
+                {total > 0 ? <p className="mt-2 text-xs leading-5 text-subtle">{reartUndoNote(plan)}</p> : null}
               </div>
               {plan.skipped.length > 0 ? (
                 <details className="rounded-lg border border-border/50">

@@ -78,7 +78,7 @@ vi.mock("@/lib/cards/preview-data", () => ({ cardToPreviewData: () => ({}) }));
 import { ReartStudio } from "@/components/tools/re-art/reart-studio";
 import { ReartCardGrid, gridFilterOf, shownEntries, type ReartGridFilter } from "@/components/tools/re-art/reart-card-grid";
 import { ReartRunList } from "@/components/tools/re-art/reart-run-list";
-import { REART_UNDO_NO_REFUND_COPY } from "@/lib/tools/re-art/model";
+import { REART_MAX_CARDS, REART_UNDO_KEPT_COPY, REART_UNDO_NO_REFUND_COPY } from "@/lib/tools/re-art/model";
 
 const DECK = "00000000-0000-4000-8000-0000000000d1";
 const E = (n: number) => `00000000-0000-4000-8000-0000000000e${n}`;
@@ -243,10 +243,12 @@ describe("selecting several cards", () => {
     render(<Grid entries={DECK_ENTRIES()} spy={spies()} />);
     expect(screen.queryByRole("group", { name: "Selected cards" })).toBeNull();
     expect(screen.getAllByRole("checkbox", { name: /In the sample/ })).toHaveLength(4);
+    // The button's words say which way it goes — no pressed state beside a
+    // label that changes (a screen reader would hear both).
     const mode = button("Select cards");
-    expect(mode.getAttribute("aria-pressed")).toBe("false");
+    expect(mode.hasAttribute("aria-pressed")).toBe(false);
     fireEvent.click(mode);
-    expect(button("Done selecting").getAttribute("aria-pressed")).toBe("true");
+    expect(button("Done selecting").hasAttribute("aria-pressed")).toBe(false);
     // A card a run never paints can't be picked.
     expect(screen.getAllByRole("checkbox").map((input) => input.closest("label")?.textContent)).toEqual([
       "Select: Thornback Wyrm",
@@ -282,9 +284,12 @@ describe("selecting several cards", () => {
     select("Sol Ring");
     fireEvent.change(screen.getByRole("combobox", { name: "Type" }), { target: { value: "creature" } });
     fireEvent.click(bar().getByRole("button", { name: "Select all shown" }));
-    // The two creatures a run can paint (not the other creator's card), and Sol Ring still.
-    expect(bar().getByRole("status").textContent).toBe("3 selected");
+    // The two creatures a run can paint (not the other creator's card), and
+    // Sol Ring still — which the list isn't showing: the bar says so, since
+    // Lock and Paint act on it all the same.
+    expect(bar().getByRole("status").textContent).toBe("3 selected · 1 not shown");
     fireEvent.change(screen.getByRole("combobox", { name: "Type" }), { target: { value: "all" } });
+    expect(bar().getByRole("status").textContent).toBe("3 selected");
     expect(screen.getAllByRole("checkbox").filter((input) => (input as HTMLInputElement).checked)).toHaveLength(3);
     fireEvent.click(bar().getByRole("button", { name: "Clear" }));
     expect(bar().getByRole("status").textContent).toBe("0 selected");
@@ -357,7 +362,10 @@ describe("a locked card", () => {
     render(<Grid entries={DECK_ENTRIES()} spy={spy} />);
     const card = cardItem("Archivist of Lost Hours");
     expect(card.getByText("Locked")).toBeTruthy();
-    const note = screen.getByText(/A locked card is left as it is by everything here/);
+    // What a lock covers, said honestly: this deck's page — another deck
+    // that holds the card has its own locks.
+    const note = screen.getByText(/A locked card is left as it is by everything on this deck's page/);
+    expect(note.textContent).toMatch(/Another deck that holds the same card has its own locks\./);
     for (const name of [/Re-roll…/, /Earlier pictures/, /Old art back/]) {
       const action = card.getByRole("button", { name });
       expect(off(action)).toBe(true);
@@ -384,6 +392,89 @@ describe("a locked card", () => {
       [["Sol Ring"], true],
     ]);
     expect(screen.queryByRole("button", { name: /Lock — Cinderwing Matriarch/ })).toBeNull();
+  });
+
+  it("a card that leaves the view when it is locked hands the focus to the card that took its PLACE — never <body>, never the first card, and without scrolling", async () => {
+    const spy = spies();
+    const lockOf = (name: string) => button(`Lock — ${name}`);
+    const cards = (locked: number[]) => [1, 2, 3, 4].map((n) => entry(n, { name: `Card ${n}`, locked: locked.includes(n) }));
+    const focused = vi.spyOn(HTMLElement.prototype, "focus");
+    const { rerender } = render(<Grid entries={cards([])} spy={spy} />);
+    fireEvent.click(screen.getByRole("radio", { name: /To paint/ }));
+    // A mouse press on the THIRD card's Lock (the press takes the focus).
+    lockOf("Card 3").focus();
+    fireEvent.click(lockOf("Card 3"));
+    focused.mockClear();
+    // The page re-reads: the card is locked now, so it is no longer "to paint".
+    await act(async () => {
+      rerender(<Grid entries={cards([3])} spy={spy} />);
+    });
+    expect(names()).toEqual(["Card 1", "Card 2", "Card 4"]);
+    // The card now in its place — not Card 1 (the page would jump to the top).
+    expect(document.activeElement).toBe(lockOf("Card 4"));
+    expect(focused.mock.calls).toEqual([[{ preventScroll: true }]]);
+    // The LAST card out: the one that is last now.
+    fireEvent.click(lockOf("Card 4"));
+    await act(async () => {
+      rerender(<Grid entries={cards([3, 4])} spy={spy} />);
+    });
+    expect(document.activeElement).toBe(lockOf("Card 2"));
+    // The last one of all: the name box.
+    fireEvent.click(lockOf("Card 2"));
+    await act(async () => {
+      rerender(<Grid entries={cards([2, 3, 4])} spy={spy} />);
+    });
+    fireEvent.click(lockOf("Card 1"));
+    await act(async () => {
+      rerender(<Grid entries={cards([1, 2, 3, 4])} spy={spy} />);
+    });
+    expect(screen.getByText("No cards here.")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Find a card" }));
+    focused.mockRestore();
+  });
+
+  it("a card that stays in view keeps the focus on its own button, whose words turn — and a LATER re-read of the page moves nothing", async () => {
+    const spy = spies();
+    const focused = vi.spyOn(HTMLElement.prototype, "focus");
+    const { rerender } = render(<Grid entries={[entry(1, { name: "Thornback Wyrm" }), entry(2, { name: "Mossy Fen" })]} spy={spy} />);
+    button("Lock — Thornback Wyrm").focus();
+    fireEvent.click(button("Lock — Thornback Wyrm"));
+    await act(async () => {
+      rerender(<Grid entries={[entry(1, { name: "Thornback Wyrm", locked: true }), entry(2, { name: "Mossy Fen" })]} spy={spy} />);
+    });
+    expect(document.activeElement).toBe(button("Unlock — Thornback Wyrm"));
+    // The maker clicks blank space; the page re-reads later for another
+    // reason (and the card even leaves the view): the press is long over.
+    (document.activeElement as HTMLElement).blur();
+    focused.mockClear();
+    fireEvent.click(screen.getByRole("radio", { name: /To paint/ }));
+    await act(async () => {
+      rerender(<Grid entries={[entry(1, { name: "Thornback Wyrm", locked: true }), entry(2, { name: "Mossy Fen", state: "in_style" })]} spy={spy} />);
+    });
+    expect(focused).not.toHaveBeenCalled();
+    focused.mockRestore();
+  });
+
+  it("a lock that was refused (the request ended, nothing changed) is forgotten too", async () => {
+    const spy = spies();
+    const focused = vi.spyOn(HTMLElement.prototype, "focus");
+    const list = [entry(1, { name: "Thornback Wyrm" }), entry(2, { name: "Mossy Fen" })];
+    const { rerender } = render(<Grid entries={list} spy={spy} />);
+    fireEvent.click(button("Lock — Thornback Wyrm"));
+    await act(async () => {
+      rerender(<Grid entries={list} spy={spy} working />);
+    });
+    await act(async () => {
+      rerender(<Grid entries={list} spy={spy} />);
+    });
+    focused.mockClear();
+    // Much later, the card leaves the view for another reason.
+    fireEvent.click(screen.getByRole("radio", { name: /To paint/ }));
+    await act(async () => {
+      rerender(<Grid entries={[entry(1, { name: "Thornback Wyrm", state: "in_style" }), list[1]]} spy={spy} />);
+    });
+    expect(focused).not.toHaveBeenCalled();
+    focused.mockRestore();
   });
 
   it("a deck with no locked card says nothing about locks", () => {
@@ -422,6 +513,16 @@ describe("the studio: what a selection and a lock do", () => {
     expect(opened.input).toMatchObject({ deckId: DECK, entryIds: [E(1), E(4)], scope: "all" });
     // No style rides along: selected cards are painted in the deck's SAVED style.
     expect(opened.input.style).toBeUndefined();
+  });
+
+  it("a selection past what one run can name is said in words — never sent to be refused as a run that “couldn't be read”", () => {
+    const many = Array.from({ length: REART_MAX_CARDS + 1 }, (_, i) => entry(1, { id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`, name: `Card ${i + 1}` }));
+    studio(many);
+    fireEvent.click(button("Select cards"));
+    fireEvent.click(bar().getByRole("button", { name: "Select all shown" }));
+    fireEvent.click(bar().getByRole("button", { name: "Paint selected…" }));
+    expect(h.toastError).toHaveBeenCalledWith(expect.stringContaining(`up to ${REART_MAX_CARDS} cards at a time — you picked ${REART_MAX_CARDS + 1}`));
+    expect(h.confirm).not.toHaveBeenCalled();
   });
 
   it("one picked card is the one-card paint", () => {
@@ -526,11 +627,20 @@ describe("undoing a run", () => {
     expect(text).toContain("1 card goes back to the picture it had before this run.");
     expect(text).toContain("1 card gets its own art back.");
     expect(text).toContain("1 card goes back to being the real card in the deck.");
-    expect(text).toContain(REART_UNDO_NO_REFUND_COPY);
+    expect(text).toContain(`${REART_UNDO_NO_REFUND_COPY} ${REART_UNDO_KEPT_COPY}`);
     expect(text).toContain("1 left as it is");
     expect(text).toContain("Mossy Fen — Locked — left as it is.");
     expect(within(dialog).getByRole("button", { name: "Undo 3 cards" })).toBeTruthy();
     expect(h.undo).not.toHaveBeenCalled();
+  });
+
+  it("an undo that only returns real cards takes no picture off a card, and doesn't say it keeps one", async () => {
+    h.planUndo.mockResolvedValue({ ok: true, earlier: 0, own: 0, real: 2, skipped: [] });
+    studio(DECK_ENTRIES(), runs);
+    const dialog = await open();
+    expect(dialog.textContent).toContain("2 cards go back to being the real card in the deck. The cards made from them stay in My Cards.");
+    expect(dialog.textContent).toContain(REART_UNDO_NO_REFUND_COPY);
+    expect(dialog.textContent).not.toContain(REART_UNDO_KEPT_COPY);
   });
 
   it("puts the cards back a few a request until none remain, then says so and re-reads the page", async () => {

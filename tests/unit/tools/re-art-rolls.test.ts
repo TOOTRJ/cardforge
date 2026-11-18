@@ -20,7 +20,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Call = {
   table: string;
-  op: "select" | "insert" | "delete";
+  op: "select" | "insert" | "delete" | "update";
   columns?: string;
   row?: unknown;
   filters: Array<[string, unknown]>;
@@ -55,6 +55,11 @@ function clientOf(answerOf: (call: Call) => Promise<Result>) {
           call.op = "delete";
           return chain;
         },
+        update: (row: unknown) => {
+          call.op = "update";
+          call.row = row;
+          return chain;
+        },
         eq: (column: string, value: unknown) => {
           call.filters.push([column, value]);
           return chain;
@@ -82,7 +87,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/tools/re-art/server", () => ({ discardReartArtIfUnused: m.discardUnused }));
 
-import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRolls } from "@/lib/tools/re-art/rolls";
+import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRolls, readRollsOrNull } from "@/lib/tools/re-art/rolls";
 import {
   REART_ROLLS_KEPT,
   REART_ROLLS_KEPT_COPY,
@@ -138,7 +143,7 @@ beforeEach(() => {
 describe("how many are kept", () => {
   it("three for each card on each deck — and the studio says so", () => {
     expect(REART_ROLLS_KEPT).toBe(3);
-    expect(REART_ROLLS_KEPT_COPY).toBe("Up to 3 earlier pictures are kept for each card. When another is kept, the oldest goes.");
+    expect(REART_ROLLS_KEPT_COPY).toBe("Up to 3 earlier pictures are kept for each card. When another is kept, the one kept longest ago goes.");
   });
 });
 
@@ -319,6 +324,18 @@ describe("reading the deck's kept pictures", () => {
     expect(logged).toHaveBeenCalledTimes(1);
     logged.mockRestore();
   });
+
+  it("…but a caller that DECIDES by them is told the read failed: null, never “none kept” (an undo would give a re-rolled card its own art)", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    m.session.mockResolvedValue({ data: null, error: { message: "connection reset", code: "08006" } });
+    expect(await readRollsOrNull(DECK)).toBeNull();
+    // A database the migration hasn't reached keeps none: an empty answer, not a failure.
+    m.session.mockResolvedValue({ data: null, error: { message: "no such table", code: "PGRST205" } });
+    expect(await readRollsOrNull(DECK)).toEqual(new Map());
+    m.session.mockResolvedValue({ data: [stored(roll(1))], error: null });
+    expect((await readRollsOrNull(DECK))?.get(CARD)).toHaveLength(1);
+    logged.mockRestore();
+  });
 });
 
 describe("keeping a picture", () => {
@@ -360,12 +377,21 @@ describe("keeping a picture", () => {
       .mockResolvedValueOnce({ data: null, error: { message: "duplicate key", code: "23505" } })
       .mockResolvedValueOnce({ data: { id: "roll-there" }, error: null });
     expect(await keepRoll(ME, DECK, toKeep)).toEqual({ id: "roll-there", inserted: false });
-    const [, lookup] = adminCalls();
+    const [, lookup, touch] = adminCalls();
     expect(lookup.filters).toEqual([
       ["deck_id", DECK],
       ["card_id", CARD],
       ["owner_id", ME],
       ["art_url", ART("ai-1.jpg")],
+    ]);
+    // …and it is kept again NOW: the limit drops the pictures kept longest
+    // ago, and must not count this one among them.
+    expect(touch).toMatchObject({ op: "update", table: "deck_reart_rolls" });
+    expect(Object.keys(touch.row as object)).toEqual(["kept_at"]);
+    expect(Date.now() - Date.parse((touch.row as { kept_at: string }).kept_at)).toBeLessThan(5_000);
+    expect(touch.filters).toEqual([
+      ["id", "roll-there"],
+      ["owner_id", ME],
     ]);
   });
 
@@ -427,8 +453,8 @@ describe("taking a kept row back out (a paint that never landed)", () => {
   });
 });
 
-describe("past the limit the oldest kept pictures go", () => {
-  /** Five kept, newest first as the read orders them. */
+describe("past the limit the pictures kept longest ago go", () => {
+  /** Five kept, the one kept last first, as the read orders them. */
   const five = [5, 4, 3, 2, 1].map((n) => ({ id: `roll-${n}` }));
   const answer = (dropped: unknown, list: unknown = five) =>
     m.admin.mockImplementation(async (call: Call): Promise<Result> => (call.op === "select" ? { data: list, error: null } : { data: dropped, error: null }));
@@ -440,7 +466,11 @@ describe("past the limit the oldest kept pictures go", () => {
     ]);
     expect(await pruneRolls(ME, DECK, CARD)).toBe(2);
     const [list, drop] = adminCalls();
-    expect(list).toMatchObject({ op: "select", orders: ["painted_at desc", "kept_at desc"] });
+    // By when each was KEPT — never by when it was painted: a picture
+    // painted long ago, put back on the card and just taken off again is
+    // the newest kept one, and the one the maker (or an undo) goes back to
+    // next. Ordered by its paint date it was the one this very call dropped.
+    expect(list).toMatchObject({ op: "select", orders: ["kept_at desc", "painted_at desc"] });
     expect(list.filters).toEqual([
       ["deck_id", DECK],
       ["card_id", CARD],

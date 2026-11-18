@@ -54,18 +54,22 @@ export async function isEntryLockedAdmin(userId: string, deckId: string, entryId
     }
     entryIds = [...new Set([entryId, ...((siblings ?? []) as Array<{ id: string }>).map((row) => row.id)])];
   }
-  const { count, error } = await admin
+  // Rows, not a HEAD count: a HEAD answer carries no error body, so a table
+  // that isn't there yet (a deploy that lands before 0216) would read as "no
+  // answer" and stop every paint, where it means "no locks".
+  const { data, error } = await admin
     .from("deck_reart_locks")
-    .select("entry_id", { count: "exact", head: true })
+    .select("entry_id")
     .in("entry_id", entryIds)
     .eq("deck_id", deckId)
-    .eq("owner_id", userId);
+    .eq("owner_id", userId)
+    .limit(1);
   if (error) {
     if (missingTable(error)) return false;
     console.error(`[re-art] lock of entry ${entryId} not read: ${error.code ?? ""} ${error.message}`);
     return null;
   }
-  return Number.isFinite(count) ? (count as number) > 0 : null;
+  return Array.isArray(data) ? data.length > 0 : null;
 }
 
 /**

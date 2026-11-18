@@ -115,21 +115,40 @@ describe("the bulk step's patch", () => {
     const patch = s.patched.at(-1)!;
     expect("note" in patch).toBe(false);
     expect("retry_after_seconds" in patch).toBe(false);
-    expect("kept_roll" in patch).toBe(false);
+    expect("kept_art" in patch).toBe(false);
     expect("painted" in patch).toBe(false);
+    expect("linked" in patch).toBe(false);
   });
 
   // Re-art deck: a re-roll's done step names the earlier picture it kept in
   // the card's place — what "undo this run" puts back. The patch is built
   // key by key: a key it doesn't name never reaches the row.
-  it("writes the earlier picture a re-roll kept, and only for a step that names one", async () => {
-    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_roll: "roll-1" };
+  it("writes the earlier picture a re-roll kept (its address), and only for a step that names one", async () => {
+    const KEPT = "https://x.supabase.co/storage/v1/object/public/card-art/u1/ai-1.jpg";
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_art: KEPT };
     await runNextJobStep("job-1", "bulk:0");
-    expect(s.patched.at(-1)!.kept_roll).toBe("roll-1");
+    expect(s.patched.at(-1)!.kept_art).toBe(KEPT);
     s.job = bulkJob();
-    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_roll: null };
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", kept_art: null };
     await runNextJobStep("job-1", "bulk:0");
-    expect("kept_roll" in s.patched.at(-1)!).toBe(false);
+    expect("kept_art" in s.patched.at(-1)!).toBe(false);
+  });
+
+  // …that it LINKED a card to its deck entry (it made the card, or linked
+  // again one an earlier run made): only such a step's undo puts the real
+  // card back. A failed step that linked says so too — the link stands.
+  it("writes that a step linked its card, and only for a step that says so", async () => {
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1", linked: true };
+    await runNextJobStep("job-1", "bulk:0");
+    expect(s.patched.at(-1)!.linked).toBe(true);
+    s.job = bulkJob();
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "failed", error: "No picture.", linked: true };
+    await runNextJobStep("job-1", "bulk:0");
+    expect(s.patched.at(-1)!.linked).toBe(true);
+    s.job = bulkJob();
+    s.result = { key: "bulk:0", label: "Llanowar Elves", status: "done", card_id: "card-1" };
+    await runNextJobStep("job-1", "bulk:0");
+    expect("linked" in s.patched.at(-1)!).toBe(false);
   });
 
   // …and says that it PAINTED: a step that left its card as it was is done

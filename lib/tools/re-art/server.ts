@@ -794,12 +794,6 @@ export async function planReartRun(
   // A lock that couldn't be read is never "not locked": a run would paint
   // (and charge for) a card its maker locked.
   if (!locks) return { ok: false, error: "We couldn't read which cards are locked — try again." };
-  // A lock is on the card's picture: every row of the deck that holds a
-  // locked card is locked with it.
-  const lockedEntries = reartLockedEntries(
-    items.map((item) => ({ id: item.entry.id, cardId: item.entry.card_id })),
-    locks,
-  );
   let locked = 0;
   const OWN_WORDS_NOTE = "Its own words.";
   // A restyle starts from a picture: the real card's art for an entry that
@@ -820,6 +814,13 @@ export async function planReartRun(
   // them again (never makes them twice) — priced as what they are.
   const madeByEntry = new Map(
     [...painted.values()].filter((row) => row.made && row.entryId).map((row) => [row.entryId!, row]),
+  );
+  // A lock is on the card's picture: every row of the deck that holds a
+  // locked card is locked with it — a row whose made card isn't linked
+  // right now included (a run would link it again and paint that card).
+  const lockedEntries = reartLockedEntries(
+    items.map((item) => ({ id: item.entry.id, cardId: item.entry.card_id ?? madeByEntry.get(item.entry.id)?.cardId })),
+    locks,
   );
   const own: ReartPlannedEntry[] = [];
   const printings: DeckItem<DeckPageCard>[] = [];

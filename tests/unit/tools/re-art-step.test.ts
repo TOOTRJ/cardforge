@@ -1326,8 +1326,11 @@ describe("a licensed property and a reference picture (0214)", () => {
 //     owner's to write). A lock that couldn't be read stops the step: it is
 //     never read as "not locked".
 //   * A re-roll's done step names the earlier picture it kept in the card's
-//     place (`kept_roll`): what "undo this run" puts back. Only when the
-//     card was SHOWING that picture.
+//     place (`kept_art`, its address): what "undo this run" puts back. Only
+//     when the card was SHOWING that picture.
+//   * A step says that it PAINTED, and that it LINKED a card to its entry
+//     (it made the card, or linked again one an earlier run made): only a
+//     step that linked puts the real card back when its run is undone.
 // ---------------------------------------------------------------------------
 
 describe("a locked card (0216)", () => {
@@ -1370,11 +1373,14 @@ describe("what an undo of the run needs from a step", () => {
     m.paintedAdmin.mockResolvedValue(ROW());
     m.paintedRows.mockResolvedValue([ROW()]);
     const result = await run(planOf("own", true));
-    expect(result).toMatchObject({ status: "done", kept_roll: "roll-1" });
+    // Its ADDRESS, not the kept row's id: kept again under another row (a
+    // pick that didn't land), it is still the picture to go back to.
+    expect(result).toMatchObject({ status: "done", kept_art: ART("ai-old.jpg") });
+    expect(Object.keys(result)).not.toContain("kept_roll");
   });
 
   it("a first paint names none; nor does a card that showed OTHER art (it gets that art back instead)", async () => {
-    expect(Object.keys(await run(planOf()))).not.toContain("kept_roll");
+    expect(Object.keys(await run(planOf()))).not.toContain("kept_art");
     // Painted, then given other art by hand: the row's picture is kept, but
     // it is not what the card showed.
     m.rows.cards = { ...OWN_CARD, art_url: ART("hand.png") };
@@ -1382,7 +1388,7 @@ describe("what an undo of the run needs from a step", () => {
     m.paintedRows.mockResolvedValue([ROW()]);
     const result = await run(planOf("own", true));
     expect(m.keep).toHaveBeenCalledTimes(1);
-    expect(Object.keys(result)).not.toContain("kept_roll");
+    expect(Object.keys(result)).not.toContain("kept_art");
   });
 
   it("a picture that couldn't be kept names none", async () => {
@@ -1390,7 +1396,55 @@ describe("what an undo of the run needs from a step", () => {
     m.paintedAdmin.mockResolvedValue(ROW());
     m.paintedRows.mockResolvedValue([ROW()]);
     m.keep.mockResolvedValue(null);
-    expect(Object.keys(await run(planOf("own", true)))).not.toContain("kept_roll");
+    expect(Object.keys(await run(planOf("own", true)))).not.toContain("kept_art");
+  });
+
+  describe("which step LINKED a card to its entry", () => {
+    it("a step that MADE the card from a real card says so", async () => {
+      m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+      expect(await run(planOf("printing"))).toMatchObject({ status: "done", card_id: "made-1", linked: true });
+      // …and one whose card was never made does not.
+      m.customize.mockResolvedValue({ ...STEP, status: "failed", error: "No picture." });
+      expect(Object.keys(await run(planOf("printing")))).not.toContain("linked");
+    });
+
+    it("a step that linked again a card an EARLIER run made says so — whatever its paint came to (the link stands)", async () => {
+      m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+      m.madeForEntry.mockResolvedValue(OWN_CARD.id);
+      // In the style already: linked, nothing painted, nothing charged.
+      m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg") };
+      m.paintedAdmin.mockResolvedValue(ROW());
+      const left = await run(planOf("printing"));
+      expect(left).toMatchObject({ status: "done", linked: true, note: "Already in this style — nothing was charged." });
+      expect(Object.keys(left)).not.toContain("painted");
+      // Painted again (a named paint): linked and painted.
+      m.paintedRows.mockResolvedValue([ROW()]);
+      expect(await run(planOf("printing", true))).toMatchObject({ status: "done", linked: true, painted: true });
+    });
+
+    it("a step that RE-ROLLED a card already linked to its entry — an earlier run's made card included — does not", async () => {
+      // The check's finding: this is the step whose undo must put the earlier
+      // picture back, never unlink the card.
+      m.rows.cards = { ...OWN_CARD, art_url: ART("ai-old.jpg") };
+      m.paintedAdmin.mockResolvedValue({ ...ROW(), made: true, entryId: ENTRY });
+      m.paintedRows.mockResolvedValue([{ ...ROW(), made: true, entryId: ENTRY }]);
+      const result = await run(planOf("own", true));
+      expect(result).toMatchObject({ status: "done", painted: true, kept_art: ART("ai-old.jpg") });
+      expect(Object.keys(result)).not.toContain("linked");
+      expect(m.link).not.toHaveBeenCalled();
+    });
+
+    it("a lock on another row of the deck that holds the MADE card is asked before the card is linked again", async () => {
+      m.rows.deck_cards = { id: ENTRY, name: "Krenko", board: "commander", card_id: null, scryfall_id: "sf-1" };
+      m.madeForEntry.mockResolvedValue("made-0");
+      m.entryLocked.mockResolvedValue(true);
+      const result = await run(planOf("printing"));
+      expect(result).toMatchObject({ status: "done", note: "Locked since this run started — left as it is. Nothing was charged." });
+      // Asked with the card the step WOULD link, not "no card".
+      expect(m.entryLocked).toHaveBeenCalledWith("u1", DECK, ENTRY, "made-0");
+      expect(m.link).not.toHaveBeenCalled();
+      expect(Object.keys(result)).not.toContain("linked");
+    });
   });
 
   it("a step that put a new picture on its card says it PAINTED; one that left the card as it was does not", async () => {

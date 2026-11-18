@@ -19,6 +19,7 @@ import { remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-cop
 import type { GenerationJobView, JobStep } from "@/lib/ai/generation-jobs";
 import { trackToolEvent } from "@/lib/tools/track-client";
 import {
+  REART_MAX_CARDS,
   EMPTY_REART_STYLE,
   REART_DEFAULT_METHOD,
   REART_DEFAULT_MODEL,
@@ -428,6 +429,12 @@ export function ReartStudio({
     }
     if (picked.length === 1) {
       paintOne(picked[0]);
+      return;
+    }
+    // One run names at most this many cards (the plan's own limit): said
+    // here, in words, rather than refused as a run that "couldn't be read".
+    if (picked.length > REART_MAX_CARDS) {
+      toast.error(`A selection paints up to ${REART_MAX_CARDS} cards at a time — you picked ${picked.length}. Pick fewer, or use “Re-art the deck…”.`);
       return;
     }
     const keeps = picked.some((entry) => entry.ownPictureOnCard);

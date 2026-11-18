@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { History, Loader2, Lock, LockOpen, PenLine, RotateCcw, Undo2, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,47 @@ export function ReartCardGrid({
   const picked = entries.filter((entry) => selected.has(entry.id) && selectable(entry));
   const pickedToPaint = picked.filter((entry) => !entry.locked);
   const waiting = locked || Boolean(busy) || Boolean(selection?.working);
+  // Picked cards the list isn't showing (a filter, a name typed): they are
+  // still acted on, so the bar says how many.
+  const shownIds = new Set(shown.map((entry) => entry.id));
+  const pickedHidden = picked.filter((entry) => !shownIds.has(entry.id)).length;
+
+  // A card that is locked or unlocked can LEAVE the view (a locked card is
+  // among those left as they are; an unlocked one leaves "Locked"), and its
+  // button with it. The focus is then handed to the card that took its
+  // PLACE in the list (the last one, for the last; the name box when none
+  // is left) — without scrolling: a mouse user keeps their place. Never
+  // left on <body>, never moved for a card that is still listed, and
+  // forgotten once the press is over, so a later re-read of the page moves
+  // nothing.
+  const lockPressed = useRef<{ id: string; index: number; wasLocked: boolean; sawWorking: boolean } | null>(null);
+  const findRef = useRef<HTMLInputElement>(null);
+  const lockWorking = Boolean(selection?.working);
+  useEffect(() => {
+    const pressed = lockPressed.current;
+    if (!pressed) return;
+    // The lock is on its way: wait for the page to re-read.
+    if (lockWorking) {
+      pressed.sawWorking = true;
+      return;
+    }
+    if (document.querySelector(`[data-reart-lock="${pressed.id}"]`)) {
+      // Still listed. Over once the page re-read (its lock turned) or the
+      // request ended without one (a refusal): nothing to hand on.
+      const now = entries.find((entry) => entry.id === pressed.id);
+      if (pressed.sawWorking || !now || Boolean(now.locked) !== pressed.wasLocked) lockPressed.current = null;
+      return;
+    }
+    lockPressed.current = null;
+    const active = document.activeElement;
+    // The maker moved on by themselves.
+    if (active && active !== document.body) return;
+    const buttons = [...document.querySelectorAll<HTMLElement>("[data-reart-lock]")];
+    const next = buttons[Math.min(pressed.index, buttons.length - 1)];
+    if (next) next.focus({ preventScroll: true });
+    else findRef.current?.focus();
+  });
+
   const toggleSelected = (id: string) => {
     if (!selection) return;
     const next = new Set(selected);
@@ -170,6 +211,7 @@ export function ReartCardGrid({
         <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-muted">
           Find a card
           <input
+            ref={findRef}
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -192,9 +234,10 @@ export function ReartCardGrid({
         ) : null}
         {selection ? (
           <Button
+            // Its words say which way it goes (no pressed state beside a
+            // label that changes: a screen reader would hear both).
             variant={selecting ? "secondary" : "outline"}
             size="sm"
-            aria-pressed={selecting}
             onClick={() => {
               // Leaving the mode lets go of what was picked: a selection
               // nobody can see must not be acted on later.
@@ -215,6 +258,7 @@ export function ReartCardGrid({
         >
           <p role="status" className="mr-auto tabular-nums text-foreground">
             {picked.length} selected
+            {pickedHidden > 0 ? <span className="text-muted"> · {pickedHidden} not shown</span> : null}
           </p>
           <Button
             variant="ghost"
@@ -278,8 +322,9 @@ export function ReartCardGrid({
       ) : null}
       {counts.locked > 0 ? (
         <p id={noteId} className="text-xs text-subtle">
-          A locked card is left as it is by everything here: a run, a sample, a re-roll, an earlier picture, old art back
-          and an undo. Unlock it to change its picture.
+          A locked card is left as it is by everything on this deck&apos;s page: a run, a sample, a re-roll, an earlier
+          picture, old art back and an undo. Unlock it to change its picture. Another deck that holds the same card has
+          its own locks.
         </p>
       ) : null}
       {shown.length === 0 ? (
@@ -498,7 +543,14 @@ export function ReartCardGrid({
                           type="button"
                           data-reart-lock={entry.id}
                           onClick={() => {
-                            if (!waiting) selection.onLock([entry], !cardLocked);
+                            if (waiting) return;
+                            lockPressed.current = {
+                              id: entry.id,
+                              index: shown.findIndex((shownEntry) => shownEntry.id === entry.id),
+                              wasLocked: cardLocked,
+                              sawWorking: false,
+                            };
+                            selection.onLock([entry], !cardLocked);
                           }}
                           aria-disabled={waiting ? true : undefined}
                           className={cn(

@@ -150,8 +150,9 @@ export default async function ReartDeckPage({ searchParams }: { searchParams: Pr
 
   // A lock is on the card's picture: every row that holds a locked card is
   // shown locked with it (model.ts reartLockedEntries — the plan's rule).
+  const madeByEntry = new Map([...painted.values()].filter((row) => row.made && row.entryId).map((row) => [row.entryId!, row.cardId]));
   const lockedEntries = reartLockedEntries(
-    items.map(({ entry: e }) => ({ id: e.id, cardId: e.card_id })),
+    items.map(({ entry: e }) => ({ id: e.id, cardId: e.card_id ?? madeByEntry.get(e.id) })),
     locks ?? new Set(),
   );
 

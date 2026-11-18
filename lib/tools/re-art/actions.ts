@@ -56,7 +56,7 @@ import {
 } from "@/lib/tools/re-art/model";
 import { isCardLocked, readLocks, setLocks } from "@/lib/tools/re-art/locks";
 import { unlinkDeckCardAction } from "@/lib/decks/card-actions";
-import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRolls } from "@/lib/tools/re-art/rolls";
+import { claimRoll, dropRoll, isKeptPicture, keepRoll, pruneRolls, readRollsOrNull } from "@/lib/tools/re-art/rolls";
 import { storedArtExists } from "@/lib/tools/re-art/restyle-source";
 import {
   getOwnedDeck,
@@ -368,9 +368,13 @@ export async function startReartAction(input: unknown): Promise<ReartStarted | R
       ok: false,
       error:
         plan.skipped.length === 0
-          ? plan.inStyle > 0
-            ? "Every card of this run is in the deck's style already."
-            : "None of these cards can be re-arted."
+          ? plan.locked > 0
+            ? plan.inStyle > 0
+              ? "Every card of this run is locked or in the deck's style already."
+              : "Every card of this run is locked — unlock one to paint it."
+            : plan.inStyle > 0
+              ? "Every card of this run is in the deck's style already."
+              : "None of these cards can be re-arted."
           : plan.inStyle > 0 || plan.skipped.length > 1
             ? "No card of this run is waiting to be painted."
             : plan.skipped[0].reason,
@@ -961,7 +965,7 @@ async function undoStepsOf(
   const supabase = await createClient();
   const { data: job } = await supabase
     .from("ai_generation_jobs")
-    .select("id, owner_id, kind, status, request, steps")
+    .select("id, owner_id, kind, status, request, steps, created_at")
     .eq("id", jobId)
     .eq("owner_id", userId)
     .eq("kind", "deck_reart")
@@ -978,8 +982,9 @@ async function undoStepsOf(
     status?: unknown;
     card_id?: unknown;
     label?: unknown;
-    kept_roll?: unknown;
+    kept_art?: unknown;
     painted?: unknown;
+    linked?: unknown;
   }>;
   const done = steps.filter((step) => step?.status === "done" && typeof step.card_id === "string" && isUuid(step.card_id as string));
   if (done.length === 0) return { ok: true, deck, todo: [], skipped: [] };
@@ -990,19 +995,23 @@ async function undoStepsOf(
   const parts = chunkIds(cardIds);
   const [rows, rolls, locks, cardsRead, entriesRead] = await Promise.all([
     readPaintedCards(deck.id),
-    readRolls(deck.id),
+    readRollsOrNull(deck.id),
     readLocks(deck.id),
-    Promise.all(parts.map((ids) => supabase.from("cards").select("id, owner_id, title, art_url").in("id", ids))),
+    Promise.all(parts.map((ids) => supabase.from("cards").select("id, owner_id, title, art_url, created_at").in("id", ids))),
     Promise.all(parts.map((ids) => supabase.from("deck_cards").select("id, card_id").eq("deck_id", deck.id).in("card_id", ids))),
   ]);
-  if (!locks || cardsRead.some((read) => read.error) || entriesRead.some((read) => read.error)) {
+  // Locks or kept pictures that couldn't be read are never "none": an undo
+  // would change a locked card, or give a re-rolled card its own art where
+  // the plan said the earlier picture.
+  if (!locks || !rolls || cardsRead.some((read) => read.error) || entriesRead.some((read) => read.error)) {
     return { ok: false, reason: "unread", error: "We couldn't read this run's cards — try again." };
   }
   const cards = new Map(
     cardsRead
-      .flatMap((read) => (read.data ?? []) as Array<{ id: string; owner_id: string; title: string; art_url: string | null }>)
+      .flatMap((read) => (read.data ?? []) as Array<{ id: string; owner_id: string; title: string; art_url: string | null; created_at: string | null }>)
       .map((card) => [card.id, card]),
   );
+  const runStarted = typeof job.created_at === "string" ? Date.parse(job.created_at) : NaN;
   const entries = entriesRead.flatMap((read) => (read.data ?? []) as Array<{ id: string; card_id: string | null }>);
 
   const todo: UndoStep[] = [];
@@ -1014,21 +1023,31 @@ async function undoStepsOf(
     seen.add(cardId);
     const card = cards.get(cardId);
     const row = rows.get(cardId);
-    // A step says it painted (`painted`, written since undo exists); a run
-    // from before that is told by the deck's row alone — the card is the
-    // run's while its row still names the run. A step that painted nothing
-    // is neither undone nor listed.
-    if (step.painted !== true && row?.jobId !== job.id) continue;
+    // A step says what it did (`painted`, `linked` — written since undo
+    // exists); a run from before that is told by the deck's row alone — the
+    // card is the run's while its row still names the run. A step that
+    // neither painted nor linked is neither undone nor listed.
+    const marked = step.painted === true || step.linked === true;
+    if (!marked && row?.jobId !== job.id) continue;
     const name = card?.title || (typeof step.label === "string" ? step.label : "A card");
     const cardEntries = entries.filter((entry) => entry.card_id === cardId);
+    // Did THIS run link the card to its entry? The step says so; for a run
+    // from before steps said anything, a card made after the run started
+    // was made by it (a card an earlier run made was only re-rolled).
+    const cardMade = card?.created_at ? Date.parse(card.created_at) : NaN;
+    const stepLinked = step.linked === true || (!marked && Boolean(row?.made) && Number.isFinite(runStarted) && cardMade >= runStarted);
+    // The picture the step replaced, while this deck still keeps it for the
+    // card — found by its address.
+    const keptArt = typeof step.kept_art === "string" ? step.kept_art : null;
+    const keptRoll = keptArt ? (rolls.get(cardId) ?? []).find((roll) => roll.artUrl === keptArt) : undefined;
     const verdict = reartUndoOf({
       jobId: job.id,
-      keptRoll: typeof step.kept_roll === "string" ? step.kept_roll : null,
+      stepLinked,
+      keptRollId: keptRoll?.id ?? null,
       row,
       cardArtUrl: card?.art_url,
       cardIsOwn: Boolean(card && card.owner_id === userId),
       madeEntryLinked: Boolean(row?.entryId && cardEntries.some((entry) => entry.id === row.entryId)),
-      keptRollIds: new Set((rolls.get(cardId) ?? []).map((roll) => roll.id)),
       locked: cardEntries.some((entry) => locks.has(entry.id)),
     });
     if ("skip" in verdict) skipped.push({ name, reason: REART_UNDO_SKIP_COPY[verdict.skip] });
