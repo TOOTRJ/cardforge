@@ -442,7 +442,8 @@ describe("the studio — `run_finished`, once each time the runner ends", () => 
     const view = await begin([step(0), step(1), step(2)]);
     fireEvent.click(screen.getByText("panel stop"));
     expect(h.stop).toHaveBeenCalledTimes(1);
-    expect(events("stop")).toEqual([{ painted: 0, failed: 0, waiting: 3 }]);
+    // `carried`: whether the server was carrying the run too (0218) — here not.
+    expect(events("stop")).toEqual([{ painted: 0, failed: 0, waiting: 3, carried: false }]);
 
     runnerSays(view, { steps: [done(0), step(1), step(2)], running: false, paused: true, runsEnded: 1 });
     expect(events("run_finished")).toEqual([

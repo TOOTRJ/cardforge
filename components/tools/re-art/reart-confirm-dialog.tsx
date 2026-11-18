@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,15 @@ import { publishCredits } from "@/components/billing/credits-bus";
 import { describeCapacity } from "@/lib/billing/capacity-copy";
 import { cn } from "@/lib/utils";
 import type { GenerationJobView } from "@/lib/ai/generation-jobs";
-import { REART_DEFAULT_MODEL, reartCostDetail, reartCostLine, reartModelOf, type ReartRunInput } from "@/lib/tools/re-art/model";
+import {
+  REART_BACKGROUND_HELP,
+  REART_BACKGROUND_LABEL,
+  REART_DEFAULT_MODEL,
+  reartCostDetail,
+  reartCostLine,
+  reartModelOf,
+  type ReartRunInput,
+} from "@/lib/tools/re-art/model";
 import { planReartAction, startReartAction, type ReartPlanned } from "@/lib/tools/re-art/actions";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +43,7 @@ export function ReartConfirmDialog({
   title,
   description,
   licence,
+  background,
   onStarted,
 }: {
   open: boolean;
@@ -46,6 +55,9 @@ export function ReartConfirmDialog({
   /** The style the run paints in names a licensed property, or holds a
    *  reference picture (0214): said before anything is charged. */
   licence?: { ipName: string; reference: boolean };
+  /** "Keep painting if I close this page" (0218): offered for a run long
+   *  enough to walk away from. Absent: not offered. */
+  background?: { checked: boolean; onChange: (next: boolean) => void };
   onStarted: (job: GenerationJobView, skipped: Array<{ name: string; reason: string }>, styleVersion: number) => void;
 }) {
   const [planned, setPlanned] = useState<ReartPlanned | null>(null);
@@ -53,6 +65,7 @@ export function ReartConfirmDialog({
   const [startError, setStartError] = useState<string | null>(null);
   const [starting, startTransition] = useTransition();
   const upgrade = useUpgradeModal();
+  const backgroundId = useId();
   const inputKey = JSON.stringify(input);
 
   // Plan each time it opens on a new run (reset during render; the effect
@@ -194,6 +207,21 @@ export function ReartConfirmDialog({
                 </p>
               ) : null}
             </div>
+            {background && planned.lines.length > 0 ? (
+              <label htmlFor={backgroundId} className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+                <input
+                  id={backgroundId}
+                  type="checkbox"
+                  checked={background.checked}
+                  onChange={(event) => background.onChange(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+                />
+                <span>
+                  {REART_BACKGROUND_LABEL}
+                  <span className="block text-xs text-muted">{REART_BACKGROUND_HELP}</span>
+                </span>
+              </label>
+            ) : null}
             {planned.lines.length > 0 ? (
               <details className="group rounded-lg border border-border/50">
                 <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-foreground">
