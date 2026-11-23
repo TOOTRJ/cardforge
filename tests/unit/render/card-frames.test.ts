@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FrameAssetUnavailableError,
+  LOCAL_TREE_SENTINELS,
   assetOrigins,
   frameAssetPath,
   getFrameDataUrl,
@@ -14,7 +16,7 @@ import {
   preloadFrameAssets,
   resetFrameAssetCacheForTests,
 } from "@/lib/render/card-frames";
-import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
+import { frameManifestEntry, setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 
@@ -67,6 +69,19 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     expect(getFrameDataUrl("tarkirdraconic", "w").startsWith("data:image/png;base64,")).toBe(true);
     expect(getPlateDataUrlForPath("/frames/tarkirdraconic/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("decides 'this tree holds the git files' by a sentinel that is in git and outside the frames manifest", () => {
+    for (const [folder, sentinel] of Object.entries(LOCAL_TREE_SENTINELS)) {
+      expect(sentinel.startsWith(`${folder}/`), sentinel).toBe(true);
+      expect(fs.existsSync(path.join(process.cwd(), "public", sentinel)), sentinel).toBe(true);
+      expect(frameManifestEntry(sentinel), sentinel).toBeNull();
+    }
+  });
+
+  it("next.config.ts keeps public/frames out of every function (the loader fetches git frames from the CDN there)", () => {
+    const config = fs.readFileSync(path.join(process.cwd(), "next.config.ts"), "utf8");
+    expect(config).toMatch(/outputFileTracingExcludes:\s*\{\s*"\*":\s*\[[^\]]*"\.\/public\/frames\/\*\*"/);
   });
 
   it("fetches from the CDN where the frames folder isn't deployed, and memoizes it", async () => {
@@ -251,23 +266,35 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
   const cdnCalls = (spy: ReturnType<typeof serve>) =>
     spy.mock.calls.filter(([url]) => String(url).startsWith("https://cdn.example")).length;
 
-  it("a 503 fails the preload and is not cached: the next render draws the real master — never M15's", async () => {
+  /** The loader's clock (its 30 s retry window), moved by hand. */
+  function clock() {
+    let now = Date.parse("2026-11-23T12:00:00Z");
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    return { advance: (ms: number) => (now += ms) };
+  }
+
+  it("a 503 fails the preload and is not cached: a render after the retry window draws the real master — never M15's", async () => {
     deployed();
+    const time = clock();
     let up = false;
     const spy = serve((url) =>
       url === "https://cdn.example/frames/agclassic/g.png" && up ? pngAnswer(ALPHA_G) : new Response("busy", { status: 503 }),
     );
     await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+    // Inside the window a render fails at once — no second wait on the CDN.
     await expect(preloadFrame("agclassic", "g")).rejects.toThrow(/frames\/agclassic\/g\.png/);
+    expect(cdnCalls(spy)).toBe(1);
     // The renderer's getter never substitutes the default template's frame
     // for a master it never loaded.
     expect(() => getFrameDataUrl("agclassic", "g")).toThrow(FrameAssetUnavailableError);
     expect(spy.mock.calls.some(([url]) => String(url) === m15Url)).toBe(false);
-    // The CDN recovers: the very next render fetches again and draws it.
+    // The CDN recovers: the first render after the window fetches again and
+    // draws it.
     up = true;
+    time.advance(30_001);
     await preloadFrame("agclassic", "g");
     expect(getFrameDataUrl("agclassic", "g")).toBe(dataUrl(ALPHA_G));
-    expect(cdnCalls(spy)).toBe(3);
+    expect(cdnCalls(spy)).toBe(2);
   });
 
   it.each([
@@ -279,12 +306,17 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
     ["an HTML page from the only origin", () => new Response("<html>Sign in</html>", { status: 200, headers: { "content-type": "text/html" } })],
     ["a 401 from the only origin", () => new Response(null, { status: 401 })],
     ["an empty image", () => new Response(new Uint8Array(0), { status: 200, headers: { "content-type": "image/png" } })],
-  ])("%s for a plate or a loyalty badge fails the preload, and the next one fetches again", async (_label, answer) => {
+  ])("%s for a plate or a loyalty badge fails the preload — at once inside the retry window — and the next one after it fetches again", async (_label, answer) => {
     deployed();
+    const time = clock();
     const spy = serve(answer);
     const paths = ["/frames/m15pw/loyaltyup.png", "/frames/agclassic/pt/g.png"];
     await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    expect(cdnCalls(spy)).toBe(2);
     await expect(preloadFrameAssets(paths)).rejects.toThrow(/frames\/m15pw\/loyaltyup\.png, frames\/agclassic\/pt\/g\.png/);
+    expect(cdnCalls(spy)).toBe(2);
+    time.advance(30_001);
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
     expect(cdnCalls(spy)).toBe(4);
   });
 
@@ -304,13 +336,29 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
 
   it("a 404 beside a failure that may pass is no miss", async () => {
     deployed();
+    const time = clock();
     vi.stubEnv("RENDER_ASSET_ORIGIN", "https://busy.example");
     const spy = serve((url) =>
       url.startsWith("https://busy.example") ? new Response(null, { status: 503 }) : new Response(null, { status: 404 }),
     );
     await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+    time.advance(30_001);
     await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
     expect(spy.mock.calls.filter(([url]) => String(url).startsWith("https://busy.example"))).toHaveLength(2);
+  });
+
+  it("an EMPTY public/frames folder is no checkout: the git assets still come from the CDN", async () => {
+    // A deployment that ever carried the folder (next.config.ts keeps it
+    // out — pinned below) must not read every git master as missing.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "pipglyph-empty-frames-"));
+    fs.mkdirSync(path.join(root, "public", "frames"), { recursive: true });
+    deployed();
+    vi.spyOn(process, "cwd").mockReturnValue(root);
+    const spy = serve((url) => (url === "https://cdn.example/frames/agclassic/g.png" ? pngAnswer(ALPHA_G) : new Response(null, { status: 404 })));
+    await preloadFrame("agclassic", "g");
+    expect(getFrameDataUrl("agclassic", "g")).toBe(dataUrl(ALPHA_G));
+    expect(cdnCalls(spy)).toBe(1);
+    fs.rmSync(root, { recursive: true, force: true });
   });
 
   it("loadFrameMasterBytes (the art-window check on a layout save) throws on a CDN failure instead of reading the master as missing", async () => {

@@ -21,12 +21,12 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // WHERE THE BYTES COME FROM — two sources, same bytes, so the bake stays
 // pixel-identical either way:
 //
-//   1. The filesystem (`public/…` under process.cwd()) when the folder is
-//      there: local dev, tests, CI, and any deployment that still traces
-//      the folder into the function. A file absent from a folder that is
-//      there does not exist — nothing is fetched for it.
-//   2. Otherwise (the folder isn't on disk) an HTTP fetch of the same file
-//      from the deployment's own
+//   1. The filesystem (`public/…` under process.cwd()) when this tree
+//      holds the folder's git files (LOCAL_TREE_SENTINELS — a file known to
+//      be in git, never the folder alone): local dev, tests, CI, and any
+//      deployment that still traces the folder into the function. A file
+//      absent beside the sentinel does not exist — nothing is fetched.
+//   2. Otherwise an HTTP fetch of the same file from the deployment's own
 //      static CDN (`${site}/frames/…`). `public/frames` is ~163 MB of PNG
 //      masters; when Next traced it into every function that can reach the
 //      renderer (nearly all of them, via the save-time bake), each
@@ -77,11 +77,12 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // FrameAssetUnavailableError. Only a DEFINITIVE miss is remembered and drawn
 // as absent (a git template with no master for a key falls back to the
 // default template's, an absent plate draws none): a 404 from the
-// deployment, or a file absent from a local tree that IS on disk (a
-// checkout, CI, a test — `public/<folder>` present: that tree is the whole
-// truth, nothing to fetch). Before, one 503 cached the miss and the 1993
-// frame drew M15's master for the rest of the instance's life, its bake
-// stored as current.
+// deployment, or a file absent from a local tree that holds the folder's
+// git files (a checkout, CI, a test: LOCAL_TREE_SENTINELS). A CDN failure
+// is remembered for CDN_FAILURE_RETRY_MS so an outage fails renders at once
+// instead of each waiting out the timeouts — never as a miss. Before, one
+// 503 cached the miss and the 1993 frame drew M15's master for the rest of
+// the instance's life, its bake stored as current.
 // ---------------------------------------------------------------------------
 
 
@@ -137,6 +138,15 @@ class AssetCache {
 
 const CACHE = new AssetCache(MAX_CACHE_CHARS);
 
+/** How long a git asset the CDN just failed on fails at once (loadAsync):
+ *  long enough that an outage doesn't make every render wait out the fetch
+ *  timeouts per asset, short enough that a blip is over by the next sweep. */
+const CDN_FAILURE_RETRY_MS = 30_000;
+
+/** Public-relative path → when its next CDN attempt may run. Never a miss:
+ *  a preload inside the window still throws FrameAssetUnavailableError. */
+const CDN_FAILED_UNTIL = new Map<string, number>();
+
 /** A frame asset a render needs could not be loaded right now — a frames
  *  bucket object, or a git asset whose CDN fetch failed in a way that may
  *  pass (see header). The render fails instead of drawing a stand-in. */
@@ -169,19 +179,33 @@ function relPath(publicPath: string): string {
 // Source 1: filesystem
 // ---------------------------------------------------------------------------
 
+/**
+ * One file per public folder the loader reads that is known to be IN GIT
+ * (never a frames-manifest object): on disk, this tree holds the folder's
+ * git files — a checkout, CI, a test — so a file absent beside it does not
+ * exist; absent, the folder wasn't deployed with the function (Vercel:
+ * next.config.ts traces no `public/frames`) and the CDN has the files.
+ * Never the folder itself: a deployment that ever carried an empty or
+ * partial `public/frames` would read every git master as missing and draw
+ * M15's for the instance's life. tests/unit/render/card-frames.test.ts
+ * holds each to git, outside the manifest.
+ */
+export const LOCAL_TREE_SENTINELS: Readonly<Record<string, string>> = {
+  frames: "frames/agclassic/w.png",
+  watermarks: "watermarks/pipglyph-rose.png",
+};
+
 /** Sync read from public/: the data URL when the file is on disk; `null`
- *  when it isn't but its top folder is (`public/frames`,
- *  `public/watermarks` — a checkout, CI, a test: that tree is the whole
- *  truth, so the asset does not exist); `undefined` when the folder itself
- *  isn't here (Vercel: `public/frames` is not traced into the function —
- *  fetch it from the CDN); UNAVAILABLE when the file is there but can't be
- *  read. */
+ *  when it isn't but this tree holds its folder's git files
+ *  (LOCAL_TREE_SENTINELS — the asset does not exist); `undefined` when the
+ *  tree doesn't (fetch it from the CDN); UNAVAILABLE when the file is there
+ *  but can't be read. */
 function readLocal(rel: string): string | null | undefined | typeof UNAVAILABLE {
   const publicDir = path.join(process.cwd(), "public");
   const abs = path.join(publicDir, rel);
   if (!fs.existsSync(abs)) {
-    const folder = rel.split("/")[0];
-    return folder && fs.existsSync(path.join(publicDir, folder)) ? null : undefined;
+    const sentinel = LOCAL_TREE_SENTINELS[rel.split("/")[0]];
+    return sentinel && fs.existsSync(path.join(publicDir, sentinel)) ? null : undefined;
   }
   try {
     return toDataUrl(fs.readFileSync(abs));
@@ -336,8 +360,23 @@ async function loadAsync(rel: string): Promise<Loaded> {
     return value;
   }
   const local = readLocal(rel);
-  const value = local !== undefined ? local : await fetchRemote(rel);
-  if (value !== UNAVAILABLE) CACHE.set(key, value);
+  if (local === null) console.warn(`[card-frames] ${rel} is not in this checkout's public/ — drawn as absent.`);
+  if (local !== undefined) {
+    if (local !== UNAVAILABLE) CACHE.set(key, local);
+    return local;
+  }
+  // A CDN failure is remembered for a short while — never cached as a miss:
+  // within the window a render fails at once (the bake is retried by the
+  // sweep) instead of every render waiting out the timeouts again.
+  const failedUntil = CDN_FAILED_UNTIL.get(rel);
+  if (failedUntil !== undefined && Date.now() < failedUntil) return UNAVAILABLE;
+  const value = await fetchRemote(rel);
+  if (value === UNAVAILABLE) {
+    CDN_FAILED_UNTIL.set(rel, Date.now() + CDN_FAILURE_RETRY_MS);
+    return value;
+  }
+  CDN_FAILED_UNTIL.delete(rel);
+  CACHE.set(key, value);
   return value;
 }
 
@@ -544,6 +583,7 @@ export function getWatermarkDataUrl(key: string): string {
 /** Test hook — the cache is module-global. */
 export function resetFrameAssetCacheForTests(): void {
   CACHE.clear();
+  CDN_FAILED_UNTIL.clear();
 }
 
 /** Test hook — cache occupancy. */
