@@ -34,3 +34,30 @@ export const FRAME_LIST_UNAVAILABLE_CODE = "FRAME_LIST_UNAVAILABLE";
 export function isVerifiedFramesUnavailable(err: unknown): err is VerifiedFramesUnavailableError {
   return err instanceof VerifiedFramesUnavailableError;
 }
+
+/**
+ * A synchronous, pure gate's answer, reading the verified list ONLY if the
+ * gate looks at it. The gate runs first on an empty probe set that records
+ * any use: untouched, its answer can't depend on the list and stands, and
+ * nothing is read; touched, the list is read (`read` may throw
+ * VerifiedFramesUnavailableError) and the gate runs again on it. So an edit
+ * the gate judges without the list — a stored back face left alone, the
+ * legacy pin — is never refused by a frame-list outage (the edit gates in
+ * updateCardAction: every token and double-faced edit resends its back).
+ */
+export async function withVerifiedKeysIfConsulted<T>(
+  gate: (verifiedKeys: ReadonlySet<string>) => T,
+  read: () => Promise<ReadonlySet<string>>,
+): Promise<T> {
+  let consulted = false;
+  const empty = new Set<string>();
+  const probe = new Proxy(empty, {
+    get(target, property) {
+      consulted = true;
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as ReadonlySet<string>;
+  const answer = gate(probe);
+  return consulted ? gate(await read()) : answer;
+}

@@ -275,4 +275,92 @@ describe("a frame list that can't be read", () => {
     expect(updateOf(stub).title).toBe("Renamed");
     expect(state.verifiedReads).toBe(0);
   });
+
+  // The editor resends the back face on every token and double-faced edit
+  // (`null` for a one-faced token — editBackFacePayload), and those frames
+  // take a back body: the back gate read the list for a plain retitle. It
+  // reads it now only when the gate looks at it — a stored back left alone
+  // never — so none of these edits is refused by an outage.
+  it.each(["m15token", "m20token", "m15tokentext"])("still saves a retitle of a one-faced token on %s", async (template) => {
+    state.existing = storedRow({
+      card_type: "token",
+      supertype: "Creature",
+      subtypes: ["Soldier"],
+      title: "Soldier",
+      power: "1",
+      toughness: "1",
+      color_identity: ["white"],
+      frame_style: { template },
+      back_face: null,
+    });
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Soldier Captain", color_identity: ["white"], back_face: null })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Soldier Captain");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  const back = {
+    title: "Moonrage Brute",
+    card_type: "creature",
+    subtypes: ["Werewolf"],
+    power: "3",
+    toughness: "3",
+    rules_text: "Daybound",
+    art_url: "https://example.com/back.png",
+    frame_style: { template: "m15dfcback" },
+    color_identity: ["white"],
+  };
+  const transform = () =>
+    storedRow({
+      title: "Brutal Cathar",
+      frame_style: { template: "m15dfcfront" },
+      color_identity: ["white"],
+      back_face: back,
+    });
+
+  it("still saves a retitle of a transform card, its back resent as stored", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Brutal Captain", color_identity: ["white"], back_face: { ...back } })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Brutal Captain");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still saves Re-art's new pictures on both faces of a two-faced card", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    const result = await updateCardAction(CARD, {
+      art_url: "https://example.com/new-front.png",
+      back_face: { ...back, art_url: "https://example.com/new-back.png" },
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(updateOf(stub).art_url).toBe("https://example.com/new-front.png");
+    expect((updateOf(stub).back_face as { art_url: string }).art_url).toBe("https://example.com/new-back.png");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still saves a retitle of a transform card whose back is a Saga on the saga back", async () => {
+    const { power: _power, toughness: _toughness, ...words } = back;
+    void _power;
+    void _toughness;
+    const sagaBack = { ...words, card_type: "enchantment", subtypes: ["Saga"], rules_text: "I — Draw a card.", frame_style: { template: "sagadfcback" } };
+    state.existing = storedRow({ frame_style: { template: "m15dfcfront" }, color_identity: ["white"], back_face: sagaBack });
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Renamed", back_face: { ...sagaBack } })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Renamed");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still reads the list — and says try again — when the edit moves the back onto another body", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    // A changed family re-derives the back's body: the gate checks it.
+    expect(await updateCardAction(CARD, { frame_anatomy: { dfcIcon: "moon" } })).toEqual(unavailable);
+    expect(cardWrites(stub)).toHaveLength(0);
+  });
 });
