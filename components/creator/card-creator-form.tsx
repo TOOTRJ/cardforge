@@ -4960,11 +4960,14 @@ export function CardCreatorForm({
   // and height, the borderless walker's tall box — judged from the stored
   // card to the card as this save would store it (the row the payload
   // leaves: its rules text and rows as submittedRulesOf writes them, its
-  // flavour trimmed, a P/T only where the type prints one), with the
-  // verified keys the page was handed. The preview shows what the save
-  // stores: a stored frame that disagrees with its stored text stays, an
-  // unverified move stays (and says so, once), an admin's frame preview
-  // never moves. The edit's payload is main's: the server decides again.
+  // flavour trimmed, a P/T only where the type prints one), with the REAL
+  // verified set the server reads (publishedFrameKeys — never an admin's
+  // `?previewFrames=` pickable set: the server moves a frame only onto a
+  // verified combo). The preview shows what the save stores: a stored frame
+  // that disagrees with its stored text stays, an unverified move stays (and
+  // says so, once), an admin's frame preview never moves. The edit's
+  // payload is main's: the server decides again.
+  const publishedFrameSet = useMemo(() => new Set(publishedFrameKeys), [publishedFrameKeys]);
   const editPrintsPt = showsPowerToughness(
     (watched.card_type || null) as CardType | null,
     parseSubtypes(watched.subtypes_text),
@@ -4993,11 +4996,11 @@ export function CardCreatorForm({
             stored: card,
             next: editFollowNext,
             colorIdentity: card.color_identity,
-            verifiedKeys: verifiedFrameSet,
+            verifiedKeys: publishedFrameSet,
             framePreview: card.frame_preview === true,
           })
         : null,
-    [editFollowNext, card, verifiedFrameSet],
+    [editFollowNext, card, publishedFrameSet],
   );
   const lastEditUnverifiedRef = useRef<FrameTemplate | null>(null);
   useEffect(() => {

@@ -135,6 +135,48 @@ describe("a free account's edit of a creature or spell", () => {
     expect("watermark" in (written(stub) ?? {})).toBe(false);
   });
 
+  // The independent check of #826: the watermark compared alone let a crafted
+  // TYPE change through — card_type is locked in the editor, so only a
+  // crafted payload sends one.
+  it("a land turned creature in one edit gets the Rose, its watermark sent unchanged", async () => {
+    state.existing = stored({ card_type: "land", watermark: null, power: null, toughness: null });
+    const stub = db();
+    expect((await updateCardAction(CARD, { card_type: "creature", watermark: null })).ok).toBe(true);
+    expect(written(stub)?.card_type).toBe("creature");
+    expect(written(stub)?.watermark).toEqual(PIPGLYPH_ROSE_WATERMARK);
+  });
+
+  it("…or in two: off to a land without the Rose, then back to a creature with no watermark sent", async () => {
+    // Step 1, from a Rose creature: a land may carry none.
+    state.existing = stored();
+    let stub = db();
+    expect((await updateCardAction(CARD, { card_type: "land", watermark: null })).ok).toBe(true);
+    expect(written(stub)?.watermark).toBeNull();
+    // Step 2, from the stored land: the type alone brings the Rose back.
+    state.existing = stored({ card_type: "land", watermark: null });
+    stub = db();
+    expect((await updateCardAction(CARD, { card_type: "creature" })).ok).toBe(true);
+    expect(written(stub)?.watermark).toEqual(PIPGLYPH_ROSE_WATERMARK);
+    // Between two Rose types (creature → instant), the same.
+    state.existing = stored({ watermark: null });
+    stub = db();
+    expect((await updateCardAction(CARD, { card_type: "instant", watermark: null })).ok).toBe(true);
+    expect(written(stub)?.watermark).toEqual(PIPGLYPH_ROSE_WATERMARK);
+  });
+
+  it("untouched: the type sent as stored and the watermark sent back leave an older card as it is", async () => {
+    state.existing = stored({ watermark: null });
+    let stub = db();
+    expect((await updateCardAction(CARD, { title: "Renamed", card_type: "creature", watermark: null })).ok).toBe(true);
+    expect(written(stub)?.watermark).toBeNull();
+    // A subscriber's type change keeps what they send.
+    state.paid = true;
+    state.existing = stored({ card_type: "land", watermark: null });
+    stub = db();
+    expect((await updateCardAction(CARD, { card_type: "creature", watermark: null })).ok).toBe(true);
+    expect(written(stub)?.watermark).toBeNull();
+  });
+
   it("a type with no default watermark (a land, a token, a walker) keeps the maker's choice", async () => {
     for (const card_type of ["land", "token", "planeswalker"]) {
       state.existing = stored({ card_type, watermark: null, power: null, toughness: null });

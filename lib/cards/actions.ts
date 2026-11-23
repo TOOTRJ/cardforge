@@ -1278,19 +1278,26 @@ export async function updateCardAction(
     update.face_content = data.face_content ?? null;
   // Free accounts: a creature / spell carries the PipGlyph Rose — the rule
   // createCardAction applies (owner decision 2026-09-17) holds for what an
-  // edit SENDS: a watermark the row doesn't hold (none, another mark) is
-  // stored as the Rose. The creator resends the stored watermark on every
-  // edit (its control is a subscriber's), and that is left as stored — an
-  // edit never changes what its maker did not touch, and no stored card is
-  // rewritten by an edit of something else.
-  if (data.watermark !== undefined) {
-    const sent = data.watermark ?? null;
-    update.watermark =
-      !sameWatermark(sent, existing.watermark) &&
+  // edit CHANGES: a watermark the row doesn't hold (none, another mark), or
+  // a card type the row doesn't hold (card_type is locked in the editor, so
+  // a crafted payload — a land turned creature, in one edit or two), on a
+  // card the edit leaves a creature / spell, is stored as the Rose. The
+  // creator resends the stored watermark on every edit (its control is a
+  // subscriber's) and never sends the type: a card stored as it is keeps its
+  // watermark — an edit never changes what its maker did not touch, and no
+  // stored card is rewritten by an edit of something else.
+  {
+    const watermarkChanged = data.watermark !== undefined && !sameWatermark(data.watermark ?? null, existing.watermark);
+    const typeChanged = data.card_type !== undefined && (data.card_type ?? null) !== (existing.card_type ?? null);
+    if (
+      (watermarkChanged || typeChanged) &&
       usesDefaultWatermark(savedCardType) &&
       !(await getEntitlements()).removeWatermark
-        ? PIPGLYPH_ROSE_WATERMARK
-        : sent;
+    ) {
+      update.watermark = PIPGLYPH_ROSE_WATERMARK;
+    } else if (data.watermark !== undefined) {
+      update.watermark = data.watermark ?? null;
+    }
   }
   // Footer mark: subscribers only — a free account's edit never touches it.
   if (data.footer_text !== undefined) {

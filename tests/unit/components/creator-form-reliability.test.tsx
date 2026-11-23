@@ -1921,6 +1921,20 @@ describe("4.49 (b) the token text box follows the text", () => {
     expect(toast.info).toHaveBeenCalledTimes(1);
   });
 
+  it("an admin's `?previewFrames=` edit follows the REAL verified set, as the server does — never the previewed combos", async () => {
+    // The picker's set holds the previewed text box; the real set doesn't.
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_TEXT_BOX,
+      framePreview: { param: "all", publishedKeys: VERIFIED, walkthrough: null },
+      card: savedCard(SOLDIER),
+    });
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15token");
+    expect(String(toast.info.mock.calls[0]?.[0])).toMatch(/text box isn't verified in white yet/);
+  });
+
   async function goToText() {
     await act(async () => {
       fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
