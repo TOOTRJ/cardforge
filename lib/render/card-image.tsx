@@ -4312,9 +4312,16 @@ export function drawnStatSlots(
  * is built. Exported for tests — keep it in step with the
  * getPlateDataUrlForPath call sites in CardImage.
  */
-export function frameAssetPathsFor(card: CardPreviewData): string[] {
-  const template = normalizeFrameTemplate(card.frameStyle?.template, card);
-  const layout = resolveFrameProfile(template, card.profileOverrides);
+export function frameAssetPathsFor(source: CardPreviewData): string[] {
+  const template = normalizeFrameTemplate(source.frameStyle?.template, source);
+  const layout = resolveFrameProfile(template, source.profileOverrides);
+  // Every text read below is the text CardImage DRAWS: its `~` / CARDNAME
+  // as the name the title bar prints (withSelfNames — CardImage's first
+  // step, the same nickname slot), so a symbol the NAME brings into the
+  // rules is warmed too — the 1993 frame's colour pip of "{G} Wurm" in
+  // "~ attacks each combat." failed a cold bake when only the stored text
+  // was read. The very same object for a card without a token.
+  const card = withSelfNames(source, layout);
   const colorKey = pickFrameColorKey(
     card.colorIdentity as ColorIdentity[] | undefined,
   );
