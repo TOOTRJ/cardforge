@@ -30,7 +30,7 @@ import {
 } from "@/lib/marketing/home-stats";
 import { listPublishedArticles } from "@/lib/content/article-catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
+import { readVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
 import { PageContainer } from "@/components/layout/page-container";
 import { FeaturedDeckThemes } from "@/components/decks/featured-deck-themes";
 import { CardGrid, CARD_GRID_SIZES } from "@/components/cards/card-grid";
@@ -324,11 +324,11 @@ async function LatestGuides() {
  *  EVERY saved card (owner 2026-11-11: 0207's two totals); creators and
  *  decks are the public ones a visitor can go and see. */
 const readHomeCounts = cache(async (): Promise<HomeCounts> => {
-  const [saved, creators, decks, verifiedFrameKeys] = await Promise.all([
+  const [saved, creators, decks, verifiedFrames] = await Promise.all([
     getSavedCardCounts(),
     countPublicCreators(),
     countPublicDecks(),
-    getVerifiedFrameKeysPublic(),
+    readVerifiedFrameKeysPublic(),
   ]);
   return {
     cards: saved.cards,
@@ -336,8 +336,10 @@ const readHomeCounts = cache(async (): Promise<HomeCounts> => {
     decks,
     // Frames the creator actually offers today — the verified set, counted
     // by template. (The catalogue on disk is bigger; only published frames
-    // are an honest number.)
-    frameStyles: new Set(verifiedFrameKeys.map((key) => key.split("/")[0])).size,
+    // are an honest number.) A list that couldn't be read (logged) counts
+    // none, and homeStatBadges leaves the badge out — no number rather than
+    // a wrong one.
+    frameStyles: verifiedFrames.unavailable ? 0 : new Set(verifiedFrames.keys.map((key) => key.split("/")[0])).size,
     cardsThisWeek: saved.cardsThisWeek,
   };
 });

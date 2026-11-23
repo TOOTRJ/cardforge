@@ -20,6 +20,8 @@ const state = vi.hoisted(() => ({
   profile: { is_admin: false } as { is_admin: boolean } | null,
   /** The verified combos (frame_reviews), empty by default. */
   verified: [] as string[],
+  /** The frame list read fails (a PostgREST / pooler hiccup). */
+  verifiedFails: false,
   check: vi.fn(),
   log: vi.fn(),
   byId: vi.fn(),
@@ -32,9 +34,15 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => state.user,
   getCurrentProfile: async () => state.profile,
 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({
-  getVerifiedFrameKeys: async () => state.verified,
-}));
+vi.mock("@/lib/cards/frame-reviews", async () => {
+  const { VerifiedFramesUnavailableError } = await import("@/lib/cards/frame-list-unavailable");
+  return {
+    getVerifiedFrameKeys: async () => {
+      if (state.verifiedFails) throw new VerifiedFramesUnavailableError("connection pool exhausted");
+      return state.verified;
+    },
+  };
+});
 vi.mock("@/lib/scryfall/rate-limit", () => ({
   checkScryfallRateLimit: state.check,
   logScryfallCall: state.log,
@@ -65,6 +73,7 @@ beforeEach(() => {
   state.user = { id: "user-1" };
   state.profile = { is_admin: false };
   state.verified = [];
+  state.verifiedFails = false;
   state.check.mockReset().mockResolvedValue({ ok: true });
   state.log.mockReset().mockResolvedValue(undefined);
   state.byId.mockReset().mockResolvedValue(null);
@@ -174,6 +183,13 @@ describe("GET /api/scryfall/named — no card, and why", () => {
     await get("exact=Llanowar%20Elves");
     expect(state.log).toHaveBeenCalledWith("user-1", "named");
     expect(state.log).toHaveBeenCalledTimes(1);
+  });
+
+  it("a frame list that can't be read is a 503 that says try again — never a landing as if nothing were published", async () => {
+    state.verifiedFails = true;
+    const res = await get("exact=Llanowar%20Elves");
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ ok: false, error: "We couldn't check the frame list just now — try again." });
   });
 });
 

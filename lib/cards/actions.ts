@@ -5,6 +5,11 @@ import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation
 import { revalidatePath } from "next/cache";
 import { addCardAiFields, inheritedAiParts, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
+import {
+  FRAME_LIST_UNAVAILABLE_CODE,
+  FRAME_LIST_UNAVAILABLE_MESSAGE,
+  isVerifiedFramesUnavailable,
+} from "@/lib/cards/frame-list-unavailable";
 import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import {
   cardFieldsFace,
@@ -306,9 +311,30 @@ export type CreateCardOptions = {
 };
 
 
+/** A save the verified frame list couldn't be read for (a PostgREST or
+ *  pooler hiccup, lib/cards/frame-list-unavailable.ts): refused in words
+ *  that say try again — never "that frame isn't available", which is what
+ *  an unread list read as before. Every gate that reads the list runs
+ *  before the row is written, so nothing was saved. */
+function frameListUnavailable(): CardActionFailure {
+  return { ok: false, code: FRAME_LIST_UNAVAILABLE_CODE, formError: FRAME_LIST_UNAVAILABLE_MESSAGE };
+}
+
 export async function createCardAction(
   payload: unknown,
   options: CreateCardOptions = {},
+): Promise<CreateCardResult> {
+  try {
+    return await createCard(payload, options);
+  } catch (err) {
+    if (isVerifiedFramesUnavailable(err)) return frameListUnavailable();
+    throw err;
+  }
+}
+
+async function createCard(
+  payload: unknown,
+  options: CreateCardOptions,
 ): Promise<CreateCardResult> {
   // A payload that still names a RETIRED template (TODO 4.54) saves on the
   // frame its own text asks for, not just the bare one the schema reads.
@@ -818,6 +844,20 @@ export async function createCardAction(
 // ---------------------------------------------------------------------------
 
 export async function updateCardAction(
+  cardId: string,
+  payload: unknown,
+): Promise<UpdateCardResult> {
+  try {
+    return await updateCard(cardId, payload);
+  } catch (err) {
+    // (The edit's gates read the list before the row is written, as the
+    // create's do — frameListUnavailable.)
+    if (isVerifiedFramesUnavailable(err)) return frameListUnavailable();
+    throw err;
+  }
+}
+
+async function updateCard(
   cardId: string,
   payload: unknown,
 ): Promise<UpdateCardResult> {

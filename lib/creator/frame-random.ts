@@ -75,9 +75,10 @@ export const FREE_DESIGN_TYPES: readonly CardType[] = [
 ];
 
 export function typesWithoutPublishedFrame(verifiedKeys: ReadonlySet<string>): CardType[] {
-  // An empty set is an UNKNOWN set, never "nothing is published":
-  // getVerifiedFrameKeys answers [] when its read fails, and treating that
-  // as truth refused every free design (two design calls paid for nothing).
+  // An empty set is an UNKNOWN set, never "nothing is published": a read
+  // that fails throws (VerifiedFramesUnavailableError) and the card-ideas
+  // route hands an empty set here, and treating that as truth refused every
+  // free design (two design calls paid for nothing).
   if (verifiedKeys.size === 0) return [];
   const missing = FREE_DESIGN_TYPES.filter((type) =>
     frameChoicesForType(type, verifiedKeys).every((choice) => choice.availableColorKeys.length === 0),

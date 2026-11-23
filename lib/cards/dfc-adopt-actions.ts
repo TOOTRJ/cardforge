@@ -35,6 +35,7 @@ import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { getCardById } from "@/lib/cards/queries";
 import { REBAKE_PENDING_RENDER } from "@/lib/cards/bake-core";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
@@ -93,7 +94,15 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
 
   // The gates every save passes: verification on the front and the back,
   // the kind gate on the new front.
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let verifiedKeys: Set<string>;
+  try {
+    verifiedKeys = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // An unread list is no verdict on the bodies: try again, never "isn't
+    // available" (lib/cards/frame-list-unavailable.ts).
+    if (isVerifiedFramesUnavailable(err)) return { ok: false, formError: FRAME_LIST_UNAVAILABLE_MESSAGE };
+    throw err;
+  }
   const frontGate = frameGateError(plan.frontBody, existing.color_identity, verifiedKeys);
   if (frontGate) return { ok: false, formError: frontGate };
   const kindGate = frameKindGateError(plan.frontBody, cardFieldsFace(existing));

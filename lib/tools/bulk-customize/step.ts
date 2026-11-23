@@ -8,6 +8,7 @@ import { fetchScryfallArtCrop } from "@/lib/scryfall/art-crop";
 import { checkUploadRateLimit } from "@/lib/media/upload-rate-limit";
 import { userFolder } from "@/lib/media/user-storage";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { remainingCapacity } from "@/lib/billing/capacity-copy";
@@ -284,7 +285,15 @@ export async function customizeSourceStep(
   const card = await getCardById(source.scryfallId);
   if (!card) return failed(step, "Scryfall didn't answer for this card — try it again.");
 
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let verifiedKeys: Set<string>;
+  try {
+    verifiedKeys = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // An unread frame list is no "nothing published": the step fails in
+    // words that say try again, before any picture is paid for.
+    if (isVerifiedFramesUnavailable(err)) return failed(step, FRAME_LIST_UNAVAILABLE_MESSAGE);
+    throw err;
+  }
   const patch = await importPatchOf(card, verifiedKeys);
   const entitlements = await getEntitlements();
   const planned = planCustomizedCard({

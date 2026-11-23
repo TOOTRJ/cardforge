@@ -18,7 +18,9 @@ describe("admin frame preview surfaces", () => {
     const guest = read("app/(marketing)/create-guest/page.tsx");
     expect(guest).not.toMatch(/searchParams/);
     expect(guest).not.toMatch(/previewFrames|resolveFramePreviewMode/);
-    expect(guest).toMatch(/getVerifiedFrameKeysPublic\(\)/);
+    // (The read that says when it failed — readVerifiedFrameKeysPublic — is
+    // the same cookie-free public read.)
+    expect(guest).toMatch(/(get|read)VerifiedFrameKeysPublic\(\)/);
     expect(guest).toMatch(/export const revalidate = \d+/);
   });
 

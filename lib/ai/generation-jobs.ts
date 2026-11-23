@@ -63,6 +63,7 @@ import type {
 } from "@/lib/ai/card-fill-shared";
 import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import {
   colorHintsForFrame,
   resolveDeckCardFrame,
@@ -1004,6 +1005,23 @@ export type CreateCardJobResult =
    *  always says no credits were used. */
   | { ok: false; error: string; code?: "STATION_TIER_UNFILLED" | AiFailureKind };
 
+/** A card or fill plan refused because the verified frame list couldn't be
+ *  read (lib/cards/frame-list-unavailable.ts): before any AI call, nothing
+ *  reserved. */
+const FRAME_LIST_UNAVAILABLE_PLAN = `${FRAME_LIST_UNAVAILABLE_MESSAGE} No credits were used.`;
+
+/** The verified combos a plan is designed against, or null when the list
+ *  can't be read right now — never an empty set standing for "nothing is
+ *  published" (the reader logged the failure). */
+async function planVerifiedKeys(): Promise<Set<string> | null> {
+  try {
+    return new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    if (isVerifiedFramesUnavailable(err)) return null;
+    throw err;
+  }
+}
+
 /** A plan-time design failure: its kind, logged with the raw detail
  *  (server only), and the user's sentence. Nothing was reserved. */
 /** The face a designed card resolves its frame by. */
@@ -1073,8 +1091,11 @@ export async function createCardGenerationJob(
   // When the user locked a specific frame, steer generation toward a color
   // that frame actually has published art for (same logic as the legacy
   // random-card route). A deck brief's dominant color steers the same way
-  // when the frame is left random.
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  // when the frame is left random. A list that can't be read refuses the
+  // plan before any AI call — never a design steered as if nothing were
+  // published.
+  const verifiedKeys = await planVerifiedKeys();
+  if (!verifiedKeys) return { ok: false, error: FRAME_LIST_UNAVAILABLE_PLAN };
   let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
   if (input.frame && input.frame !== "random" && input.cardType) {
     const hints = colorHintsForFrame(input.cardType, input.frame, verifiedKeys);
@@ -1253,7 +1274,8 @@ export async function createCardFillJob(
     });
   }
 
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  const verifiedKeys = await planVerifiedKeys();
+  if (!verifiedKeys) return { ok: false, error: FRAME_LIST_UNAVAILABLE_PLAN };
   const wantsType = input.want.includes("card_type");
   if (input.dfc && wantsType) {
     return createDfcFillJob(input, input.dfc, { userId: user.id, deckContext, deckBrief, verifiedKeys });
@@ -2465,7 +2487,15 @@ async function generatedCardSaveRefusal(userId: string, payload: Record<string, 
     | undefined;
   const template = frameStyle?.template;
   const colors = payload.color_identity as ColorIdentity[] | undefined;
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let verifiedKeys: Set<string>;
+  try {
+    verifiedKeys = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // The create would refuse it the same way (createCardAction): try
+    // again — refunded, unpainted.
+    if (isVerifiedFramesUnavailable(err)) return FRAME_LIST_UNAVAILABLE_MESSAGE;
+    throw err;
+  }
   const gateError = frameGateError(
     template,
     frameGateColors(
