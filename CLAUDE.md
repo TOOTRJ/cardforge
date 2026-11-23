@@ -552,10 +552,10 @@ Rules and gotchas:
   Retry-After, never 409. A card failing 3 runs goes on the poison list
   (skipped until "Retry"; dropped once it no longer owes a re-bake); a run
   that dies (maxDuration, OOM) is detected by the next one, which strikes the
-  batch it left in `in_flight`. A card a frame asset stops is set aside and
-  retried; two on one asset are an outage (no strike, a failing run), one on
-  its own broken asset is struck from its 3rd run (`ASSET_STOP_RUNS`). The
-  breaker (whole batch / 10 new failures /
+  batch it left in `in_flight`. A frame asset that won't load is an outage
+  (no strike, a failing run) — a git/CDN one always; only a frames-bucket
+  object can be one card's own: set aside, retried, struck from its 3rd run
+  (`ASSET_STOP_RUNS`). The breaker (whole batch / 10 new failures /
   hung batch / batch query failing 3 runs / 2 dead runs / a run pushing the
   poison list past 50) pauses it and sends every admin a
   `render_sweep_paused` notification; `/admin/renders` = status + Pause /

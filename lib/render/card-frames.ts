@@ -81,9 +81,10 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // git files (a checkout, CI, a test: LOCAL_TREE_SENTINELS). After a CDN
 // TIMEOUT, or an asset's second failure in a row (never one 5xx), it fails
 // at once for CDN_FAILURE_RETRY_MS so an outage doesn't make every render
-// wait out the timeouts — never cached as a miss. A re-bake batch sets a
-// card it can't load an asset for aside and strikes no card for an asset
-// that is down for everyone (lib/cards/rebake-batch.ts). Before, one
+// wait out the timeouts — never cached as a miss. A re-bake batch reads an
+// asset that won't load as an outage and strikes no card for it — a git
+// asset always; only a bucket object can be one card's own
+// (lib/cards/rebake-batch.ts outageOf). Before, one
 // 503 cached the miss and the 1993 frame drew M15's master for the rest of
 // the instance's life, its bake stored as current.
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
 import { FrameAssetUnavailableError } from "@/lib/render/card-frames";
+import { frameManifestEntry } from "@/lib/frames/frame-url";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
   removeRenderObjects,
@@ -140,26 +141,37 @@ export type RebakeBatchResult = {
   /** Work left in scope after this call (excluding `skipIds`). Exact for the
    *  marked scope (a count query); a lower bound for the others. */
   remaining: number;
-  /** The frame assets two cards of the batch couldn't load
-   *  (FrameAssetUnavailableError): the asset itself is down for every card
-   *  that draws it — the CDN, the frames bucket, an object missing or not
-   *  matching the manifest. The batch STOPPED at the second card: those
-   *  cards and the rest were neither baked nor failed, so no card is struck;
-   *  the caller treats it as an infrastructure fault
-   *  (frameAssetsUnavailableMessage, lib/cards/auto-rebake-state.ts). */
+  /** The frame assets of an OUTAGE (outageOf): a git asset the site CDN
+   *  couldn't serve, or frames-bucket objects two cards couldn't load. The
+   *  batch STOPPED there: that card and the rest were neither baked nor
+   *  failed, so no card is struck; the caller treats it as an
+   *  infrastructure fault (frameAssetsUnavailableMessage,
+   *  lib/cards/auto-rebake-state.ts). */
   assetsUnavailable?: string[];
-  /** Cards a frame asset stopped twice — on their turn and once more at the
-   *  batch's end — while the other cards rendered: the fault looks like the
-   *  card's own (a master of its template never published), but one batch
-   *  can't tell a long blip from a missing object. Neither processed nor
-   *  failed: the caller decides (the automatic re-bake strikes one after
-   *  ASSET_STOP_RUNS runs in a row on the same asset; a manual run reports
-   *  it failed). */
+  /** A card a frames-BUCKET object stopped twice — on its turn and once more
+   *  at the batch's end — while the other cards rendered: the fault looks
+   *  like the card's own (its template × colour's object missing or not
+   *  matching the manifest), but one batch can't tell a long blip from a
+   *  missing object. Neither processed nor failed: the caller decides (the
+   *  automatic re-bake strikes it from its ASSET_STOP_RUNS-th run in a row;
+   *  a manual run reports it failed). At most one per batch. */
   assetStops?: AssetStop[];
 };
 
 /** A card a frame asset stopped, and the asset's paths. */
 export type AssetStop = { id: string; paths: string[] };
+
+/** The paths of an OUTAGE a frame-asset stop reveals, or null when it may be
+ *  the card's own fault: any GIT asset (no manifest entry — the site CDN
+ *  failing; a 404 never reaches here), or a second card stopped on a
+ *  frames-bucket object in the batch (`earlier`: the card already set
+ *  aside's) — the bucket failing. Exported for tests. */
+export function outageOf(paths: readonly string[], earlier: readonly string[] | undefined): string[] | null {
+  const git = paths.filter((path) => !frameManifestEntry(path));
+  if (git.length > 0) return git;
+  if (earlier) return [...new Set([...earlier, ...paths])];
+  return null;
+}
 
 /** One card's bake in a batch (runRebakeBatch's bakeOne). */
 type CardOutcome =
@@ -406,37 +418,45 @@ export async function runRebakeBatch(
     else failed.push({ id, error: outcome.error });
   };
 
-  // A frame asset that can't be loaded is the CDN's or the bucket's fault
-  // until shown otherwise: the card is SET ASIDE (neither baked nor failed)
-  // and the batch goes on. A second card stopped on the same asset means the
-  // asset itself is down for every card that draws it: the batch STOPS there
-  // (`assetsUnavailable` — the caller's infrastructure fault; no card
-  // struck). Otherwise each card set aside is tried once more at the end — a
-  // blip has passed by then (one 5xx opens no fail-fast window) — and one
-  // that stops on its asset again while the others rendered is reported in
-  // `assetStops`: it looks like the card's own (a master never published),
-  // and the caller decides when to strike it.
-  const setAside: Array<(typeof batch)[number] & { paths: string[] }> = [];
+  // A frame asset that can't be loaded is an OUTAGE — the batch STOPS there
+  // (`assetsUnavailable`: the caller's infrastructure fault, no card struck)
+  // — unless it can be one card's own fault:
+  //   * a GIT asset (no frames-manifest entry: fetched from the site CDN)
+  //     never is — a 404 is already a definitive miss, drawn as absent, so
+  //     what remains is the CDN failing, for every card that draws it (each
+  //     git template's card meets a different path, so no path is shared);
+  //   * a frames-BUCKET object may be (published in the manifest, then
+  //     missing or not matching its sha256: one card's template × colour).
+  //     The FIRST card a bucket object stops is SET ASIDE (neither baked nor
+  //     failed) and the batch goes on; a second card stopped on any bucket
+  //     object means the bucket is failing — an outage. Otherwise the card
+  //     is tried once more at the end (a blip has passed by then; one 5xx
+  //     opens no fail-fast window), and if its asset stops it again while
+  //     the others rendered it is reported in `assetStops`: the caller
+  //     decides when to strike it.
+  let setAside: ((typeof batch)[number] & { paths: string[] }) | null = null;
   let assetsUnavailable: string[] | null = null;
+  const assetStops: AssetStop[] = [];
   for (const item of batch) {
     const outcome = await bakeOne(item);
     if (outcome.kind !== "asset") {
       record(item.row.id, outcome);
       continue;
     }
-    const shared = outcome.paths.filter((path) => setAside.some((aside) => aside.paths.includes(path)));
-    if (shared.length > 0) {
-      assetsUnavailable = shared;
+    const outage = outageOf(outcome.paths, setAside?.paths);
+    if (outage) {
+      assetsUnavailable = outage;
       break;
     }
-    setAside.push({ ...item, paths: outcome.paths });
+    setAside = { ...item, paths: outcome.paths };
   }
-  const assetStops: AssetStop[] = [];
-  if (!assetsUnavailable) {
-    for (const item of setAside) {
-      const outcome = await bakeOne(item);
-      if (outcome.kind === "asset") assetStops.push({ id: item.row.id, paths: outcome.paths });
-      else record(item.row.id, outcome);
+  if (setAside && !assetsUnavailable) {
+    const outcome = await bakeOne(setAside);
+    if (outcome.kind !== "asset") {
+      record(setAside.row.id, outcome);
+    } else {
+      assetsUnavailable = outageOf(outcome.paths, undefined);
+      if (!assetsUnavailable) assetStops.push({ id: setAside.row.id, paths: outcome.paths });
     }
   }
 

@@ -12914,21 +12914,28 @@ they show a change at once.
   a re-bake (the owner saved it again, unpublished or deleted it) leaves the
   list on the next working run.
 - **Frame assets that won't load.** A card whose render can't load a frame
-  asset (`FrameAssetUnavailableError`: the site CDN or the frames bucket
-  failed, or a bucket object is missing or doesn't match the manifest) is no
-  failure yet. The batch **sets it aside**, goes on, and tries it once more
-  at the end — a blip has passed by then, and the card bakes.
-  - **Two cards on the same asset** mean the asset is down for every card
-    that draws it: an **outage**. The batch stops there and strikes no card
-    (`assetsUnavailable`); the run ends as "Stopped on an error", and the
-    breaker pauses after 3 such runs in a row.
-  - **A card on its own broken asset** (it stops again on its retry while
-    the others render) is skipped for the rest of the run — the cards behind
-    it are baked — and struck, with the asset as the reason, only from its
-    3rd run in a row on that asset (`ASSET_STOP_RUNS`). It is struck again
-    each run after, so it reaches the poison list on its 5th run and
-    **Retry these cards** works as for any poisoned card. One blip strikes
-    nothing.
+  asset (`FrameAssetUnavailableError`) is no failure of the card's: it is
+  an **outage** — the batch stops there and strikes no card
+  (`assetsUnavailable`); the run ends as "Stopped on an error", and the
+  breaker pauses after 3 such runs in a row — unless the asset is the one
+  kind that can be a card's own fault:
+  - **A git asset** (no frames-manifest entry, fetched from the site CDN:
+    the 1993, Avatar, Bloomburrow and Tarkir frames, git plates, the
+    walker's loyalty badges) is always an outage. A 404 is already a miss
+    drawn as absent, so what is left is the CDN failing — for every card
+    that draws it, each on its own path.
+  - **A frames-bucket object** (a manifest entry missing from the bucket,
+    or not matching its sha256) may be one card's. The first card one stops
+    is **set aside**: the batch goes on and tries it once more at the end —
+    a blip has passed by then, and the card bakes. A second card stopped on
+    any bucket object means the bucket is failing: an outage.
+  - **A card on its own broken bucket object** (it stops again on its retry
+    while the others render) is skipped for the rest of the run — the cards
+    behind it are baked — and struck, with the object as the reason, only
+    from its 3rd run in a row (`ASSET_STOP_RUNS`: the card's streak,
+    whichever objects it names). It is struck again each run after, so it
+    reaches the poison list on its 5th run and **Retry these cards** works
+    as for any poisoned card. One blip strikes nothing.
 - **A run that dies.** A run killed at the 300 s limit or out of memory
   writes nothing. It records the batch it is baking first (`in_flight`), so
   the next run gives each of those cards a strike: a card that kills the
@@ -13073,7 +13080,7 @@ quotes the reason. Find the reason, fix the cause, then **Resume**:
 | "A whole batch failed (N cards): …" | Systemic: a renderer regression, storage or the frames bucket unreachable, a frame object not promoted | Read the error it quotes; check the latest deploy and `npm run frames:check`; fix, then Resume |
 | "N cards failed to re-bake in one run …" | Same as above, spread over several batches | Same |
 | "A re-bake batch was still running after N s — a render may hang" | A card hangs the renderer, or storage stalled | The last run lists the cards in that batch. A hang strikes no card, so Resume retries the same cards: a one-off stall passes; the same batch hanging again is a renderer bug, keep it paused and fix it |
-| "The re-bake batch failed N runs in a row: …" | The batch query fails: a deploy reads a column its migration hasn't applied yet, or the database is down. Or, when the rest reads "Frame assets unavailable (the site CDN or the frames bucket): <paths>", a frame asset two cards need won't load: the CDN or the frames bucket is down, or the object is missing or doesn't match the manifest (it adds "Resume won't help until it loads again" when it was the same asset every run) | Check that production's migrations applied after the merge and that the database answers; Resume once the query works. For a frame asset: open its URL, run `npm run frames:check`, publish / promote the object again if it is missing, and Resume once it loads — before then the sweep pauses again |
+| "The re-bake batch failed N runs in a row: …" | The batch query fails: a deploy reads a column its migration hasn't applied yet, or the database is down. Or, when the rest reads "Frame assets unavailable (the site CDN or the frames bucket): <paths>", a frame-asset outage: the site CDN can't serve a git asset, or the frames bucket fails for two cards (down, or the object is missing or doesn't match the manifest); it adds "Resume won't help until it loads again" when it was the same asset every run | Check that production's migrations applied after the merge and that the database answers; Resume once the query works. For a frame asset: open its URL, run `npm run frames:check`, publish / promote the object again if it is missing, and Resume once it loads — before then the sweep pauses again |
 | "N automatic runs in a row died before finishing …" | A card crashes the function (time limit, out of memory) | Its batch got a strike each (listed on the last run). Check Vercel's function logs; Resume — a crasher reaches the poison list after 3 strikes |
 | "N cards keep failing (more than 50) …" | Something wrong beyond single cards | Look for the common error on the list; fix; Retry these cards; Resume (it trips once, so Resume carries on past cards you can't fix yet) |
 | "Paused by @…" | An admin paused it (not the breaker) | Ask them, or Resume |
@@ -13108,12 +13115,13 @@ may be left in scope) and checking that a few re-baked renders are
 reachable.
 
 Frame assets, on both manual drivers (this route and the compare page's
-`/api/admin/rebake-marked`): a card on its own broken asset (the batch's
-`assetStops`) comes back in `failed` with the asset as the reason — the
-script goes on and stops on it at the end, as on any card that keeps
-failing; the compare page's loop skips it. An outage (two cards on the same
-asset) answers `503` with `Retry-After: 60`, naming the asset: the script
-backs off and retries, the compare page stops and shows it.
+`/api/admin/rebake-marked`): a card on its own broken bucket object (the
+batch's `assetStops`) comes back in `failed` with the object as the reason
+— the script goes on and stops on it at the end, as on any card that keeps
+failing; the compare page's loop skips it. An outage (any git asset the CDN
+can't serve, or bucket objects two cards can't load) answers `503` with
+`Retry-After: 60`, naming the asset: the script backs off and retries, the
+compare page stops and shows it.
 
 Against production (owner), in a terminal:
 

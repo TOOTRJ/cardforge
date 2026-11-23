@@ -33,6 +33,7 @@ import {
 } from "@/lib/cards/auto-rebake";
 import { CARD_LAYOUT_VERSION, latestSweepVersion } from "@/lib/cards/layout-version";
 import {
+  ASSET_STOPS_KEPT,
   BREAKER_ERROR_RUNS,
   CRASHED_BATCH_ERROR,
   POISON_AFTER_STRIKES,
@@ -698,8 +699,8 @@ describe("runAutoRebake — a frame asset the CDN can't serve", () => {
   // The re-check's probe: a card whose own asset never loads (a master never
   // published) used to stop every batch first, the cards behind it never
   // tried, and the breaker paused the sweep again after every Resume.
-  it("a card whose own asset never loads: the rest are baked at once; it is struck from its 3rd run and poisoned with the asset reason — never a pause", async () => {
-    const STUCK = { id: id(1), paths: ["frames/never-promoted/w.png"] };
+  it("a card whose own bucket object never loads: the rest are baked at once; it is struck from its 3rd run and poisoned with the asset reason — never a pause", async () => {
+    const STUCK = { id: id(1), paths: ["frames/m15/w.png"] };
     const strikesAfter: Array<number | undefined> = [];
     for (let run = 1; run <= 5; run += 1) {
       t = T0 + run * 300_000;
@@ -718,10 +719,37 @@ describe("runAutoRebake — a frame asset the CDN can't serve", () => {
     // and 4th, poisoned on the 5th — the normal way, with the asset reason.
     expect(strikesAfter).toEqual([undefined, undefined, 1, 2, undefined]);
     expect(db.row.poison).toEqual([
-      expect.objectContaining({ id: id(1), error: expect.stringMatching(/Frame assets unavailable .*frames\/never-promoted\/w\.png — for this card alone, 5 runs in a row/) }),
+      expect.objectContaining({ id: id(1), error: expect.stringMatching(/Frame assets unavailable .*frames\/m15\/w\.png — for this card alone, 5 runs in a row/) }),
     ]);
     expect(db.row.paused).toBeFalsy();
     expect(db.notifications).toEqual([]);
+  });
+
+  it("the streak is the CARD's: a card missing two objects that names either one run to run is still struck on its 3rd", async () => {
+    // Its preload is one Promise.all: either object may be the one reported.
+    const paths = [["frames/m15/w.png"], ["frames/saga/w.png"], ["frames/m15/w.png", "frames/saga/w.png"]];
+    for (let run = 1; run <= 3; run += 1) {
+      t = T0 + run * 300_000;
+      script([{ assetStops: [{ id: id(1), paths: paths[run - 1] }] }, {}]);
+      const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+      if (!result.ok || result.outcome !== "ran") throw new Error(`expected run ${run}`);
+      expect(result.summary.assetStops?.[0]?.runs, `run ${run}`).toBe(run);
+    }
+    // Struck on the 3rd, the reason naming the latest objects.
+    expect(db.row.strikes).toMatchObject({
+      [id(1)]: { n: 1, error: expect.stringMatching(/frames\/m15\/w\.png, frames\/saga\/w\.png — for this card alone, 3 runs in a row/) },
+    });
+  });
+
+  it("the summary keeps the longest streaks first: a crowd of new stops never holds a card's streak back", async () => {
+    setup({ last_run: { stop: "done", finishedAt: new Date(T0 - 300_000).toISOString(), assetStops: [{ id: id(1), paths: ["frames/m15/w.png"], runs: 2 }] } });
+    const crowd = Array.from({ length: 70 }, (_, i) => ({ id: id(100 + i), paths: ["frames/saga/w.png"] }));
+    script([{ assetStops: [...crowd, { id: id(1), paths: ["frames/m15/w.png"] }] }, {}]);
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary.assetStops).toHaveLength(ASSET_STOPS_KEPT);
+    expect(result.summary.assetStops?.[0]).toEqual({ id: id(1), paths: ["frames/m15/w.png"], runs: 3 });
+    expect(db.row.strikes).toMatchObject({ [id(1)]: { n: 1 } });
   });
 
   it("a card set aside for one run only is never struck", async () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { chainClient, called, payloadOf, type ChainAnswer, type ChainCall } from "@/tests/stubs/supabase-chain";
 
 // ---------------------------------------------------------------------------
@@ -55,6 +55,7 @@ vi.mock("@/lib/cards/layout-version", async (importOriginal) => {
 
 import {
   countMarkedRenders,
+  outageOf,
   parseRebakeScope,
   rebakeVerdictFor,
   runRebakeBatch,
@@ -471,109 +472,143 @@ describe("runRebakeBatch", () => {
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
   });
 
-  // A frame asset that can't be loaded (FrameAssetUnavailableError) is no
-  // fault of the card's until shown otherwise: the card is set aside, the
-  // batch goes on, and the card is tried once more at the end.
-  const assetDown = (path: string) => async () => {
-    throw new FrameAssetUnavailableError([path]);
-  };
-  const png = async () => new Response(new Uint8Array([137, 80, 78, 71]));
-  const uploadedIds = () => mocks.upload.mock.calls.map((call) => (call as unknown[])[1]);
+  // A frame asset that can't be loaded (FrameAssetUnavailableError): an
+  // OUTAGE (the batch stops, no card failed) unless it can be the card's own
+  // fault — only a frames-BUCKET object can (outageOf). Git assets come
+  // from the site CDN, where a 404 is already a miss drawn as absent.
+  describe("frame assets that can't be loaded", () => {
+    // Git (no manifest entry): the 1993 frame, Bloomburrow, the walker's
+    // loyalty badge. Bucket (manifest entries): the M15 and saga masters.
+    const GIT_BADGE = "frames/m15pw/loyaltyup.png";
+    const GIT_1993 = "frames/agclassic/w.png";
+    const GIT_BLB = "frames/bloomburrow/g.png";
+    const BUCKET_M15 = "frames/m15/w.png";
+    const BUCKET_SAGA = "frames/saga/w.png";
+    const assetDown = (path: string) => async () => {
+      throw new FrameAssetUnavailableError([path]);
+    };
+    const png = async () => new Response(new Uint8Array([137, 80, 78, 71]));
+    const uploadedIds = () => mocks.upload.mock.calls.map((call) => (call as unknown[])[1]);
+    afterEach(() => {
+      // Never leave a queued answer to the next test.
+      mocks.render.mockReset();
+      mocks.render.mockImplementation(png);
+    });
 
-  it("one blip costs nothing: the card set aside is baked on its second try, after the others", async () => {
-    mocks.render.mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"));
-    const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 0, markedAmongIds: 0 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.processed.map((p) => p.id)).toEqual(["walker-2", "walker-3", "walker-1"]);
-    expect(result.failed).toEqual([]);
-    expect(result.assetStops).toBeUndefined();
-    expect(result.assetsUnavailable).toBeUndefined();
-    expect(mocks.render).toHaveBeenCalledTimes(4);
-  });
+    it("outageOf: a git asset is always an outage; a bucket object only beside a second card's", () => {
+      expect(outageOf([GIT_BADGE], undefined)).toEqual([GIT_BADGE]);
+      expect(outageOf([BUCKET_M15, GIT_1993], undefined)).toEqual([GIT_1993]);
+      expect(outageOf([BUCKET_M15], undefined)).toBeNull();
+      expect(outageOf([BUCKET_SAGA], [BUCKET_M15])).toEqual([BUCKET_M15, BUCKET_SAGA]);
+    });
 
-  it("a card whose own asset never loads is reported in assetStops — the cards behind it are baked, nothing failed", async () => {
-    // The re-check's probe: render always throws for the stuck card's
-    // never-promoted master; good-1 and good-2 are never held up by it.
-    mocks.render
-      .mockImplementationOnce(assetDown("frames/never-promoted/w.png"))
-      .mockImplementationOnce(png)
-      .mockImplementationOnce(png)
-      .mockImplementationOnce(assetDown("frames/never-promoted/w.png"));
-    const stub = db([row("stuck"), row("good-1"), row("good-2")], { markedCount: 1, markedAmongIds: 1 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.processed.map((p) => p.id)).toEqual(["good-1", "good-2"]);
-    expect(uploadedIds()).toEqual(["good-1", "good-2"]);
-    expect(result.failed).toEqual([]);
-    expect(result.assetStops).toEqual([{ id: "stuck", paths: ["frames/never-promoted/w.png"] }]);
-    expect(result.assetsUnavailable).toBeUndefined();
-    // (The marked count leaves the card set aside out, as a failed one.)
-    expect(result.remaining).toBe(0);
-  });
-
-  it("two cards on the SAME asset STOP the batch: the asset is down for everyone — no card failed, none retried", async () => {
-    mocks.render.mockImplementation(assetDown("frames/m15pw/loyaltyup.png"));
-    try {
-      const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 3, markedAmongIds: 0 });
+    it("a lone walker whose git loyalty badge never loads is an OUTAGE — never its own fault, never struck", async () => {
+      mocks.render.mockImplementation(assetDown(GIT_BADGE));
+      const stub = db([row("walker")], { markedCount: 1, markedAmongIds: 0 });
       const result = await run(stub);
       if (!result.ok) throw new Error(result.error);
-      expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
+      expect(result.assetsUnavailable).toEqual([GIT_BADGE]);
+      expect(result.assetStops).toBeUndefined();
+      expect(result.failed).toEqual([]);
+      // No retry: a CDN failure is the CDN's.
+      expect(mocks.render).toHaveBeenCalledTimes(1);
+    });
+
+    it("two cards on DIFFERENT git assets with the CDN down: an outage at the first, no card failed", async () => {
+      mocks.render.mockImplementationOnce(assetDown(GIT_1993)).mockImplementationOnce(assetDown(GIT_BLB));
+      const stub = db([row("alpha"), row("bloom"), row("other")], { markedCount: 3, markedAmongIds: 0 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.assetsUnavailable).toEqual([GIT_1993]);
       expect(result.assetStops).toBeUndefined();
       expect(result.failed).toEqual([]);
       expect(result.processed).toEqual([]);
-      expect(mocks.render).toHaveBeenCalledTimes(2);
+      expect(mocks.render).toHaveBeenCalledTimes(1);
       expect(mocks.upload).not.toHaveBeenCalled();
-    } finally {
-      mocks.render.mockImplementation(png);
-    }
-  });
+    });
 
-  it("cards baked before an asset stop stay baked and reported", async () => {
-    mocks.render
-      .mockImplementationOnce(png)
-      .mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"))
-      .mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"));
-    const stub = db([row("first"), row("walker-1"), row("walker-2")], { markedCount: 2, markedAmongIds: 0 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.processed.map((p) => p.id)).toEqual(["first"]);
-    expect(result.failed).toEqual([]);
-    expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
-  });
+    it("cards baked before an outage stay baked and reported", async () => {
+      mocks.render.mockImplementationOnce(png).mockImplementationOnce(assetDown(GIT_BADGE));
+      const stub = db([row("first"), row("walker-1"), row("walker-2")], { markedCount: 2, markedAmongIds: 0 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["first"]);
+      expect(result.failed).toEqual([]);
+      expect(result.assetsUnavailable).toEqual([GIT_BADGE]);
+    });
 
-  it("cards on DIFFERENT missing assets are each their own: set aside, retried, reported in assetStops", async () => {
-    mocks.render
-      .mockImplementationOnce(assetDown("frames/a/w.png"))
-      .mockImplementationOnce(png)
-      .mockImplementationOnce(assetDown("frames/b/w.png"))
-      .mockImplementationOnce(assetDown("frames/a/w.png"))
-      .mockImplementationOnce(assetDown("frames/b/w.png"));
-    const stub = db([row("a"), row("ok"), row("b")], { markedCount: 2, markedAmongIds: 2 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.processed.map((p) => p.id)).toEqual(["ok"]);
-    expect(result.assetStops).toEqual([
-      { id: "a", paths: ["frames/a/w.png"] },
-      { id: "b", paths: ["frames/b/w.png"] },
-    ]);
-    expect(result.failed).toEqual([]);
-  });
+    it("a bucket blip costs nothing: the card set aside is baked on its second try, after the others", async () => {
+      mocks.render.mockImplementationOnce(assetDown(BUCKET_M15));
+      const stub = db([row("c1"), row("c2"), row("c3")], { markedCount: 0, markedAmongIds: 0 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["c2", "c3", "c1"]);
+      expect(result.failed).toEqual([]);
+      expect(result.assetStops).toBeUndefined();
+      expect(result.assetsUnavailable).toBeUndefined();
+      expect(mocks.render).toHaveBeenCalledTimes(4);
+    });
 
-  it("a back face whose frame asset can't be loaded is set aside the same way", async () => {
-    const backDown = {
-      ok: false,
-      error: "Back face render failed: Frame asset(s) unavailable: frames/agclassic/g.png",
-      assetsUnavailable: ["frames/agclassic/g.png"],
-    } as never;
-    mocks.back.mockResolvedValueOnce(backDown).mockResolvedValueOnce({ ok: true, png: null }).mockResolvedValueOnce(backDown);
-    const stub = db([row("dfc"), row("good")], { markedCount: 1, markedAmongIds: 1 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.processed.map((p) => p.id)).toEqual(["good"]);
-    expect(result.assetStops).toEqual([{ id: "dfc", paths: ["frames/agclassic/g.png"] }]);
-    expect(result.failed).toEqual([]);
-    expect(uploadedIds()).toEqual(["good"]);
+    it("a bucket object missing for ONE card: set aside, reported in assetStops — the cards behind it baked, nothing failed", async () => {
+      mocks.render
+        .mockImplementationOnce(assetDown(BUCKET_M15))
+        .mockImplementationOnce(png)
+        .mockImplementationOnce(png)
+        .mockImplementationOnce(assetDown(BUCKET_M15));
+      const stub = db([row("stuck"), row("good-1"), row("good-2")], { markedCount: 1, markedAmongIds: 1 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["good-1", "good-2"]);
+      expect(uploadedIds()).toEqual(["good-1", "good-2"]);
+      expect(result.failed).toEqual([]);
+      expect(result.assetStops).toEqual([{ id: "stuck", paths: [BUCKET_M15] }]);
+      expect(result.assetsUnavailable).toBeUndefined();
+      // (The marked count leaves the card set aside out, as a failed one.)
+      expect(result.remaining).toBe(0);
+    });
+
+    it("a second card on a bucket object — the same or another — is the bucket failing: an outage, none retried", async () => {
+      for (const second of [BUCKET_M15, BUCKET_SAGA]) {
+        mocks.render.mockReset();
+        mocks.render.mockImplementationOnce(assetDown(BUCKET_M15)).mockImplementationOnce(assetDown(second));
+        const stub = db([row("a"), row("b"), row("c")], { markedCount: 3, markedAmongIds: 0 });
+        const result = await run(stub);
+        if (!result.ok) throw new Error(result.error);
+        expect(result.assetsUnavailable, second).toEqual([...new Set([BUCKET_M15, second])]);
+        expect(result.assetStops).toBeUndefined();
+        expect(result.failed).toEqual([]);
+        expect(mocks.render).toHaveBeenCalledTimes(2);
+      }
+    });
+
+    it("a set-aside card whose retry meets a git asset is an outage, not its own fault", async () => {
+      mocks.render
+        .mockImplementationOnce(assetDown(BUCKET_M15))
+        .mockImplementationOnce(png)
+        .mockImplementationOnce(assetDown(GIT_BADGE));
+      const stub = db([row("aside"), row("good")], { markedCount: 1, markedAmongIds: 0 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["good"]);
+      expect(result.assetsUnavailable).toEqual([GIT_BADGE]);
+      expect(result.assetStops).toBeUndefined();
+    });
+
+    it("a back face whose bucket object can't be loaded is set aside the same way", async () => {
+      const backDown = {
+        ok: false,
+        error: "Back face render failed: Frame asset(s) unavailable: frames/m15/w.png",
+        assetsUnavailable: [BUCKET_M15],
+      } as never;
+      mocks.back.mockResolvedValueOnce(backDown).mockResolvedValueOnce({ ok: true, png: null }).mockResolvedValueOnce(backDown);
+      const stub = db([row("dfc"), row("good")], { markedCount: 1, markedAmongIds: 1 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["good"]);
+      expect(result.assetStops).toEqual([{ id: "dfc", paths: [BUCKET_M15] }]);
+      expect(result.failed).toEqual([]);
+      expect(uploadedIds()).toEqual(["good"]);
+    });
   });
 
   it("refuses the whole batch when the override STAMPS can't be read — never a guard on an empty map", async () => {

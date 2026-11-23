@@ -13,6 +13,7 @@ import {
   ASSET_STOP_RESUME_NOTE,
   ASSET_STOP_RUNS,
   assetStopRunsAfter,
+  keptAssetStops,
   BREAKER_ERROR_RUNS,
   breakerAfterBatch,
   breakerForPoison,
@@ -71,13 +72,14 @@ import {
 //      are dropped), the breaker, one state write, admin alert, release, and
 //      ONE log line (formatRunLog). A batch query that fails
 //      BREAKER_ERROR_RUNS runs in a row trips the breaker too — and so does
-//      a frame asset the CDN or the frames bucket can't serve to ANY card
-//      (the batch's `assetsUnavailable`: an infrastructure stop that strikes
-//      no card; the pause reason says Resume won't help while it is the same
-//      asset run after run). A card a frame asset stops on its own (the
-//      batch's `assetStops`) is skipped for the run and struck only from its
-//      ASSET_STOP_RUNS-th run in a row on the same asset, then poisoned the
-//      normal way — the sweep never stalls behind it.
+//      a frame-asset outage (the batch's `assetsUnavailable`: any git asset
+//      the site CDN can't serve, or bucket objects two cards can't load — an
+//      infrastructure stop that strikes no card; the pause reason says
+//      Resume won't help while it is the same asset run after run). A card a
+//      frames-bucket object stops on its own (the batch's `assetStops`) is
+//      skipped for the run and struck only from its ASSET_STOP_RUNS-th run
+//      in a row, then poisoned the normal way — the sweep never stalls
+//      behind it.
 // ---------------------------------------------------------------------------
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -490,9 +492,10 @@ export async function runAutoRebake(
       supersededTimes.set(id, times);
       if (times >= SUPERSEDED_LIMIT) skip.add(id);
     }
-    // A card a frame asset stopped on its own (the others rendered): skipped
-    // for the rest of the run, and struck — with the asset as its reason —
-    // only once it stopped on the same asset ASSET_STOP_RUNS runs in a row,
+    // A card a frames-bucket object stopped on its own (the others
+    // rendered): skipped for the rest of the run, and struck — the latest
+    // objects as its reason — only once a bucket object stopped it
+    // ASSET_STOP_RUNS runs in a row (any objects: the streak is the card's),
     // then every run after, so it is poisoned the normal way and the sweep
     // stops retrying it. One blip strikes nothing.
     for (const assetStop of batch.assetStops ?? []) {
@@ -607,7 +610,7 @@ export async function runAutoRebake(
     failures: summaryFailures(failed),
     poisoned: outcome.poisoned.map((p) => p.id),
     ...(errorStreak != null ? { errorStreak } : {}),
-    ...(assetStops.length > 0 ? { assetStops: assetStops.slice(0, 20) } : {}),
+    ...(assetStops.length > 0 ? { assetStops: keptAssetStops(assetStops) } : {}),
     ...(assetPaths ? { assetPaths } : {}),
     ...(keepLease && inFlight.length > 0 ? { suspects: inFlight } : {}),
   });
