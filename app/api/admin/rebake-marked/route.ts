@@ -120,28 +120,37 @@ export async function POST(request: Request) {
     console.error("[rebake-marked] batch failed:", result.error);
     return json({ ok: false, error: result.error }, 500);
   }
-  // A frame asset the CDN or the frames bucket couldn't serve stopped the
-  // batch (no card failed): the loop stops and says so — Re-bake now again
-  // once it is back.
-  if (result.assetsUnavailable) {
-    const error = frameAssetsUnavailableMessage(result.assetsUnavailable);
-    console.error("[rebake-marked] batch stopped:", error);
-    return json({ ok: false, error: `${error} — try Re-bake now again in a minute.` }, 503, { "Retry-After": "60" });
-  }
   // Gallery landings, hubs and card pages are ISR and point at the old
   // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,
   // when the run finishes — the loop's last call, the one that reports
   // nothing remaining or makes no progress — if ANY call of the run
   // re-baked a card, not after every batch.
   const runRebaked = parsed.data.rebakedSoFar + result.processed.length;
+  // A frame asset two cards couldn't load stopped the batch (the asset is
+  // down for every card that draws it; no card failed): the loop stops and
+  // says so — Re-bake now again once it is back. The run ends here, so the
+  // cards it did re-bake get their refresh.
+  if (result.assetsUnavailable) {
+    if (runRebaked > 0) revalidatePath("/", "layout");
+    const error = frameAssetsUnavailableMessage(result.assetsUnavailable);
+    console.error("[rebake-marked] batch stopped:", error);
+    return json({ ok: false, error: `${error} — try Re-bake now again in a minute.` }, 503, { "Retry-After": "60" });
+  }
+  // A card a frame asset stopped on its own (twice, while the rest rendered)
+  // comes back failed with the asset as its reason: the loop skips it for
+  // the rest of the run, as it skips any failed card.
+  const failed = [
+    ...result.failed,
+    ...(result.assetStops ?? []).map((stop) => ({ id: stop.id, error: frameAssetsUnavailableMessage(stop.paths) })),
+  ];
   const runEnds =
     result.remaining === 0 ||
-    (result.processed.length === 0 && result.failed.length === 0 && result.superseded.length === 0);
+    (result.processed.length === 0 && failed.length === 0 && result.superseded.length === 0);
   if (runEnds && runRebaked > 0) revalidatePath("/", "layout");
   return json({
     ok: true,
     rebaked: result.processed.length,
-    failed: result.failed,
+    failed,
     superseded: result.superseded.length,
     remaining: result.remaining,
   });

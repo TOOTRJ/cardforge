@@ -50,6 +50,8 @@ type Batch = {
   remaining?: number;
   /** A frame asset stopped the batch (runRebakeBatch's infrastructure stop). */
   assetsUnavailable?: string[];
+  /** Cards a frame asset stopped on their own (runRebakeBatch's set-aside). */
+  assetStops?: Array<{ id: string; paths: string[] }>;
 };
 const ok = (b: Batch) => ({
   ok: true as const,
@@ -63,6 +65,7 @@ const ok = (b: Batch) => ({
   superseded: b.superseded ?? [],
   remaining: b.remaining ?? 0,
   ...(b.assetsUnavailable ? { assetsUnavailable: b.assetsUnavailable } : {}),
+  ...(b.assetStops ? { assetStops: b.assetStops } : {}),
 });
 const rebaked = (...ns: number[]) => ns.map((n) => ({ id: id(n), verdict: "rebake" as const }));
 
@@ -668,8 +671,72 @@ describe("runAutoRebake — a frame asset the CDN can't serve", () => {
     expect(stops).toEqual(["error", "error", "breaker"]);
     expect(db.row.paused).toBe(true);
     expect(db.row.paused_reason).toMatch(/failed 3 runs in a row: Frame assets unavailable .*frames\/m15pw\/loyaltyup\.png/);
+    // The same asset every run: the reason says Resume alone won't help.
+    expect(db.row.paused_reason).toMatch(/Resume won't help until it loads again/);
     expect(db.notifications).toHaveLength(2);
     // Still no card blamed for the CDN.
+    expect(db.row.strikes).toEqual({});
+    expect(db.row.poison).toEqual([]);
+  });
+
+  it("an outage on DIFFERENT assets run to run still pauses — without promising that Resume can't help", async () => {
+    let n = 0;
+    runBatch.mockImplementation(async () => {
+      t += 20_000;
+      n += 1;
+      return ok({ assetsUnavailable: [`frames/outage-${n}/w.png`], remaining: 8 });
+    });
+    for (let run = 1; run <= BREAKER_ERROR_RUNS; run += 1) {
+      t = T0 + run * 300_000;
+      await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    }
+    expect(db.row.paused).toBe(true);
+    expect(db.row.paused_reason).toMatch(/Frame assets unavailable/);
+    expect(db.row.paused_reason).not.toMatch(/Resume won't help/);
+  });
+
+  // The re-check's probe: a card whose own asset never loads (a master never
+  // published) used to stop every batch first, the cards behind it never
+  // tried, and the breaker paused the sweep again after every Resume.
+  it("a card whose own asset never loads: the rest are baked at once; it is struck from its 3rd run and poisoned with the asset reason — never a pause", async () => {
+    const STUCK = { id: id(1), paths: ["frames/never-promoted/w.png"] };
+    const strikesAfter: Array<number | undefined> = [];
+    for (let run = 1; run <= 5; run += 1) {
+      t = T0 + run * 300_000;
+      // Run 1 bakes good-1 and good-2 past the stuck card; every run sets it aside.
+      script([{ processed: run === 1 ? rebaked(2, 3) : [], assetStops: [STUCK] }, {}]);
+      const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+      if (!result.ok || result.outcome !== "ran") throw new Error(`expected run ${run}`);
+      expect(result.summary.stop, `run ${run}`).toBe("done");
+      expect(result.summary.assetStops).toEqual([{ ...STUCK, runs: run }]);
+      if (run === 1) expect(result.summary.rebaked).toBe(2);
+      strikesAfter.push((db.row.strikes as Record<string, { n: number }>)[id(1)]?.n);
+      // Never another batch's skip list without it, after its stop.
+      expect(batchCalls().at(-1)?.skipIds).toContain(id(1));
+    }
+    // No strike for runs 1–2 (a blip could be that long); struck on the 3rd
+    // and 4th, poisoned on the 5th — the normal way, with the asset reason.
+    expect(strikesAfter).toEqual([undefined, undefined, 1, 2, undefined]);
+    expect(db.row.poison).toEqual([
+      expect.objectContaining({ id: id(1), error: expect.stringMatching(/Frame assets unavailable .*frames\/never-promoted\/w\.png — for this card alone, 5 runs in a row/) }),
+    ]);
+    expect(db.row.paused).toBeFalsy();
+    expect(db.notifications).toEqual([]);
+  });
+
+  it("a card set aside for one run only is never struck", async () => {
+    const BLIP = { id: id(1), paths: ["frames/agclassic/g.png"] };
+    script([{ assetStops: [BLIP] }, {}]);
+    const first = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!first.ok || first.outcome !== "ran") throw new Error("expected a run");
+    expect(first.summary).toMatchObject({ stop: "done", failed: 0 });
+    // Not idle: it is retried next run.
+    expect(db.row.idle).toBeNull();
+    t += 300_000;
+    script([{ processed: rebaked(1) }, {}]);
+    const second = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!second.ok || second.outcome !== "ran") throw new Error("expected a run");
+    expect(second.summary.assetStops).toBeUndefined();
     expect(db.row.strikes).toEqual({});
     expect(db.row.poison).toEqual([]);
   });

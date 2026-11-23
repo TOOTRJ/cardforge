@@ -471,48 +471,109 @@ describe("runRebakeBatch", () => {
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
   });
 
-  it("a frame asset the CDN can't serve STOPS the batch: no card failed (no strike), the rest left for a later run", async () => {
-    mocks.render.mockImplementationOnce(async () => {
-      throw new FrameAssetUnavailableError(["frames/m15pw/loyaltyup.png"]);
-    });
-    const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 3, markedAmongIds: 0 });
+  // A frame asset that can't be loaded (FrameAssetUnavailableError) is no
+  // fault of the card's until shown otherwise: the card is set aside, the
+  // batch goes on, and the card is tried once more at the end.
+  const assetDown = (path: string) => async () => {
+    throw new FrameAssetUnavailableError([path]);
+  };
+  const png = async () => new Response(new Uint8Array([137, 80, 78, 71]));
+  const uploadedIds = () => mocks.upload.mock.calls.map((call) => (call as unknown[])[1]);
+
+  it("one blip costs nothing: the card set aside is baked on its second try, after the others", async () => {
+    mocks.render.mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"));
+    const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 0, markedAmongIds: 0 });
     const result = await run(stub);
     if (!result.ok) throw new Error(result.error);
-    expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
+    expect(result.processed.map((p) => p.id)).toEqual(["walker-2", "walker-3", "walker-1"]);
     expect(result.failed).toEqual([]);
-    expect(result.processed).toEqual([]);
-    // Every walker would meet the same badge: none after the first is tried.
-    expect(mocks.render).toHaveBeenCalledTimes(1);
-    expect(mocks.upload).not.toHaveBeenCalled();
-    expect(result.remaining).toBe(3);
+    expect(result.assetStops).toBeUndefined();
+    expect(result.assetsUnavailable).toBeUndefined();
+    expect(mocks.render).toHaveBeenCalledTimes(4);
   });
 
-  it("a back face whose frame asset can't be loaded stops the batch the same way", async () => {
-    mocks.back.mockResolvedValueOnce({
-      ok: false,
-      error: "Back face render failed: Frame asset(s) unavailable: frames/agclassic/g.png",
-      assetsUnavailable: ["frames/agclassic/g.png"],
-    } as never);
-    const stub = db([row("dfc"), row("good")], { markedCount: 2, markedAmongIds: 0 });
-    const result = await run(stub);
-    if (!result.ok) throw new Error(result.error);
-    expect(result.assetsUnavailable).toEqual(["frames/agclassic/g.png"]);
-    expect(result.failed).toEqual([]);
-    expect(mocks.upload).not.toHaveBeenCalled();
-  });
-
-  it("cards baked before the stop stay baked and reported", async () => {
+  it("a card whose own asset never loads is reported in assetStops — the cards behind it are baked, nothing failed", async () => {
+    // The re-check's probe: render always throws for the stuck card's
+    // never-promoted master; good-1 and good-2 are never held up by it.
     mocks.render
-      .mockImplementationOnce(async () => new Response(new Uint8Array([137, 80, 78, 71])))
-      .mockImplementationOnce(async () => {
-        throw new FrameAssetUnavailableError(["frames/m15pw/loyaltyup.png"]);
-      });
-    const stub = db([row("first"), row("walker")], { markedCount: 1, markedAmongIds: 0 });
+      .mockImplementationOnce(assetDown("frames/never-promoted/w.png"))
+      .mockImplementationOnce(png)
+      .mockImplementationOnce(png)
+      .mockImplementationOnce(assetDown("frames/never-promoted/w.png"));
+    const stub = db([row("stuck"), row("good-1"), row("good-2")], { markedCount: 1, markedAmongIds: 1 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed.map((p) => p.id)).toEqual(["good-1", "good-2"]);
+    expect(uploadedIds()).toEqual(["good-1", "good-2"]);
+    expect(result.failed).toEqual([]);
+    expect(result.assetStops).toEqual([{ id: "stuck", paths: ["frames/never-promoted/w.png"] }]);
+    expect(result.assetsUnavailable).toBeUndefined();
+    // (The marked count leaves the card set aside out, as a failed one.)
+    expect(result.remaining).toBe(0);
+  });
+
+  it("two cards on the SAME asset STOP the batch: the asset is down for everyone — no card failed, none retried", async () => {
+    mocks.render.mockImplementation(assetDown("frames/m15pw/loyaltyup.png"));
+    try {
+      const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 3, markedAmongIds: 0 });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
+      expect(result.assetStops).toBeUndefined();
+      expect(result.failed).toEqual([]);
+      expect(result.processed).toEqual([]);
+      expect(mocks.render).toHaveBeenCalledTimes(2);
+      expect(mocks.upload).not.toHaveBeenCalled();
+    } finally {
+      mocks.render.mockImplementation(png);
+    }
+  });
+
+  it("cards baked before an asset stop stay baked and reported", async () => {
+    mocks.render
+      .mockImplementationOnce(png)
+      .mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"))
+      .mockImplementationOnce(assetDown("frames/m15pw/loyaltyup.png"));
+    const stub = db([row("first"), row("walker-1"), row("walker-2")], { markedCount: 2, markedAmongIds: 0 });
     const result = await run(stub);
     if (!result.ok) throw new Error(result.error);
     expect(result.processed.map((p) => p.id)).toEqual(["first"]);
     expect(result.failed).toEqual([]);
     expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
+  });
+
+  it("cards on DIFFERENT missing assets are each their own: set aside, retried, reported in assetStops", async () => {
+    mocks.render
+      .mockImplementationOnce(assetDown("frames/a/w.png"))
+      .mockImplementationOnce(png)
+      .mockImplementationOnce(assetDown("frames/b/w.png"))
+      .mockImplementationOnce(assetDown("frames/a/w.png"))
+      .mockImplementationOnce(assetDown("frames/b/w.png"));
+    const stub = db([row("a"), row("ok"), row("b")], { markedCount: 2, markedAmongIds: 2 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed.map((p) => p.id)).toEqual(["ok"]);
+    expect(result.assetStops).toEqual([
+      { id: "a", paths: ["frames/a/w.png"] },
+      { id: "b", paths: ["frames/b/w.png"] },
+    ]);
+    expect(result.failed).toEqual([]);
+  });
+
+  it("a back face whose frame asset can't be loaded is set aside the same way", async () => {
+    const backDown = {
+      ok: false,
+      error: "Back face render failed: Frame asset(s) unavailable: frames/agclassic/g.png",
+      assetsUnavailable: ["frames/agclassic/g.png"],
+    } as never;
+    mocks.back.mockResolvedValueOnce(backDown).mockResolvedValueOnce({ ok: true, png: null }).mockResolvedValueOnce(backDown);
+    const stub = db([row("dfc"), row("good")], { markedCount: 1, markedAmongIds: 1 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed.map((p) => p.id)).toEqual(["good"]);
+    expect(result.assetStops).toEqual([{ id: "dfc", paths: ["frames/agclassic/g.png"] }]);
+    expect(result.failed).toEqual([]);
+    expect(uploadedIds()).toEqual(["good"]);
   });
 
   it("refuses the whole batch when the override STAMPS can't be read — never a guard on an empty map", async () => {

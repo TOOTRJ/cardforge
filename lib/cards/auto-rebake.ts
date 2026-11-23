@@ -10,6 +10,9 @@ import { acquireSweepLease, releaseSweepLease } from "@/lib/cards/sweep-lease";
 import {
   applyRunOutcome,
   BREAKER_CRASHED_RUNS,
+  ASSET_STOP_RESUME_NOTE,
+  ASSET_STOP_RUNS,
+  assetStopRunsAfter,
   BREAKER_ERROR_RUNS,
   breakerAfterBatch,
   breakerForPoison,
@@ -17,6 +20,7 @@ import {
   diedHoldingLease,
   formatRunLog,
   frameAssetsUnavailableMessage,
+  sameAssetPaths,
   leaseIsLive,
   parseSweepState,
   streakAfter,
@@ -67,8 +71,13 @@ import {
 //      are dropped), the breaker, one state write, admin alert, release, and
 //      ONE log line (formatRunLog). A batch query that fails
 //      BREAKER_ERROR_RUNS runs in a row trips the breaker too — and so does
-//      a frame asset the CDN or the frames bucket can't serve (the batch's
-//      `assetsUnavailable`: an infrastructure stop that strikes no card).
+//      a frame asset the CDN or the frames bucket can't serve to ANY card
+//      (the batch's `assetsUnavailable`: an infrastructure stop that strikes
+//      no card; the pause reason says Resume won't help while it is the same
+//      asset run after run). A card a frame asset stops on its own (the
+//      batch's `assetStops`) is skipped for the run and struck only from its
+//      ASSET_STOP_RUNS-th run in a row on the same asset, then poisoned the
+//      normal way — the sweep never stalls behind it.
 // ---------------------------------------------------------------------------
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -377,6 +386,10 @@ export async function runAutoRebake(
   let superseded = 0;
   let batches = 0;
   let newFailures = 0;
+  /** Cards a frame asset stopped on their own (the batches' `assetStops`). */
+  const assetStops: Array<{ id: string; paths: string[]; runs: number }> = [];
+  /** The frame assets an infrastructure stop ended the run on. */
+  let assetPaths: string[] | null = null;
   let stop: AutoRebakeStop = "budget";
   let error: string | null = null;
   let breaker: string | null = null;
@@ -477,13 +490,32 @@ export async function runAutoRebake(
       supersededTimes.set(id, times);
       if (times >= SUPERSEDED_LIMIT) skip.add(id);
     }
-    // A frame asset the CDN or the frames bucket couldn't serve stopped the
-    // batch (runRebakeBatch: no card struck). An infrastructure fault, like
-    // a batch query that fails: this run ends, and BREAKER_ERROR_RUNS such
-    // runs in a row pause the sweep and alert the admins — one blip never.
+    // A card a frame asset stopped on its own (the others rendered): skipped
+    // for the rest of the run, and struck — with the asset as its reason —
+    // only once it stopped on the same asset ASSET_STOP_RUNS runs in a row,
+    // then every run after, so it is poisoned the normal way and the sweep
+    // stops retrying it. One blip strikes nothing.
+    for (const assetStop of batch.assetStops ?? []) {
+      skip.add(assetStop.id);
+      const runs = assetStopRunsAfter(state.lastRun, assetStop);
+      assetStops.push({ ...assetStop, runs });
+      if (runs >= ASSET_STOP_RUNS) {
+        failed.push({
+          id: assetStop.id,
+          error: `${frameAssetsUnavailableMessage(assetStop.paths)} — for this card alone, ${runs} runs in a row`,
+        });
+        if (!known.has(assetStop.id)) newFailures += 1;
+      }
+    }
+    // A frame asset two cards couldn't load stopped the batch: the asset is
+    // down for every card that draws it (runRebakeBatch: no card struck). An
+    // infrastructure fault, like a batch query that fails: this run ends,
+    // and BREAKER_ERROR_RUNS such runs in a row pause the sweep and alert the
+    // admins — one blip never.
     if (batch.assetsUnavailable) {
       stop = "error";
       error = frameAssetsUnavailableMessage(batch.assetsUnavailable);
+      assetPaths = batch.assetsUnavailable;
       break;
     }
 
@@ -497,7 +529,7 @@ export async function runAutoRebake(
       breaker = tripped;
       break;
     }
-    if (batch.processed.length + batch.failed.length + batch.superseded.length === 0) {
+    if (batch.processed.length + batch.failed.length + batch.superseded.length + (batch.assetStops?.length ?? 0) === 0) {
       stop = "done";
       break;
     }
@@ -531,6 +563,10 @@ export async function runAutoRebake(
     errorStreak = streakAfter(fresh.lastRun, "error", "errorStreak");
     if (!breaker && errorStreak >= BREAKER_ERROR_RUNS) {
       breaker = `The re-bake batch failed ${errorStreak} runs in a row: ${error ?? "unknown error"}`;
+      // The same frame assets every time: say plainly that Resume won't help.
+      if (assetPaths && sameAssetPaths(fresh.lastRun?.assetPaths, assetPaths)) {
+        breaker += ` — ${ASSET_STOP_RESUME_NOTE}`;
+      }
       stop = "breaker";
     }
   }
@@ -545,7 +581,9 @@ export async function runAutoRebake(
   // A clean finish with nothing waiting for a retry: remember the count so
   // opt-in-only leftovers don't cost a scan every 5 minutes.
   const poisonedNow = new Set(outcome.poisoned.map((p) => p.id));
-  const retryPending = failed.some((f) => !poisonedNow.has(f.id));
+  // (A card a frame asset stopped on its own is retried next run too: its
+  // runs in a row decide its strike — never an idle fingerprint over it.)
+  const retryPending = failed.some((f) => !poisonedNow.has(f.id)) || assetStops.length > 0;
   const idle: IdleFingerprint | null =
     stop === "done" && !retryPending && remaining != null
       ? { layoutVersion: CARD_LAYOUT_VERSION, candidates: remaining, at: new Date(now()).toISOString() }
@@ -569,6 +607,8 @@ export async function runAutoRebake(
     failures: summaryFailures(failed),
     poisoned: outcome.poisoned.map((p) => p.id),
     ...(errorStreak != null ? { errorStreak } : {}),
+    ...(assetStops.length > 0 ? { assetStops: assetStops.slice(0, 20) } : {}),
+    ...(assetPaths ? { assetPaths } : {}),
     ...(keepLease && inFlight.length > 0 ? { suspects: inFlight } : {}),
   });
   const patch: Record<string, unknown> = {
