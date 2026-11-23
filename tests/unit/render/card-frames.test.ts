@@ -1,22 +1,46 @@
+import { createHash } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  FrameAssetUnavailableError,
   assetOrigins,
   frameAssetPath,
   getFrameDataUrl,
   getPlateDataUrlForPath,
+  loadFrameMasterBytes,
   plateAssetPath,
   preloadFrame,
   preloadFrameAssets,
   resetFrameAssetCacheForTests,
 } from "@/lib/render/card-frames";
+import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+
+const PIXEL = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+  "base64",
+);
+const dataUrl = (bytes: Buffer) => `data:image/png;base64,${bytes.toString("base64")}`;
+const pngAnswer = (bytes: Buffer) => new Response(new Uint8Array(bytes), { status: 200, headers: { "content-type": "image/png" } });
+
+/** A deployment as Vercel runs it: `public/frames` is not in the function
+ *  (next.config.ts excludes it), so git assets come from the site's CDN —
+ *  one origin, https://cdn.example. */
+function deployed(): void {
+  vi.spyOn(process, "cwd").mockReturnValue(path.join(os.tmpdir(), "pipglyph-deployment-without-public-frames"));
+  vi.stubEnv("RENDER_ASSET_ORIGIN", "https://cdn.example");
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cdn.example");
+  vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "");
+}
 
 describe("card-frames — frame assets resolve from disk or the deployment CDN", () => {
   beforeEach(() => resetFrameAssetCacheForTests());
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("builds public paths the way the renderer references them", () => {
@@ -45,45 +69,34 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("falls back to the CDN for a path that is not on disk, and memoizes it", async () => {
-    vi.stubEnv("RENDER_ASSET_ORIGIN", "https://cdn.example");
-    const png = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-      "base64",
-    );
+  it("fetches from the CDN where the frames folder isn't deployed, and memoizes it", async () => {
+    deployed();
+    const png = PIXEL;
     const fetchSpy = vi.fn(async (input: string) =>
-      input.endsWith("/frames/not-a-real-template/w.png")
-        ? new Response(new Uint8Array(png), { status: 200, headers: { "content-type": "image/png" } })
-        : new Response(null, { status: 404 }),
+      input.endsWith("/frames/not-a-real-template/w.png") ? pngAnswer(png) : new Response(null, { status: 404 }),
     );
     vi.stubGlobal("fetch", fetchSpy);
     await preloadFrame("not-a-real-template", "w");
-    expect(getFrameDataUrl("not-a-real-template", "w")).toBe(
-      `data:image/png;base64,${png.toString("base64")}`,
-    );
+    expect(getFrameDataUrl("not-a-real-template", "w")).toBe(dataUrl(png));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0][0]).toBe("https://cdn.example/frames/not-a-real-template/w.png");
     await preloadFrame("not-a-real-template", "w");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("treats a protected preview's HTML answer as a miss and tries the next origin", async () => {
+  it("treats a protected preview's HTML answer as no answer and tries the next origin", async () => {
+    deployed();
     vi.stubEnv("RENDER_ASSET_ORIGIN", "https://preview.example");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://www.pipglyph.com");
-    const png = Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
-      "base64",
-    );
+    const png = PIXEL;
     const fetchSpy = vi.fn(async (input: string) =>
       input.startsWith("https://preview.example")
         ? new Response("<html>Vercel Authentication</html>", { status: 200, headers: { "content-type": "text/html" } })
-        : new Response(new Uint8Array(png), { status: 200, headers: { "content-type": "image/png" } }),
+        : pngAnswer(png),
     );
     vi.stubGlobal("fetch", fetchSpy);
     await preloadFrameAssets(["/frames/not-a-real-template/pt/w.png"]);
-    expect(getPlateDataUrlForPath("/frames/not-a-real-template/pt/{color}.png", "w")).toBe(
-      `data:image/png;base64,${png.toString("base64")}`,
-    );
+    expect(getPlateDataUrlForPath("/frames/not-a-real-template/pt/{color}.png", "w")).toBe(dataUrl(png));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -184,5 +197,135 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     expect(frameAssetPathsFor({ ...walker, profileOverrides: { m15pw: { textless: true } } })).not.toContain(
       "/frames/m15pw/loyaltyup.png",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A git asset (the 1993 pair, Avatar, the Bloomburrow and Tarkir frames, git
+// plates and overlays, the walker's loyalty badges) the deployment's CDN
+// fails on: storage that is BUSY is not storage that lacks the file. Before,
+// one 503 was cached like a 404 for the instance's life and the 1993 frame
+// drew M15's master — its bake stored as current. A failure that may pass is
+// now never cached and fails the render (FrameAssetUnavailableError: the save
+// bake and the sweep keep the card for a retry); only a 404 — or a file
+// absent from a local frames folder that IS on disk — is a miss.
+// ---------------------------------------------------------------------------
+
+describe("card-frames — a git asset the CDN fails on is never a miss", () => {
+  const BUCKET = "https://bucket.example/frames";
+  const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+  const M15_G = Buffer.concat([PIXEL, Buffer.from("m15/g")]);
+  const ALPHA_G = Buffer.concat([PIXEL, Buffer.from("agclassic/g")]);
+  const m15Url = `${BUCKET}/m15/g.${sha(M15_G).slice(0, 12)}.png`;
+  let restoreStorage: () => void = () => {};
+
+  beforeEach(() => {
+    resetFrameAssetCacheForTests();
+    // The default template's master — the fallback — is a bucket object.
+    const manifest: FrameManifest = {
+      version: 1,
+      bucket: "frames",
+      files: { "m15/g.png": { hash: sha(M15_G).slice(0, 12), sha256: sha(M15_G), bytes: M15_G.length, width: 1, height: 1 } },
+    };
+    restoreStorage = setFrameStorageForTests({ manifest, origin: BUCKET });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    restoreStorage();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  /** The CDN answers `cdn(url)`; the bucket serves M15's master. */
+  function serve(cdn: (url: string) => Response | Promise<Response>) {
+    const spy = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === m15Url) return pngAnswer(M15_G);
+      return cdn(url);
+    });
+    vi.stubGlobal("fetch", spy);
+    return spy;
+  }
+  const cdnCalls = (spy: ReturnType<typeof serve>) =>
+    spy.mock.calls.filter(([url]) => String(url).startsWith("https://cdn.example")).length;
+
+  it("a 503 fails the preload and is not cached: the next render draws the real master — never M15's", async () => {
+    deployed();
+    let up = false;
+    const spy = serve((url) =>
+      url === "https://cdn.example/frames/agclassic/g.png" && up ? pngAnswer(ALPHA_G) : new Response("busy", { status: 503 }),
+    );
+    await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+    await expect(preloadFrame("agclassic", "g")).rejects.toThrow(/frames\/agclassic\/g\.png/);
+    // The renderer's getter never substitutes the default template's frame
+    // for a master it never loaded.
+    expect(() => getFrameDataUrl("agclassic", "g")).toThrow(FrameAssetUnavailableError);
+    expect(spy.mock.calls.some(([url]) => String(url) === m15Url)).toBe(false);
+    // The CDN recovers: the very next render fetches again and draws it.
+    up = true;
+    await preloadFrame("agclassic", "g");
+    expect(getFrameDataUrl("agclassic", "g")).toBe(dataUrl(ALPHA_G));
+    expect(cdnCalls(spy)).toBe(3);
+  });
+
+  it.each([
+    ["a 500", () => new Response(null, { status: 500 })],
+    ["a 502", () => new Response(null, { status: 502 })],
+    ["a 429", () => new Response(null, { status: 429 })],
+    ["a refused connection", () => Promise.reject(new TypeError("fetch failed"))],
+    ["an aborted fetch", () => Promise.reject(Object.assign(new Error("This operation was aborted"), { name: "AbortError" }))],
+    ["an HTML page from the only origin", () => new Response("<html>Sign in</html>", { status: 200, headers: { "content-type": "text/html" } })],
+    ["a 401 from the only origin", () => new Response(null, { status: 401 })],
+    ["an empty image", () => new Response(new Uint8Array(0), { status: 200, headers: { "content-type": "image/png" } })],
+  ])("%s for a plate or a loyalty badge fails the preload, and the next one fetches again", async (_label, answer) => {
+    deployed();
+    const spy = serve(answer);
+    const paths = ["/frames/m15pw/loyaltyup.png", "/frames/agclassic/pt/g.png"];
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(/frames\/m15pw\/loyaltyup\.png, frames\/agclassic\/pt\/g\.png/);
+    expect(cdnCalls(spy)).toBe(4);
+  });
+
+  it("a 404 is the deployment saying the file isn't there: cached, a master falls back to the default template's, a plate draws none", async () => {
+    deployed();
+    const spy = serve(() => new Response(null, { status: 404 }));
+    await preloadFrame("not-a-real-template", "g");
+    expect(getFrameDataUrl("not-a-real-template", "g")).toBe(dataUrl(M15_G));
+    await preloadFrameAssets(["/frames/not-a-real-template/pt/g.png"]);
+    expect(getPlateDataUrlForPath("/frames/not-a-real-template/pt/{color}.png", "g")).toBeNull();
+    const before = cdnCalls(spy);
+    await preloadFrame("not-a-real-template", "g");
+    await preloadFrameAssets(["/frames/not-a-real-template/pt/g.png"]);
+    expect(cdnCalls(spy)).toBe(before);
+    await expect(loadFrameMasterBytes("not-a-real-template", "g")).resolves.toBeNull();
+  });
+
+  it("a 404 beside a failure that may pass is no miss", async () => {
+    deployed();
+    vi.stubEnv("RENDER_ASSET_ORIGIN", "https://busy.example");
+    const spy = serve((url) =>
+      url.startsWith("https://busy.example") ? new Response(null, { status: 503 }) : new Response(null, { status: 404 }),
+    );
+    await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+    await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+    expect(spy.mock.calls.filter(([url]) => String(url).startsWith("https://busy.example"))).toHaveLength(2);
+  });
+
+  it("loadFrameMasterBytes (the art-window check on a layout save) throws on a CDN failure instead of reading the master as missing", async () => {
+    deployed();
+    serve(() => new Response(null, { status: 503 }));
+    await expect(loadFrameMasterBytes("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+  });
+
+  it("a file absent from a local frames folder is absent — nothing is fetched (a checkout, CI, a test)", async () => {
+    const spy = serve(() => new Response(null, { status: 503 }));
+    await preloadFrameAssets(["/frames/not-a-real-template/pt/g.png"]);
+    expect(getPlateDataUrlForPath("/frames/not-a-real-template/pt/{color}.png", "g")).toBeNull();
+    await preloadFrame("not-a-real-template", "g");
+    expect(getFrameDataUrl("not-a-real-template", "g")).toBe(dataUrl(M15_G));
+    expect(cdnCalls(spy)).toBe(0);
+    expect(spy.mock.calls.every(([url]) => String(url) === m15Url)).toBe(true);
   });
 });
