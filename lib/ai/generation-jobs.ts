@@ -1010,10 +1010,12 @@ export type CreateCardJobResult =
  *  reserved. */
 const FRAME_LIST_UNAVAILABLE_PLAN = `${FRAME_LIST_UNAVAILABLE_MESSAGE} No credits were used.`;
 
-/** The verified combos a plan is designed against, or null when the list
- *  can't be read right now — never an empty set standing for "nothing is
- *  published" (the reader logged the failure). */
-async function planVerifiedKeys(): Promise<Set<string> | null> {
+/** The verified combos a plan or a step resolves frames against, or null
+ *  when the list can't be read right now — never an empty set standing for
+ *  "nothing is published" (the reader logged the failure). A step that gets
+ *  null fails with FRAME_LIST_UNAVAILABLE_MESSAGE (before its reserve, or
+ *  refunded by withCreditedStep). */
+async function verifiedKeysOrNull(): Promise<Set<string> | null> {
   try {
     return new Set(await getVerifiedFrameKeys());
   } catch (err) {
@@ -1094,7 +1096,7 @@ export async function createCardGenerationJob(
   // when the frame is left random. A list that can't be read refuses the
   // plan before any AI call — never a design steered as if nothing were
   // published.
-  const verifiedKeys = await planVerifiedKeys();
+  const verifiedKeys = await verifiedKeysOrNull();
   if (!verifiedKeys) return { ok: false, error: FRAME_LIST_UNAVAILABLE_PLAN };
   let colorHint: ColorIdentity | undefined = deckBrief?.colorHint;
   if (input.frame && input.frame !== "random" && input.cardType) {
@@ -1274,7 +1276,7 @@ export async function createCardFillJob(
     });
   }
 
-  const verifiedKeys = await planVerifiedKeys();
+  const verifiedKeys = await verifiedKeysOrNull();
   if (!verifiedKeys) return { ok: false, error: FRAME_LIST_UNAVAILABLE_PLAN };
   const wantsType = input.want.includes("card_type");
   if (input.dfc && wantsType) {
@@ -2594,12 +2596,14 @@ async function runDeckCardStep(
   // random other era or showcase (owner 2026-10-14). A saga, a snow card and
   // a token follow their own looks where verified (resolveDeckCardFrame:
   // the saga frame, the snow frames, a new token's full-art design).
-  const frameTemplate = step.card_id
+  const deckVerifiedKeys = step.card_id ? null : await verifiedKeysOrNull();
+  if (!step.card_id && !deckVerifiedKeys) return { ...step, status: "failed", error: FRAME_LIST_UNAVAILABLE_MESSAGE };
+  const frameTemplate = step.card_id || !deckVerifiedKeys
     ? null
     : resolveDeckCardFrame({
         cardType: card.card_type,
         colorIdentity: card.color_identity,
-        verifiedKeys: new Set(await getVerifiedFrameKeys()),
+        verifiedKeys: deckVerifiedKeys,
         face: {
           cardType: card.card_type,
           supertype,
@@ -2743,7 +2747,8 @@ async function executeDeckRemixStep(
     // card lands as before (no template). ownCardRemixFrame is what the
     // estimate priced the entry with; a one-credit entry stays one-faced.
     const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
-    const ownVerifiedKeys = new Set(await getVerifiedFrameKeys());
+    const ownVerifiedKeys = await verifiedKeysOrNull();
+    if (!ownVerifiedKeys) return { ...step, status: "failed", error: FRAME_LIST_UNAVAILABLE_MESSAGE };
     const kept = ownCardRemixFrame(source, ownVerifiedKeys, {
       singleFace: !doubleFacedPlan,
     });
@@ -2791,11 +2796,13 @@ async function executeDeckRemixStep(
     // printing keeps its back face only when the plan priced it (two
     // credits, TODO 5.4); a one-credit entry is remixed one-faced.
     const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
+    const printingVerifiedKeys = await verifiedKeysOrNull();
+    if (!printingVerifiedKeys) return { ...step, status: "failed", error: FRAME_LIST_UNAVAILABLE_MESSAGE };
     const resolved = scryfallRemixMechanics(
       // Oracle's own rules (TODO 6.2): the remix renames them itself.
       mapScryfallToFormPatch(scry, { oracleRules: true }),
       entry.name,
-      new Set(await getVerifiedFrameKeys()),
+      printingVerifiedKeys,
       { singleFace: !doubleFacedPlan },
     );
     if (!resolved.ok) {
@@ -2910,6 +2917,8 @@ async function executeDeckRemixStep(
   // `textless` landing gives way to its stand-in when the card saves with
   // rules or flavour text, and stands when it saves with none
   // (remixSavedFrame — one rule for a printing and an own card).
+  const savedVerifiedKeys = mechanics.frame_template ? await verifiedKeysOrNull() : new Set<string>();
+  if (!savedVerifiedKeys) return { ...step, status: "failed", error: FRAME_LIST_UNAVAILABLE_MESSAGE };
   const savedFrames = mechanics.frame_template
     ? remixSavedFrames({
         standIn: mechanics.text_stand_in,
@@ -2923,7 +2932,7 @@ async function executeDeckRemixStep(
         power: mechanics.power,
         toughness: mechanics.toughness,
         colorIdentity: (mechanics.color_identity ?? ["colorless"]) as ColorIdentity[],
-        verifiedKeys: new Set(await getVerifiedFrameKeys()),
+        verifiedKeys: savedVerifiedKeys,
         back: named.back_face ?? null,
       })
     : ({ ok: true, template: undefined } as const);

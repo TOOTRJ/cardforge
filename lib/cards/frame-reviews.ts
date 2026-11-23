@@ -1,5 +1,6 @@
 import "server-only";
 
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { unstable_rethrow } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -165,4 +166,20 @@ export function readVerifiedFrameKeys(): Promise<VerifiedFrameKeysRead> {
  *  read failed (cookie-free, like it). */
 export function readVerifiedFrameKeysPublic(): Promise<VerifiedFrameKeysRead> {
   return settled(getVerifiedFrameKeysPublic());
+}
+
+/**
+ * The cookie-free read for an ISR page whose degraded form must never be
+ * CACHED (the guest creator: every frame "Soon" for its revalidate hour).
+ * At run time a failed read THROWS: a regeneration that throws leaves Next
+ * serving the last good page, retried on a later request — where no page is
+ * cached (an on-demand purge, revalidateFramePickers, coinciding with the
+ * failure) that one request gets the error page and the next one retries.
+ * During `next build` there is no page to keep, so the read answers
+ * `unavailable` and the page renders its notice: a blip never fails a
+ * deploy (that page then stands until its first regeneration).
+ */
+export async function readVerifiedFrameKeysForStaticPage(): Promise<VerifiedFrameKeysRead> {
+  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) return readVerifiedFrameKeysPublic();
+  return { keys: await getVerifiedFrameKeysPublic(), unavailable: false };
 }

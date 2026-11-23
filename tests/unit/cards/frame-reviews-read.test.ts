@@ -46,8 +46,10 @@ import {
   getVerifiedFrameKeys,
   getVerifiedFrameKeysPublic,
   readVerifiedFrameKeys,
+  readVerifiedFrameKeysForStaticPage,
   readVerifiedFrameKeysPublic,
 } from "@/lib/cards/frame-reviews";
+import { withVerifiedKeysIfConsulted } from "@/lib/cards/frame-list-unavailable";
 
 const ROWS = [
   { template: "m15", color_key: "w", verified_layout_version: 70 },
@@ -100,11 +102,51 @@ describe("the verified frame list read", () => {
     expect(await readVerifiedFrameKeysPublic()).toEqual({ keys: [], unavailable: true });
   });
 
+  it("the static page's read throws at run time (a regeneration keeps the last good page) and says so during the build", async () => {
+    serve(new Error("Connection pool exhausted"));
+    await expect(readVerifiedFrameKeysForStaticPage()).rejects.toBeInstanceOf(VerifiedFramesUnavailableError);
+    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+    try {
+      // `next build` has no page to keep: the notice, never a failed deploy.
+      expect(await readVerifiedFrameKeysForStaticPage()).toEqual({ keys: [], unavailable: true });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    serve({ data: ROWS, error: null });
+    expect(await readVerifiedFrameKeysForStaticPage()).toMatchObject({ unavailable: false, keys: expect.arrayContaining(["m15/w"]) });
+  });
+
   it("reads nothing where Supabase isn't configured (local without a database)", async () => {
     state.configured = false;
     serve(new Error("must not be called"));
     expect(await getVerifiedFrameKeys()).toEqual([]);
     expect(await readVerifiedFrameKeysPublic()).toEqual({ keys: [], unavailable: false });
     expect([state.sessionCalls, state.publicCalls]).toEqual([0, 0]);
+  });
+});
+
+// The edit gates' lazy read (updateCardAction): a gate that never looks at
+// the set reads no list — so an outage can't refuse it — and one that does
+// runs again on the list as read.
+describe("withVerifiedKeysIfConsulted", () => {
+  it("reads nothing for a gate that never looks at the set", async () => {
+    const read = vi.fn(async () => new Set(["m15/w"]));
+    expect(await withVerifiedKeysIfConsulted(() => "kept", read)).toBe("kept");
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("reads the list and answers again for a gate that looks — through any use of the set", async () => {
+    const read = vi.fn(async () => new Set(["m15/w"]));
+    expect(await withVerifiedKeysIfConsulted((keys) => keys.has("m15/w"), read)).toBe(true);
+    expect(await withVerifiedKeysIfConsulted((keys) => keys.size, read)).toBe(1);
+    expect(await withVerifiedKeysIfConsulted((keys) => [...keys], read)).toEqual(["m15/w"]);
+    expect(read).toHaveBeenCalledTimes(3);
+  });
+
+  it("lets a failed read through — the action turns it into its try-again refusal", async () => {
+    const read = vi.fn(async (): Promise<Set<string>> => {
+      throw new VerifiedFramesUnavailableError("upstream request timeout");
+    });
+    await expect(withVerifiedKeysIfConsulted((keys) => keys.has("m15/w"), read)).rejects.toBeInstanceOf(VerifiedFramesUnavailableError);
   });
 });

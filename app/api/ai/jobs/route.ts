@@ -46,6 +46,7 @@ import { getEntitlements } from "@/lib/billing/entitlements";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { estimateDeckRemix, type DeckRemixEstimate } from "@/lib/ai/remix-estimate";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { reconcileUserSpends } from "@/lib/billing/credit-reconcile";
 import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
@@ -399,7 +400,13 @@ export async function POST(request: Request) {
     // limit, sizing on the ceiling would demand 101 credits to remix a
     // 5-card deck). RLS hides decks that aren't the caller's; the count
     // then reads 0 and createDeckRemixJob rejects ownership downstream.
-    remixEstimate = await estimateDeckRemix(parsed.data.deck_id, limit);
+    try {
+      remixEstimate = await estimateDeckRemix(parsed.data.deck_id, limit);
+    } catch (err) {
+      // An unread frame list sizes nothing — before any reserve.
+      if (!isVerifiedFramesUnavailable(err)) throw err;
+      return NextResponse.json({ ok: false, error: `${FRAME_LIST_UNAVAILABLE_MESSAGE} No credits were used.` }, { status: 503 });
+    }
     if (remixEstimate.cards === 0) {
       // Nothing to remix — or a deck RLS hides (not the caller's). Refuse
       // here instead of sizing the job at the ceiling and answering "you

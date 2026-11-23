@@ -338,7 +338,10 @@ const readHomeCounts = cache(async (): Promise<HomeCounts> => {
     // by template. (The catalogue on disk is bigger; only published frames
     // are an honest number.) A list that couldn't be read (logged) counts
     // none, and homeStatBadges leaves the badge out — no number rather than
-    // a wrong one.
+    // a wrong one. Not the guest creator's throw (readVerifiedFrameKeysFor-
+    // StaticPage): every card save purges this page (revalidatePath("/")),
+    // so a throw here could turn a frame-list blip into home-page errors for
+    // one badge — the other counts degrade the same way.
     frameStyles: verifiedFrames.unavailable ? 0 : new Set(verifiedFrames.keys.map((key) => key.split("/")[0])).size,
     cardsThisWeek: saved.cardsThisWeek,
   };

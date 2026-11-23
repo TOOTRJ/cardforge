@@ -36,8 +36,9 @@ const USER = "11111111-1111-4111-8111-111111111111";
 
 const s = vi.hoisted(() => ({
   verified: [] as string[],
-  /** Answers for the next reads, before `verified` (a read that failed). */
-  verifiedReads: [] as string[][],
+  /** Answers for the next reads, before `verified` ("fail": the read
+   *  throws, a PostgREST / pooler hiccup). */
+  verifiedReads: [] as (string[] | "fail")[],
   created: [] as Record<string, unknown>[],
   patched: [] as Record<string, unknown>[],
   job: null as unknown as Record<string, unknown>,
@@ -78,7 +79,16 @@ vi.mock("@/lib/supabase/admin", () => ({
     },
   }),
 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => s.verifiedReads.shift() ?? s.verified }));
+vi.mock("@/lib/cards/frame-reviews", async () => {
+  const { VerifiedFramesUnavailableError } = await import("@/lib/cards/frame-list-unavailable");
+  return {
+    getVerifiedFrameKeys: async () => {
+      const next = s.verifiedReads.shift();
+      if (next === "fail") throw new VerifiedFramesUnavailableError("connection pool exhausted");
+      return next ?? s.verified;
+    },
+  };
+});
 vi.mock("@/lib/cards/capacity", () => ({ getCardCapacity: async () => null }));
 vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
   const image = async () => ({ ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" });
@@ -234,6 +244,16 @@ describe("an AI deck card saves with its frame", () => {
     const saved = await deckStep(KINDS[10]![1], "land");
     expect(s.verifiedReads).toEqual([]);
     expect(JSON.parse(JSON.stringify(saved))).not.toHaveProperty("frame_style");
+  });
+
+  it("a frame list that can't be read fails the step in words that say try again — before any credit, nothing created", async () => {
+    s.verifiedReads = ["fail"];
+    s.verified = SEED;
+    const before = s.created.length;
+    await deckStep(KINDS[0]![1], KINDS[0]![2]);
+    expect(s.created).toHaveLength(before);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.patched.at(-1)).toMatchObject({ status: "failed", error: "We couldn't check the frame list just now — try again." });
   });
 
   it("where the type's M15 frame is unpublished in the card's colour: NO template — never another era or a showcase (owner 2026-10-14)", async () => {
