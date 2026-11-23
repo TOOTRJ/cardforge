@@ -246,6 +246,35 @@ describe("cardFormSchema", () => {
       ).toBeNull();
     });
 
+    // The save-correctness audit (2026-11): a save the strong-language rule
+    // (or the moderation lock, or a frame preview) makes private is a
+    // draft's, and the server never refuses it for the name — the form asks
+    // through `forcedPrivate`, and only when the name is missing.
+    it("a save forced private (the form's own rule) needs no second-face name", () => {
+      const publicUnnamed = baseValues({
+        visibility: "public",
+        has_back_face: true,
+        back_face: { ...EMPTY_BACK_FACE, title: "" },
+      });
+      const asked: FormValues[] = [];
+      const forced = cardFormSchemaFor(null, undefined, null, (values) => {
+        asked.push(values);
+        return true;
+      });
+      const backIssue = (schema: typeof forced, values: FormValues) => {
+        const result = schema.safeParse(values);
+        return result.success ? null : (result.error.issues.find((i) => i.path[0] === "back_face" && i.path[1] === "title") ?? null);
+      };
+      expect(backIssue(forced, publicUnnamed)).toBeNull();
+      expect(asked).toHaveLength(1);
+      // Not forced: as before.
+      expect(backIssue(cardFormSchemaFor(null, undefined, null, () => false), publicUnnamed)?.message).toBe(SECOND_FACE_NAME_ERROR);
+      // A name typed: never asked (nothing is waived).
+      asked.length = 0;
+      expect(backIssue(forced, { ...publicUnnamed, back_face: { ...EMPTY_BACK_FACE, title: "Ice" } })).toBeNull();
+      expect(asked).toHaveLength(0);
+    });
+
     it("still length-checks a draft's second-face name", () => {
       const issue = backTitleIssue(
         baseValues({

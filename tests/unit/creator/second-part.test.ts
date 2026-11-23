@@ -147,6 +147,25 @@ describe("what Save still needs — one rule", () => {
     const needs = saveNeedsOf({ ...input, title: "Fire", artUrl: "https://x/a.png", doubleFaced: false, words: SECOND_PART_WORDS.split! });
     expect(needs).toEqual([{ id: "second-name", label: "the right half's name", field: "back_face.title" }]);
   });
+  // The save-correctness audit (2026-11): a save the form's own rules make
+  // private (strong language, the moderation lock) is a draft's — the
+  // server asks it for neither artwork nor the second part's name.
+  it("a save forced private needs a title alone — and the text is read only when something else is missing", () => {
+    let asked = 0;
+    const forcedPrivate = () => {
+      asked += 1;
+      return true;
+    };
+    expect(saveNeedsOf({ ...input, forcedPrivate }).map((n) => n.id)).toEqual(["title"]);
+    expect(asked).toBe(1);
+    // Not forced: the whole list, as before.
+    expect(saveNeedsOf({ ...input, forcedPrivate: () => false }).map((n) => n.id)).toEqual(["title", "art", "second-art", "second-name"]);
+    // Nothing but the title missing, or a draft already: never asked.
+    asked = 0;
+    saveNeedsOf({ ...input, artUrl: "https://x/a.png", doubleFaced: false, hasBackFace: false, forcedPrivate });
+    saveNeedsOf({ ...input, savesAsDraft: true, forcedPrivate });
+    expect(asked).toBe(0);
+  });
   it("listPhrase", () => {
     expect(listPhrase([])).toBe("");
     expect(listPhrase(["a"])).toBe("a");

@@ -277,6 +277,89 @@ describe("the check runs on the Publish step only", () => {
   });
 });
 
+// The text the save WRITES (the save-correctness audit, 2026-11): a walker's
+// and a saga's rows, and the saga creature's "Creature abilities" box — never
+// the hidden rules text beside the rows, which the row editors don't update.
+describe("rows and the saga creature's box: the text the save writes", () => {
+  const PW = ["w", "u", "b", "r", "g", "c", "m"].flatMap((k) => [frameComboKey("m15pw", k), frameComboKey("sagacreature", k)]);
+  const typeRich = async (name: string, value: string) => {
+    const el = document.querySelector(`[data-field="${name}"]`);
+    if (!el) throw new Error(`no editor named ${name}`);
+    await act(async () => {
+      el.textContent = value;
+      fireEvent.input(el);
+    });
+  };
+  const walker = savedCard({
+    title: "Tamsin, Tide-Reader",
+    cost: "{2}{U}{U}",
+    color_identity: ["blue"],
+    supertype: "Legendary",
+    card_type: "planeswalker",
+    subtypes: ["Tamsin"],
+    rarity: "mythic",
+    rules_text: `+1: Draw a ${STRONG} card.\n−2: Tap target creature.`,
+    power: null,
+    toughness: null,
+    loyalty: "4",
+    frame_style: { finish: "regular", template: "m15pw" },
+    // Kept private by the word in its first row.
+    visibility: "private",
+  });
+
+  it("a walker kept private for a word in a row: the word taken out, Public is back — and the save sends it", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "tamsin" });
+    renderForm({ card: walker, verifiedFrameKeys: [...VERIFIED, ...PW] });
+    await goTo(/Publish/);
+    // A private card opens as a draft: unticked, it offers Public — which
+    // the word rules out.
+    await click(screen.getByTestId("save-as-draft"));
+    expect(chipOff(visibilityChip(/^Public/))).toBe(true);
+    await goTo(/Text/);
+    await typeRich("loyalty_abilities.0.text", "Draw a card.");
+    await goTo(/Publish/);
+    expect(note().textContent).toBe("");
+    expect(chipOff(visibilityChip(/^Public/))).toBe(false);
+    expect(chipOff(visibilityChip(/^Unlisted/))).toBe(false);
+    expect(visibilityChip(/^Public/).getAttribute("aria-checked")).toBe("true");
+    await click(saveButton());
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    const sent = actions.updateCardAction.mock.calls[0][1] as Record<string, unknown>;
+    expect(sent.visibility).toBe("public");
+    expect(sent.rules_text).not.toContain(STRONG);
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(String(toast.success.mock.calls[0][0])).not.toMatch(/strong language/);
+  });
+
+  it("a word typed into the saga creature's box is named on the Publish step, and the save sends private", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "summon-ifrit" });
+    renderForm({
+      card: savedCard({
+        title: "Summon: Ifrit",
+        cost: "{3}{R}",
+        supertype: "Creature",
+        card_type: "enchantment",
+        subtypes: ["Saga", "Djinn"],
+        rules_text: "I — Deal 2 damage to any target.\nII — Draw a card.\nHaste",
+        power: "4",
+        toughness: "4",
+        frame_style: { finish: "regular", template: "sagacreature" },
+      }),
+      verifiedFrameKeys: [...VERIFIED, ...PW],
+    });
+    await goTo(/Text/);
+    await typeRich("saga_creature_text", `Haste. This ${STRONG} is hot.`);
+    await goTo(/Publish/);
+    expect(note().textContent).toBe(
+      "This card's rules text includes strong language, so it will be saved as private. Remove it to publish.",
+    );
+    expect(chipOff(visibilityChip(/^Public/))).toBe(true);
+    await click(saveButton());
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.updateCardAction.mock.calls[0][1]).toMatchObject({ visibility: "private" });
+  });
+});
+
 describe("the save", () => {
   it("edit: sends private and ONE toast says why", async () => {
     actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "emberbound-wyrm" });

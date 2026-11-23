@@ -246,7 +246,14 @@ import {
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { keptStationRows, sagaRowsForKindSwitch, sagaRowsOut, structuredRowsUntouched, submittedRulesOf } from "@/lib/creator/structured-rules";
+import {
+  keptStationRows,
+  sagaRowsForKindSwitch,
+  sagaRowsOut,
+  structuredRowsUntouched,
+  submittedRulesOf,
+  type SubmittedRulesOptions,
+} from "@/lib/creator/structured-rules";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
 import { stationPtChoiceAfterFill } from "@/lib/ai/station-design";
@@ -343,6 +350,7 @@ import {
   sameTokenFrameText,
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
+import { editFrameFollow } from "@/lib/creator/edit-frame-follow";
 import { archTallStandIn, m20TokenHeightOf, m20TokenTwinWithoutNyx, tokenHeightOf, tokenTemplate } from "@/lib/cards/token-height";
 import {
   blankSecondFaceFor,
@@ -1129,6 +1137,11 @@ export function CardCreatorForm({
         : null,
     [symbolMeanings, mode, card],
   );
+  // …and whether a save goes private whatever the Publish step says
+  // (saveForcedPrivate, below — it reads the language context, built after
+  // the form): such a save needs no second part's name. (A holder object,
+  // not a ref, as aiOrigins below: the schema is built during render.)
+  const [forcedPrivateHolder] = useState(() => new Map<"of", (values: FormValues) => boolean>());
   const formResolver = useMemo(
     () =>
       zodResolver(
@@ -1138,9 +1151,10 @@ export function CardCreatorForm({
           mode === "edit" ? (values: FormValues) => openedForFrame(defaults, card, values.frame_style?.template) : null,
           formBackBody,
           formSymbols,
+          (values: FormValues) => forcedPrivateHolder.get("of")?.(values) ?? false,
         ),
       ),
-    [mode, defaults, card, formBackBody, formSymbols],
+    [mode, defaults, card, formBackBody, formSymbols, forcedPrivateHolder],
   );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
@@ -1562,14 +1576,31 @@ export function CardCreatorForm({
         });
   const previewSave = previewSaveFor(watched);
   const savesAsDraft = watched.save_as_draft || previewSave;
+  // How the save writes the rules text and the rows (submittedRulesOf's
+  // options, lib/creator/structured-rules.ts): ONE answer for the save
+  // itself and for every check that reads what the save writes.
+  const submittedRulesOptionsFor = (values: FormValues): SubmittedRulesOptions => ({
+    // (Read for the frame the card is on now — TODO 4.5d.)
+    opened: isEdit ? openedForFrame(defaults, card, values.frame_style?.template) : null,
+    storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
+    // The station frame's tier editor (TODO 4.27a).
+    stationFrame: isStationFrame(values.frame_style?.template),
+    // A Planet shows no P/T: its rows mark no tier.
+    stationShowsPt: showsPowerToughness((values.card_type || null) as CardType | null, parseSubtypes(values.subtypes_text), values.supertype),
+    ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
+    // The saga creature's box (TODO 4.5d): its lines after the chapters.
+    sagaCreatureFrame: isSagaCreatureDress(normalizeFrameTemplate(values.frame_style?.template)),
+  });
   // Strong language in the card's text (owner policy 2026-10-28): the save
   // goes PRIVATE, whatever the Publish step says — the same detector and
-  // rule as the server (lib/creator/strong-language.ts). The footer counts
-  // as the row will hold it: a subscriber's new card sends it as typed, an
-  // edit only when it changed.
-  const languageContextFor = (values: Pick<FormValues, "footer_text">) => ({
+  // rule as the server (lib/creator/strong-language.ts), on the text the
+  // save WRITES (a walker's and a saga's rows as the save serializes them,
+  // the saga creature's box). The footer counts as the row will hold it: a
+  // subscriber's new card sends it as typed, an edit only when it changed.
+  const languageContextFor = (values: FormValues) => ({
     stored: isEdit && card ? card : null,
     footerStored: isEdit ? values.footer_text.trim() !== footerBaseline.text : isPaid,
+    rules: submittedRulesOptionsFor(values),
   });
   // Read only where it is shown (the Publish panel), not on every keystroke.
   const languageChoices =
@@ -1577,10 +1608,26 @@ export function CardCreatorForm({
   // The moderation lock (migration 0156, lib/moderation/lock.ts): an edit of
   // a card moderation hid saves private, and the Publish step says why.
   const moderationLocked = isEdit && isModerationLocked(card);
+  /** Whether a save of `values` goes PRIVATE whatever the Publish step
+   *  says — strong language in the text it writes, the moderation lock, an
+   *  admin's frame preview — as runSubmit decides it. Such a save is a
+   *  draft's, and the server asks it for neither artwork nor a second
+   *  part's name (lib/cards/actions.ts): neither does the form. */
+  const saveForcedPrivate = (values: FormValues): boolean => {
+    if (values.save_as_draft || previewSaveFor(values) || moderationLocked) return true;
+    return creatorLanguageFields(values, values.visibility, languageContextFor(values)).length > 0;
+  };
+  // (The form's schema asks it through its holder: it is built before this.)
+  useEffect(() => {
+    forcedPrivateHolder.set("of", saveForcedPrivate);
+  });
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
   // design D13: the "no artwork → no gallery" rule on both faces).
+  // …judged at the visibility the save will really have: a save the text's
+  // strong language (or the moderation lock) makes private needs only a
+  // title. (The text is read only when something but the title is missing.)
   const saveNeeds = saveNeedsOf({
     title: watched.title,
     artUrl: watched.art_url,
@@ -1590,6 +1637,7 @@ export function CardCreatorForm({
     visibility: watched.visibility,
     doubleFaced: twoFaces,
     words: partWords,
+    forcedPrivate: () => saveForcedPrivate(watched),
   });
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
@@ -1611,13 +1659,16 @@ export function CardCreatorForm({
   // A restored guest card's pictures upload first (TODO HM3): a `blob:` URL
   // is this page's own and never reaches the save.
   const localPictureWaiting = Boolean(userId) && blobUrlPaths(watched).length > 0;
+  const localPictureReason = localPictureWaiting
+    ? guestUploads === "failed"
+      ? GUEST_PICTURE_FAILED_REASON
+      : GUEST_PICTURE_UPLOADING_REASON
+    : null;
   const saveDisabledReason =
     saveNeeds.length > 0
       ? saveNeedsSentence(saveNeeds)
-      : localPictureWaiting
-        ? guestUploads === "failed"
-          ? GUEST_PICTURE_FAILED_REASON
-          : GUEST_PICTURE_UPLOADING_REASON
+      : localPictureReason
+        ? localPictureReason
       : deckRemix && remixSource && (!isDirty || importIsUnchanged)
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
@@ -1901,9 +1952,12 @@ export function CardCreatorForm({
   // with the rules or flavour text; on the full-art design the height (no
   // box, the regular box, the tall box) follows the text as it grows or
   // shrinks (lib/creator/token-frame-auto.ts followTokenHeight). Real edits
-  // only (isDirty) — and while revising too: the text is not locked there,
-  // and a saved token given its first flavour line belongs in the box as
-  // much as a new one. Entering the token kind (never while revising: the
+  // only (isDirty) — and on a remix too: the text is not locked there, and
+  // a token given its first flavour line belongs in the box as much as a
+  // new one. An EDIT follows too, but never here: an edit never sends its
+  // template, so the server moves the frame, and the edit's preview asks the
+  // server's own function (editFrameFollow, after the live rules below —
+  // owner decision 2026-11-22). Entering the token kind (never while revising: the
   // type is locked) is where a NEW token starts: on the M15 era's standard,
   // the full-art template its text asks for once that template is verified
   // in the card's colour (the default switch, newTokenFrame), else the arch
@@ -1963,7 +2017,8 @@ export function CardCreatorForm({
     const prev = lastTokenTextRef.current;
     if (prev.kind === kind && sameTokenFrameText(prev.text, tokenText)) return;
     lastTokenTextRef.current = { kind, text: tokenText };
-    if (!isDirty || kind !== "token" || tokenFramePinned) return;
+    // (An edit: the server's follow, below.)
+    if (isEdit || !isDirty || kind !== "token" || tokenFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
     const colorKey = pickFrameColorKey(getValues("color_identity"));
     const verified = new Set(verifiedFrameKeys);
@@ -2016,6 +2071,7 @@ export function CardCreatorForm({
   }, [
     kind,
     tokenText,
+    isEdit,
     isDirty,
     tokenFramePinned,
     getValues,
@@ -2029,7 +2085,8 @@ export function CardCreatorForm({
   // borderless walkers (m15pw and every other frame stay put). Never an
   // unverified combo (the card keeps its frame and says so), never an
   // admin's saved frame preview, and never the walk-through's combo under
-  // test (settleTokenTextFollow({ manual: true }) pins it).
+  // test (settleTokenTextFollow({ manual: true }) pins it). An EDIT follows
+  // its rows through the server's function, as the token does (below).
   // The rows the renderers draw: the row editor's (the rows with text),
   // else a line of the rules text each (walkerRowCount, as liveFaceContent
   // below).
@@ -2041,7 +2098,7 @@ export function CardCreatorForm({
   useEffect(() => {
     if (lastWalkerTallRef.current === walkerTall) return;
     lastWalkerTallRef.current = walkerTall;
-    if (!isDirty || kind !== "planeswalker" || tokenFramePinned || walkerRowsPinnedRef.current) return;
+    if (isEdit || !isDirty || kind !== "planeswalker" || tokenFramePinned || walkerRowsPinnedRef.current) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
     const next = followWalkerRows({
       kind,
@@ -2057,7 +2114,7 @@ export function CardCreatorForm({
       return;
     }
     setValue("frame_style.template", next, { shouldDirty: true });
-  }, [kind, walkerTall, isDirty, tokenFramePinned, getValues, setValue, verifiedFrameKeys]);
+  }, [kind, walkerTall, isEdit, isDirty, tokenFramePinned, getValues, setValue, verifiedFrameKeys]);
   /** An import or an AI fill that wrote the card's frame AND its text:
    *  that frame stands — the follow starts again from here, automatic (or,
    *  for the admin walk-through's combo under test, `manual`). The same for
@@ -4354,18 +4411,7 @@ export function CardCreatorForm({
       rulesText: rulesTextOut,
       faceContent: faceContentPayload,
       keepsStored: keepsStoredFaceContent,
-    } = submittedRulesOf(submitKind, values, {
-      // (Read for the frame the card is on now — TODO 4.5d.)
-      opened: isEdit ? openedForFrame(defaults, card, values.frame_style?.template) : null,
-      storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
-      // The station frame's tier editor (TODO 4.27a).
-      stationFrame: isStationFrame(values.frame_style?.template),
-      // A Planet shows no P/T: its rows mark no tier.
-      stationShowsPt: showsPowerToughness((values.card_type || null) as CardType | null, parseSubtypes(values.subtypes_text), values.supertype),
-      ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
-      // The saga creature's box (TODO 4.5d): its lines after the chapters.
-      sagaCreatureFrame: isSagaCreatureDress(normalizeFrameTemplate(values.frame_style?.template)),
-    });
+    } = submittedRulesOf(submitKind, values, submittedRulesOptionsFor(values));
 
     // Design watermark: the form's flat shape → the discriminated union
     // (null = none / clear).
@@ -4908,6 +4954,68 @@ export function CardCreatorForm({
   // a long walker's layout takes a few ms: the editor memoises on the key.)
   const walkerRowsKey =
     kind === "planeswalker" ? JSON.stringify(resolveLoyaltyRows(liveFaceContent, liveRules?.rulesText ?? "")) : "";
+
+  // An EDIT's frame follows its text through the SERVER's function (owner
+  // decision 2026-11-22, lib/creator/edit-frame-follow.ts): the token's box
+  // and height, the borderless walker's tall box — judged from the stored
+  // card to the card as this save would store it (the row the payload
+  // leaves: its rules text and rows as submittedRulesOf writes them, its
+  // flavour trimmed, a P/T only where the type prints one), with the
+  // verified keys the page was handed. The preview shows what the save
+  // stores: a stored frame that disagrees with its stored text stays, an
+  // unverified move stays (and says so, once), an admin's frame preview
+  // never moves. The edit's payload is main's: the server decides again.
+  const editPrintsPt = showsPowerToughness(
+    (watched.card_type || null) as CardType | null,
+    parseSubtypes(watched.subtypes_text),
+    watched.supertype,
+  );
+  const editFollowNext = useStableValue(
+    isEdit && card
+      ? {
+          card_type: card.card_type,
+          supertype: card.supertype,
+          subtypes: card.subtypes,
+          title: watched.title.trim(),
+          rules_text: (liveRules ? liveRules.rulesText : watched.rules_text.trim()) || null,
+          flavor_text: watched.flavor_text.trim() || null,
+          power: editPrintsPt ? watched.power.trim() || null : card.power,
+          toughness: editPrintsPt ? watched.toughness.trim() || null : card.toughness,
+          face_content: liveRules ? liveRules.faceContent : (card.face_content ?? null),
+        }
+      : null,
+  );
+  const editFollow = useMemo(
+    () =>
+      editFollowNext && card
+        ? editFrameFollow({
+            storedTemplate: (card.frame_style as { template?: string } | null)?.template,
+            stored: card,
+            next: editFollowNext,
+            colorIdentity: card.color_identity,
+            verifiedKeys: verifiedFrameSet,
+            framePreview: card.frame_preview === true,
+          })
+        : null,
+    [editFollowNext, card, verifiedFrameSet],
+  );
+  const lastEditUnverifiedRef = useRef<FrameTemplate | null>(null);
+  useEffect(() => {
+    if (!editFollow || !card) return;
+    if (normalizeFrameTemplate(getValues("frame_style.template")) !== editFollow.template) {
+      setValue("frame_style.template", editFollow.template, { shouldDirty: true });
+    }
+    // The frame the text asked for isn't verified in the colour: said once
+    // when the text first asks for it (as the new card's follow says it).
+    const unverified = editFollow.unverified ?? null;
+    if (unverified && unverified !== lastEditUnverifiedRef.current) {
+      const colorKey = pickFrameColorKey(card.color_identity ?? []);
+      toast.info(
+        `${describeFrame(unverified)} isn't verified in ${colorWord(colorKey)} yet — keeping ${describeFrame(editFollow.template)}.`,
+      );
+    }
+    lastEditUnverifiedRef.current = unverified;
+  }, [editFollow, card, getValues, setValue]);
   // The saga rows a blocked save left a message on (their chapter numbers):
   // listed above Save as links to them, like everything else Save still
   // needs.
@@ -5877,9 +5985,11 @@ export function CardCreatorForm({
                 ? saveDisabledReason
                 : !watched.title.trim()
                   ? "Add a title first to save it as a draft."
-                  : (isRemix && reviseUnchanged) || importIsUnchanged
-                    ? saveDisabledReason
-                    : null
+                  : // A restored guest card's pictures still uploading (or
+                    // failed): a draft saved now would send their `blob:`
+                    // addresses, which the server refuses.
+                    localPictureReason ??
+                    ((isRemix && reviseUnchanged) || importIsUnchanged ? saveDisabledReason : null)
             }
             saving={isSubmitting}
             saveError={leaveSaveError}

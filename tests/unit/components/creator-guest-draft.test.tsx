@@ -384,6 +384,43 @@ describe("the signed-in creator puts a guest's card back (HM3)", () => {
     expect((actions.createCardAction.mock.calls[0]![0] as { art_url: string }).art_url).toBe(STORED_ART);
   });
 
+  // The leave dialog's "Save as draft" (the save-correctness audit, 2026-11):
+  // it waited for a title only, so it sent the page's `blob:` address and the
+  // server refused it ("Art URL must be an https:// URL."). It waits for the
+  // pictures as Save does, and says why.
+  it("the leave dialog's \"Save as draft\" waits for the picture too — and says why", async () => {
+    let finish: (value: unknown) => void = () => {};
+    uploads.uploadCardArtFile.mockImplementation(() => new Promise((resolve) => (finish = resolve)));
+    kept.draft = await draftWithPicture();
+    signedIn();
+    await waitFor(() => expect(uploads.uploadCardArtFile).toHaveBeenCalledTimes(1));
+    // A change of the maker's own arms the leave guard.
+    await act(async () => {
+      fireEvent.change(title(), { target: { value: "Ember Wyrm, Renamed" } });
+    });
+    const anchor = document.createElement("a");
+    anchor.href = "/dashboard";
+    anchor.textContent = "Dashboard";
+    document.body.appendChild(anchor);
+    try {
+      await click(anchor);
+      const dialog = await screen.findByRole("dialog");
+      const saveDraft = () => screen.getByRole("button", { name: /Save as draft/ }) as HTMLButtonElement;
+      expect(saveDraft().disabled).toBe(true);
+      expect(dialog.textContent).toContain("Your picture is uploading to your account…");
+      // A failed upload: the other reason.
+      await act(async () => {
+        finish({ ok: false, error: "You're uploading too fast." });
+      });
+      await waitFor(() => expect(screen.getByRole("dialog").textContent).toContain("A picture didn't upload"));
+      expect(saveDraft().disabled).toBe(true);
+      await click(saveDraft());
+      expect(actions.createCardAction).not.toHaveBeenCalled();
+    } finally {
+      anchor.remove();
+    }
+  });
+
   it("a failed upload keeps the picture and offers a retry", async () => {
     uploads.uploadCardArtFile.mockResolvedValue({ ok: false, error: "You're uploading too fast." });
     kept.draft = await draftWithPicture();

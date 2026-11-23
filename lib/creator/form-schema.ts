@@ -202,6 +202,12 @@ export function cardFormSchemaFor(
   openedFor: StructuredRulesValues | ((values: FormValues) => StructuredRulesValues | null) | null = null,
   backBody: FormBackBodyContext = NO_BACK_BODY_CONTEXT,
   symbols: FormSymbolContext | null = null,
+  // Whether the save goes PRIVATE whatever the Publish step says (strong
+  // language in the text it writes, the moderation lock, an admin's frame
+  // preview — the form's own rule, runSubmit's): such a save is a draft's,
+  // and the server asks it for no second part's name. Absent: none is.
+  // Asked only when that name is missing.
+  forcedPrivate: ((values: FormValues) => boolean) | null = null,
 ): z.ZodType<FormValues, FormValues> {
   return z
   .custom<FormValues>()
@@ -262,7 +268,9 @@ export function cardFormSchemaFor(
       // The name is a publishing requirement, not a draft one (TODO 3b.5,
       // lib/cards/second-face-name.ts), judged at the visibility runSubmit
       // sends: "Save as a draft" is private, and so is an artless public
-      // save (the server stores it private).
+      // save (the server stores it private) — and a save the strong-language
+      // rule (or the moderation lock, or a frame preview) makes private,
+      // which the server never refuses for the name either.
       const sentVisibility = values.save_as_draft
         ? "private"
         : values.visibility === "public" && !values.art_url.trim()
@@ -270,7 +278,7 @@ export function cardFormSchemaFor(
           : values.visibility;
       if (back.title.trim()) {
         check(ctx, ["back_face", "title"], cardTitleSchema, back.title);
-      } else if (missingSecondFaceName(back, sentVisibility)) {
+      } else if (missingSecondFaceName(back, sentVisibility) && !forcedPrivate?.(values)) {
         ctx.addIssue({
           code: "custom",
           path: ["back_face", "title"],
