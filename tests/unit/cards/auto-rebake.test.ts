@@ -48,6 +48,8 @@ type Batch = {
   failed?: Array<{ id: string; error: string }>;
   superseded?: string[];
   remaining?: number;
+  /** A frame asset stopped the batch (runRebakeBatch's infrastructure stop). */
+  assetsUnavailable?: string[];
 };
 const ok = (b: Batch) => ({
   ok: true as const,
@@ -60,6 +62,7 @@ const ok = (b: Batch) => ({
   failed: b.failed ?? [],
   superseded: b.superseded ?? [],
   remaining: b.remaining ?? 0,
+  ...(b.assetsUnavailable ? { assetsUnavailable: b.assetsUnavailable } : {}),
 });
 const rebaked = (...ns: number[]) => ns.map((n) => ({ id: id(n), verdict: "rebake" as const }));
 
@@ -619,6 +622,65 @@ describe("runAutoRebake — errors that repeat", () => {
     if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
     expect(result.summary.stop).toBe("done");
     expect(result.summary.errorStreak).toBeUndefined();
+  });
+});
+
+// A frame asset the CDN or the frames bucket can't serve stops a batch
+// without failing a card (runRebakeBatch). One blip must never pause the
+// sweep or strike a card — eight walkers reading the same badge used to fail
+// together and trip "A whole batch failed" — while an outage that lasts
+// still reaches the admins, through the "failing runs in a row" breaker.
+describe("runAutoRebake — a frame asset the CDN can't serve", () => {
+  const BADGE = "frames/m15pw/loyaltyup.png";
+  const walkers = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  it("one blip ends the run: no card struck, no pause, no alert — and the next run bakes them all", async () => {
+    script([{ assetsUnavailable: [BADGE], remaining: 8 }]);
+    const blip = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!blip.ok || blip.outcome !== "ran") throw new Error("expected a run");
+    expect(blip.summary).toMatchObject({ stop: "error", failed: 0, errorStreak: 1 });
+    expect(blip.summary.error).toMatch(/Frame assets unavailable \(the site CDN or the frames bucket\): frames\/m15pw\/loyaltyup\.png/);
+    expect(db.row.strikes).toEqual({});
+    expect(db.row.poison).toEqual([]);
+    expect(db.row.paused).toBeFalsy();
+    expect(db.notifications).toEqual([]);
+    expect(runBatch).toHaveBeenCalledTimes(1);
+
+    // The CDN is back: the next run bakes the eight walkers, the streak over.
+    t += 300_000;
+    script([{ processed: rebaked(...walkers) }, {}]);
+    const next = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!next.ok || next.outcome !== "ran") throw new Error("expected a run");
+    expect(next.summary).toMatchObject({ stop: "done", rebaked: 8, failed: 0 });
+    expect(next.summary.errorStreak).toBeUndefined();
+    expect(db.row.paused).toBeFalsy();
+  });
+
+  it(`an outage that lasts ${BREAKER_ERROR_RUNS} runs pauses the sweep and tells the admins, naming the asset`, async () => {
+    script([{ assetsUnavailable: [BADGE], remaining: 8 }]);
+    const stops = [];
+    for (let run = 1; run <= BREAKER_ERROR_RUNS; run += 1) {
+      t = T0 + run * 300_000;
+      const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+      if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+      stops.push(result.summary.stop);
+    }
+    expect(stops).toEqual(["error", "error", "breaker"]);
+    expect(db.row.paused).toBe(true);
+    expect(db.row.paused_reason).toMatch(/failed 3 runs in a row: Frame assets unavailable .*frames\/m15pw\/loyaltyup\.png/);
+    expect(db.notifications).toHaveLength(2);
+    // Still no card blamed for the CDN.
+    expect(db.row.strikes).toEqual({});
+    expect(db.row.poison).toEqual([]);
+  });
+
+  it("cards baked before the stop count as baked (their strikes clear)", async () => {
+    setup({ strikes: { [id(1)]: { n: 1, error: "Art unavailable", at: ISO0 } } });
+    script([{ processed: rebaked(1), assetsUnavailable: [BADGE], remaining: 7 }]);
+    const result = await runAutoRebake(db.client, { billingEnabled: true }, deps());
+    if (!result.ok || result.outcome !== "ran") throw new Error("expected a run");
+    expect(result.summary).toMatchObject({ stop: "error", rebaked: 1, failed: 0 });
+    expect(db.row.strikes).toEqual({});
   });
 });
 

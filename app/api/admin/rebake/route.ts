@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cronRouteGuard, isCronAuthorized } from "@/lib/api/cron-auth";
+import { frameAssetsUnavailableMessage } from "@/lib/cards/auto-rebake-state";
 import {
   DEFAULT_BATCH,
   MAX_BATCH,
@@ -119,6 +120,14 @@ export async function POST(request: Request) {
   if (!result.ok) {
     console.error("[rebake] batch failed:", result.error);
     return NextResponse.json(result, { status: 500 });
+  }
+  // A frame asset the CDN or the frames bucket couldn't serve stopped the
+  // batch (no card failed): the driver's retry-with-backoff, never a tight
+  // loop on the same card.
+  if (result.assetsUnavailable) {
+    const error = frameAssetsUnavailableMessage(result.assetsUnavailable);
+    console.error("[rebake] batch stopped:", error);
+    return NextResponse.json({ ...result, ok: false, error }, { status: 503, headers: { "Retry-After": "60" } });
   }
   return NextResponse.json(result);
 }

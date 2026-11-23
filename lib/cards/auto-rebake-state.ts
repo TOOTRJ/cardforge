@@ -38,6 +38,14 @@ export const BREAKER_NEW_FAILURES = 10;
 export const BREAKER_ERROR_RUNS = 3;
 /** Invocations in a row that died holding the lease that trip the breaker. */
 export const BREAKER_CRASHED_RUNS = 2;
+
+/** The error a re-bake batch's infrastructure stop reports — a frame asset
+ *  the site CDN or the frames bucket couldn't serve (runRebakeBatch's
+ *  `assetsUnavailable`; no card struck). The "batch failing
+ *  BREAKER_ERROR_RUNS runs in a row" breaker names it to the admins. */
+export function frameAssetsUnavailableMessage(paths: readonly string[]): string {
+  return `Frame assets unavailable (the site CDN or the frames bucket): ${paths.join(", ")}`;
+}
 /** The strike a dead run's in-flight batch gets. */
 export const CRASHED_BATCH_ERROR =
   "The automatic run died while re-baking this card's batch (killed at the 300 s limit or out of memory).";

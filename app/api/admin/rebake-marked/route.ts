@@ -6,6 +6,7 @@ import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { runRebakeBatch } from "@/lib/cards/rebake-batch";
+import { frameAssetsUnavailableMessage } from "@/lib/cards/auto-rebake-state";
 import {
   acquireManualLease,
   leaseBusyMessage,
@@ -118,6 +119,14 @@ export async function POST(request: Request) {
   if (!result.ok) {
     console.error("[rebake-marked] batch failed:", result.error);
     return json({ ok: false, error: result.error }, 500);
+  }
+  // A frame asset the CDN or the frames bucket couldn't serve stopped the
+  // batch (no card failed): the loop stops and says so — Re-bake now again
+  // once it is back.
+  if (result.assetsUnavailable) {
+    const error = frameAssetsUnavailableMessage(result.assetsUnavailable);
+    console.error("[rebake-marked] batch stopped:", error);
+    return json({ ok: false, error: `${error} — try Re-bake now again in a minute.` }, 503, { "Retry-After": "60" });
   }
   // Gallery landings, hubs and card pages are ISR and point at the old
   // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,

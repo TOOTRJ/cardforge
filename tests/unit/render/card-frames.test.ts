@@ -273,28 +273,80 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
     return { advance: (ms: number) => (now += ms) };
   }
 
-  it("a 503 fails the preload and is not cached: a render after the retry window draws the real master — never M15's", async () => {
+  it("one 503 fails that preload and nothing else: the very next render fetches again and draws the real master — never M15's", async () => {
     deployed();
-    const time = clock();
+    clock();
     let up = false;
     const spy = serve((url) =>
       url === "https://cdn.example/frames/agclassic/g.png" && up ? pngAnswer(ALPHA_G) : new Response("busy", { status: 503 }),
     );
-    await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
-    // Inside the window a render fails at once — no second wait on the CDN.
     await expect(preloadFrame("agclassic", "g")).rejects.toThrow(/frames\/agclassic\/g\.png/);
-    expect(cdnCalls(spy)).toBe(1);
     // The renderer's getter never substitutes the default template's frame
     // for a master it never loaded.
     expect(() => getFrameDataUrl("agclassic", "g")).toThrow(FrameAssetUnavailableError);
     expect(spy.mock.calls.some(([url]) => String(url) === m15Url)).toBe(false);
-    // The CDN recovers: the first render after the window fetches again and
-    // draws it.
+    // The CDN recovers: no window after one 5xx — the next render retries.
     up = true;
-    time.advance(30_001);
     await preloadFrame("agclassic", "g");
     expect(getFrameDataUrl("agclassic", "g")).toBe(dataUrl(ALPHA_G));
     expect(cdnCalls(spy)).toBe(2);
+  });
+
+  it("one 503 then recovery, across eight walkers baked in a row: only the first fails", async () => {
+    // The re-bake batch's shape: eight walker cards, each preloading the git
+    // loyalty badge. A window opened by the one blip failed all eight (and
+    // the batch breaker paused the sweep); now only the card that met the
+    // blip fails, and the batch stops there without striking it
+    // (lib/cards/rebake-batch.ts).
+    deployed();
+    clock();
+    let calls = 0;
+    const spy = serve((url) => {
+      if (!url.endsWith("/frames/m15pw/loyaltyup.png")) return new Response(null, { status: 404 });
+      calls += 1;
+      return calls === 1 ? new Response(null, { status: 503 }) : pngAnswer(PIXEL);
+    });
+    const outcomes: string[] = [];
+    for (let walker = 0; walker < 8; walker += 1) {
+      outcomes.push(
+        await preloadFrameAssets(["/frames/m15pw/loyaltyup.png"]).then(
+          () => "ok",
+          (err: unknown) => (err instanceof FrameAssetUnavailableError ? "unavailable" : "error"),
+        ),
+      );
+    }
+    expect(outcomes).toEqual(["unavailable", "ok", "ok", "ok", "ok", "ok", "ok", "ok"]);
+    expect(cdnCalls(spy)).toBe(2);
+  });
+
+  it("a TIMEOUT opens the retry window at once: the renders inside it fail without waiting again", async () => {
+    vi.useFakeTimers();
+    try {
+      deployed();
+      const hang = vi.fn(
+        (_input: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(new Error("This operation was aborted")));
+          }),
+      );
+      vi.stubGlobal("fetch", hang);
+      const paths = ["/frames/m15pw/loyaltyup.png"];
+      const first = expect(preloadFrameAssets(paths)).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await first;
+      expect(hang).toHaveBeenCalledTimes(1);
+      // Inside the window: fails at once, no fetch, no wait.
+      await expect(preloadFrameAssets(paths)).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+      expect(hang).toHaveBeenCalledTimes(1);
+      // After it: the CDN is asked again.
+      await vi.advanceTimersByTimeAsync(30_001);
+      const third = expect(preloadFrameAssets(paths)).rejects.toBeInstanceOf(FrameAssetUnavailableError);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await third;
+      expect(hang).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each([
@@ -306,18 +358,36 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
     ["an HTML page from the only origin", () => new Response("<html>Sign in</html>", { status: 200, headers: { "content-type": "text/html" } })],
     ["a 401 from the only origin", () => new Response(null, { status: 401 })],
     ["an empty image", () => new Response(new Uint8Array(0), { status: 200, headers: { "content-type": "image/png" } })],
-  ])("%s for a plate or a loyalty badge fails the preload — at once inside the retry window — and the next one after it fetches again", async (_label, answer) => {
+  ])("%s for a plate or a loyalty badge fails the preload; a second failure in a row opens the retry window; after it the CDN is asked again", async (_label, answer) => {
     deployed();
     const time = clock();
     const spy = serve(answer);
     const paths = ["/frames/m15pw/loyaltyup.png", "/frames/agclassic/pt/g.png"];
     await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
     expect(cdnCalls(spy)).toBe(2);
+    // One failure opens no window: the next render asks again.
     await expect(preloadFrameAssets(paths)).rejects.toThrow(/frames\/m15pw\/loyaltyup\.png, frames\/agclassic\/pt\/g\.png/);
-    expect(cdnCalls(spy)).toBe(2);
-    time.advance(30_001);
+    expect(cdnCalls(spy)).toBe(4);
+    // Two in a row did: the renders inside it fail at once.
     await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
     expect(cdnCalls(spy)).toBe(4);
+    time.advance(30_001);
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    expect(cdnCalls(spy)).toBe(6);
+  });
+
+  it("failures far apart are no streak: each one leaves the next render free to retry", async () => {
+    deployed();
+    const time = clock();
+    const spy = serve(() => new Response(null, { status: 503 }));
+    const paths = ["/frames/m15pw/loyaltyup.png"];
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    time.advance(5 * 60_000);
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    await expect(preloadFrameAssets(paths)).rejects.toThrow(FrameAssetUnavailableError);
+    // Five minutes apart: the second failure started a new streak, so the
+    // third render still asked the CDN.
+    expect(cdnCalls(spy)).toBe(3);
   });
 
   it("a 404 is the deployment saying the file isn't there: cached, a master falls back to the default template's, a plate draws none", async () => {
@@ -336,13 +406,12 @@ describe("card-frames — a git asset the CDN fails on is never a miss", () => {
 
   it("a 404 beside a failure that may pass is no miss", async () => {
     deployed();
-    const time = clock();
+    clock();
     vi.stubEnv("RENDER_ASSET_ORIGIN", "https://busy.example");
     const spy = serve((url) =>
       url.startsWith("https://busy.example") ? new Response(null, { status: 503 }) : new Response(null, { status: 404 }),
     );
     await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
-    time.advance(30_001);
     await expect(preloadFrame("agclassic", "g")).rejects.toBeInstanceOf(FrameAssetUnavailableError);
     expect(spy.mock.calls.filter(([url]) => String(url).startsWith("https://busy.example"))).toHaveLength(2);
   });

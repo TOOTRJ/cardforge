@@ -166,4 +166,21 @@ describe("POST /api/admin/rebake-marked", () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ ok: false, error: "scan failed" });
   });
+
+  it("a frame asset the CDN can't serve stops the loop with a 503 that names it — no card failed", async () => {
+    state.batch.mockResolvedValue({
+      ok: true,
+      processed: [],
+      failed: [],
+      superseded: [],
+      remaining: 3,
+      assetsUnavailable: ["frames/m15pw/loyaltyup.png"],
+    });
+    const res = await post({});
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("60");
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toMatch(/Frame assets unavailable .*frames\/m15pw\/loyaltyup\.png — try Re-bake now again in a minute\./);
+  });
 });

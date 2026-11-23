@@ -78,9 +78,12 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // as absent (a git template with no master for a key falls back to the
 // default template's, an absent plate draws none): a 404 from the
 // deployment, or a file absent from a local tree that holds the folder's
-// git files (a checkout, CI, a test: LOCAL_TREE_SENTINELS). A CDN failure
-// is remembered for CDN_FAILURE_RETRY_MS so an outage fails renders at once
-// instead of each waiting out the timeouts — never as a miss. Before, one
+// git files (a checkout, CI, a test: LOCAL_TREE_SENTINELS). After a CDN
+// TIMEOUT, or an asset's second failure in a row (never one 5xx), it fails
+// at once for CDN_FAILURE_RETRY_MS so an outage doesn't make every render
+// wait out the timeouts — never cached as a miss. A re-bake batch that
+// meets a frame asset it can't load stops there and strikes no card
+// (lib/cards/rebake-batch.ts: an infrastructure stop). Before, one
 // 503 cached the miss and the 1993 frame drew M15's master for the rest of
 // the instance's life, its bake stored as current.
 // ---------------------------------------------------------------------------
@@ -143,9 +146,17 @@ const CACHE = new AssetCache(MAX_CACHE_CHARS);
  *  timeouts per asset, short enough that a blip is over by the next sweep. */
 const CDN_FAILURE_RETRY_MS = 30_000;
 
-/** Public-relative path → when its next CDN attempt may run. Never a miss:
- *  a preload inside the window still throws FrameAssetUnavailableError. */
-const CDN_FAILED_UNTIL = new Map<string, number>();
+/** Failures of one asset further apart than this aren't "in a row". */
+const CDN_FAILURE_STREAK_MS = 2 * CDN_FAILURE_RETRY_MS;
+
+/** Public-relative path → its CDN failures in a row and, once the window is
+ *  open, when its next attempt may run. The window opens only where waiting
+ *  again would cost — after a TIMEOUT, or the asset's second failure in a
+ *  row — never on one 5xx: a blip must not fail the renders after it (a
+ *  re-bake batch reads the same badge for eight walkers in a row). Never a
+ *  miss: a preload inside the window still throws
+ *  FrameAssetUnavailableError. */
+const CDN_FAILURES = new Map<string, { count: number; at: number; until: number | null }>();
 
 /** A frame asset a render needs could not be loaded right now — a frames
  *  bucket object, or a git asset whose CDN fetch failed in a way that may
@@ -251,7 +262,7 @@ export function assetOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
  *  take). */
 type OriginAnswer =
   | { kind: "found"; bytes: Buffer }
-  | { kind: "missing" | "skipped" | "failed"; reason: string };
+  | { kind: "missing" | "skipped" | "failed"; reason: string; timedOut?: true };
 
 async function fetchFromOrigin(origin: string, rel: string): Promise<OriginAnswer> {
   const controller = new AbortController();
@@ -276,10 +287,8 @@ async function fetchFromOrigin(origin: string, rel: string): Promise<OriginAnswe
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) return { kind: "failed", reason: `${bytes.byteLength} bytes` };
     return { kind: "found", bytes };
   } catch (err) {
-    return {
-      kind: "failed",
-      reason: controller.signal.aborted ? `timed out after ${FETCH_TIMEOUT_MS} ms` : err instanceof Error ? err.message : "fetch failed",
-    };
+    if (controller.signal.aborted) return { kind: "failed", reason: `timed out after ${FETCH_TIMEOUT_MS} ms`, timedOut: true };
+    return { kind: "failed", reason: err instanceof Error ? err.message : "fetch failed" };
   } finally {
     clearTimeout(timer);
   }
@@ -316,22 +325,23 @@ async function fetchFromBucket(url: string, expectedSha256: string): Promise<str
  *  origin that has it wins. It is ABSENT (null, cached) only when an origin
  *  said 404 and none failed in a way that may pass; any such failure with
  *  no file anywhere — or no origin that answered about the file at all —
- *  is UNAVAILABLE (logged, never cached). */
-async function fetchRemote(rel: string): Promise<Loaded> {
+ *  is UNAVAILABLE (logged, never cached); `timedOut` when an origin timed
+ *  out (what opens the retry window at once). */
+async function fetchRemote(rel: string): Promise<{ value: Loaded; timedOut: boolean }> {
   const answers: { origin: string; answer: Exclude<OriginAnswer, { kind: "found" }> }[] = [];
   for (const origin of assetOrigins()) {
     const answer = await fetchFromOrigin(origin, rel);
-    if (answer.kind === "found") return toDataUrl(answer.bytes);
+    if (answer.kind === "found") return { value: toDataUrl(answer.bytes), timedOut: false };
     answers.push({ origin, answer });
   }
   const failed = answers.some(({ answer }) => answer.kind === "failed");
-  if (!failed && answers.some(({ answer }) => answer.kind === "missing")) return null;
+  if (!failed && answers.some(({ answer }) => answer.kind === "missing")) return { value: null, timedOut: false };
   console.error(
     `[card-frames] ${rel} unavailable from the deployment CDN (not cached; the next render retries): ${
       answers.map(({ origin, answer }) => `${origin} ${answer.kind} (${answer.reason})`).join("; ") || "no asset origin"
     }`,
   );
-  return UNAVAILABLE;
+  return { value: UNAVAILABLE, timedOut: answers.some(({ answer }) => answer.timedOut === true) };
 }
 
 // ---------------------------------------------------------------------------
@@ -365,17 +375,20 @@ async function loadAsync(rel: string): Promise<Loaded> {
     if (local !== UNAVAILABLE) CACHE.set(key, local);
     return local;
   }
-  // A CDN failure is remembered for a short while — never cached as a miss:
-  // within the window a render fails at once (the bake is retried by the
-  // sweep) instead of every render waiting out the timeouts again.
-  const failedUntil = CDN_FAILED_UNTIL.get(rel);
-  if (failedUntil !== undefined && Date.now() < failedUntil) return UNAVAILABLE;
-  const value = await fetchRemote(rel);
+  // A CDN outage (a timeout, or a second failure in a row — CDN_FAILURES)
+  // fails renders at once for a short while instead of each waiting out the
+  // timeouts again; one 5xx leaves the next render free to retry. Never
+  // cached as a miss.
+  const previous = CDN_FAILURES.get(rel);
+  if (previous?.until != null && Date.now() < previous.until) return UNAVAILABLE;
+  const { value, timedOut } = await fetchRemote(rel);
   if (value === UNAVAILABLE) {
-    CDN_FAILED_UNTIL.set(rel, Date.now() + CDN_FAILURE_RETRY_MS);
+    const at = Date.now();
+    const count = previous && at - previous.at <= CDN_FAILURE_STREAK_MS ? previous.count + 1 : 1;
+    CDN_FAILURES.set(rel, { count, at, until: timedOut || count >= 2 ? at + CDN_FAILURE_RETRY_MS : null });
     return value;
   }
-  CDN_FAILED_UNTIL.delete(rel);
+  CDN_FAILURES.delete(rel);
   CACHE.set(key, value);
   return value;
 }
@@ -583,7 +596,7 @@ export function getWatermarkDataUrl(key: string): string {
 /** Test hook — the cache is module-global. */
 export function resetFrameAssetCacheForTests(): void {
   CACHE.clear();
-  CDN_FAILED_UNTIL.clear();
+  CDN_FAILURES.clear();
 }
 
 /** Test hook — cache occupancy. */

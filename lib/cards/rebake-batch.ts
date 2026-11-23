@@ -4,6 +4,7 @@ import { renderBackFace, resolveBakeArt } from "@/lib/cards/bake-render";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
+import { FrameAssetUnavailableError } from "@/lib/render/card-frames";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
   removeRenderObjects,
@@ -139,6 +140,13 @@ export type RebakeBatchResult = {
   /** Work left in scope after this call (excluding `skipIds`). Exact for the
    *  marked scope (a count query); a lower bound for the others. */
   remaining: number;
+  /** The frame assets a render couldn't load right now
+   *  (FrameAssetUnavailableError: the CDN or the frames bucket, not the
+   *  card). The batch STOPPED there — that card and the rest were neither
+   *  baked nor failed, so no card is struck for it; the caller treats it as
+   *  an infrastructure fault (frameAssetsUnavailableMessage,
+   *  lib/cards/auto-rebake-state.ts). */
+  assetsUnavailable?: string[];
 };
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -258,6 +266,7 @@ export async function runRebakeBatch(
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
   const superseded: string[] = [];
+  let assetsUnavailable: string[] | null = null;
   for (const { row, verdict } of batch) {
     try {
       if (verdict === "stamp") {
@@ -292,7 +301,10 @@ export async function runRebakeBatch(
       // The back face of a card with a back body (TODO 5.3), before any
       // upload — a back that fails fails the card, nothing written.
       const back = await renderBackFace(previewData, { brandMark: billingEnabled });
-      if (!back.ok) throw new Error(back.error);
+      if (!back.ok) {
+        if (back.assetsUnavailable) throw new FrameAssetUnavailableError(back.assetsUnavailable);
+        throw new Error(back.error);
+      }
 
       // Overlap guard, part 1: is the card (and its layout) still what we
       // rendered? A residual race remains until the write; part 2 catches it.
@@ -366,6 +378,14 @@ export async function runRebakeBatch(
       }
       processed.push({ id: row.id, verdict, renderedImageUrl });
     } catch (err) {
+      // A frame asset that can't be loaded right now is the CDN's or the
+      // bucket's fault, never the card's: no strike — the batch stops here
+      // (every card after it would meet the same asset) and the caller
+      // counts an infrastructure fault.
+      if (err instanceof FrameAssetUnavailableError) {
+        assetsUnavailable = err.paths;
+        break;
+      }
       failed.push({ id: row.id, error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
@@ -395,7 +415,7 @@ export async function runRebakeBatch(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not count the remaining cards." };
   }
-  return { ...base, dry: false, processed, failed, superseded, remaining };
+  return { ...base, dry: false, processed, failed, superseded, remaining, ...(assetsUnavailable ? { assetsUnavailable } : {}) };
 }
 
 /** Published, baked cards a platform re-bake is owed to (null stamp) — the

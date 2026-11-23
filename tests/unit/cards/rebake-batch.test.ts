@@ -61,6 +61,7 @@ import {
   type RebakeRow,
 } from "@/lib/cards/rebake-batch";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
+import { FrameAssetUnavailableError } from "@/lib/render/card-frames";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
 const row = (id: string, patch: Partial<RebakeRow> = {}): RebakeRow =>
@@ -468,6 +469,50 @@ describe("runRebakeBatch", () => {
     expect(mocks.upload).toHaveBeenCalledTimes(1);
     expect((mocks.upload.mock.calls[0] as unknown[])[1]).toBe("good");
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
+  });
+
+  it("a frame asset the CDN can't serve STOPS the batch: no card failed (no strike), the rest left for a later run", async () => {
+    mocks.render.mockImplementationOnce(async () => {
+      throw new FrameAssetUnavailableError(["frames/m15pw/loyaltyup.png"]);
+    });
+    const stub = db([row("walker-1"), row("walker-2"), row("walker-3")], { markedCount: 3, markedAmongIds: 0 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
+    expect(result.failed).toEqual([]);
+    expect(result.processed).toEqual([]);
+    // Every walker would meet the same badge: none after the first is tried.
+    expect(mocks.render).toHaveBeenCalledTimes(1);
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(result.remaining).toBe(3);
+  });
+
+  it("a back face whose frame asset can't be loaded stops the batch the same way", async () => {
+    mocks.back.mockResolvedValueOnce({
+      ok: false,
+      error: "Back face render failed: Frame asset(s) unavailable: frames/agclassic/g.png",
+      assetsUnavailable: ["frames/agclassic/g.png"],
+    } as never);
+    const stub = db([row("dfc"), row("good")], { markedCount: 2, markedAmongIds: 0 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.assetsUnavailable).toEqual(["frames/agclassic/g.png"]);
+    expect(result.failed).toEqual([]);
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it("cards baked before the stop stay baked and reported", async () => {
+    mocks.render
+      .mockImplementationOnce(async () => new Response(new Uint8Array([137, 80, 78, 71])))
+      .mockImplementationOnce(async () => {
+        throw new FrameAssetUnavailableError(["frames/m15pw/loyaltyup.png"]);
+      });
+    const stub = db([row("first"), row("walker")], { markedCount: 1, markedAmongIds: 0 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.processed.map((p) => p.id)).toEqual(["first"]);
+    expect(result.failed).toEqual([]);
+    expect(result.assetsUnavailable).toEqual(["frames/m15pw/loyaltyup.png"]);
   });
 
   it("refuses the whole batch when the override STAMPS can't be read — never a guard on an empty map", async () => {

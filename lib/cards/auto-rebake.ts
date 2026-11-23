@@ -16,6 +16,7 @@ import {
   CRASHED_BATCH_ERROR,
   diedHoldingLease,
   formatRunLog,
+  frameAssetsUnavailableMessage,
   leaseIsLive,
   parseSweepState,
   streakAfter,
@@ -65,7 +66,9 @@ import {
 //   5. Strikes → poison list (entries whose card no longer owes a re-bake
 //      are dropped), the breaker, one state write, admin alert, release, and
 //      ONE log line (formatRunLog). A batch query that fails
-//      BREAKER_ERROR_RUNS runs in a row trips the breaker too.
+//      BREAKER_ERROR_RUNS runs in a row trips the breaker too — and so does
+//      a frame asset the CDN or the frames bucket can't serve (the batch's
+//      `assetsUnavailable`: an infrastructure stop that strikes no card).
 // ---------------------------------------------------------------------------
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -473,6 +476,15 @@ export async function runAutoRebake(
       const times = (supersededTimes.get(id) ?? 0) + 1;
       supersededTimes.set(id, times);
       if (times >= SUPERSEDED_LIMIT) skip.add(id);
+    }
+    // A frame asset the CDN or the frames bucket couldn't serve stopped the
+    // batch (runRebakeBatch: no card struck). An infrastructure fault, like
+    // a batch query that fails: this run ends, and BREAKER_ERROR_RUNS such
+    // runs in a row pause the sweep and alert the admins — one blip never.
+    if (batch.assetsUnavailable) {
+      stop = "error";
+      error = frameAssetsUnavailableMessage(batch.assetsUnavailable);
+      break;
     }
 
     const tripped = breakerAfterBatch(
