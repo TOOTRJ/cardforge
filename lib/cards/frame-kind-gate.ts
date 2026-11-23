@@ -8,6 +8,8 @@ import {
   enchantmentFrameFits,
   isSingleBasicLand,
   kindFromCard,
+  layoutFrameRefusedCardType,
+  type CardKind,
   sagaCreatureDressReason,
   sagaCreatureFrameFits,
   subtypeDressReason,
@@ -34,7 +36,11 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // artifact on the plain m15 frame, a token on m15) predate the kind-first
 // picker and must stay savable. The borderless M15 skins (4.32) are the one
 // border-era exception: they are new, so no legacy card sits on them, and
-// they carry a kind restriction like a showcase treatment.
+// they carry a kind restriction like a showcase treatment — and so are the
+// NEW frames no legacy card predates: the token frames past the 2014–19
+// arch's own pair dress tokens alone, and the new layout frames (Prepare,
+// the saga creature) the card types their kind draws. An emblem wears the
+// emblem frame alone, on a layout template too.
 // ---------------------------------------------------------------------------
 
 /** The card fields the kind gate reads, in the snake_case a payload or a
@@ -69,6 +75,20 @@ export function frameKindGateError(
   const kind = kindFromCard(face.cardType as CardType | null | undefined, resolved);
   if (templateRefusesKind(resolved, kind)) {
     return `The ${describeFrame(resolved)} frame doesn't dress ${KIND_DEFS[kind].label} cards — pick another frame.`;
+  }
+  // A layout template names its kind whatever the card type (kindFromCard),
+  // so the rule above never sees the type: an emblem is the emblem kind on
+  // EVERY template (it wears the emblem frame alone, CR 114), and the new
+  // layout frames take only the card types their kind's frame draws (the
+  // Prepare frame a creature, the saga creature an enchantment —
+  // layoutFrameRefusedCardType).
+  if (face.cardType === "emblem" && kind !== "emblem" && templateRefusesKind(resolved, "emblem")) {
+    return `The ${describeFrame(resolved)} frame doesn't dress ${KIND_DEFS.emblem.label} cards — pick another frame.`;
+  }
+  const refusedType = layoutFrameRefusedCardType(resolved, face.cardType as CardType | null | undefined);
+  if (refusedType) {
+    const label = KIND_DEFS[refusedType as CardKind]?.label ?? refusedType;
+    return `The ${describeFrame(resolved)} frame doesn't dress ${label} cards — pick another frame.`;
   }
   if (templateIsBasicOnly(resolved) && !isSingleBasicLand(face)) {
     return `${BASIC_ONLY_FRAME_REASON} — pick another frame.`;

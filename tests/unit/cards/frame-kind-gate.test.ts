@@ -130,6 +130,116 @@ describe("frameKindGateError", () => {
   });
 });
 
+describe("frameKindGateError — the newer token frames and the new layout frames", () => {
+  // The token frames past the 2014–19 arch's own pair sit in the m15 set,
+  // so no capability rule judged them, and the new layout frames name their
+  // kind whatever the card type (kindFromCard): a crafted or stale payload
+  // saved a planeswalker on the full-art token or an instant on the Prepare
+  // frame. The picker never offered either.
+  const NEWER_TOKEN_FRAMES = [
+    "m15tokentext",
+    "m15tokenartifacttext",
+    "m15tokentall",
+    "m15tokenartifacttall",
+    "m20token",
+    "m20tokentext",
+    "m20tokentall",
+    "m20tokenartifact",
+    "m20tokenartifacttext",
+    "m20tokenartifacttall",
+  ] as const;
+  const land = cardFieldsFace({ card_type: "land", title: "Test Tower" });
+  const instant = cardFieldsFace({ card_type: "instant", title: "Shock" });
+  const token = (supertype: string, subtypes: string[]) => cardFieldsFace({ card_type: "token", supertype, subtypes, title: subtypes[0] ?? "Copy" });
+  const emblem = cardFieldsFace({ card_type: "emblem", title: "Kaito" });
+
+  it("refuses every card type but the token on the newer token frames", () => {
+    for (const template of NEWER_TOKEN_FRAMES) {
+      expect(frameKindGateError(template, walker), template).toMatch(/doesn't dress Planeswalker cards — pick another frame\.$/);
+      expect(frameKindGateError(template, land), template).toMatch(/doesn't dress Land cards/);
+      expect(frameKindGateError(template, instant), template).toMatch(/doesn't dress Instant cards/);
+      expect(frameKindGateError(template, creature), template).toMatch(/doesn't dress Creature cards/);
+      expect(frameKindGateError(template, battle), template).toMatch(/doesn't dress Battle cards/);
+      expect(frameKindGateError(template, emblem), template).toMatch(/doesn't dress Emblem cards/);
+    }
+    expect(frameKindGateError("m20token", walker)).toBe("The M15 (2015) Token frame doesn't dress Planeswalker cards — pick another frame.");
+  });
+
+  it("still takes every token kind's card on every token frame: creature, artifact, enchantment, a Copy's bare Token, Vehicle and Spacecraft", () => {
+    const tokens = [
+      token("Creature", ["Soldier"]),
+      token("Legendary Creature", ["Spirit"]),
+      token("Artifact", ["Treasure"]),
+      token("Artifact Creature", ["Thopter"]),
+      token("Enchantment", ["Aura", "Role"]),
+      token("", []),
+      token("Artifact", ["Vehicle"]),
+      token("Artifact", ["Spacecraft"]),
+    ];
+    for (const template of [...NEWER_TOKEN_FRAMES, "m15token", "m15tokenartifact"]) {
+      for (const face of tokens) expect(frameKindGateError(template, face), `${template} ${face.supertype} ${face.subtypes?.join(" ")}`).toBeNull();
+    }
+    // The Nyx dress keeps its own rule: a token whose words say Enchantment.
+    expect(frameKindGateError("m20tokennyx", token("Enchantment Creature", ["Nymph"]))).toBeNull();
+    expect(frameKindGateError("m20tokennyx", walker)).not.toBeNull();
+  });
+
+  it("leaves the 2014–19 arch's own pair to the legacy cards that sit on it", () => {
+    for (const template of ["m15token", "m15tokenartifact"]) {
+      expect(frameKindGateError(template, creature), template).toBeNull();
+      expect(frameKindGateError(template, walker), template).toBeNull();
+    }
+  });
+
+  it("keeps an emblem on the emblem frame alone — a layout frame's kind never hides it", () => {
+    expect(frameKindGateError("emblem", emblem)).toBeNull();
+    expect(frameKindGateError("emblem", token("Creature", ["Soldier"]))).not.toBeNull();
+    for (const template of ["saga", "adventure", "split", "aftermath", "flip", "m15dfcfront", "m15mdfcfront", "prepare", "sagacreature", "m15", "m15token"]) {
+      expect(frameKindGateError(template, emblem), template).toMatch(/doesn't dress Emblem cards/);
+    }
+  });
+
+  it("refuses every card type but the Prepare kind's creature on the Prepare frame and its extended-art dress", () => {
+    for (const template of ["prepare", "extendedartprepare"]) {
+      expect(frameKindGateError(template, creature), template).toBeNull();
+      expect(frameKindGateError(template, cardFieldsFace({ card_type: "creature", supertype: "Legendary", subtypes: ["Human", "Wizard"], title: "A" })), template).toBeNull();
+      for (const type of ["instant", "sorcery", "artifact", "enchantment", "land", "planeswalker", "battle", "token"]) {
+        expect(frameKindGateError(template, cardFieldsFace({ card_type: type, title: "A" })), `${template} ${type}`).toMatch(/doesn't dress .* cards — pick another frame\.$/);
+      }
+    }
+    expect(frameKindGateError("prepare", walker)).toBe("The M15 (2015) Prepare frame doesn't dress Planeswalker cards — pick another frame.");
+  });
+
+  it("takes a saga whose words say Creature on the saga creature, and no other card type", () => {
+    const summon = cardFieldsFace({ card_type: "enchantment", supertype: "Creature", subtypes: ["Saga", "Dragon"], title: "Summon: Bahamut" });
+    expect(frameKindGateError("sagacreature", summon)).toBeNull();
+    expect(frameKindGateError("sagacreature", cardFieldsFace({ card_type: "creature", supertype: "Enchantment", subtypes: ["Saga"], title: "A" }))).toBeNull();
+    for (const type of ["instant", "sorcery", "artifact", "land", "planeswalker", "battle", "token"]) {
+      expect(frameKindGateError("sagacreature", cardFieldsFace({ card_type: type, supertype: "Creature", title: "A" })), type).toMatch(/doesn't dress .* cards/);
+    }
+    // The other layout frames still keep their legacy cards.
+    expect(frameKindGateError("saga", walker)).toBeNull();
+    expect(frameKindGateError("adventure", walker)).toBeNull();
+  });
+
+  it("keeps a stored card that broke the rule editable while its frame stays, and refuses a move onto the frame", () => {
+    // Stored before the fix: a walker on the full-art token, an instant on the Prepare frame.
+    expect(frameKindUpdateGateError({ existingTemplate: "m20token", nextTemplate: undefined, existing: walker, next: { ...walker, title: "Renamed" } })).toBeNull();
+    expect(frameKindUpdateGateError({ existingTemplate: "prepare", nextTemplate: "prepare", existing: instant, next: instant })).toBeNull();
+    // A move onto one is judged in full.
+    expect(frameKindUpdateGateError({ existingTemplate: "m15pw", nextTemplate: "m20token", existing: walker, next: walker })).toMatch(/Planeswalker cards/);
+    expect(frameKindUpdateGateError({ existingTemplate: "m15", nextTemplate: "prepare", existing: instant, next: instant })).toMatch(/Instant cards/);
+    // …and a legal card the edit turns illegal is refused.
+    expect(
+      frameKindUpdateGateError({ existingTemplate: "m20token", nextTemplate: undefined, existing: token("Creature", ["Soldier"]), next: walker }),
+    ).toMatch(/Planeswalker cards/);
+    // A token on the full-art frame stays editable.
+    expect(
+      frameKindUpdateGateError({ existingTemplate: "m20token", nextTemplate: "m20tokentext", existing: token("Creature", ["Soldier"]), next: token("Creature", ["Soldier"]) }),
+    ).toBeNull();
+  });
+});
+
 describe("frameKindUpdateGateError", () => {
   it("refuses a patch that moves a card onto a frame that can't draw it", () => {
     expect(

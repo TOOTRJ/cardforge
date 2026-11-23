@@ -636,6 +636,25 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m20tokenartifactnyx: ["token"],
   m20tokenartifactnyxtext: ["token"],
   m20tokenartifactnyxtall: ["token"],
+  // The token frames newer than the 2014–19 arch's own pair (m15token /
+  // m15tokenartifact, the legacy frames a card of another type may sit on
+  // — never judged): the arch's text and tall boxes (TODO 4.49 (b), 4.55)
+  // and the M20+ full-art design (4.48 / 4.50) dress the token kind alone.
+  // Their "token" sits in the m15 set, so no capability rule judges them,
+  // and without a row a planeswalker or a land saved on one. (0129 moved
+  // stored cards WITH TEXT of any type but a land onto the text boxes —
+  // production's public ones were all tokens; an edit of one that keeps
+  // its frame stays editable, frameKindUpdateGateError's legacy pin.)
+  m15tokentext: ["token"],
+  m15tokenartifacttext: ["token"],
+  m15tokentall: ["token"],
+  m15tokenartifacttall: ["token"],
+  m20token: ["token"],
+  m20tokentext: ["token"],
+  m20tokentall: ["token"],
+  m20tokenartifact: ["token"],
+  m20tokenartifacttext: ["token"],
+  m20tokenartifacttall: ["token"],
   // The station frame (TODO 4.27a), new as well: an artifact whose subtype
   // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
   m15station: ["artifact"],
@@ -711,6 +730,38 @@ export function templateRefusesKind(
   if (dress && !dress.includes(kind)) return true;
   if (EXCLUSIVE_KINDS.has(kind) && !dress?.includes(kind)) return true;
   return capabilityJudges(template) && !profileDrawsKind(getFrameProfile(template), kind);
+}
+
+/** The card types the kind gate lets a NEW layout frame dress — the ones
+ *  no stored card of another type predates. kindFromCard reads a layout
+ *  template first, whatever the card type, so templateRefusesKind sees
+ *  their kind and never the type: the Prepare frame and its extended-art
+ *  dress take the Prepare kind's creature (LAYOUT_KIND_CARD_TYPES — every
+ *  printing is one); the saga creature the saga's enchantment with
+ *  "Creature" in its words (FIN's "Enchantment Creature — Saga") or a
+ *  creature with "Enchantment" in them — its words say Creature either
+ *  way (sagaCreatureFrameFits, the per-card half). The older layout frames
+ *  (saga, adventure, split, aftermath, flip) are not judged: legacy cards
+ *  of another type sit on them; the double-faced fronts have their own
+ *  type gate (dfcFrontTypeError). */
+const LAYOUT_FRAME_CARD_TYPES: Partial<Record<FrameTemplate, readonly CardType[]>> = {
+  prepare: LAYOUT_KIND_CARD_TYPES.prepare,
+  extendedartprepare: LAYOUT_KIND_CARD_TYPES.prepare,
+  sagacreature: [...LAYOUT_KIND_CARD_TYPES.saga, "creature"],
+};
+
+/** The card type a layout template judged by the kind gate refuses
+ *  (LAYOUT_FRAME_CARD_TYPES), or null — null on every other template. A
+ *  missing card type reads as kindFromCard's (a creature), the legacy
+ *  "spell" as a sorcery. */
+export function layoutFrameRefusedCardType(
+  template: FrameTemplate,
+  cardType: CardType | "" | null | undefined,
+): CardType | null {
+  const drawable = LAYOUT_FRAME_CARD_TYPES[template];
+  if (!drawable) return null;
+  const type = (cardType === "spell" ? "sorcery" : cardType || "creature") as CardType;
+  return drawable.includes(type) ? null : type;
 }
 
 // ---------------------------------------------------------------------------
