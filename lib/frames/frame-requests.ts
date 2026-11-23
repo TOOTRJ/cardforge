@@ -4,10 +4,16 @@ import { isUuid } from "@/lib/ids";
 import {
   FRAME_SIGNATURE_RULES,
   blockedByOn,
+  borderedLandingOf,
   isKnownFrameSignature,
+  legacyTallBoxAnswered,
+  signatureDrawnOn,
+  templatesOfRule,
   type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
 import { importFrameColorKey, withVerification } from "@/lib/creator/frame-resolve";
+import { CARD_KIND_VALUES, templateSupportsKind, type CardKind } from "@/lib/creator/card-kinds";
+import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 
 // ---------------------------------------------------------------------------
@@ -220,4 +226,112 @@ export function scryfallPrintingUrl(
 ): string | null {
   if (!setCode || !collectorNumber) return null;
   return `https://scryfall.com/card/${encodeURIComponent(setCode)}/${encodeURIComponent(collectorNumber)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Is a logged row answered (frames audit 2026-11-22)? A row keeps the
+// signature its printing had and the frame it LANDED on — never its colour,
+// border or faces — so the answer is read from what it carries: the frame
+// draws the row's piece (signatureDrawnOn), the printing it stands for lands
+// on a frame that does now that that frame is verified (below), or the
+// arch's tall box (legacyTallBoxAnswered, by its set). The admin page asks
+// per row (frameRequestAnswered, with the row's set); the public list per
+// signature and frame (lib/frames/requested-frames.ts
+// answeredSignaturePairs), which has no set.
+// ---------------------------------------------------------------------------
+
+/** The sets whose printings on the 1997 and 2003 frames are white-bordered
+ *  in every non-foil printing — TODO 4.30's own (Fifth to Ninth Edition,
+ *  Anthologies, Deckmasters: tests/unit/scryfall/fixtures/
+ *  white-border-printings.json); their black-bordered foils log no
+ *  "+border" row. A set not listed keeps its "+border" rows open — a World
+ *  Championship deck (gold), Unglued / Unhinged (silver) — so the list can
+ *  be short of a white set, never wrong about one. */
+const WHITE_BORDER_ROW_SETS: ReadonlySet<string> = new Set(["5ed", "6ed", "7ed", "ath", "dkm", "8ed", "9ed"]);
+
+/** The printed border a request row's set says, where it says one. */
+export function printedBorderOfRowSet(setCode: string | null | undefined): "white" | undefined {
+  return setCode && WHITE_BORDER_ROW_SETS.has(setCode.trim().toLowerCase()) ? "white" : undefined;
+}
+
+/** Whether a frame is verified in every colour a real printing exists in
+ *  (the colours frameReferenceOptions has a printing for — a colour with no
+ *  print can't be imported, so it never asks). A frame with no printed
+ *  colour at all is never "done": nothing could check it. */
+export function verifiedInEveryPrintedColour(template: FrameTemplate, verifiedKeys: ReadonlySet<string>): boolean {
+  const printed = FRAME_COLOR_KEYS.filter((colour) => frameReferenceOptions(template, colour).length > 0);
+  return printed.length > 0 && printed.every((colour) => verifiedKeys.has(frameComboKey(template, colour)));
+}
+
+const kindsMemo = new Map<FrameTemplate, ReadonlySet<CardKind>>();
+const kindsOf = (template: FrameTemplate): ReadonlySet<CardKind> => {
+  let kinds = kindsMemo.get(template);
+  if (!kinds) {
+    kinds = new Set(CARD_KIND_VALUES.filter((kind) => templateSupportsKind(template, kind)));
+    kindsMemo.set(template, kinds);
+  }
+  return kinds;
+};
+
+const isTemplate = (value: string | null | undefined): value is FrameTemplate =>
+  value != null && Object.prototype.hasOwnProperty.call(FRAME_TEMPLATE_SET, value);
+
+/**
+ * Whether a gap row logged on a STAND-IN is answered now that the frame it
+ * stood in for is verified: the "+nyx" rows logged on the M15 frame before
+ * the Nyx frame was ticked, the extended-art Spacecraft on the extended-art
+ * frame, the borderless Spacecraft on the artifact frame. The row names a frame the
+ * rule lands its printings on before (its own frames, or the bordered
+ * landing of an edge-to-edge one); the frames the printing lands on once
+ * verified are the ones its rule names — exact there (`onceVerified` +
+ * `exactOnceVerified`), or the stand-in landing of a dress offered only as
+ * a pick (`landOnOnceVerified.answersRows`) — and of those, the ones that
+ * dress a kind the logged frame dresses (the row's printing is one of
+ * them — never a Nyx land on the Nyx frame). Answered when every such frame
+ * draws the row's piece and is verified in every printed colour — every
+ * one, since a row carries no colour, and a frame no printing exists for is
+ * never done (verifiedInEveryPrintedColour): so the M20 token's crown stays
+ * open on the arch — three Nyx heights of its family print nothing. A row
+ * logged on the later frame itself is signatureDrawnOn's.
+ * The "+dfc" rows can't be read this way: the transform printings logged
+ * `era/2015+dfc` on the standard frame before the double-faced bodies, and
+ * today's live cause — FIN's transform cards whose back is a Saga creature
+ * (4.5d part B) — logs the very same signature and frame, with nothing in
+ * the row to tell them apart. They stay open (and leave the windows).
+ */
+export function signatureAnsweredOnceVerified(
+  signature: string,
+  template: string | null | undefined,
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  const rule = RULE_BY_KEY.get(signature);
+  if (!rule || !signature.includes("+") || !isTemplate(template)) return false;
+  const { outcome } = rule;
+  const later: FrameTemplate[] = [];
+  if (outcome.onceVerified !== undefined && outcome.exactOnceVerified === true) {
+    later.push(...templatesOfRule({ ...rule, outcome: { ...outcome, template: outcome.onceVerified, onceVerified: undefined } }));
+  }
+  if (outcome.landOnOnceVerified?.answersRows) later.push(outcome.landOnOnceVerified.template);
+  if (later.length === 0 || later.includes(template)) return false;
+  const before = templatesOfRule({ ...rule, outcome: { ...outcome, onceVerified: undefined } });
+  if (!before.includes(template) && !before.some((frame) => borderedLandingOf(frame) === template)) return false;
+  const kinds = kindsOf(template);
+  const frames = later.filter((frame) => [...kindsOf(frame)].some((kind) => kinds.has(kind)));
+  return (
+    frames.length > 0 &&
+    frames.every((frame) => signatureDrawnOn(signature, frame) && verifiedInEveryPrintedColour(frame, verifiedKeys))
+  );
+}
+
+/** Whether one admin-page row (a signature, its set, the frame it landed
+ *  on) is answered today — see the section above. */
+export function frameRequestAnswered(
+  row: { signature: string; template: string | null; setCode: string | null },
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  return (
+    signatureDrawnOn(row.signature, row.template, printedBorderOfRowSet(row.setCode)) ||
+    signatureAnsweredOnceVerified(row.signature, row.template, verifiedKeys) ||
+    legacyTallBoxAnswered(row.signature, row.setCode, verifiedKeys)
+  );
 }

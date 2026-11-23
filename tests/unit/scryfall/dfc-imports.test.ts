@@ -233,7 +233,7 @@ describe("the registry", () => {
     ["lci-26", "transform/2015+parchment-land-back", "nearest", "m15dfcfront", undefined, "5.8"],
     ["soi-281", "transform/2015", "exact", "m15dfclandfront", undefined, undefined],
     // Pre-2015 frames land nearest on the M15 bodies.
-    ["isd-51", "dfc/2003", "nearest", "m15dfcfront", undefined, "4.10"],
+    ["isd-51", "dfc/2003", "nearest", "m15dfcfront", undefined, "4.10g"],
     // Walker faces wait (5.13); a colourless face is the body's frame,
     // landing on the standard (5.11); a devoid dress the body's frame,
     // landing on the devoid frame (5.11); the modal printings exact on the

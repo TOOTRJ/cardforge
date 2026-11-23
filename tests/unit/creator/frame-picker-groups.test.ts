@@ -49,6 +49,7 @@ import {
   printingTreatmentNotice,
   type PrintingTreatment,
 } from "@/lib/scryfall/import-mapper";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // The frame picker's GROUPS (2026-10-13): extended art, the full-art basics
@@ -270,7 +271,8 @@ const ALL = new Set(TEMPLATES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameCo
 /**
  * The combos production ticked AFTER the recording was made (the seed mirror
  * of 2026-10-14: the Nyx dress, the Universes Beyond trio and the station
- * pair). The recording computed "prod" against the 2026-10-13 list, so this
+ * pair — and every combo of the 2026-11-22 refresh, asBeforeSeedRefresh).
+ * The recording computed "prod" against the 2026-10-13 list, so this
  * suite keeps reading that list: a data refresh is not a classification
  * change. Re-recording the fixture is the time to drop this.
  */
@@ -278,7 +280,7 @@ const TICKED_AFTER_RECORDING = new Set([
   ...["m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15station"].flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))),
   ...["w", "u", "b", "r", "g"].map((k) => frameComboKey("m15stationland", k)),
 ]);
-const PROD = new Set([...productionVerifiedKeys()].filter((key) => !TICKED_AFTER_RECORDING.has(key)));
+const PROD = new Set([...asBeforeSeedRefresh(productionVerifiedKeys())].filter((key) => !TICKED_AFTER_RECORDING.has(key)));
 /** Production's list plus every colour of the frames that moved (today
  *  production has only the two full-art basics ticked, in w u b r g c): the
  *  day they are all ticked. */

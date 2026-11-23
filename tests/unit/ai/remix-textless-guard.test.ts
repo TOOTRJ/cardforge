@@ -17,6 +17,7 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 1.24 — an AI remix never saves a text on a frame that draws none.
@@ -53,7 +54,9 @@ function productionVerifiedKeys(): Set<string> {
   }
   return keys;
 }
-const PROD = productionVerifiedKeys();
+/** Production's list as these cases were written against it — before the
+ *  2026-11-22 refresh. */
+const PROD = asBeforeSeedRefresh(productionVerifiedKeys());
 const ALL = new Set(every(FRAME_TEMPLATE_VALUES));
 const minus = (keys: ReadonlySet<string>, ...templates: string[]) =>
   new Set([...keys].filter((key) => !templates.some((t) => key.startsWith(`${t}/`))));

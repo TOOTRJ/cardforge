@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { FRAME_SIGNATURE_KEYS, FRAME_SIGNATURE_RULES, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
-import { isForGoodSignature } from "@/lib/frames/frame-requests";
-import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import {
+  frameRequestAnswered,
+  isForGoodSignature,
+  printedBorderOfRowSet,
+  signatureAnsweredOnceVerified,
+  signatureBlockedBy,
+} from "@/lib/frames/frame-requests";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import {
+  REQUESTED_FRAMES_MAX_KEYS,
   REQUESTED_FRAMES_MIN_PEOPLE,
   answeredSignaturePairs,
   exactFramesOfSignature,
@@ -201,5 +208,164 @@ describe("requestedFrameStatus — the registry and the verified combos, never a
   it("says people, not requests", () => {
     expect(peopleLabel(1)).toBe("1 person");
     expect(peopleLabel(4)).toBe("4 people");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rows that can clear (frames audit 2026-11-22): rows whose frame is built
+// and verified, yet stayed on the list — and the items they pointed at.
+// ---------------------------------------------------------------------------
+
+/** A row as the admin page reads it. */
+const row = (signature: string, template: string | null, setCode: string | null = null) => ({ signature, template, setCode });
+const everyColourOf = (...templates: FrameTemplate[]) =>
+  new Set(templates.flatMap((t) => FRAME_COLOR_KEYS.map((c) => frameComboKey(t, c))));
+
+describe("the layout frames' two-colour gap is answered frame by frame (its item is a function of the frame)", () => {
+  it("a split or aftermath row is answered: two one-colour parts since 4.26, never a hybrid row", () => {
+    const pairs = answeredSignaturePairs();
+    expect(pairs).toContain("layout/2015+two-colour|split");
+    expect(pairs).toContain("layout/2015+two-colour|aftermath");
+    expect(frameRequestAnswered(row("layout/2015+two-colour", "split"), NONE)).toBe(true);
+  });
+
+  it("a saga's or an adventure's stays open on 4.6f, and the hybrid split stays open", () => {
+    const pairs = answeredSignaturePairs(ALL_VERIFIED);
+    for (const pair of ["layout/2015+two-colour|saga", "layout/2015+two-colour|adventure", "layout/2015+two-colour-hybrid|split"]) {
+      expect(pairs, pair).not.toContain(pair);
+    }
+    expect(signatureBlockedBy("layout/2015+two-colour", "saga")).toBe("4.6f");
+    expect(signatureBlockedBy("layout/2015+two-colour", "split")).toBe("4.26");
+  });
+
+  it("a rule whose gap is older than its hybrid twin still keeps a split-only creature frame's row open", () => {
+    // era/2015's "+two-colour" rows from before 2026-09-29 may be hybrid.
+    expect(signatureDrawnOn("era/2015+two-colour", "m15artifact")).toBe(false);
+    // The Vehicle's gap was born beside its hybrid twin: its rows never are.
+    expect(signatureDrawnOn("vehicle/2015+two-colour", "m15vehicle")).toBe(true);
+  });
+});
+
+describe("the borderless Spacecraft lands on the bordered Station frame by design", () => {
+  it("its row on the bordered Station frame is answered; the item is 1.18's landing rule, not 4.27a", () => {
+    expect(answeredSignaturePairs()).toContain("borderless/standard+station|m15station");
+    expect(frameRequestAnswered(row("borderless/standard+station", "m15station"), NONE)).toBe(true);
+    expect(signatureBlockedBy("borderless/standard+station", "m15artifact")).toBe("1.18");
+  });
+
+  it("a row logged on the artifact frame before the Station frame was ticked is answered once it is, in every printed colour", () => {
+    const station = everyColourOf("m15station");
+    expect(answeredSignaturePairs(NONE)).not.toContain("borderless/standard+station|m15artifact");
+    expect(answeredSignaturePairs(station)).toContain("borderless/standard+station|m15artifact");
+    expect(frameRequestAnswered(row("borderless/standard+station", "m15artifact"), station)).toBe(true);
+    const printed = FRAME_COLOR_KEYS.find((c) => frameReferenceOptions("m15station", c).length > 0)!;
+    const short = new Set([...station].filter((key) => key !== frameComboKey("m15station", printed)));
+    expect(frameRequestAnswered(row("borderless/standard+station", "m15artifact"), short)).toBe(false);
+  });
+
+  it("the other station dresses keep their items: a showcase is 4.11's, extended art answers on its own frame", () => {
+    expect(answeredSignaturePairs(ALL_VERIFIED)).not.toContain("showcase+station|m15station");
+    expect(signatureBlockedBy("borderless/showcase+station", "m15land")).toBe("4.11");
+    expect(answeredSignaturePairs(everyColourOf("extendedartstation"))).toContain("extendedart+station|extendedart");
+  });
+});
+
+describe("a borderless printing's row on its BORDERED landing is answered once the borderless twin draws the piece", () => {
+  it("the crown: drawn on m15borderless / m15borderlessartifact since 4.6f wave 2a", () => {
+    const pairs = answeredSignaturePairs();
+    expect(pairs).toContain("borderless/standard+crown|m15");
+    expect(pairs).toContain("borderless/standard+crown|m15artifact");
+  });
+
+  it("not where the twin doesn't draw it: the borderless land has no crown", () => {
+    expect(answeredSignaturePairs(ALL_VERIFIED)).not.toContain("borderless/land+crown|m15land");
+    expect(signatureDrawnOn("borderless/land+crown", "m15land")).toBe(false);
+  });
+});
+
+describe("a \"+border\" row: the white border is drawn on the 1997 and 2003 frames, read off the row's set", () => {
+  it("answered on the admin page for a white-bordered set, open for a gold or silver one", () => {
+    expect(printedBorderOfRowSet("6ed")).toBe("white");
+    expect(printedBorderOfRowSet("9ED")).toBe("white");
+    expect(printedBorderOfRowSet("wc97")).toBeUndefined();
+    expect(signatureDrawnOn("era/1997+border", "retro", "white")).toBe(true);
+    expect(signatureDrawnOn("era/2003+border", "modern", "white")).toBe(true);
+    expect(signatureDrawnOn("era/1997+border", "retro", "gold")).toBe(false);
+    expect(frameRequestAnswered(row("era/1997+border", "retro", "6ed"), NONE)).toBe(true);
+    expect(frameRequestAnswered(row("era/2003+border", "modern", "8ed"), NONE)).toBe(true);
+    expect(frameRequestAnswered(row("era/1997+border", "retro", "wc99"), NONE)).toBe(false);
+    expect(frameRequestAnswered(row("era/2003+border", "modern", "unh"), NONE)).toBe(false);
+    // No frame draws a white border on the 2015 frame.
+    expect(frameRequestAnswered(row("era/2015+border", "m15", "8ed"), ALL_VERIFIED)).toBe(false);
+  });
+
+  it("never on the public list: its rows carry no set", () => {
+    expect(answeredSignaturePairs(ALL_VERIFIED).some((pair) => pair.includes("+border|"))).toBe(false);
+  });
+});
+
+describe("a gap row logged on a stand-in, answered once the frame it stood in for is verified", () => {
+  it("+nyx on the M15 frame: answered once the Nyx frame is ticked in every printed colour", () => {
+    const nyx = everyColourOf("m15nyx");
+    expect(answeredSignaturePairs(NONE)).not.toContain("era/2015+nyx|m15");
+    for (const template of ["m15", "m15artifact"]) {
+      expect(answeredSignaturePairs(nyx), template).toContain(`era/2015+nyx|${template}`);
+      expect(signatureAnsweredOnceVerified("era/2015+nyx", template, nyx), template).toBe(true);
+    }
+    const printed = FRAME_COLOR_KEYS.find((c) => frameReferenceOptions("m15nyx", c).length > 0)!;
+    const short = new Set([...nyx].filter((key) => key !== frameComboKey("m15nyx", printed)));
+    expect(signatureAnsweredOnceVerified("era/2015+nyx", "m15", short)).toBe(false);
+  });
+
+  it("never where the Nyx frame doesn't dress the logged frame's kinds: a land, a battle", () => {
+    for (const template of ["m15land", "battle"]) {
+      expect(signatureAnsweredOnceVerified("era/2015+nyx", template, ALL_VERIFIED), template).toBe(false);
+    }
+  });
+
+  it("+dfc rows can't be read this way: FIN's live rows log the same signature and frame", () => {
+    for (const template of ["m15", "m15artifact", "m15land"]) {
+      expect(frameRequestAnswered(row("era/2015+dfc", template), ALL_VERIFIED), template).toBe(false);
+    }
+  });
+
+  it("stays under the database's cap with every combo verified", () => {
+    expect(answeredSignaturePairs(ALL_VERIFIED).length).toBeLessThanOrEqual(REQUESTED_FRAMES_MAX_KEYS);
+    for (const pair of answeredSignaturePairs(ALL_VERIFIED)) expect(pair, pair).toMatch(/^[^|]+\+[^|]+\|[a-z0-9]+$/);
+  });
+});
+
+describe("the items the registry names (frames audit 2026-11-22)", () => {
+  it("the double-faced marks: 4.5d on the 2015 frame (FIN's Saga-creature backs), 5.7b on extended art, 4.11 on a showcase", () => {
+    expect(signatureBlockedBy("era/2015+dfc", "m15")).toBe("4.5d");
+    expect(signatureBlockedBy("layout/2015+dfc", "saga")).toBe("4.5d");
+    expect(signatureBlockedBy("extendedart+dfc", "extendedart")).toBe("5.7b");
+    expect(signatureBlockedBy("showcase/tla/avatar+dfc", "avatar")).toBe("4.11");
+    expect(signatureBlockedBy("showcase/blb/woodland+dfc", "bloomburrow")).toBe("4.11");
+  });
+
+  it("the old frames' coloured artifacts, walkers, layout kinds and transforms: 4.10g", () => {
+    for (const signature of [
+      "era/1997/coloured-artifact",
+      "era/2003/coloured-artifact",
+      "era/1997/planeswalker",
+      "era/2003/planeswalker",
+      "layout/older",
+      "dfc/2003",
+    ]) {
+      expect(signatureBlockedBy(signature), signature).toBe("4.10g");
+    }
+    for (const rule of FRAME_SIGNATURE_RULES) {
+      const item = rule.outcome.blockedBy;
+      if (typeof item === "string") expect(item, rule.key).not.toBe("4.10");
+    }
+  });
+
+  it("the legendary arch token's crown is 4.53b; every other frame's crown on the 2015 frame keeps 4.6f", () => {
+    for (const template of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokentall"]) {
+      expect(signatureBlockedBy("era/2015+crown", template), template).toBe("4.53b");
+    }
+    expect(signatureBlockedBy("era/2015+crown", "m15devoid")).toBe("4.6f");
+    expect(signatureBlockedBy("era/2015+crown", null)).toBe("4.6f");
   });
 });
