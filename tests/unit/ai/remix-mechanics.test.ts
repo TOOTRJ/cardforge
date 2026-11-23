@@ -133,7 +133,7 @@ describe("remixFrameFor — layout kinds land on their layout template", () => {
     expect(remixOf("dgm-123", plus(["split", "m"]))).toMatchObject({ template: "split", cardType: "sorcery" });
   });
 
-  it("a saga lands on the saga frame (verified on production), which paints no second face", () => {
+  it("a saga lands on the saga frame (verified on the 2026-10-14 list), which paints no second face", () => {
     const fable = remixOf("neo-141");
     expect(fable).toMatchObject({ template: "saga", cardType: "enchantment" });
     expect(fable.mechanics.back_face).toBeUndefined();

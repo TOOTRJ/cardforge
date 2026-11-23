@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { FRAME_SIGNATURE_KEYS, FRAME_SIGNATURE_RULES, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import anatomyPrintings from "../scryfall/fixtures/anatomy-printings.json";
+import adventurePrintings from "../scryfall/fixtures/adventure-part-colour-printings.json";
+import otpPrintings from "../scryfall/fixtures/otp-breaking-news-printings.json";
+import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import {
   frameRequestAnswered,
   isForGoodSignature,
@@ -246,6 +252,39 @@ describe("the layout frames' two-colour gap is answered frame by frame (its item
   });
 });
 
+describe("a row logged on a fall-forward frame is never answered there (the independent check, 2026-11-22)", () => {
+  // The creator logs the frame the form LANDED on: where the saga /
+  // adventure / walker frame wasn't published in the colour, the plain one.
+  // The printing still lands on its own frame today, where the gap holds.
+  const printing = (data: Record<string, unknown>, key: string) => frameMatchFromScryfall(scryfallCardSchema.parse(data[key]));
+  const LAYOUT_ROWS: [string, Record<string, unknown>, string, string][] = [
+    ["khm-201", anatomyPrintings, "layout/2015+two-colour", "saga"], // a two-colour saga
+    ["mh3-196", adventurePrintings.printings, "layout/2015+two-colour", "adventure"], // a two-colour adventure
+    ["eld-212", adventurePrintings.printings, "layout/2015+two-colour-hybrid", "adventure"], // a hybrid adventure
+  ];
+
+  it.each(LAYOUT_ROWS)("%s: open on its layout frame today, and its row on the plain frame stays open", (key, data, signature, frame) => {
+    const match = printing(data, key);
+    expect(match).toMatchObject({ signature, status: "nearest", template: frame });
+    for (const template of ["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15devoid"]) {
+      expect(frameRequestAnswered(row(signature, template), ALL_VERIFIED), `${signature} on ${template}`).toBe(false);
+      expect(answeredSignaturePairs(ALL_VERIFIED), `${signature} on ${template}`).not.toContain(`${signature}|${template}`);
+    }
+    expect(frameRequestAnswered(row(signature, frame), ALL_VERIFIED)).toBe(false);
+  });
+
+  it("a borderless walker's two-colour row on the plain frame or the bordered walker frame stays open", () => {
+    for (const [key, data] of [["otp-77", otpPrintings], ["dmu-375", signaturePrintings]] as const) {
+      const match = printing(data, key);
+      expect(match.gaps ?? [], key).toContain("two-colour");
+      for (const template of ["m15", "m15pw", match.landOn ?? match.template]) {
+        expect(frameRequestAnswered(row(match.signature, template), ALL_VERIFIED), `${key} on ${template}`).toBe(false);
+      }
+    }
+    expect(answeredSignaturePairs(ALL_VERIFIED)).not.toContain("borderless/planeswalker+two-colour|m15");
+  });
+});
+
 describe("the borderless Spacecraft lands on the bordered Station frame by design", () => {
   it("its row on the bordered Station frame is answered; the item is 1.18's landing rule, not 4.27a", () => {
     expect(answeredSignaturePairs()).toContain("borderless/standard+station|m15station");
@@ -266,7 +305,11 @@ describe("the borderless Spacecraft lands on the bordered Station frame by desig
   it("the other station dresses keep their items: a showcase is 4.11's, extended art answers on its own frame", () => {
     expect(answeredSignaturePairs(ALL_VERIFIED)).not.toContain("showcase+station|m15station");
     expect(signatureBlockedBy("borderless/showcase+station", "m15land")).toBe("4.11");
-    expect(answeredSignaturePairs(everyColourOf("extendedartstation"))).toContain("extendedart+station|extendedart");
+    const own = everyColourOf("extendedartstation");
+    expect(answeredSignaturePairs(own)).toContain("extendedart+station|extendedart");
+    // …and on the bordered Station frame it stood in on meanwhile.
+    expect(answeredSignaturePairs(NONE)).not.toContain("extendedart+station|m15station");
+    expect(answeredSignaturePairs(own)).toContain("extendedart+station|m15station");
   });
 });
 

@@ -559,8 +559,10 @@ Briarhowl Stalker gets +1/+1 as long as you control another Wolf.', '3', '2', 12
   -- …116: Astraia with the crown switched on (as a new legendary card on
   -- the frame starts), and Orrin, a legendary card stored on the frame
   -- with NO switch (as every card saved before the crown shipped): it keeps
-  -- its look until its owner turns "Legendary crown" on. Unverified on a
-  -- fresh database: an admin edits these with `?previewFrames=nyx`.
+  -- its look until its owner turns "Legendary crown" on. Verified on a
+  -- fresh database in every colour but c since supabase/seed.sql's
+  -- 2026-11-22 refresh (green and blue here), so their owner edits them as
+  -- any card.
   ('c0000000-0000-4000-a000-000000000115'::uuid, 'Astraia, Crowned in Starlight', 'astraia-crowned-in-starlight', '{2}{G}', array['green'], 'Legendary Enchantment', 'creature', array['God'], 'mythic',
      E'Indestructible
 As long as your devotion to green is less than five, Astraia isn''t a creature.

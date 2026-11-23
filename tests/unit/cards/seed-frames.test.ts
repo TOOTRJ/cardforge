@@ -59,6 +59,14 @@ describe("supabase/seed.sql verified frames", () => {
     expect(stray).toEqual([]);
   });
 
+  it("names a template in one list only — the every-colour list or the single rows, never both", () => {
+    const block = seededFrameBlock();
+    const everyColour = /unnest\(array\[([^\]]*)\]\)\s+as t \(template\)/.exec(block)![1];
+    const listed = new Set([...everyColour.matchAll(/'([^']+)'/g)].map((m) => m[1]));
+    const singles = new Set([...block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)].map((m) => m[1]));
+    expect([...singles].filter((template) => listed.has(template))).toEqual([]);
+  });
+
   it("names every combo once — a single row never repeats an every-colour template", () => {
     const combos = seededCombos();
     expect(combos.filter((combo, i) => combos.indexOf(combo) !== i)).toEqual([]);

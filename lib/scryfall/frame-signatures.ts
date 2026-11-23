@@ -3557,7 +3557,9 @@ export function ownFramesOfSignature(signature: string): readonly FrameTemplate[
  * rule's "+two-colour" rows were never hybrid.
  *
  * Where a row was logged (frames audit 2026-11-22) — the frame it names:
- *   • a frame of the signature's own rule;
+ *   • a frame of the signature's own rule that dresses a kind the rule
+ *     holds to (framesOfRuleKinds: never a fall-forward — a layout or
+ *     walker printing logged on the plain frame);
  *   • the BORDERED landing of an edge-to-edge frame the rule names (1.18:
  *     an import's picture is the window's, so a borderless printing logs
  *     the frame it landed on — m15 for m15borderless): drawn when every
@@ -3585,9 +3587,37 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   const on = template as FrameTemplate;
   const standIn = rule.outcome.landOnOnceVerified;
   if (standIn?.answersRows && standIn.gap === key && standIn.template === on) return gapDrawnBy(key, on, border);
-  const own = templatesOfRule(rule);
+  const own = framesOfRuleKinds(rule);
   const worn = own.includes(on) ? [on] : own.filter((frame) => BORDERED_EQUIVALENT[frame] === on);
   return worn.length > 0 && worn.every((frame) => gapDrawnOnOwnFrame(rule, key, frame, border));
+}
+
+/** Every `kinds` list a match requires (its own and its `allOf` parts' —
+ *  a gap rule is `allOf: [base, gap]`; never an `anyOf` branch). */
+function requiredKindLists(match: Match): (readonly CardKind[])[] {
+  return [...(match.kinds ? [match.kinds] : []), ...(match.allOf ?? []).flatMap(requiredKindLists)];
+}
+
+const framesOfRuleKindsMemo = new Map<string, readonly FrameTemplate[]>();
+/** The frames a rule names that dress a kind its match holds to — the
+ *  frames its printings WEAR. A family names more (`layout/2015`'s m15
+ *  family names m15, m15land…; `borderless/planeswalker`'s names
+ *  m15borderless), and a row logged on one of those is a fall-forward: the
+ *  creator logs the frame the form landed on (`landedTemplate`), the plain
+ *  frame where the layout or walker frame wasn't published in the colour
+ *  (KHM #201's saga, MH3 #196's adventure, DMU #375's walker on m15) — and
+ *  the printing still lands on its own frame, where the gap holds. Such a
+ *  row is never answered (frames audit 2026-11-22, the independent check). */
+function framesOfRuleKinds(rule: Rule): readonly FrameTemplate[] {
+  let frames = framesOfRuleKindsMemo.get(rule.key);
+  if (!frames) {
+    const lists = requiredKindLists(rule.match);
+    frames = templatesOfRule(rule).filter((frame) =>
+      lists.every((kinds) => kinds.some((kind) => templateSupportsKind(frame, kind))),
+    );
+    framesOfRuleKindsMemo.set(rule.key, frames);
+  }
+  return frames;
 }
 
 /** The rules whose `two-colour` gap is older than its hybrid twin: TODO

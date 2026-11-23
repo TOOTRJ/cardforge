@@ -36,6 +36,10 @@ export const getRequestedFrames = cache(async (): Promise<RequestedFramesResult>
     // The verified combos first: they decide each frame's status AND which
     // rows logged on a stand-in are answered (answeredSignaturePairs — an
     // unreadable list is [] there, which answers only what is drawn today).
+    // TODO: once #827 (fix/rendering-safety) lands, read its honest result
+    // (readVerifiedFrameKeysPublic → { keys, unavailable }) and answer the
+    // page "unavailable" on a failed read — today a failure reads as an
+    // empty list, every built frame "Being checked".
     const verifiedKeys = new Set(await getVerifiedFrameKeysPublic());
     const { data, error } = await createPublicClient().rpc("requested_frame_counts", {
       p_signatures: publicSignatures(),

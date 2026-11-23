@@ -281,8 +281,10 @@ const isTemplate = (value: string | null | undefined): value is FrameTemplate =>
  * stood in for is verified: the "+nyx" rows logged on the M15 frame before
  * the Nyx frame was ticked, the extended-art Spacecraft on the extended-art
  * frame, the borderless Spacecraft on the artifact frame. The row names a frame the
- * rule lands its printings on before (its own frames, or the bordered
- * landing of an edge-to-edge one); the frames the printing lands on once
+ * rule lands its printings on before (its own frames, the bordered landing
+ * of an edge-to-edge one, or the stand-in landing it took meanwhile —
+ * `landOnOnceVerified`: the extended-art Spacecraft on the bordered Station
+ * frame); the frames the printing lands on once
  * verified are the ones its rule names — exact there (`onceVerified` +
  * `exactOnceVerified`), or the stand-in landing of a dress offered only as
  * a pick (`landOnOnceVerified.answersRows`) — and of those, the ones that
@@ -314,7 +316,14 @@ export function signatureAnsweredOnceVerified(
   if (outcome.landOnOnceVerified?.answersRows) later.push(outcome.landOnOnceVerified.template);
   if (later.length === 0 || later.includes(template)) return false;
   const before = templatesOfRule({ ...rule, outcome: { ...outcome, onceVerified: undefined } });
-  if (!before.includes(template) && !before.some((frame) => borderedLandingOf(frame) === template)) return false;
+  // …or the stand-in landing it took while its own frame wasn't verified
+  // (the extended-art Spacecraft on the bordered Station frame).
+  const standIn = outcome.landOnOnceVerified;
+  const loggedBefore =
+    before.includes(template) ||
+    before.some((frame) => borderedLandingOf(frame) === template) ||
+    (standIn !== undefined && !standIn.answersRows && standIn.template === template);
+  if (!loggedBefore) return false;
   const kinds = kindsOf(template);
   const frames = later.filter((frame) => [...kindsOf(frame)].some((kind) => kinds.has(kind)));
   return (
