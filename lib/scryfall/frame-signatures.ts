@@ -3249,9 +3249,11 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { frames: ["2015"], kinds: LAYOUT_KINDS },
       outcome: { status: "exact", template: { family: "m15" } },
     },
-    // A crowned adventure (WOE #220 Beluna, 56 printings) and a two-colour
-    // saga (KHM #201, 84) print pieces the layout frames don't draw yet
-    // (TODO 4.6.0; 4.6f adds them) — and a two-colour split or aftermath
+    // A two-colour saga (KHM #201, 84) prints pieces the layout frames don't
+    // draw yet (TODO 4.6.0; 4.6f adds them, a family per PR — the adventure's
+    // crown and both pair dresses are drawn since its own, so WOE #220
+    // Beluna's crown and MKM #212's pair drop out there: gapDrawnBy) — and a
+    // two-colour split or aftermath
     // (HOU #157 Driven // Despair g|b) prints each part in its own colour:
     // that is 4.26's per-part colour, not the two-colour dress, so the gap's
     // item follows the frame the printing lands on (as the registry's

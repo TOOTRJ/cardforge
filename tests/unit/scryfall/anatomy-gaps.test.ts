@@ -38,13 +38,11 @@ describe("the crown on the frames that draw it (4.6a)", () => {
 });
 
 describe("the layout frames' new gaps", () => {
-  it("a crowned adventure is nearest, blocked by the crown", () => {
+  it("a crowned adventure is exact since the adventure frame draws its crown (TODO 4.6f; it was nearest, blocked by the crown)", () => {
     expect(match("woe-220")).toMatchObject({
-      status: "nearest",
+      status: "exact",
       template: "adventure",
-      signature: "layout/2015+crown",
-      blockedBy: "4.6f",
-      reason: "PipGlyph doesn't draw the legendary crown on this frame yet",
+      signature: "layout/2015",
     });
   });
 

@@ -87,7 +87,8 @@ describe("bake path = preview path", () => {
     // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
     // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
     // …and the extended-art Prepare dress's 20 (4.27b: the Prepare pairs' lower half).
-    expect(pairKeys).toBe(480);
+    // …and the adventure's 20 (4.6f: both dresses, each storybook page split).
+    expect(pairKeys).toBe(500);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -227,6 +228,9 @@ describe("bake path = preview path", () => {
                   : template === "nyx"
                     ? // The Nyx Constellation frame's crown: that band, its arms faded.
                       "nyxcrown"
+                  : template === "adventure"
+                    ? // The adventure's crown (4.6f): the m15crown band, its arms faded.
+                      "adventurecrown"
                     : template.startsWith("m20token")
                       ? // The full-art token's floating crown band (4.48).
                         "m20tokencrown"

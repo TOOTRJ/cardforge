@@ -1684,6 +1684,18 @@ export function visualCases(): VisualCase[] {
   add("nyx", "creature", "u", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   // The ZNR hedron crown at the stored bake's size (TODO 4.11).
   add("fullart", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // TODO 4.6f (owner 2026-11-22): the adventure frame's crown — the m15crown
+  // band with its arms faded onto the masters' pinline (adventurecrown), in
+  // every colour that picks a different band: w u b r g, c (the artifact
+  // silver: the frame maps c → a), wu (gold: a pair with its two-colour
+  // switch off; the split crown is "@pair-crown") and wub; at the stored
+  // bake's size and on foil. The adventure's long row prints no supertype
+  // (its stored cases), so these name the word.
+  for (const colour of ["w", "u", "b", "r", "g", "c", "wu", "wub"] as const) {
+    add("adventure", "adventure", colour, "long", { crown: true, suffix: "@crown", row: { supertype: "Legendary" } });
+  }
+  add("adventure", "adventure", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd", row: { supertype: "Legendary" } });
+  add("adventure", "adventure", "r", "long", { crown: true, finish: "foil", suffix: "@crown-foil", row: { supertype: "Legendary" } });
   // TODO 4.48's last pieces: the full-art token's floating crown round its
   // name pill (m20tokencrown/<key>), opt-in per card — NEW cases, no stored
   // token names the switch. A Legendary token on each height, the artifact
@@ -1777,10 +1789,22 @@ export function visualCases(): VisualCase[] {
     // crown at all (the borderless land draws its pairs and none: 4.56).
     // (The token's long row is a Treasure: an Artifact, made Legendary here —
     // the full-art token's crown, 4.48.)
-    const legend = template.startsWith("m20token") ? { supertype: "Legendary Artifact" } : {};
+    // (The adventure's long row is not Legendary — its stored cases print
+    // no supertype — so its pair crown names the word here, TODO 4.6f.)
+    const legend = template.startsWith("m20token") ? { supertype: "Legendary Artifact" } : template === "adventure" ? { supertype: "Legendary" } : {};
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.6f: the adventure's hybrid dress (ELD #212 Oakhame Ranger: the two
+  // frames split, grey bars and a grey spell page, the grey plate), its
+  // legend's split crown over it (HOB #166 Thranduil), and the gold-split
+  // pair at the stored bake's size.
+  add("adventure", "adventure", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("adventure"), cost: "{W/U}{W/U}" } });
+  add("adventure", "adventure", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("adventure", "regular", true), supertype: "Legendary", cost: "{2}{W/U}{W/U}" },
+  });
+  add("adventure", "adventure", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("adventure") });
   // TODO 4.11 wave 2: the Strixhaven Mystical Archive's pair on an instant,
   // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
   // and flavour).
@@ -1866,6 +1890,12 @@ export function visualCases(): VisualCase[] {
   partCase("adventure", "adventure", "g", "short", "@part-ub", { colors: ["blue", "black"], cost: "{U}{B}" });
   partCase("adventure", "adventure", "b", "short", "@part-r-foil", { colors: ["red"], cost: "{R}" }, { finish: "foil" });
   partCase("adventure", "adventure", "w", "long", "@part-u-etched", { colors: ["blue"], cost: "{2}{U}" }, { finish: "etched" });
+  // TODO 4.6f: the two-colour adventure (its pair master) beside its spell's
+  // page — a mono spell's page over the pair master's split pages, and a
+  // spell of the creature's own pair, which draws no page (MKM #212: the
+  // pair master paints the pair's pages).
+  partCase("adventure", "adventure", "wu", "short", "@pair-part-w", { colors: ["white"], cost: "{W}" }, { style: { twoColor: true } });
+  partCase("adventure", "adventure", "wu", "short", "@pair-part-wu", { colors: ["white", "blue"], cost: "{W}{U}" }, { style: { twoColor: true } });
   // The borderless hybrid dress (grey bars, the split pinline) and its
   // crowned twin (4.6f).
   add("m15borderless", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15borderless"), cost: "{W/U}{W/U}" } });
@@ -3180,6 +3210,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15vehicle",
   // The Nyx dress (TODO 4.7): m15's split and hybrid over the starfield.
   "m15nyx",
+  // The adventure frame (TODO 4.6f): each storybook page split, both dresses.
+  "adventure",
   // The Universes Beyond frames (TODO 4.25): their M15 twins' dresses.
   "m15ub", "m15ubartifact", "m15ubland",
   // The extended-art frame and its land dress (TODO 4.7 follow-up, owner

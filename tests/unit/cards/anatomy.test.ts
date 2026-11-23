@@ -24,7 +24,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
-import { M15_CROWN, getFrameProfile, profileOffersRulesAlign, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
+import { ADVENTURE_CROWN, M15_CROWN, getFrameProfile, profileOffersRulesAlign, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 
@@ -344,6 +344,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band, the pairs.
       "extendedartprepare",
+      // The adventure frame (TODO 4.6f, owner 2026-11-22): M15's band with
+      // its arms faded onto the masters' pinline, and both pair dresses.
+      "adventure",
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -429,6 +432,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       prepare: ["split", "hybrid"],
       // …and its extended-art dress (4.27b): the same masters' lower half.
       extendedartprepare: ["split", "hybrid"],
+      // The adventure frame (4.6f): the gold-split (each storybook page and
+      // the pinline split) and the hybrid (the spell's page grey).
+      adventure: ["split", "hybrid"],
       // The Strixhaven Mystical Archive (4.11 wave 2): the gold frame with
       // the two colours' lines, as STA #59–63 print it.
       mysticalarchive: ["split"],
@@ -499,12 +505,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    for (const t of ["adventure", "saga"]) {
-      // (The adventure's one piece is the spell's page in its own colour,
-      // TODO 4.26: the `partPage` slot.)
-      const part = t === "adventure" ? { partColor: true } : {};
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false, ...part });
-    }
+    // The saga draws none yet (4.6f's next family). The adventure (4.6f,
+    // owner 2026-11-22) draws its own crown band and both pair dresses, beside
+    // the spell's page in its own colour (TODO 4.26: the `partPage` slot).
+    expect(frameAnatomyOf("saga")).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile("saga")), border: false });
+    expect(frameAnatomyOf("adventure")).toEqual({ crown: true, twoColor: ["split", "hybrid"], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile("adventure")), border: false, partColor: true });
+    expect(getFrameProfile("adventure").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([ADVENTURE_CROWN]);
     // The Expeditions (TODO 4.11 wave 1) print the collector line, nothing
     // else a card switches on.
     for (const t of ["expeditionland", "expeditionlandbfz"]) {

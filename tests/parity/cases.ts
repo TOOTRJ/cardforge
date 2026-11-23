@@ -272,6 +272,14 @@ const PICKS: readonly Pick[] = [
   // decision 2026-10-22: the pre-cut `adventure/page/<key>` through the
   // same partPage slot — WOE #221's red page beside a black frame).
   { from: "adventure/b/adventure-short@part-r", why: "part colour: the adventure spell's red page over a black master (the page overlay, bookLeft's soft edge)" },
+  // TODO 4.6f (owner 2026-11-22): the adventure's legendary crown (the
+  // m15crown band with its arms faded onto the masters' pinline) and its
+  // two-colour pair masters — each storybook page split about its own
+  // centre (MKM #212), the hybrid's grey bars, grey spell page and plate
+  // (ELD #212).
+  { from: "adventure/r/adventure-long@crown", why: "adventure crown (4.6f): the faded crown band over a mono master, the title above the band's bar" },
+  { from: "adventure/wu/adventure-long@pair-crown", why: "adventure pair (4.6f): the gold-split pair master (each page split), the split crown band, the gold plate" },
+  { from: "adventure/wu/adventure-short@pair-hybrid", why: "adventure hybrid (4.6f): the two frames split, grey bars and a grey spell page under the white page ink, the grey plate" },
   // …and owner decision M2 (N3): the card's colour the WHOLE card's (gold),
   // its first half's on frame_style.firstPartColor — the left half red from
   // it, the right blue (the long split: the short one's turned footer is

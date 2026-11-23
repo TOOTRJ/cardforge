@@ -3398,20 +3398,114 @@ export function belowOutlinePlane(data, width, height, { cols, rows, dark }) {
   if (missing.length) throw new Error(`belowOutlinePlane: no outline darker than ${dark} in rows ${rows[0]}–${rows[1] - 1} at ${missing.length} columns (first ${missing[0]})`);
   return plane;
 }
-/** The adventure masters' files toned (sourceTonesOf reads it). */
+/**
+ * The HYBRID two-colour adventure's grey left page (TODO 4.6f; see
+ * ADVENTURE_PAIR_LAYERS below): the pack's 'Land Frame' (l.png) through
+ * bookLeft — the grey bars and paper ELD #212 Oakhame Ranger // Bring Back
+ * and HOB #166 Thranduil, Sindarin Liege // Silvan Rally print — its paper
+ * toned onto those two prints by 4.26a's house rule (the same region, the
+ * same reading): print 210,206,205 (HOB #166) and 221,213,218 (ELD #212),
+ * their median (of two: the mean) against the file's 177,174,173. Read by
+ * the hybrid pair masters alone — no one-colour master draws l.png.
+ */
+export const ADVENTURE_HYBRID_PAPER_TONE = Object.freeze({ from: Object.freeze([177, 174, 173]), to: Object.freeze([216, 210, 212]) });
+
+/** One adventure pack file's left-page paper tone (sourceTonesOf's shape). */
+const adventurePaperTone = (key, tone, table) => [
+  `${ADVENTURE}/${key}.png`,
+  Object.freeze({
+    masks: Object.freeze({ paper: `${ADVENTURE}/bookLeft.png` }),
+    clip: Object.freeze({ paper: Object.freeze({ belowOutline: ADVENTURE_PAPER_REGION }) }),
+    tones: Object.freeze({ paper: tone }),
+    table,
+  }),
+];
+
+/** The adventure masters' files toned (sourceTonesOf reads it): each
+ *  colour's (ADVENTURE_PAPER_TONES) and the hybrid pairs' grey page
+ *  (ADVENTURE_HYBRID_PAPER_TONE). */
 export const ADVENTURE_SOURCE_TONES = Object.freeze(
-  Object.fromEntries(
-    Object.entries(ADVENTURE_PAPER_TONES).map(([key, tone]) => [
-      `${ADVENTURE}/${key}.png`,
-      Object.freeze({
-        masks: Object.freeze({ paper: `${ADVENTURE}/bookLeft.png` }),
-        clip: Object.freeze({ paper: Object.freeze({ belowOutline: ADVENTURE_PAPER_REGION }) }),
-        tones: Object.freeze({ paper: tone }),
-        table: `ADVENTURE_PAPER_TONES.${key}`,
-      }),
-    ]),
-  ),
+  Object.fromEntries([
+    ...Object.entries(ADVENTURE_PAPER_TONES).map(([key, tone]) => adventurePaperTone(key, tone, `ADVENTURE_PAPER_TONES.${key}`)),
+    adventurePaperTone("l", ADVENTURE_HYBRID_PAPER_TONE, "ADVENTURE_HYBRID_PAPER_TONE"),
+  ]),
 );
+
+// ---------------------------------------------------------------------------
+// The adventure's two-colour pair masters (TODO 4.6f; owner 2026-11-22):
+// `adventure/<pair>` (gold-split) and `adventure/<pair>-h` (hybrid). Card
+// Conjurer has no two-colour adventure recipe (creator-23.js's
+// cardFrameProperties knows none of the pack's masks), so this is 4.6b's
+// recipe (twoColorRecipe) carried onto the pack's OWN masks — its Pinline
+// (pinline.svg), the regular M15 Title / Type masks it lists, and the two
+// pages of its storybook (bookLeft.png, bookRight.png) — over the same
+// pack files as the seven one-colour masters, loaded the same way (the
+// left page's paper toned, ADVENTURE_SOURCE_TONES).
+//
+// What print does (Scryfall 2026-11-22: `layout:adventure frame:2015 c=2`,
+// the black-bordered plain printings — MKM #212 Kellan, Inquisitive Prodigy
+// G|U and MH3 #196 Ondu Knotmaster W|B gold; ELD #212 Oakhame Ranger G|W
+// and HOB #166 Thranduil, Sindarin Liege G|U hybrid; read at 1500 × 2100,
+// each column's median de-shaded against our two one-colour masters):
+//   • gold-split — the gold frame and gold bars (m.png), the pinline split
+//     across 4.6b's 40→60 %W (the art ring, the type-bar ring and the
+//     book's foot), and EACH PAGE split about its own centre, not the
+//     card's: the left page's bars and paper cross from the first colour to
+//     the second around x 400–450 (MKM #212's name bar 50 % at ~430, type
+//     bar ~400; MH3 #196's ~390 and ~450, its paper ~420 — the page runs x
+//     73–752, centre 412), the right page's paper around x 1090–1130 (MKM
+//     ~1105, MH3 ~1120 — the page runs 752–1410). Both pages ramp over
+//     about 240 px: ADVENTURE_PAIR_PAGE_RAMPS, 300 → 540 and 990 → 1230;
+//   • hybrid — the two colours' frames across the hybrid frame ramp (44→57
+//     %W), CC's grey 'Land Frame' bars (l.png through Title and Type), the
+//     LEFT page grey — the spell's page in the hybrid's own grey, bars and
+//     paper (ELD #212, HOB #166: the creature's and the spell's cost are
+//     both hybrid) — the right page split as the gold-split's (HOB #166
+//     ~1110) and the pinline split; the grey plate pt/c (plateKeyFor).
+// The crown is the adventure's own band (adventurecrown/<pair>, built by
+// scripts/build-adventure-crown.mjs). Verification: a pair rides the
+// template's `m` tick (4.6b's V-A).
+// ---------------------------------------------------------------------------
+
+/** The pages' own splits, [from, to] in % of the card's width (see above):
+ *  the left page x 300 → 540 (10 / 50 / 90 % at 324 / 420 / 516), the
+ *  right page x 990 → 1230 (1014 / 1110 / 1206). */
+export const ADVENTURE_PAIR_PAGE_RAMPS = Object.freeze({
+  left: Object.freeze([20, 36]),
+  right: Object.freeze([66, 82]),
+});
+
+/** The pack's masks the pair masters draw through (packAdventure.js). */
+export const ADVENTURE_MASK = Object.freeze({
+  title: `${REG}/m15MaskTitle.png`,
+  type: `${REG}/m15MaskType.png`,
+  pageLeft: `${ADVENTURE}/bookLeft.png`,
+  pageRight: `${ADVENTURE}/bookRight.png`,
+  pinline: `${ADVENTURE}/pinline.svg`,
+});
+
+/** The layers of one adventure pair master (see above): `dress` "split"
+ *  (the gold-split `<pair>`) or "hybrid" (`<pair>-h`). */
+export function adventurePairLayers(pair, dress) {
+  const [a, b] = pairSides(pair);
+  const file = (k) => `${ADVENTURE}/${k}.png`;
+  const split = (mask, ramp) => ({ src: file(a), right: file(b), ramp: [...ramp], ...(mask ? { mask } : {}) });
+  const rightPageAndPinline = [split(ADVENTURE_MASK.pageRight, ADVENTURE_PAIR_PAGE_RAMPS.right), split(ADVENTURE_MASK.pinline, PAIR_RAMPS.pinline)];
+  if (dress === "hybrid") {
+    return [
+      split(undefined, PAIR_RAMPS.frame),
+      layer(file("l"), ADVENTURE_MASK.title),
+      layer(file("l"), ADVENTURE_MASK.type),
+      layer(file("l"), ADVENTURE_MASK.pageLeft),
+      ...rightPageAndPinline,
+    ];
+  }
+  if (dress !== "split") throw new Error(`adventurePairLayers: no ${dress} dress`);
+  return [layer(file("m")), split(ADVENTURE_MASK.pageLeft, ADVENTURE_PAIR_PAGE_RAMPS.left), ...rightPageAndPinline];
+}
+
+const ADVENTURE_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6f, owner 2026-11-22): Card Conjurer has no two-colour adventure recipe, so 4.6b's (twoColorRecipe) carried onto the pack's own masks (adventurePairLayers) — gold-split <pair> = m.png whole with each storybook PAGE split about its own centre (bookLeft 300→540 px, bookRight 990→1230 px: ADVENTURE_PAIR_PAGE_RAMPS, measured on MKM #212 / MH3 #196 / HOB #166) and the pinline (pinline.svg) across 40→60 %W; hybrid <pair>-h = the two colours' frames across the frame ramp (44→57 %W) under the pack's grey 'Land Frame' bars (l.png through the regular M15 Title and Type masks) and grey LEFT page (l.png through bookLeft, its paper toned onto ELD #212 / HOB #166: ADVENTURE_HYBRID_PAPER_TONE), the right page and the pinline split as the gold-split's (the grey plate pt/c)";
 
 // ---------------------------------------------------------------------------
 // The Nyx Constellation frame's masters (template `nyx`, TODO 4.17f; owner
@@ -7502,6 +7596,8 @@ export const CC_TEMPLATES = {
     colors: {
       ...perColor((k) => [layer(`${ADVENTURE}/${k}.png`)], WUBRGM),
       c: [layer(`${ADVENTURE}/a.png`)],
+      // TODO 4.6f: the two-colour pair masters, both dresses (adventurePairLayers).
+      ...pairMasters("m15", ["split", "hybrid"], (pair, dress) => adventurePairLayers(pair, dress)),
     },
     pack: "packAdventure.js 'Adventure'",
     transforms: NATIVE_1500,
@@ -7512,7 +7608,9 @@ export const CC_TEMPLATES = {
       "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
       "colourless = CC's 'Artifact Frame' (adventure/a.png; the pack has no other colourless frame): colourless adventures ARE printed — the artifacts HOB #170 / #174 / #176 and FIN's Towns #283–293 — and `adventure/c` is verified on production (supabase/seed.sql lists adventure in all seven keys; corrected 2026-10-22, 4.26 — the 4.21a note said no colourless adventure was printed and the key would never be ticked); a colourless creature with a coloured spell draws the spell's page over it (HOB #170: `page/w` over `adventure/c`, TODO 4.26)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
-      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints",
+      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookLeft and bookRight split the two pages of the pair masters (TODO 4.6f, below)",
+      ADVENTURE_PAIR_NOTE,
+      "the legendary crown (TODO 4.6f): the adventurecrown overlay — our m15crown band with its arms' last rows faded (scripts/build-adventure-crown.mjs), the pack's title bar sitting on M15's rows (the bar's top outline rows 100–103 on both, its bottom 1 px higher here) while its pinline is the regular pack's other tone on w, b, r, g, m and c",
     ],
   },
   // 4.17f — the Theros Beyond Death constellation showcase (template `nyx`,

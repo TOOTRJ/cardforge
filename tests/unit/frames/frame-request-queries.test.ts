@@ -228,6 +228,8 @@ describe("window helpers", () => {
       ["token/m20+crown", "m20tokenartifacttext"],
       ["token/m20+two-colour", "m20token"],
       ["token/m20+two-colour", "m20tokentall"],
+      // TODO 4.6f: the adventure frame draws its crown (WOE #220 Beluna).
+      ["layout/2015+crown", "adventure"],
     ]) {
       expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
     }
@@ -238,7 +240,8 @@ describe("window helpers", () => {
       // A split-only frame that hosts creatures can't tell a hybrid row
       // from a gold one (like m15artifact below).
       ["era/2015+two-colour", "m15snow"],
-      ["layout/2015+crown", "adventure"],
+      // …and the saga's crown, still 4.6f's.
+      ["layout/2015+crown", "saga"],
       // A borderless printing that landed on its bordered equivalent is not
       // exact however the landing frame is dressed.
       ["borderless/standard+crown", "m15"],

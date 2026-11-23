@@ -18,7 +18,8 @@ import { FRAME_TEMPLATE_VALUES, type FrameStyle } from "@/types/card";
 //     verified on the adventure frame (M1) — else OFF, main's look, never a
 //     save refused after the art;
 //   • the landings are main's: WOE #221 (a red page beside a black frame)
-//     exact; the crowned, two-colour and Omen printings keep their gaps.
+//     exact; the Omen printings keep their gap (the crowned and two-colour
+//     ones are exact since TODO 4.6f drew the crown and the pairs).
 // ---------------------------------------------------------------------------
 
 const PRINTINGS = (fixture as { printings: Record<string, ScryfallCard> }).printings;
@@ -64,12 +65,14 @@ describe("adventure printings, the spell's page in its own colour", () => {
       "woe-239": ["exact", "layout/2015"],
       "woe-223": ["exact", "layout/2015"],
       "eld-115": ["exact", "layout/2015"],
-      "woe-220": ["nearest", "layout/2015+crown"],
-      "mkm-212": ["nearest", "layout/2015+crown"],
-      "eld-212": ["nearest", "layout/2015+two-colour-hybrid"],
-      "mh3-196": ["nearest", "layout/2015+two-colour"],
-      "hob-170": ["nearest", "layout/2015+crown"],
-      "lci-231": ["nearest", "layout/2015+crown"],
+      // The crowned and two-colour printings (TODO 4.6f): the adventure
+      // frame draws its crown and both pair dresses now — exact.
+      "woe-220": ["exact", "layout/2015"],
+      "mkm-212": ["exact", "layout/2015"],
+      "eld-212": ["exact", "layout/2015"],
+      "mh3-196": ["exact", "layout/2015"],
+      "hob-170": ["exact", "layout/2015"],
+      "lci-231": ["exact", "layout/2015"],
       "tdm-178": ["nearest", "layout/2015+omen"],
     };
     for (const [key, [status, signature]] of Object.entries(want)) {

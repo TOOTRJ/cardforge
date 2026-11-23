@@ -100,6 +100,10 @@ describe("the declared pair masters", () => {
       // …and its extended-art dress (TODO 4.27b): the same twenty, merged
       // under the extended-art top.
       extendedartprepare: 20,
+      // …and the adventure's twenty (TODO 4.6f): 4.6b's two dresses on the
+      // pack's own masks, each storybook page split
+      // (tests/unit/frames/adventure-crown-pairs.test.ts).
+      adventure: 20,
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,

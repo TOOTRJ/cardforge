@@ -319,6 +319,13 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the adventure's twenty (TODO 4.6f): 4.6b's two dresses carried
+      // onto the pack's own masks — each storybook page split about its own
+      // centre (tests/unit/frames/adventure-crown-pairs.test.ts).
+      if (template === "adventure") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
+        continue;
+      }
       // …and the Nyx dress's twenty (TODO 4.7): m15's two dresses over the
       // starfield masters (tests/unit/creator/nyx-frame.test.ts).
       if (template === "m15nyx") {

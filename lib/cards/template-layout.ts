@@ -6464,6 +6464,33 @@ export const NYX_CONSTELLATION_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The adventure frame's legendary crown (TODO 4.6f; owner 2026-11-22):
+ * `adventurecrown/<key>.png`. Every crowned adventure printing on the 2015
+ * frame wears the STANDARD crown in the card's colour (LCI #231, HOB #34 /
+ * #71 / #118, WOE #230, WOE #220 gold, HOB #170 the artifact silver; MKM
+ * #212's G|U split over the gold-split pair frame) — the m15crown band, which
+ * registers on this frame's title bar as on m15's (Card Conjurer's
+ * 'Adventure' pack is the regular M15 pack's geometry: the bar's top outline
+ * on M15's rows). The bands here are that band with ONE cut, the Nyx
+ * Constellation crown's (scripts/lib/adventure-crown.mjs,
+ * scripts/build-adventure-crown.mjs): the arms' last rows fade out, because
+ * the masters' pinline beside the art is the regular pack's other tone on
+ * six keys and the crown would end in a step — it hands over to the
+ * master's pinline instead. Keys (ADVENTURE_CROWN_RECIPE.keys; a unit test
+ * holds them together): the masters' letters — w u b r g, m — the artifact
+ * silver `a`, which the entry maps its colourless key to (`adventure/c` is
+ * the pack's artifact frame), and the ten pairs (the pair masters). Set on
+ * the adventure entry only; opt-in per card like every crown
+ * (FrameStyle.crown) — declaring it changes no stored card.
+ */
+export const ADVENTURE_CROWN: FrameOverlaySlot = {
+  ...M15_CROWN,
+  assetPathTemplate: "/frames/adventurecrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "a" },
+};
+
+/**
  * The Universes Beyond crown (TODO 4.25): `m15ubcrown/<key>.png`, Card
  * Conjurer's 'Legend Crowns (Universes Beyond)' of its accurate group — the
  * standard crown's geometry with the UB pack's smooth art, built by
@@ -8736,7 +8763,16 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
   // per card (frame_style.partColor).
-  adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },
+  // TODO 4.6f (owner 2026-11-22): the legendary crown (ADVENTURE_CROWN: the
+  // m15crown band with its arms faded onto the masters' pinline) and the
+  // two-colour pair masters in both dresses — the gold-split `<pair>` (the
+  // gold frame and bars, each storybook page and the pinline split: MKM
+  // #212, MH3 #196) and the hybrid `<pair>-h` (the two frames split, grey
+  // bars, the spell's page grey, the right page and pinline split, the grey
+  // plate: ELD #212, HOB #166) — each opt-in per card, so no stored card
+  // changes by them. A pair master paints its own pair's pages, so a spell
+  // of the creature's pair draws no page over it (resolveFrameOverlays).
+  adventure: { ...ADVENTURE, twoColorMasters: ["split", "hybrid"], overlays: [ADVENTURE_CROWN, ADVENTURE_PAGE] },
   // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
   // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
   // the colourless key is the artifact frame, so its crown is the
