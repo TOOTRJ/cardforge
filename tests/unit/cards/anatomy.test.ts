@@ -344,6 +344,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band, the pairs.
       "extendedartprepare",
+      // …and the Universes Beyond extended-art frames (TODO 4.25): the
+      // floating Universes Beyond crown band and their twins' pairs.
+      "extendedartub", "extendedartubland",
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -425,6 +428,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // dresses over the extended masters; its land dress the land's split.
       extendedart: ["split", "hybrid"],
       extendedartland: ["split"],
+      // The Universes Beyond extended-art frames (4.25): their extended
+      // twins' dresses over the pack's own masters.
+      extendedartub: ["split", "hybrid"],
+      extendedartubland: ["split"],
       // The Prepare frame (4.26): m15's two dresses with the page.
       prepare: ["split", "hybrid"],
       // …and its extended-art dress (4.27b): the same masters' lower half.
@@ -554,7 +561,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Doctor Who TARDIS (4.11 wave 2): the pack's one trapezoid, the Universes Beyond hole.
     "tardis",
     // …and the OTJ Breaking News (4.11 wave 2): the pack's one oval tab.
-    "breakingnews"];
+    "breakingnews",
+    // …and the Universes Beyond extended-art frames (4.25): the triangle on the pack's own piece.
+    "extendedartub", "extendedartubland"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -832,7 +841,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "mysticalarchive", "breakingnews", "extendedartland", "retroland", "modernland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "mysticalarchive", "breakingnews", "extendedartland", "extendedartubland", "retroland", "modernland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

@@ -56,6 +56,9 @@ describe("which card draws the crown", () => {
       "m15station", "m15stationland",
       // …and its dresses (step 2): the extended-art band, the borderless twins.
       "extendedartstation", "m15borderlessstation",
+      // The Universes Beyond extended-art frames (TODO 4.25): the floating
+      // Universes Beyond crown band.
+      "extendedartub", "extendedartubland",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       // The Lord of the Rings scroll (TODO 4.11): the pack's own crown band.

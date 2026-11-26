@@ -192,6 +192,10 @@ const DOCUMENTED_NULLS = new Set([
   // artifact dress) — no other colour printed it.
   "m15tokentall/u", "m15tokentall/g", "m15tokentall/c", "m15tokentall/m",
   "m15tokenartifacttall/w", "m15tokenartifacttall/u", "m15tokenartifacttall/b", "m15tokenartifacttall/r", "m15tokenartifacttall/g", "m15tokenartifacttall/m",
+  // The Universes Beyond extended-art land (TODO 4.25): its 214 printings
+  // (Scryfall 2026-11-25) are two-colour, colourless or a white, blue or
+  // black land — no land that makes red or green mana alone.
+  "extendedartubland/r", "extendedartubland/g",
 ]);
 
 describe("frame-references.json", () => {

@@ -231,6 +231,13 @@ const STATION_DRESSES: readonly string[] = [
   // tests/unit/scryfall/otp-breaking-news-imports.test.ts (OTP #1–65 land
   // there once verified) and tests/unit/frames/otp-breaking-news-importer.test.ts.
   "breakingnews",
+  // …and the Universes Beyond extended-art frames (TODO 4.25): two new
+  // templates, extended art's Universes Beyond dress and its land — pinned
+  // in tests/unit/creator/ub-extended-art-frame.test.ts (the kinds, the
+  // gallery, the import over 30 printings) and
+  // tests/unit/frames/ub-extended-art.test.ts.
+  "extendedartub",
+  "extendedartubland",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

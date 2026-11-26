@@ -231,7 +231,8 @@ describe("setSymbolSize on the family", () => {
     // …and the borderless double-faced bodies (TODO 5.7).
     // …and the Zendikar Rising hedron showcase (TODO 4.11).
     // …and the Prepare frame's extended-art dress (TODO 4.27b).
-    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "extendedartprepare", "extendedartstation", "fullart", "m15borderless", "m15borderlessartifact", "m15borderlessdfcback", "m15borderlessdfcfront", "m15borderlessland", "m15borderlessmdfcback", "m15borderlessmdfcfront", "m15borderlessstation"]);
+    // …and the Universes Beyond extended-art frames (TODO 4.25).
+    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "extendedartprepare", "extendedartstation", "extendedartub", "extendedartubland", "fullart", "m15borderless", "m15borderlessartifact", "m15borderlessdfcback", "m15borderlessdfcfront", "m15borderlessland", "m15borderlessmdfcback", "m15borderlessmdfcfront", "m15borderlessstation"]);
     const m15 = getFrameProfile("m15");
     for (const template of keylined) {
       const p = getFrameProfile(template);
