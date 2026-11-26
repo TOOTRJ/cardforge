@@ -4,6 +4,8 @@ import { renderBackFace, resolveBakeArt } from "@/lib/cards/bake-render";
 import { LEGACY_SUPABASE_HOSTS } from "@/lib/validation/card";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
+import { FrameAssetUnavailableError } from "@/lib/render/card-frames";
+import { frameManifestEntry } from "@/lib/frames/frame-url";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
   removeRenderObjects,
@@ -139,7 +141,44 @@ export type RebakeBatchResult = {
   /** Work left in scope after this call (excluding `skipIds`). Exact for the
    *  marked scope (a count query); a lower bound for the others. */
   remaining: number;
+  /** The frame assets of an OUTAGE (outageOf): a git asset the site CDN
+   *  couldn't serve, or frames-bucket objects two cards couldn't load. The
+   *  batch STOPPED there: that card and the rest were neither baked nor
+   *  failed, so no card is struck; the caller treats it as an
+   *  infrastructure fault (frameAssetsUnavailableMessage,
+   *  lib/cards/auto-rebake-state.ts). */
+  assetsUnavailable?: string[];
+  /** A card a frames-BUCKET object stopped twice — on its turn and once more
+   *  at the batch's end — while the other cards rendered: the fault looks
+   *  like the card's own (its template × colour's object missing or not
+   *  matching the manifest), but one batch can't tell a long blip from a
+   *  missing object. Neither processed nor failed: the caller decides (the
+   *  automatic re-bake strikes it from its ASSET_STOP_RUNS-th run in a row;
+   *  a manual run reports it failed). At most one per batch. */
+  assetStops?: AssetStop[];
 };
+
+/** A card a frame asset stopped, and the asset's paths. */
+export type AssetStop = { id: string; paths: string[] };
+
+/** The paths of an OUTAGE a frame-asset stop reveals, or null when it may be
+ *  the card's own fault: any GIT asset (no manifest entry — the site CDN
+ *  failing; a 404 never reaches here), or a second card stopped on a
+ *  frames-bucket object in the batch (`earlier`: the card already set
+ *  aside's) — the bucket failing. Exported for tests. */
+export function outageOf(paths: readonly string[], earlier: readonly string[] | undefined): string[] | null {
+  const git = paths.filter((path) => !frameManifestEntry(path));
+  if (git.length > 0) return git;
+  if (earlier) return [...new Set([...earlier, ...paths])];
+  return null;
+}
+
+/** One card's bake in a batch (runRebakeBatch's bakeOne). */
+type CardOutcome =
+  | { kind: "processed"; entry: RebakeBatchResult["processed"][number] }
+  | { kind: "superseded" }
+  | { kind: "failed"; error: string }
+  | { kind: "asset"; paths: string[] };
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -258,7 +297,11 @@ export async function runRebakeBatch(
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
   const superseded: string[] = [];
-  for (const { row, verdict } of batch) {
+
+  /** One card's bake: its outcome, never a throw. A frame asset that can't
+   *  be loaded (FrameAssetUnavailableError — the front, or the back through
+   *  renderBackFace) is its own outcome: no fault of the card's yet. */
+  const bakeOne = async ({ row, verdict }: (typeof batch)[number]): Promise<CardOutcome> => {
     try {
       if (verdict === "stamp") {
         // Conditional on the stamp we classified: a layout save that nulled
@@ -267,9 +310,8 @@ export async function runRebakeBatch(
         stamp = row.layout_version == null ? stamp.is("layout_version", null) : stamp.eq("layout_version", row.layout_version);
         const { data: stamped, error: stampErr } = await stamp.select("id");
         if (stampErr) throw new Error(`Row update failed: ${stampErr.message}`);
-        if (!stamped || stamped.length === 0) superseded.push(row.id);
-        else processed.push({ id: row.id, verdict });
-        continue;
+        if (!stamped || stamped.length === 0) return { kind: "superseded" };
+        return { kind: "processed", entry: { id: row.id, verdict } };
       }
 
       // Same render contract as the save-time bake: HD, always watermarked
@@ -292,7 +334,10 @@ export async function runRebakeBatch(
       // The back face of a card with a back body (TODO 5.3), before any
       // upload — a back that fails fails the card, nothing written.
       const back = await renderBackFace(previewData, { brandMark: billingEnabled });
-      if (!back.ok) throw new Error(back.error);
+      if (!back.ok) {
+        if (back.assetsUnavailable) throw new FrameAssetUnavailableError(back.assetsUnavailable);
+        throw new Error(back.error);
+      }
 
       // Overlap guard, part 1: is the card (and its layout) still what we
       // rendered? A residual race remains until the write; part 2 catches it.
@@ -310,8 +355,7 @@ export async function runRebakeBatch(
         (scope.kind === "marked" && fresh.layout_version != null) ||
         layoutMoved
       ) {
-        superseded.push(row.id);
-        continue;
+        return { kind: "superseded" };
       }
 
       // The owner's card-renders folder (bake-core → lib/media/user-storage.ts):
@@ -354,19 +398,65 @@ export async function runRebakeBatch(
           await removeRenderObjects(row.owner_id, [row.id]);
           await purgeCardCdnCache([row.id]);
         }
-        superseded.push(row.id);
-        continue;
+        return { kind: "superseded" };
       }
       // Part 3: a layout save during the upload can't be seen by the write
       // (it doesn't move updated_at). If the override moved, re-mark the
       // card — only if the row still holds OUR render.
       if (await remarkIfLayoutMoved(supabase, { cardId: row.id, renderedAt, templates, stamps: overrideStamps })) {
-        superseded.push(row.id);
-        continue;
+        return { kind: "superseded" };
       }
-      processed.push({ id: row.id, verdict, renderedImageUrl });
+      return { kind: "processed", entry: { id: row.id, verdict, renderedImageUrl } };
     } catch (err) {
-      failed.push({ id: row.id, error: err instanceof Error ? err.message : "Unknown error" });
+      if (err instanceof FrameAssetUnavailableError) return { kind: "asset", paths: err.paths };
+      return { kind: "failed", error: err instanceof Error ? err.message : "Unknown error" };
+    }
+  };
+  const record = (id: string, outcome: Exclude<CardOutcome, { kind: "asset" }>) => {
+    if (outcome.kind === "processed") processed.push(outcome.entry);
+    else if (outcome.kind === "superseded") superseded.push(id);
+    else failed.push({ id, error: outcome.error });
+  };
+
+  // A frame asset that can't be loaded is an OUTAGE — the batch STOPS there
+  // (`assetsUnavailable`: the caller's infrastructure fault, no card struck)
+  // — unless it can be one card's own fault:
+  //   * a GIT asset (no frames-manifest entry: fetched from the site CDN)
+  //     never is — a 404 is already a definitive miss, drawn as absent, so
+  //     what remains is the CDN failing, for every card that draws it (each
+  //     git template's card meets a different path, so no path is shared);
+  //   * a frames-BUCKET object may be (published in the manifest, then
+  //     missing or not matching its sha256: one card's template × colour).
+  //     The FIRST card a bucket object stops is SET ASIDE (neither baked nor
+  //     failed) and the batch goes on; a second card stopped on any bucket
+  //     object means the bucket is failing — an outage. Otherwise the card
+  //     is tried once more at the end (a blip has passed by then; one 5xx
+  //     opens no fail-fast window), and if its asset stops it again while
+  //     the others rendered it is reported in `assetStops`: the caller
+  //     decides when to strike it.
+  let setAside: ((typeof batch)[number] & { paths: string[] }) | null = null;
+  let assetsUnavailable: string[] | null = null;
+  const assetStops: AssetStop[] = [];
+  for (const item of batch) {
+    const outcome = await bakeOne(item);
+    if (outcome.kind !== "asset") {
+      record(item.row.id, outcome);
+      continue;
+    }
+    const outage = outageOf(outcome.paths, setAside?.paths);
+    if (outage) {
+      assetsUnavailable = outage;
+      break;
+    }
+    setAside = { ...item, paths: outcome.paths };
+  }
+  if (setAside && !assetsUnavailable) {
+    const outcome = await bakeOne(setAside);
+    if (outcome.kind !== "asset") {
+      record(setAside.row.id, outcome);
+    } else {
+      assetsUnavailable = outageOf(outcome.paths, undefined);
+      if (!assetsUnavailable) assetStops.push({ id: setAside.row.id, paths: outcome.paths });
     }
   }
 
@@ -389,13 +479,22 @@ export async function runRebakeBatch(
         ? Math.max(
             0,
             (await countMarkedRenders(supabase)) -
-              (await countMarkedRenders(supabase, [...skip, ...failed.map((f) => f.id)])),
+              (await countMarkedRenders(supabase, [...skip, ...failed.map((f) => f.id), ...assetStops.map((a) => a.id)])),
           )
         : Math.max(0, plan.rebake + plan.stamp - processed.length);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not count the remaining cards." };
   }
-  return { ...base, dry: false, processed, failed, superseded, remaining };
+  return {
+    ...base,
+    dry: false,
+    processed,
+    failed,
+    superseded,
+    remaining,
+    ...(assetStops.length > 0 ? { assetStops } : {}),
+    ...(assetsUnavailable ? { assetsUnavailable } : {}),
+  };
 }
 
 /** Published, baked cards a platform re-bake is owed to (null stamp) — the

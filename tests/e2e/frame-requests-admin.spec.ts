@@ -41,11 +41,13 @@ test.describe("admin frame requests", () => {
     // The Future Sight row is 120 days old: all time shows it, 30 days doesn't.
     await expect(missing.locator('tr[data-signature="future"]')).toBeVisible();
 
-    // Exact frames waiting for verification sit in their own group (D1).
+    // Exact frames waiting for verification sit in their own group (D1):
+    // Fire // Ice DMR #215 on the split frame, which production (and so
+    // supabase/seed.sql) hasn't verified in any colour.
     const unverified = page.getByRole("table", { name: "Not yet verified" });
-    await expect(unverified.locator('tr[data-signature="showcase/thb/constellation"]')).toBeVisible();
-    await expect(unverified.locator('tr[data-signature="extendedart"]')).toBeVisible();
-    await expect(missing.locator('tr[data-signature="showcase/thb/constellation"]')).toHaveCount(0);
+    await expect(unverified.locator('tr[data-signature="layout/2015"]')).toBeVisible();
+    await expect(unverified.locator('tr[data-signature="layout/2015"]')).toContainText("Split frame");
+    await expect(missing.locator('tr[data-signature="layout/2015"]')).toHaveCount(0);
 
     // The poster family sits in the collapsed "Unsupported for good" group.
     await expect(page.getByText("Artist-lettered borderless poster")).toBeHidden();

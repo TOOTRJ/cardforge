@@ -5,8 +5,7 @@ import {
   signatureDrawnOn,
   templatesOfRule,
 } from "@/lib/scryfall/frame-signatures";
-import { isForGoodSignature } from "@/lib/frames/frame-requests";
-import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
+import { isForGoodSignature, signatureAnsweredOnceVerified, verifiedInEveryPrintedColour } from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
 // The public "Requested frames" list (TODO NV12, part 1; /frames/requested).
@@ -185,20 +184,32 @@ export function publicSignatures(): string[] {
 }
 
 let answeredMemo: string[] | null = null;
-/** Every "signature|template" pair PipGlyph draws today: a gap signature
+/** Every "signature|template" pair PipGlyph answers today: a gap signature
  *  logged before its piece shipped, on a frame that draws it now (the admin
- *  page's `drawnNow`, signatureDrawnOn). Passed as `p_answered`; those rows
- *  aren't requests any more. It has to be per row — whether a gap is drawn
- *  depends on the frame the import landed on (era/2015+crown is drawn on 7
- *  of its rule's 18 frames), and the database never returns a row's
- *  template — so the database does the dropping. */
-export function answeredSignaturePairs(): string[] {
+ *  page's `drawnNow`, signatureDrawnOn) — and, given the verified combos,
+ *  one logged on a stand-in whose printings land on a frame that draws it
+ *  now that frame is verified (signatureAnsweredOnceVerified: the "+nyx"
+ *  rows on the M15 frame, the borderless Spacecraft on the artifact frame).
+ *  Passed as `p_answered`; those rows aren't requests any more. It has to be
+ *  per row — whether a gap is drawn depends on the frame the import landed
+ *  on (era/2015+crown is drawn on 7 of its rule's 18 frames), and the
+ *  database never returns a row's template — so the database does the
+ *  dropping. The rows carry no set, so a "+border" row stays (the admin page
+ *  answers it by its set: lib/frames/frame-requests.ts). */
+export function answeredSignaturePairs(verifiedKeys?: ReadonlySet<string>): string[] {
   answeredMemo ??= FRAME_SIGNATURE_KEYS.filter((key) => key.includes("+")).flatMap((key) =>
     FRAME_TEMPLATE_VALUES.filter((template) => signatureDrawnOn(key, template)).map(
       (template) => `${key}|${template}`,
     ),
   );
-  return answeredMemo;
+  if (!verifiedKeys) return answeredMemo;
+  const drawn = new Set(answeredMemo);
+  const onceVerified = FRAME_SIGNATURE_KEYS.filter((key) => key.includes("+")).flatMap((key) =>
+    FRAME_TEMPLATE_VALUES.filter(
+      (template) => !drawn.has(`${key}|${template}`) && signatureAnsweredOnceVerified(key, template, verifiedKeys),
+    ).map((template) => `${key}|${template}`),
+  );
+  return [...answeredMemo, ...onceVerified];
 }
 
 /** The frames an import of this signature would be EXACT on once they are
@@ -220,15 +231,6 @@ export function exactFramesOfSignature(signature: string): readonly FrameTemplat
     return templatesOfRule({ ...rule, outcome: { ...outcome, template: outcome.onceVerified, onceVerified: undefined } });
   }
   return [];
-}
-
-/** Whether a frame is verified in every colour a real printing exists in
- *  (the colours frameReferenceOptions has a printing for — a colour with no
- *  print can't be imported, so it never asks). A frame with no printed
- *  colour at all is never "done": nothing could check it. */
-function verifiedInEveryPrintedColour(template: FrameTemplate, verifiedKeys: ReadonlySet<string>): boolean {
-  const printed = FRAME_COLOR_KEYS.filter((colour) => frameReferenceOptions(template, colour).length > 0);
-  return printed.length > 0 && printed.every((colour) => verifiedKeys.has(frameComboKey(template, colour)));
 }
 
 /** Where a frame stands — the registry's answer and the verified combos,

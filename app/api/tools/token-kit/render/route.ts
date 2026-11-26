@@ -12,6 +12,11 @@ import { isPrintRequest, parsePpiParam, parsePrintBleedParam, parsePrintParam, P
 import { downloadBrandMark, getEntitlements } from "@/lib/billing/entitlements";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import {
+  FRAME_LIST_UNAVAILABLE_CODE,
+  FRAME_LIST_UNAVAILABLE_MESSAGE,
+  isVerifiedFramesUnavailable,
+} from "@/lib/cards/frame-list-unavailable";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { kitFaceSchema, kitItemStateSchema, kitPreviewData, kitSettingsSchema } from "@/lib/tools/token-kit/model";
 import { KIT_RENDERS_PER_HOUR, KIT_RENDERS_PER_MINUTE } from "@/lib/tools/token-kit/workspace";
@@ -138,7 +143,16 @@ export async function POST(request: NextRequest) {
   const requested: RenderPreset = params.get("preset") === "default" ? "default" : "hd";
   const preset: RenderPreset = entitlements.maxExportPreset === "hd" ? requested : "default";
 
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let verifiedKeys: Set<string>;
+  try {
+    verifiedKeys = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // An unread frame list is no "no verified frame" (lib/cards/
+    // frame-list-unavailable.ts): try again.
+    if (!isVerifiedFramesUnavailable(err)) throw err;
+    record("render_failed", { reason: "frame_list_unavailable", kind: face.kind, print: printMode });
+    return NextResponse.json({ error: FRAME_LIST_UNAVAILABLE_MESSAGE, code: FRAME_LIST_UNAVAILABLE_CODE }, { status: 503 });
+  }
   const built = kitPreviewData(face, settings, { ...state, artUrl }, verifiedKeys);
   if (!built) {
     record("render_refused", { reason: "no_frame", kind: face.kind, design: settings.design });

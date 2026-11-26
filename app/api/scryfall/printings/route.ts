@@ -12,6 +12,7 @@ import {
 } from "@/lib/scryfall/rate-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import {
   DEFAULT_PRINTING_VIEW,
   isPrintingView,
@@ -106,7 +107,15 @@ export async function GET(request: NextRequest) {
 
   await logScryfallCall(user.id, "search");
 
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  let verifiedKeys: Set<string>;
+  try {
+    verifiedKeys = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // An unread frame list would mark every printing "Not available" —
+    // say try again instead (lib/cards/frame-list-unavailable.ts).
+    if (!isVerifiedFramesUnavailable(err)) throw err;
+    return json({ ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE }, 503);
+  }
   return json({
     ok: true,
     printings: cards.map((card) => trimPrinting(card, verifiedKeys)),

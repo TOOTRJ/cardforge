@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cronRouteGuard, isCronAuthorized } from "@/lib/api/cron-auth";
+import { frameAssetsUnavailableMessage } from "@/lib/cards/auto-rebake-state";
 import {
   DEFAULT_BATCH,
   MAX_BATCH,
   parseRebakeScope,
   runRebakeBatch,
+  type RebakeBatchResult,
 } from "@/lib/cards/rebake-batch";
 import {
   acquireManualLease,
@@ -120,7 +122,26 @@ export async function POST(request: Request) {
     console.error("[rebake] batch failed:", result.error);
     return NextResponse.json(result, { status: 500 });
   }
-  return NextResponse.json(result);
+  // A frame asset two cards couldn't load stopped the batch (the asset is
+  // down for every card that draws it; no card failed): the driver's
+  // retry-with-backoff, never a tight loop on the same card.
+  if (result.assetsUnavailable) {
+    const error = frameAssetsUnavailableMessage(result.assetsUnavailable);
+    console.error("[rebake] batch stopped:", error);
+    return NextResponse.json({ ...result, ok: false, error }, { status: 503, headers: { "Retry-After": "60" } });
+  }
+  // A card a frame asset stopped on its own (twice, while the rest rendered)
+  // is reported failed with the asset as its reason: the driver goes on, and
+  // stops on it at the end as on any card that keeps failing.
+  return NextResponse.json({ ...result, failed: withAssetStopsFailed(result) });
+}
+
+/** The batch's failures plus each card a frame asset stopped on its own. */
+function withAssetStopsFailed(result: RebakeBatchResult): RebakeBatchResult["failed"] {
+  return [
+    ...result.failed,
+    ...(result.assetStops ?? []).map((stop) => ({ id: stop.id, error: frameAssetsUnavailableMessage(stop.paths) })),
+  ];
 }
 
 /** The dry run's answer: the plan the driver prints (nothing processed). */

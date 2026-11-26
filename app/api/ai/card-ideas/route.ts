@@ -18,6 +18,7 @@ import { recordAiReceipt } from "@/lib/cards/ai-provenance-server";
 import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { recentAiTitles } from "@/lib/ai/recent-designs";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { typesWithoutPublishedFrame } from "@/lib/creator/frame-random";
 import { aiFailureMessage, classifyProviderError, designFailureKind, type AiFailureKind } from "@/lib/ai/failure";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -123,8 +124,17 @@ export async function POST(request: Request) {
   const recentTitles = await recentAiTitles(user.id);
   // With no type chosen, the ideas avoid a type no published frame can draw
   // (a battle today) — applied, it would land the creator on a frame it
-  // can't save. An unknown (unreadable) frame list avoids nothing.
-  const avoidTypes = parsed.data.card_type ? [] : typesWithoutPublishedFrame(new Set(await getVerifiedFrameKeys()));
+  // can't save. An unknown (unreadable) frame list avoids nothing — the
+  // read logs the failure, and the ideas go ahead: they save nothing, and
+  // the save itself waits for the list (createCardAction).
+  let avoidTypes: ReturnType<typeof typesWithoutPublishedFrame> = [];
+  if (!parsed.data.card_type) {
+    try {
+      avoidTypes = typesWithoutPublishedFrame(new Set(await getVerifiedFrameKeys()));
+    } catch (err) {
+      if (!isVerifiedFramesUnavailable(err)) throw err;
+    }
+  }
 
   // One credit for the batch, reserved before the call and refunded if the
   // design fails (same fail-closed posture as job steps).

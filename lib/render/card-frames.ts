@@ -21,9 +21,11 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // WHERE THE BYTES COME FROM — two sources, same bytes, so the bake stays
 // pixel-identical either way:
 //
-//   1. The filesystem (`public/…` under process.cwd()) when the file is
-//      there: local dev, tests, and any deployment that still traces the
-//      folder into the function.
+//   1. The filesystem (`public/…` under process.cwd()) when this tree
+//      holds the folder's git files (LOCAL_TREE_SENTINELS — a file known to
+//      be in git, never the folder alone): local dev, tests, CI, and any
+//      deployment that still traces the folder into the function. A file
+//      absent beside the sentinel does not exist — nothing is fetched.
 //   2. Otherwise an HTTP fetch of the same file from the deployment's own
 //      static CDN (`${site}/frames/…`). `public/frames` is ~163 MB of PNG
 //      masters; when Next traced it into every function that can reach the
@@ -38,7 +40,9 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // exact paths a card needs BEFORE building the tree (see
 // frameAssetPathsFor in card-image.tsx). The sync getters below then read
 // from the warmed cache; a miss falls back to the filesystem and, failing
-// that, a transparent pixel — logged, never thrown mid-render.
+// that, a transparent pixel — logged — but for a frame MASTER, which throws
+// FrameAssetUnavailableError rather than draw another template's frame for
+// one it never loaded.
 //
 // Fetch origin, in order: RENDER_ASSET_ORIGIN (explicit override), the
 // site URL (lib/site-url.ts: NEXT_PUBLIC_SITE_URL → production URL →
@@ -65,6 +69,24 @@ import { frameManifestEntry, frameUrl } from "@/lib/frames/frame-url";
 // the render throws FrameAssetUnavailableError instead of baking a frameless
 // card or another template's frame — a bake/sweep then records a failure
 // rather than storing a wrong image stamped current.
+//
+// A git asset follows the same rule for a failure that may PASS (storage
+// that is busy is not storage that lacks the file): a CDN timeout, a refused
+// connection, a 5xx or a 429, an origin that answers nothing but a non-image
+// — logged, never cached, and a preload that asked for it throws
+// FrameAssetUnavailableError. Only a DEFINITIVE miss is remembered and drawn
+// as absent (a git template with no master for a key falls back to the
+// default template's, an absent plate draws none): a 404 from the
+// deployment, or a file absent from a local tree that holds the folder's
+// git files (a checkout, CI, a test: LOCAL_TREE_SENTINELS). After a CDN
+// TIMEOUT, or an asset's second failure in a row (never one 5xx), it fails
+// at once for CDN_FAILURE_RETRY_MS so an outage doesn't make every render
+// wait out the timeouts — never cached as a miss. A re-bake batch reads an
+// asset that won't load as an outage and strikes no card for it — a git
+// asset always; only a bucket object can be one card's own
+// (lib/cards/rebake-batch.ts outageOf). Before, one
+// 503 cached the miss and the 1993 frame drew M15's master for the rest of
+// the instance's life, its bake stored as current.
 // ---------------------------------------------------------------------------
 
 
@@ -120,13 +142,38 @@ class AssetCache {
 
 const CACHE = new AssetCache(MAX_CACHE_CHARS);
 
-/** A frame asset listed in the manifest could not be loaded (see header). */
+/** How long a git asset the CDN just failed on fails at once (loadAsync):
+ *  long enough that an outage doesn't make every render wait out the fetch
+ *  timeouts per asset, short enough that a blip is over by the next sweep. */
+const CDN_FAILURE_RETRY_MS = 30_000;
+
+/** Failures of one asset further apart than this aren't "in a row". */
+const CDN_FAILURE_STREAK_MS = 2 * CDN_FAILURE_RETRY_MS;
+
+/** Public-relative path → its CDN failures in a row and, once the window is
+ *  open, when its next attempt may run. The window opens only where waiting
+ *  again would cost — after a TIMEOUT, or the asset's second failure in a
+ *  row — never on one 5xx: a blip must not fail the renders after it (a
+ *  re-bake batch reads the same badge for eight walkers in a row). Never a
+ *  miss: a preload inside the window still throws
+ *  FrameAssetUnavailableError. */
+const CDN_FAILURES = new Map<string, { count: number; at: number; until: number | null }>();
+
+/** A frame asset a render needs could not be loaded right now — a frames
+ *  bucket object, or a git asset whose CDN fetch failed in a way that may
+ *  pass (see header). The render fails instead of drawing a stand-in. */
 export class FrameAssetUnavailableError extends Error {
   constructor(readonly paths: string[]) {
-    super(`Frame asset(s) unavailable from the frames bucket: ${paths.join(", ")}`);
+    super(`Frame asset(s) unavailable: ${paths.join(", ")}`);
     this.name = "FrameAssetUnavailableError";
   }
 }
+
+/** A load that failed in a way that may pass (see header) — as opposed to
+ *  `null`, an asset that does not exist. Never cached: the next render
+ *  retries. */
+const UNAVAILABLE: unique symbol = Symbol("frame-asset-unavailable");
+type Loaded = string | null | typeof UNAVAILABLE;
 
 export const TRANSPARENT_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
@@ -144,15 +191,39 @@ function relPath(publicPath: string): string {
 // Source 1: filesystem
 // ---------------------------------------------------------------------------
 
-/** Sync read from public/. `undefined` = not on disk (try the CDN);
- *  `null` = on disk but unreadable (treat as missing). */
-function readLocal(rel: string): string | null | undefined {
-  const abs = path.join(process.cwd(), "public", rel);
+/**
+ * One file per public folder the loader reads that is known to be IN GIT
+ * (never a frames-manifest object): on disk, this tree holds the folder's
+ * git files — a checkout, CI, a test — so a file absent beside it does not
+ * exist; absent, the folder wasn't deployed with the function (Vercel:
+ * next.config.ts traces no `public/frames`) and the CDN has the files.
+ * Never the folder itself: a deployment that ever carried an empty or
+ * partial `public/frames` would read every git master as missing and draw
+ * M15's for the instance's life. tests/unit/render/card-frames.test.ts
+ * holds each to git, outside the manifest.
+ */
+export const LOCAL_TREE_SENTINELS: Readonly<Record<string, string>> = {
+  frames: "frames/agclassic/w.png",
+  watermarks: "watermarks/pipglyph-rose.png",
+};
+
+/** Sync read from public/: the data URL when the file is on disk; `null`
+ *  when it isn't but this tree holds its folder's git files
+ *  (LOCAL_TREE_SENTINELS — the asset does not exist); `undefined` when the
+ *  tree doesn't (fetch it from the CDN); UNAVAILABLE when the file is there
+ *  but can't be read. */
+function readLocal(rel: string): string | null | undefined | typeof UNAVAILABLE {
+  const publicDir = path.join(process.cwd(), "public");
+  const abs = path.join(publicDir, rel);
+  if (!fs.existsSync(abs)) {
+    const sentinel = LOCAL_TREE_SENTINELS[rel.split("/")[0]];
+    return sentinel && fs.existsSync(path.join(publicDir, sentinel)) ? null : undefined;
+  }
   try {
-    if (!fs.existsSync(abs)) return undefined;
     return toDataUrl(fs.readFileSync(abs));
-  } catch {
-    return null;
+  } catch (err) {
+    console.error(`[card-frames] ${rel} is on disk but can't be read: ${err instanceof Error ? err.message : String(err)}`);
+    return UNAVAILABLE;
   }
 }
 
@@ -184,7 +255,17 @@ export function assetOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
   return out;
 }
 
-async function fetchFromOrigin(origin: string, rel: string): Promise<Buffer | null> {
+/** One origin's answer for a git asset: the file; MISSING — the deployment
+ *  says it has no such file (404 / 410); SKIPPED — it answered, but not with
+ *  the file and not about it (a protected preview's 401 / 403, or its 200
+ *  HTML sign-in page): it proves nothing either way; FAILED — a failure that
+ *  may pass (a timeout, a refused connection, a 5xx, a 429, a body we can't
+ *  take). */
+type OriginAnswer =
+  | { kind: "found"; bytes: Buffer }
+  | { kind: "missing" | "skipped" | "failed"; reason: string; timedOut?: true };
+
+async function fetchFromOrigin(origin: string, rel: string): Promise<OriginAnswer> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -197,15 +278,18 @@ async function fetchFromOrigin(origin: string, rel: string): Promise<Buffer | nu
       // Our own Map is the cache; keep Next's data cache out of it.
       cache: "no-store",
     });
-    if (!response.ok) return null;
+    if (response.status === 404 || response.status === 410) return { kind: "missing", reason: `HTTP ${response.status}` };
+    if (response.status === 401 || response.status === 403) return { kind: "skipped", reason: `HTTP ${response.status}` };
+    if (!response.ok) return { kind: "failed", reason: `HTTP ${response.status}` };
     const type = response.headers.get("content-type") ?? "";
     // A protected preview answers 200 with an HTML sign-in page.
-    if (!type.startsWith("image/")) return null;
+    if (!type.startsWith("image/")) return { kind: "skipped", reason: `content-type ${type || "missing"}` };
     const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) return null;
-    return bytes;
-  } catch {
-    return null;
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_ASSET_BYTES) return { kind: "failed", reason: `${bytes.byteLength} bytes` };
+    return { kind: "found", bytes };
+  } catch (err) {
+    if (controller.signal.aborted) return { kind: "failed", reason: `timed out after ${FETCH_TIMEOUT_MS} ms`, timedOut: true };
+    return { kind: "failed", reason: err instanceof Error ? err.message : "fetch failed" };
   } finally {
     clearTimeout(timer);
   }
@@ -238,23 +322,40 @@ async function fetchFromBucket(url: string, expectedSha256: string): Promise<str
   }
 }
 
-async function fetchRemote(rel: string): Promise<string | null> {
+/** A git asset from the deployment's CDN, origin by origin: the first
+ *  origin that has it wins. It is ABSENT (null, cached) only when an origin
+ *  said 404 and none failed in a way that may pass; any such failure with
+ *  no file anywhere — or no origin that answered about the file at all —
+ *  is UNAVAILABLE (logged, never cached); `timedOut` when an origin timed
+ *  out (what opens the retry window at once). */
+async function fetchRemote(rel: string): Promise<{ value: Loaded; timedOut: boolean }> {
+  const answers: { origin: string; answer: Exclude<OriginAnswer, { kind: "found" }> }[] = [];
   for (const origin of assetOrigins()) {
-    const bytes = await fetchFromOrigin(origin, rel);
-    if (bytes) return toDataUrl(bytes);
+    const answer = await fetchFromOrigin(origin, rel);
+    if (answer.kind === "found") return { value: toDataUrl(answer.bytes), timedOut: false };
+    answers.push({ origin, answer });
   }
-  return null;
+  const failed = answers.some(({ answer }) => answer.kind === "failed");
+  if (!failed && answers.some(({ answer }) => answer.kind === "missing")) return { value: null, timedOut: false };
+  console.error(
+    `[card-frames] ${rel} unavailable from the deployment CDN (not cached; the next render retries): ${
+      answers.map(({ origin, answer }) => `${origin} ${answer.kind} (${answer.reason})`).join("; ") || "no asset origin"
+    }`,
+  );
+  return { value: UNAVAILABLE, timedOut: answers.some(({ answer }) => answer.timedOut === true) };
 }
 
 // ---------------------------------------------------------------------------
 // Cache access
 // ---------------------------------------------------------------------------
 
-/** Async load: cache → (bucket for a manifest entry | disk → CDN).
- *  A git/CDN outcome is memoized, including a miss (an absent optional
- *  asset isn't re-fetched on every render); a bucket FAILURE is not (see
- *  the header — it is a fault and the next render retries). */
-async function loadAsync(rel: string): Promise<string | null> {
+/** Async load: cache → (bucket for a manifest entry | disk → CDN). Only an
+ *  answer is memoized — the file, or a git asset that does not exist (an
+ *  absent optional asset isn't re-fetched on every render); a failure that
+ *  may pass (a bucket fault, a CDN timeout / 5xx / 429) is UNAVAILABLE and
+ *  never cached — the next render retries (see the header). A manifest
+ *  entry never answers null: it exists by definition. */
+async function loadAsync(rel: string): Promise<Loaded> {
   const entry = frameManifestEntry(rel);
   const key = entry ? frameUrl(rel) : rel;
   const cached = CACHE.get(key);
@@ -262,22 +363,42 @@ async function loadAsync(rel: string): Promise<string | null> {
   if (entry) {
     if (!key.startsWith("http")) {
       console.error(`[card-frames] ${rel} is a bucket frame but no frame origin is configured (NEXT_PUBLIC_FRAME_ORIGIN / NEXT_PUBLIC_SUPABASE_URL).`);
-      return null;
+      return UNAVAILABLE;
     }
     const value = await fetchFromBucket(key, entry.sha256);
-    if (value !== null) CACHE.set(key, value);
+    if (value === null) return UNAVAILABLE;
+    CACHE.set(key, value);
     return value;
   }
   const local = readLocal(rel);
-  const value = local !== undefined ? local : await fetchRemote(rel);
+  if (local === null) console.warn(`[card-frames] ${rel} is not in this checkout's public/ — drawn as absent.`);
+  if (local !== undefined) {
+    if (local !== UNAVAILABLE) CACHE.set(key, local);
+    return local;
+  }
+  // A CDN outage (a timeout, or a second failure in a row — CDN_FAILURES)
+  // fails renders at once for a short while instead of each waiting out the
+  // timeouts again; one 5xx leaves the next render free to retry. Never
+  // cached as a miss.
+  const previous = CDN_FAILURES.get(rel);
+  if (previous?.until != null && Date.now() < previous.until) return UNAVAILABLE;
+  const { value, timedOut } = await fetchRemote(rel);
+  if (value === UNAVAILABLE) {
+    const at = Date.now();
+    const count = previous && at - previous.at <= CDN_FAILURE_STREAK_MS ? previous.count + 1 : 1;
+    CDN_FAILURES.set(rel, { count, at, until: timedOut || count >= 2 ? at + CDN_FAILURE_RETRY_MS : null });
+    return value;
+  }
+  CDN_FAILURES.delete(rel);
   CACHE.set(key, value);
   return value;
 }
 
-/** Sync read for the renderer's JSX: cache → disk. A miss here means the
- *  asset was neither preloaded nor on disk — log it (it's a bug in the
- *  preload path list, or a misconfigured asset origin) and return null. */
-function loadSync(rel: string): string | null {
+/** Sync read for the renderer's JSX: cache → disk. The data URL; null for
+ *  a git asset that does not exist (cached); undefined when it is UNKNOWN —
+ *  neither preloaded nor readable here (a bug in the preload path list, an
+ *  entry evicted since, a misconfigured asset origin): logged. */
+function loadSyncState(rel: string): string | null | undefined {
   const entry = frameManifestEntry(rel);
   const key = entry ? frameUrl(rel) : rel;
   const cached = CACHE.get(key);
@@ -286,28 +407,42 @@ function loadSync(rel: string): string | null {
     console.warn(
       `[card-frames] ${rel} (bucket object) was not preloaded — rendering it as a transparent pixel.`,
     );
-    return null;
+    return undefined;
   }
   const local = readLocal(rel);
-  if (local !== undefined) {
+  if (typeof local === "string") {
     CACHE.set(rel, local);
     return local;
   }
+  if (local === null) {
+    console.warn(`[card-frames] ${rel} was not preloaded and is not on disk — drawn as absent.`);
+    CACHE.set(rel, null);
+    return null;
+  }
   console.warn(
-    `[card-frames] ${rel} was not preloaded and is not on disk — rendering it as a transparent pixel.`,
+    `[card-frames] ${rel} was not preloaded and is not readable here — rendering it as a transparent pixel.`,
   );
-  return null;
+  return undefined;
+}
+
+/** loadSyncState with "unknown" read as absent — every getter but the
+ *  frame master's, which never substitutes another template's frame for
+ *  one it doesn't know is missing. */
+function loadSync(rel: string): string | null {
+  return loadSyncState(rel) ?? null;
 }
 
 /**
  * Warm the cache for every asset a render will ask for synchronously.
- * Resolves once each path is cached (present or confirmed missing).
+ * Resolves once each path is cached (present or confirmed missing); throws
+ * FrameAssetUnavailableError for any that can't be loaded right now — a
+ * bucket object, or a git asset the CDN failed on — and never caches it.
  */
 export async function preloadFrameAssets(publicPaths: Iterable<string>): Promise<void> {
   const unique = Array.from(new Set(Array.from(publicPaths, relPath)));
   const values = await Promise.all(unique.map((rel) => loadAsync(rel)));
-  const missing = unique.filter((rel, i) => values[i] === null && frameManifestEntry(rel));
-  if (missing.length) throw new FrameAssetUnavailableError(missing);
+  const unavailable = unique.filter((_, i) => values[i] === UNAVAILABLE);
+  if (unavailable.length) throw new FrameAssetUnavailableError(unavailable);
 }
 
 /**
@@ -319,13 +454,17 @@ export async function preloadFrame(template: string, colorKey: string): Promise<
   const key = normalizeMasterKey(colorKey);
   const primaryRel = relPath(frameAssetPath(template, key));
   const primary = await loadAsync(primaryRel);
-  if (primary !== null) return;
-  // A published bucket master that failed must not quietly become another
-  // template's frame (the preview would still show the real one).
-  if (frameManifestEntry(primaryRel)) throw new FrameAssetUnavailableError([primaryRel]);
+  if (typeof primary === "string") return;
+  // A master that can't be loaded RIGHT NOW — a published bucket master, or
+  // a git master the CDN failed on (a timeout, a 5xx, a 429) — must not
+  // quietly become another template's frame (the preview would still show
+  // the real one): the render fails and the next one retries.
+  if (primary === UNAVAILABLE) throw new FrameAssetUnavailableError([primaryRel]);
+  // A git template with NO master for the key (a definitive miss): the
+  // default template's, as getFrameDataUrl draws it.
   if (template !== DEFAULT_FRAME_TEMPLATE) {
     const fallbackRel = relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key));
-    if ((await loadAsync(fallbackRel)) === null && frameManifestEntry(fallbackRel)) {
+    if ((await loadAsync(fallbackRel)) === UNAVAILABLE) {
       throw new FrameAssetUnavailableError([fallbackRel]);
     }
   }
@@ -337,15 +476,14 @@ export async function preloadFrame(template: string, colorKey: string): Promise<
  * that judge the master itself, like the art-window gate on a frame-layout
  * save (lib/frames/art-window-override.ts). No fallback to the default
  * template's master: null when the template has no master for that key; a
- * bucket master that can't be loaded throws FrameAssetUnavailableError.
+ * master that can't be loaded right now (a bucket master, or a git master
+ * the CDN failed on) throws FrameAssetUnavailableError.
  */
 export async function loadFrameMasterBytes(template: string, colorKey: string): Promise<Buffer | null> {
   const rel = relPath(frameAssetPath(template, colorKey));
   const value = await loadAsync(rel);
-  if (value === null) {
-    if (frameManifestEntry(rel)) throw new FrameAssetUnavailableError([rel]);
-    return null;
-  }
+  if (value === UNAVAILABLE) throw new FrameAssetUnavailableError([rel]);
+  if (value === null) return null;
   return Buffer.from(value.slice(value.indexOf(",") + 1), "base64");
 }
 
@@ -398,23 +536,23 @@ function watermarkAssetPath(key: string): string {
 // Sync getters used inside the renderer's JSX
 // ---------------------------------------------------------------------------
 
-/** Frame PNG as a data URL. Falls back to the default template, then to a 1×1
- *  transparent pixel, so an unknown/legacy template never throws mid-render. */
+/** Frame PNG as a data URL. A git template with NO master for the key (a
+ *  definitive miss: an unknown or legacy template) falls back to the
+ *  default template's, then to a 1×1 transparent pixel, so it never throws
+ *  mid-render. A master that wasn't loaded — a bucket master, or a git
+ *  master neither preloaded nor on disk (a preload that failed, an entry
+ *  evicted since) — throws FrameAssetUnavailableError: never another
+ *  template's frame for one that may well exist. */
 export function getFrameDataUrl(template: string, colorKey: string): string {
   const key = normalizeMasterKey(colorKey);
   const primaryRel = relPath(frameAssetPath(template, key));
-  if (frameManifestEntry(primaryRel)) {
-    // Bucket masters are only ever read after preloadFrame, which throws on
-    // a failure; never substitute another template's frame here.
-    const loaded = loadSync(primaryRel);
-    if (loaded === null) throw new FrameAssetUnavailableError([primaryRel]);
-    return loaded;
-  }
-  return (
-    loadSync(relPath(frameAssetPath(template, key))) ??
-    loadSync(relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key))) ??
-    TRANSPARENT_PIXEL
-  );
+  // Masters are only ever read after preloadFrame, which throws on a
+  // failure; never substitute another template's frame here. (A bucket
+  // master is a string or unknown — it never reads as absent.)
+  const primary = loadSyncState(primaryRel);
+  if (typeof primary === "string") return primary;
+  if (primary === undefined) throw new FrameAssetUnavailableError([primaryRel]);
+  return loadSync(relPath(frameAssetPath(DEFAULT_FRAME_TEMPLATE, key))) ?? TRANSPARENT_PIXEL;
 }
 
 /** Resolve a per-color plate path like "/frames/m15/pt/{color}.png" to a data
@@ -459,6 +597,7 @@ export function getWatermarkDataUrl(key: string): string {
 /** Test hook — the cache is module-global. */
 export function resetFrameAssetCacheForTests(): void {
   CACHE.clear();
+  CDN_FAILURES.clear();
 }
 
 /** Test hook — cache occupancy. */

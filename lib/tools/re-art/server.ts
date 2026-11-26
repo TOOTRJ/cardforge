@@ -5,6 +5,7 @@ import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { listDeckPageCards, type DeckItem, type DeckPageCard } from "@/lib/decks/queries";
 import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { discardGeneratedArt } from "@/lib/ai/random-art";
@@ -924,12 +925,21 @@ export async function planReartRun(
 
   const planned: ReartPlannedEntry[] = [];
   if (printings.length > 0) {
+    // The verified frame list before any Scryfall call: one that can't be
+    // read refuses the plan in words that say try again — never every
+    // printing landing as if nothing were published.
+    let verifiedKeys: Set<string>;
+    try {
+      verifiedKeys = new Set(await getVerifiedFrameKeys());
+    } catch (err) {
+      if (isVerifiedFramesUnavailable(err)) return { ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE };
+      throw err;
+    }
     const limit = await checkScryfallRateLimit(userId, quota);
     if (!limit.ok) return { ok: false, error: limit.message, code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds };
     await logScryfallCall(userId, quota);
     const fetched = await fetchBulkPrintings(printings.map((item) => item.entry.scryfall_id!));
     if (!fetched) return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
-    const verifiedKeys = new Set(await getVerifiedFrameKeys());
     const entitlements = await getEntitlements();
     const choices = reartBulkChoices(wanted, input.visibility);
     for (const item of printings) {

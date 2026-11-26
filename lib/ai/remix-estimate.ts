@@ -71,6 +71,9 @@ async function resolvePrintings(ids: readonly string[]): Promise<Map<string, Scr
  * all. A deck with nothing remixable — or one that isn't the caller's (only
  * its owner may remix it, createDeckRemixJob's rule; RLS still lets a
  * public deck be read) — answers zero cards and makes no Scryfall call.
+ * Throws VerifiedFramesUnavailableError when the verified frame list can't
+ * be read: its routes answer 503 in words that say try again, never a
+ * price for frames it couldn't check.
  */
 export async function estimateDeckRemix(deckId: string, limit: number): Promise<DeckRemixEstimate> {
   const [user, deck] = await Promise.all([getCurrentUser(), getDeckById(deckId)]);

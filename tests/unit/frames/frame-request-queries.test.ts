@@ -96,6 +96,9 @@ describe("getFrameRequestSummary", () => {
     expect(summary?.window).toBe("90");
     expect(summary?.totalRequests).toBe(4);
     expect(summary?.error).toBeNull();
+    // Sheoldred DMU #435's row, logged on the bordered landing before the
+    // borderless frame drew its crown (4.6f wave 2a): answered there since
+    // the frames audit of 2026-11-22 — no item blocks it.
     expect(summary?.rows[0]).toMatchObject({
       signature: "borderless/standard+crown",
       cause: "missing",
@@ -103,7 +106,8 @@ describe("getFrameRequestSummary", () => {
       users: 2,
       forGood: false,
       inRegistry: true,
-      blockedBy: "4.6f",
+      drawnNow: true,
+      blockedBy: null,
       artFlags: ["window-cropped"],
       sampleUrl: "https://scryfall.com/card/dmu/435",
       templateLabel: "M15 (2015) Standard",
@@ -230,6 +234,21 @@ describe("window helpers", () => {
       ["token/m20+two-colour", "m20tokentall"],
       // TODO 4.6f: the adventure frame draws its crown (WOE #220 Beluna).
       ["layout/2015+crown", "adventure"],
+      // A borderless printing logged on its BORDERED landing (1.18: an
+      // import's picture is the window's) where its borderless twin draws
+      // the piece now: the crown since 4.6f wave 2a (frames audit
+      // 2026-11-22).
+      ["borderless/standard+crown", "m15"],
+      ["borderless/standard+crown", "m15artifact"],
+      // The layout frames' two-colour gap names its item per frame: a split
+      // or aftermath printing in two colours is two one-colour parts since
+      // 4.26, and the gap was born beside its hybrid twin (never a hybrid
+      // row).
+      ["layout/2015+two-colour", "split"],
+      ["layout/2015+two-colour", "aftermath"],
+      // The borderless Spacecraft lands on the bordered Station frame by
+      // design (its own frame is a creator pick): nothing left to build.
+      ["borderless/standard+station", "m15station"],
     ]) {
       expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
     }
@@ -242,9 +261,11 @@ describe("window helpers", () => {
       ["era/2015+two-colour", "m15snow"],
       // …and the saga's crown, still 4.6f's.
       ["layout/2015+crown", "saga"],
-      // A borderless printing that landed on its bordered equivalent is not
-      // exact however the landing frame is dressed.
-      ["borderless/standard+crown", "m15"],
+      // A borderless land logged on its bordered landing: the borderless
+      // land frame draws no crown (no crowned twin of its masters).
+      ["borderless/land+crown", "m15land"],
+      // A saga's two-colour dress is 4.6f's, frame by frame.
+      ["layout/2015+two-colour", "saga"],
       ["token/m20+crown", "m15token"], // 4.48's pill crown
       // A showcase station printing on the bordered Spacecraft frame (TRK
       // #557): the tiers are drawn there, but the row is still nearest — the

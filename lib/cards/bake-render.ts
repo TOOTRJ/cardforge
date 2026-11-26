@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isUserStorageConfigured } from "@/lib/media/user-storage";
 import { isAllowedMediaUrl } from "@/lib/media/media-urls";
 import { renderCardImage } from "@/lib/render/card-image";
+import { FrameAssetUnavailableError } from "@/lib/render/card-frames";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
@@ -133,7 +134,13 @@ export async function resolveBakeArt(
 export async function renderBackFace(
   previewData: CardPreviewData,
   opts: { brandMark: boolean },
-): Promise<{ ok: true; png: ArrayBuffer | null } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; png: ArrayBuffer | null }
+  /** `assetsUnavailable`: a frame asset couldn't be loaded right now
+   *  (FrameAssetUnavailableError) — no fault of the card's; the re-bake
+   *  batch stops there instead of striking it. */
+  | { ok: false; error: string; assetsUnavailable?: string[] }
+> {
   const back = bakedBackOf(previewData);
   if (!back) return { ok: true, png: null };
   const art = await resolveBakeArt(back.artUrl);
@@ -148,7 +155,11 @@ export async function renderBackFace(
     return { ok: true, png: await response.arrayBuffer() };
   } catch (err) {
     const detail = err instanceof Error ? err.message : "Render error";
-    return { ok: false, error: `Back face render failed: ${detail}` };
+    return {
+      ok: false,
+      error: `Back face render failed: ${detail}`,
+      ...(err instanceof FrameAssetUnavailableError ? { assetsUnavailable: err.paths } : {}),
+    };
   }
 }
 

@@ -166,4 +166,58 @@ describe("POST /api/admin/rebake-marked", () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ ok: false, error: "scan failed" });
   });
+
+  it("a frame asset the CDN can't serve stops the loop with a 503 that names it — no card failed", async () => {
+    state.batch.mockResolvedValue({
+      ok: true,
+      processed: [],
+      failed: [],
+      superseded: [],
+      remaining: 3,
+      assetsUnavailable: ["frames/m15pw/loyaltyup.png"],
+    });
+    const res = await post({});
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("60");
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toMatch(/Frame assets unavailable .*frames\/m15pw\/loyaltyup\.png — try Re-bake now again in a minute\./);
+  });
+
+  it("the asset stop ends the run: what it re-baked — earlier calls or this one — gets the ISR refresh", async () => {
+    const stopped = (processed: Array<{ id: string; verdict: string }>) => ({
+      ok: true,
+      processed,
+      failed: [],
+      superseded: [],
+      remaining: 3,
+      assetsUnavailable: ["frames/m15pw/loyaltyup.png"],
+    });
+    revalidatePath.mockClear();
+    state.batch.mockResolvedValue(stopped([]));
+    expect((await post({})).status).toBe(503);
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect((await post({ rebakedSoFar: 4 })).status).toBe(503);
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    revalidatePath.mockClear();
+    state.batch.mockResolvedValue(stopped([{ id: "a", verdict: "rebake" }]));
+    expect((await post({})).status).toBe(503);
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("a card a frame asset stopped on its own comes back failed with the asset — the loop skips it", async () => {
+    state.batch.mockResolvedValue({
+      ok: true,
+      processed: [{ id: "a", verdict: "rebake" }],
+      failed: [],
+      superseded: [],
+      remaining: 2,
+      assetStops: [{ id: ID, paths: ["frames/never-promoted/w.png"] }],
+    });
+    const res = await post({});
+    expect(res.status).toBe(200);
+    expect((await res.json()).failed).toEqual([
+      { id: ID, error: "Frame assets unavailable (the site CDN or the frames bucket): frames/never-promoted/w.png" },
+    ]);
+  });
 });

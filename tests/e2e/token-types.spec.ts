@@ -110,7 +110,9 @@ test.describe("token type picker", () => {
 
     const summary = await saveDraftAndReadSummary(page);
     await expect(summary).toContainText(/token\s+enchantment\s+creature\s+—\s+glimmer/i);
-    // Enchantment stays on the plain token frame until 4.51's Nyx dress.
+    // Never the artifact frame: an Enchantment token follows onto 4.51's Nyx
+    // dress where it is verified (seeded since the 2026-11-22 refresh), the
+    // plain token frame elsewhere.
     await expect(summary).not.toContainText(/artifact token/i);
   });
 });

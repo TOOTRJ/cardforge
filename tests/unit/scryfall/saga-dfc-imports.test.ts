@@ -6,6 +6,7 @@ import { finalizeImportMatch, remixFrameFor } from "@/lib/creator/frame-resolve"
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import printingsData from "./fixtures/saga-dfc-printings.json";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 5.5 (b) — every paper printing of a transforming Saga on Scryfall
@@ -31,7 +32,8 @@ const printings = Object.fromEntries(
 const KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 const NEW_BODIES = ["sagadfcfront"];
 
-/** Production's verified combos (supabase/seed.sql's frame_reviews block). */
+/** Production's verified combos (supabase/seed.sql's frame_reviews block,
+ *  as the recording was made: before the 2026-11-22 refresh). */
 function productionKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
   const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "") ?? "";
@@ -40,7 +42,7 @@ function productionKeys(): Set<string> {
   for (const [, template] of everyColour.matchAll(/'([^']+)'/g)) for (const k of KEYS) out.add(frameComboKey(template as never, k));
   for (const [, template, colour] of block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)) out.add(frameComboKey(template as never, colour));
   for (const key of [...out]) if (NEW_BODIES.some((t) => key.startsWith(`${t}/`) || key.startsWith(`${t}:`))) out.delete(key);
-  return out;
+  return asBeforeSeedRefresh(out);
 }
 const PROD = productionKeys();
 /** …and every saga and transform body ticked in every colour. */

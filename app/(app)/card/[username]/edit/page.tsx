@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
-import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { readVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { DownloadModal } from "@/components/cards/download-modal";
 import { frameTemplateOf } from "@/lib/cards/print-export";
@@ -31,6 +31,7 @@ import {
   withoutPreviewParams,
 } from "@/lib/creator/frame-preview";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { FrameListUnavailableNotice } from "@/components/creator/frame-list-unavailable-notice";
 import { ownDeckReturnPath } from "@/lib/decks/return-to";
 import { PageContainer } from "@/components/layout/page-container";
 
@@ -116,7 +117,9 @@ export default async function EditCardPage({
   // Publish step says (the actions and a CHECK constraint enforce it).
   const isAdmin = Boolean(profile?.is_admin);
   const search = (await searchParams) ?? {};
-  const verifiedFrameKeys = await getVerifiedFrameKeys();
+  // A read that fails is SAID (the notice below), never shown as an editor
+  // with every frame "Soon" and no reason why.
+  const { keys: verifiedFrameKeys, unavailable: frameListUnavailable } = await readVerifiedFrameKeys();
   const framePreview = resolveFramePreviewMode({
     isAdmin,
     param: search.previewFrames,
@@ -196,6 +199,8 @@ export default async function EditCardPage({
           />
         </div>
       ) : null}
+
+      {frameListUnavailable ? <FrameListUnavailableNotice className="mt-8" editing /> : null}
 
       <div className="mt-10">
         <CardCreatorForm

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
-import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { readVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   StartWithHero,
@@ -40,6 +40,7 @@ import {
 } from "@/lib/creator/frame-preview";
 import { buildFrameWalkthrough } from "@/lib/creator/frame-walkthrough";
 import { FramePreviewBanner } from "@/components/creator/frame-preview-banner";
+import { FrameListUnavailableNotice } from "@/components/creator/frame-list-unavailable-notice";
 import { PageContainer } from "@/components/layout/page-container";
 
 export const metadata: Metadata = {
@@ -196,7 +197,9 @@ export default async function CreatePage({
   // server-read profile (never the URL). Everyone else, and the guest ISR
   // creator (which never reads searchParams), gets the verified set. AI
   // jobs keep resolving frames from the verified set on the server.
-  const verifiedFrameKeys = await getVerifiedFrameKeys();
+  // A read that fails is SAID (the notice below), never shown as a creator
+  // with every frame "Soon" and no reason why.
+  const { keys: verifiedFrameKeys, unavailable: frameListUnavailable } = await readVerifiedFrameKeys();
   const framePreview = resolveFramePreviewMode({
     isAdmin: Boolean(profile?.is_admin),
     param: search.previewFrames,
@@ -302,6 +305,8 @@ export default async function CreatePage({
           />
         </div>
       ) : null}
+
+      {frameListUnavailable ? <FrameListUnavailableNotice className="mt-8" /> : null}
 
       {remixParent || layout === "canvas" || walkthrough ? null : (
         <div className="mt-10">

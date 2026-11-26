@@ -13,6 +13,7 @@ import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate"
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { backFaceSchema } from "@/lib/validation/card";
 import type { FrameTemplate } from "@/types/card";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 1.22 — the AI deck remix resolves its frame like the creator import.
@@ -49,7 +50,9 @@ function productionVerifiedKeys(): Set<string> {
   }
   return keys;
 }
-const PROD = productionVerifiedKeys();
+/** Production's list as these cases were written against it — before the
+ *  2026-11-22 refresh (extended art, the double-faced saga… ticked since). */
+const PROD = asBeforeSeedRefresh(productionVerifiedKeys());
 const plus = (...combos: [string, string][]) =>
   new Set([...PROD, ...combos.map(([t, k]) => frameComboKey(t as FrameTemplate, k))]);
 const without = (...templates: string[]) =>
@@ -130,7 +133,7 @@ describe("remixFrameFor — layout kinds land on their layout template", () => {
     expect(remixOf("dgm-123", plus(["split", "m"]))).toMatchObject({ template: "split", cardType: "sorcery" });
   });
 
-  it("a saga lands on the saga frame (verified on production), which paints no second face", () => {
+  it("a saga lands on the saga frame (verified on the 2026-10-14 list), which paints no second face", () => {
     const fable = remixOf("neo-141");
     expect(fable).toMatchObject({ template: "saga", cardType: "enchantment" });
     expect(fable.mechanics.back_face).toBeUndefined();

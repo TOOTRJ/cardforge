@@ -28,6 +28,8 @@ const GAME = "33333333-3333-4333-8333-333333333333";
 const state = vi.hoisted(() => ({
   verified: [] as string[],
   verifiedReads: 0,
+  /** The frame list read fails (a PostgREST / pooler hiccup). */
+  verifiedFails: false,
   existing: null as unknown,
   client: null as unknown,
 }));
@@ -43,12 +45,16 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({}),
   isAdminConfigured: () => true,
 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({
-  getVerifiedFrameKeys: async () => {
-    state.verifiedReads += 1;
-    return state.verified;
-  },
-}));
+vi.mock("@/lib/cards/frame-reviews", async () => {
+  const { VerifiedFramesUnavailableError } = await import("@/lib/cards/frame-list-unavailable");
+  return {
+    getVerifiedFrameKeys: async () => {
+      state.verifiedReads += 1;
+      if (state.verifiedFails) throw new VerifiedFramesUnavailableError("connection pool exhausted");
+      return state.verified;
+    },
+  };
+});
 vi.mock("@/lib/cards/queries", () => ({
   getCardById: async () => state.existing,
   isSlugTakenForCurrentUser: async () => false,
@@ -131,6 +137,7 @@ beforeEach(() => {
   // Published: the M15 frame in white, blue and gold; the Ring frame in white.
   state.verified = ["m15/w", "m15/u", "m15/m", "lotr/w"];
   state.verifiedReads = 0;
+  state.verifiedFails = false;
   state.existing = null;
 });
 
@@ -228,5 +235,132 @@ describe("updateCardAction — verification gate", () => {
     expect(await updateCardAction(CARD, { color_identity: ["white"] })).toMatchObject({ ok: true });
     expect(await updateCardAction(CARD, { frame_style: { template: "m15" } })).toMatchObject({ ok: true });
     expect(cardWrites(stub)).toHaveLength(2);
+  });
+});
+
+// A failed read of the frame list (the 2026-11-10 pooler incident) is never
+// "nothing is verified": the save is refused in words that say try again,
+// never "That frame isn't available in <colour> yet", and nothing is written.
+describe("a frame list that can't be read", () => {
+  const unavailable = {
+    ok: false,
+    code: "FRAME_LIST_UNAVAILABLE",
+    formError: "We couldn't check the frame list just now — try again.",
+  };
+
+  it("refuses a new card in words that say try again, and writes nothing", async () => {
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await createCardAction(payload())).toEqual(unavailable);
+    expect(cardWrites(stub)).toHaveLength(0);
+    // The list back: the same card saves.
+    state.verifiedFails = false;
+    expect(await createCardAction(payload())).toMatchObject({ ok: true });
+  });
+
+  it("refuses an edit that moves the frame or the colour the same way", async () => {
+    state.existing = storedRow({ frame_style: { template: "m15" } });
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { color_identity: ["white"] })).toEqual(unavailable);
+    expect(await updateCardAction(CARD, { frame_style: { template: "lotr" } })).toEqual(unavailable);
+    expect(cardWrites(stub)).toHaveLength(0);
+  });
+
+  it("still saves an edit that leaves the frame and colour alone — it reads no list", async () => {
+    state.existing = storedRow();
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Renamed" })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Renamed");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  // The editor resends the back face on every token and double-faced edit
+  // (`null` for a one-faced token — editBackFacePayload), and those frames
+  // take a back body: the back gate read the list for a plain retitle. It
+  // reads it now only when the gate looks at it — a stored back left alone
+  // never — so none of these edits is refused by an outage.
+  it.each(["m15token", "m20token", "m15tokentext"])("still saves a retitle of a one-faced token on %s", async (template) => {
+    state.existing = storedRow({
+      card_type: "token",
+      supertype: "Creature",
+      subtypes: ["Soldier"],
+      title: "Soldier",
+      power: "1",
+      toughness: "1",
+      color_identity: ["white"],
+      frame_style: { template },
+      back_face: null,
+    });
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Soldier Captain", color_identity: ["white"], back_face: null })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Soldier Captain");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  const back = {
+    title: "Moonrage Brute",
+    card_type: "creature",
+    subtypes: ["Werewolf"],
+    power: "3",
+    toughness: "3",
+    rules_text: "Daybound",
+    art_url: "https://example.com/back.png",
+    frame_style: { template: "m15dfcback" },
+    color_identity: ["white"],
+  };
+  const transform = () =>
+    storedRow({
+      title: "Brutal Cathar",
+      frame_style: { template: "m15dfcfront" },
+      color_identity: ["white"],
+      back_face: back,
+    });
+
+  it("still saves a retitle of a transform card, its back resent as stored", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Brutal Captain", color_identity: ["white"], back_face: { ...back } })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Brutal Captain");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still saves Re-art's new pictures on both faces of a two-faced card", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    const result = await updateCardAction(CARD, {
+      art_url: "https://example.com/new-front.png",
+      back_face: { ...back, art_url: "https://example.com/new-back.png" },
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(updateOf(stub).art_url).toBe("https://example.com/new-front.png");
+    expect((updateOf(stub).back_face as { art_url: string }).art_url).toBe("https://example.com/new-back.png");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still saves a retitle of a transform card whose back is a Saga on the saga back", async () => {
+    const { power: _power, toughness: _toughness, ...words } = back;
+    void _power;
+    void _toughness;
+    const sagaBack = { ...words, card_type: "enchantment", subtypes: ["Saga"], rules_text: "I — Draw a card.", frame_style: { template: "sagadfcback" } };
+    state.existing = storedRow({ frame_style: { template: "m15dfcfront" }, color_identity: ["white"], back_face: sagaBack });
+    const stub = db();
+    state.verifiedFails = true;
+    expect(await updateCardAction(CARD, { title: "Renamed", back_face: { ...sagaBack } })).toMatchObject({ ok: true });
+    expect(updateOf(stub).title).toBe("Renamed");
+    expect(state.verifiedReads).toBe(0);
+  });
+
+  it("still reads the list — and says try again — when the edit moves the back onto another body", async () => {
+    state.existing = transform();
+    const stub = db();
+    state.verifiedFails = true;
+    // A changed family re-derives the back's body: the gate checks it.
+    expect(await updateCardAction(CARD, { frame_anatomy: { dfcIcon: "moon" } })).toEqual(unavailable);
+    expect(cardWrites(stub)).toHaveLength(0);
   });
 });

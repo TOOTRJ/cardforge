@@ -21,6 +21,7 @@ import {
 import { doubleFacedTokenShapeOf, mapScryfallToFormPatch, needsScryfallSet } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 
 // ---------------------------------------------------------------------------
@@ -174,9 +175,19 @@ export async function GET(request: NextRequest) {
   // as they do in the creator's picker, so the preview can import onto a
   // body nobody has ticked yet. Anyone else's `preview` is ignored.
   const mapped = mapScryfallToFormPatch(card, { artPreviewUrl, set });
-  const patch = mapped.frame_match
-    ? finalizeImportMatch(mapped, await verifiedKeysForImport(read("preview")))
-    : mapped;
+  let patch = mapped;
+  if (mapped.frame_match) {
+    let verifiedKeys: Set<string>;
+    try {
+      verifiedKeys = await verifiedKeysForImport(read("preview"));
+    } catch (err) {
+      // An unread frame list would land the import as if nothing were
+      // published — say try again instead (lib/cards/frame-list-unavailable.ts).
+      if (!isVerifiedFramesUnavailable(err)) throw err;
+      return NextResponse.json({ ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE }, { status: 503 });
+    }
+    patch = finalizeImportMatch(mapped, verifiedKeys);
+  }
 
   return NextResponse.json({
     ok: true,

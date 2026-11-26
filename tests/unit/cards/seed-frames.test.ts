@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import { seeThroughColorlessKey, seeThroughTickKeys } from "@/lib/cards/dfc";
+import { TICKED_BY_SEED_REFRESH_2026_11_22, asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // supabase/seed.sql seeds the verified frame combos for preview branches and
 // local resets. frame_reviews.template is free text in the DB, so a renamed or
@@ -57,6 +59,14 @@ describe("supabase/seed.sql verified frames", () => {
     expect(stray).toEqual([]);
   });
 
+  it("names a template in one list only — the every-colour list or the single rows, never both", () => {
+    const block = seededFrameBlock();
+    const everyColour = /unnest\(array\[([^\]]*)\]\)\s+as t \(template\)/.exec(block)![1];
+    const listed = new Set([...everyColour.matchAll(/'([^']+)'/g)].map((m) => m[1]));
+    const singles = new Set([...block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)].map((m) => m[1]));
+    expect([...singles].filter((template) => listed.has(template))).toEqual([]);
+  });
+
   it("names every combo once — a single row never repeats an every-colour template", () => {
     const combos = seededCombos();
     expect(combos.filter((combo, i) => combos.indexOf(combo) !== i)).toEqual([]);
@@ -104,5 +114,45 @@ describe("supabase/seed.sql verified frames", () => {
     const header = /snapshotted (\d{4}-\d{2}-\d{2}) \((\d+) combos\)/.exec(seedSql());
     expect(header, "the 'snapshotted <date> (<n> combos)' line").not.toBeNull();
     expect(seededCombos()).toHaveLength(Number(header![2]));
+  });
+
+  it("the 2026-11-22 refresh's own list (tests/unit/helpers) is what it added to the 353 combos before it", () => {
+    // Suites recorded against the earlier list read the seed through it.
+    const combos = new Set(seededCombos());
+    for (const combo of TICKED_BY_SEED_REFRESH_2026_11_22) expect(combos.has(combo), combo).toBe(true);
+    expect(asBeforeSeedRefresh(combos).size).toBe(353);
+  });
+
+  it("mirrors the layout version of every tick: one version per every-colour template, one per single row", () => {
+    // The frames audit of 2026-11-22: production's verified_layout_version
+    // is mirrored, so a gate that reads it (below) answers on a seeded
+    // database as on production.
+    const block = seededFrameBlock();
+    const everyColour = /unnest\(array\[([^\]]*)\]\)\s+as t \(template\)/.exec(block)![1];
+    const listed = [...everyColour.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    const table = /left join \(values([\s\S]*?)\) as v \(template, verified_layout_version\) using \(template\)/.exec(block);
+    expect(table, "the version table under the every-colour list").not.toBeNull();
+    const versions = [...table![1].matchAll(/\('([^']+)',\s*(\d+|null)\)/g)].map((m) => m[1]);
+    expect(versions).toEqual(listed);
+    // Every single row names its version (a number, or null for a tick
+    // from before 0115).
+    const singles = [...block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true,\s*now\(\),\s*(\d+|null)\)/g)];
+    expect(singles.length).toBe([...block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)].length);
+  });
+
+  it("publishes the see-through modal colourless faces as production does (TODO 5.11a)", () => {
+    // seeThroughTickKeys reads the `c` row's version: a seed with no version
+    // refused every colourless modal face on every seeded database.
+    const block = seededFrameBlock();
+    const table = /left join \(values([\s\S]*?)\) as v/.exec(block)![1];
+    const rows = [...table.matchAll(/\('([^']+)',\s*(\d+|null)\)/g)].map((m) => ({
+      template: m[1],
+      color_key: "c",
+      verified_layout_version: m[2] === "null" ? null : Number(m[2]),
+    }));
+    const keys = seeThroughTickKeys(rows);
+    // The modal spell bodies are the see-through ones (STX #6); their
+    // production `c` ticks are v75.
+    expect(keys.sort()).toEqual([seeThroughColorlessKey("m15mdfcback"), seeThroughColorlessKey("m15mdfcfront")]);
   });
 });

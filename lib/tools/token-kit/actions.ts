@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createCardAction } from "@/lib/cards/actions";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { getFantasyGameSystem } from "@/lib/cards/queries";
 import { getDeckById, listDeckCards } from "@/lib/decks/queries";
 import { MAX_DECKLIST_CHARS } from "@/lib/decks/parse-decklist";
@@ -334,7 +335,15 @@ export async function saveKitTokenToCardsAction(input: unknown): Promise<SaveKit
   }
   const { face, settings, state } = parsed.data;
 
-  const verified = new Set(await getVerifiedFrameKeys());
+  let verified: Set<string>;
+  try {
+    verified = new Set(await getVerifiedFrameKeys());
+  } catch (err) {
+    // An unread frame list is no "can't be drawn yet": try again.
+    if (!isVerifiedFramesUnavailable(err)) throw err;
+    refused("frame_list_unavailable", { kind: face.kind });
+    return { ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE };
+  }
   const artUrl = state.artUrl && isAllowedMediaUrl("card-art", state.artUrl, access.userId) ? state.artUrl : null;
   const preview = kitPreviewData(face, settings, { ...state, artUrl }, verified);
   if (!preview) {
