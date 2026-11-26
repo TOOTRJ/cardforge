@@ -231,6 +231,13 @@ const STATION_DRESSES: readonly string[] = [
   // tests/unit/scryfall/otp-breaking-news-imports.test.ts (OTP #1–65 land
   // there once verified) and tests/unit/frames/otp-breaking-news-importer.test.ts.
   "breakingnews",
+  // …and the Innistrad: Double Feature frame and its land dress (TODO 5.9):
+  // new templates in a new showcase set — pinned in
+  // tests/unit/scryfall/dbl-double-feature-imports.test.ts (DBL's one-faced
+  // printings land there once verified) and
+  // tests/unit/frames/dbl-double-feature-importer.test.ts.
+  "doublefeature",
+  "doublefeatureland",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

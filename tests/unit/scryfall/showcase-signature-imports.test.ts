@@ -19,6 +19,12 @@ import printings from "./fixtures/showcase-signature-printings.json";
 //     print frames of their own that Scryfall flags only `inverted`: they
 //     were EXACT on M15 (`era/2015`, `transform/2015`, `vehicle/2015`) and
 //     logged nothing. Now `nearest` on the same landing, with a row.
+//     (Since TODO 5.9's one-faced part a one-faced DBL card it dresses names
+//     the Double Feature frame once verified — `double-feature`, nearest on
+//     the same landing until then, the row's cause "unverified"; the
+//     transform cards, the walkers and the Vehicle keep the old rule,
+//     `double-feature/other`: tests/unit/scryfall/dbl-double-feature-imports
+//     .test.ts.)
 //   • LTC #411–490 print LTR's scroll frame: they fell to the generic
 //     `showcase` rule (M15).
 //   • MUL's three Theros demigods (+ halo-foil twins) print the THB
@@ -59,7 +65,8 @@ describe("the rule table", () => {
   it("adds the two set signatures before the masterpiece and generic showcase rules", () => {
     const at = (key: string) => FRAME_SIGNATURE_KEYS.indexOf(key);
     expect(at("double-feature")).toBeGreaterThan(at("showcase/mul"));
-    expect(at("signature-spellbook")).toBe(at("double-feature") + 1);
+    expect(at("double-feature/other")).toBe(at("double-feature") + 1);
+    expect(at("signature-spellbook")).toBe(at("double-feature/other") + 1);
     expect(at("signature-spellbook")).toBeLessThan(at("masterpiece"));
     // …and before every rule that called them exact.
     for (const later of ["transform/2015", "vehicle/2015", "era/2015"]) expect(at("double-feature")).toBeLessThan(at(later));
@@ -68,6 +75,9 @@ describe("the rule table", () => {
 
 describe("Innistrad: Double Feature (DBL) is nearest on the frame it always landed on", () => {
   const REASON = "PipGlyph doesn't have Double Feature's black-and-white frame yet";
+  // TODO 5.9 (one-faced): the frame exists, not yet verified.
+  const UNVERIFIED = "PipGlyph's Double Feature frame isn't verified yet";
+  const ONE_FACED = new Set(["dbl-1", "dbl-300", "dbl-23", "dbl-260"]);
   // [printing, its landing with production's ticks, the rule that matched before]
   const rows: [Key, FrameTemplate, string][] = [
     ["dbl-1", "m15", "era/2015"], // Adeline, legendary creature
@@ -88,30 +98,37 @@ describe("Innistrad: Double Feature (DBL) is nearest on the frame it always land
     }
   });
 
-  it("is `double-feature`, nearest, item 4.11, and lands where it did", () => {
+  it("is `double-feature` (one-faced: the frame once verified, 5.9) or `double-feature/other` (item 4.11), nearest, and lands where it did", () => {
     for (const [key, landing] of rows) {
+      const one = ONE_FACED.has(key);
       expect(frameMatchFromScryfall(P[key]), key).toMatchObject({
-        signature: "double-feature",
+        signature: one ? "double-feature" : "double-feature/other",
         status: "nearest",
-        reason: REASON,
-        blockedBy: "4.11",
+        reason: one ? UNVERIFIED : REASON,
+        blockedBy: one ? "5.9" : "4.11",
         exactLabel: "Innistrad: Double Feature black-and-white frame",
       });
       const patch = imported(key);
       expect(patch.frame_template, key).toBe(landing);
       expect(patch.frame_match?.status, key).toBe("nearest");
-      expect(patch.frame_match?.reason, key).toBe(REASON);
-      // A missing frame, not "not yet verified": verifying would not make it exact.
-      expect(patch.frame_match?.unverified, key).toBeUndefined();
+      // The old rule's: a missing frame, not "not yet verified" — verifying
+      // would not make it exact. A one-faced card's is the frame unverified
+      // in its colour.
+      if (one) expect(patch.frame_match?.reason, key).toMatch(/^not yet verified in /);
+      else {
+        expect(patch.frame_match?.reason, key).toBe(REASON);
+        expect(patch.frame_match?.unverified, key).toBeUndefined();
+      }
     }
   });
 
   it("writes a request-log row for every printing", () => {
     for (const [key, landing] of rows) {
+      const one = ONE_FACED.has(key);
       expect(requestRow(key), key).toMatchObject({
-        signature: "double-feature",
+        signature: one ? "double-feature" : "double-feature/other",
         status: "nearest",
-        cause: "missing",
+        cause: one ? "unverified" : "missing",
         setCode: "dbl",
         template: landing,
       });

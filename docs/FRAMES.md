@@ -190,7 +190,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 74 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the Theros constellation showcase (4.17f, a correction, layout v73): nyx —
@@ -245,6 +245,15 @@ into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
   oval stamp notch (`breakingnewsholostamp`, the capture painted the strip's
   charcoal)
   ([The OTJ Breaking News showcase](#the-otj-breaking-news-showcase-411-wave-2));
+
+- the Innistrad: Double Feature frame (5.9's one-faced part, an addition):
+  doublefeature and doublefeatureland — the 'Double Feature (DBL)' pack's
+  frames downscaled once (`a` and `c` its artifact frame, which every
+  artifact of the run prints; the land's grey stone, its tints and ten duals
+  through the pack's own masks), toned onto print, its P/T boxes, its crown
+  band (`doublefeaturecrown`) and its two oval stamp notches
+  (`doublefeatureholostamp`, `doublefeaturelandholostamp` — a dual's pieces
+  lerped) ([The Innistrad: Double Feature frame](#the-innistrad-double-feature-frame-59-one-faced));
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
@@ -6955,6 +6964,125 @@ no sweep, no badge; nobody can pick it until a colour is verified.
   Vehicle does; no borrowed word); offered only in a ticked colour, and the
   AI's random pool reaches it only there.
 
+### The Innistrad: Double Feature frame (5.9, one-faced)
+
+`doublefeature` and its land dress `doublefeatureland` — "Double Feature"
+in the Innistrad: Double Feature set (`doublefeatureset`, showcase era):
+the black-and-white "silver screen" dress of DBL (2022; Scryfall flags
+every printing `inverted`, not `showcase`) — dark bars and a dark text box,
+a thin field down the sides in the card's colour, white ink everywhere.
+DBL's 437 one-faced printings; its 98 transform cards are 5.9's other part
+(their own pack, 'Double Feature: Transform') and are NOT built here. Card
+Conjurer's 'Double Feature (DBL)' pack (packDoubleFeature.js, groupDFC.js,
+`img/frames/doubleFeature/`, 2010 × 2814, downscaled ONCE to 1500 × 2100),
+frames bucket only, through `scripts/import-cc-frames.mjs`
+(`CC_TEMPLATES.doublefeature` / `doublefeatureland`, the `DBL` block of
+`scripts/lib/cc-frames.mjs`). ADDITIONS: two new templates — no layout bump,
+no sweep, no badge; nobody can pick either until a colour is verified.
+
+- **Geometry.** The pack draws through the REGULAR M15 pack's six masks
+  (`m15/regular/m15Mask*.png`) and its window, bars, box and plate sit
+  where the accurate M15 masters' do (the window 116–1383 × 238–1164 px on
+  every key, M15's own; the title bar from 104, the type bar from 1172):
+  nothing is re-cut, and the art slot is `CC_M15_ART_SLOT`.
+- **Masters.** The spell frame: w u b r g, m (gold — every two-colour DBL
+  card prints the gold frame: #209, #216, #223 …; so no pair dress), and
+  `a` = the pack's 'Artifact Frame' (the blue-grey patterned field), which
+  EVERY artifact of the run prints whatever its colour (#23 Hedgewitch's
+  Mask white, #111 Mask of Griselbrand black, #142 Geistflame Reservoir
+  red, #171 Bramble Armor green, #252 The Celestus colourless):
+  `FrameProfile.artifactMasterKeys` maps EVERY colour key to `a` — the first
+  profile to dress a coloured key by type (the gate stays per colour:
+  verifying doublefeature/w publishes the white master and the artifact one
+  for a white artifact). `c` is the same artifact file (the pack draws no
+  colourless frame; the run prints no colourless non-artifact spell). The
+  land frame: `c` the grey stone 'Land Frame' (#261 / #530 Evolving Wilds,
+  #262 Field of Ruin), w u b r g the land tints (`<k>l.png`: the stone with
+  the pinline in the colour), m the gold land (#534 Voldaren Estate, an
+  any-colour land), and the ten DUALS every two-colour land of the run
+  prints (#260 Deserted Beach … #533 Sundown Pass): 4.6b's land recipe over
+  the pack's own files and masks — the stone whole, the pinline lerped
+  between the two tints, the first colour on the left
+  (`twoColorMasters: ["split"]`, `twoColorForLands`). The tints differ from
+  the stone ONLY inside the Pinline mask.
+- **Tones** — the ring's one rule (raw scan medians; each print registered
+  on the pack's master; the pack read at the SCANS' resolution — downscaled
+  to 745 px and back — so a thin region blurs alike on both;
+  `DBL_PRINT_TONES`). Card Conjurer drew the colours far brighter and more
+  saturated than print: EVERY coloured region is toned, as each FILE loads
+  (`DBL_SOURCE_TONES`), so every master and pair drawn from it carries the
+  same pixels — the frame FIELD through the Frame mask (the blue 49,164,238
+  → 44,89,172, the black's magenta 172,36,177 → 71,29,100 …), in TWO tones
+  meeting across the type bar's rows (`DBL_FIELD_SPLIT`, a `rows` clip): the
+  pack's field turns another hue below the type bar (the green toward
+  yellow, the blue toward cyan), which print does less; the land STONE
+  (49 → 60,54,50); each land PINLINE (its core, a dual's side read in its
+  colour; the gold from #534); the plates' RIMS; the CROWNS; the land
+  stamps' arches (onto their pinline's colour). A thin flat line, a flat
+  rim and a region with a near-zero channel are toned by their luminance
+  (`mode: "luma"`): a per-channel gain lifted the blue pinline's red × 4.3
+  at its anti-aliased edge into a pink fringe. As drawn: the bars, the box
+  and the plate faces (within 8–10 levels of the scans, whose own black
+  reads 22,19,14 — the scanner's black point, not print's), the grey land's
+  dark pinline, and the RED crown (no mono-red legend is printed in DBL,
+  one-faced or transform: an owner question).
+- **The crown** (`doublefeaturecrown`, opt-in per card; an import of a
+  legend names it): the pack's 'Legend Crown' — the card's WHOLE top, the
+  black border, the arch over the title bar in the field's colour, the bar
+  itself clear — at its bounds (0 / 0, 2010 × 341), downscaled once, the
+  card corner cut, rows 0–257. Keys w u b r g m and `a` (every ARTIFACT's,
+  any colour: `artifactKeyMap`; the colourless key: `keyMap` c → a). The
+  pack's land crown 404s: the land frame draws none (no legendary land is
+  printed).
+- **The stamp** (opt-in per card; "auto" = a rare or mythic, as DBL prints
+  it — 137 of 437 carry the oval). The pack's 'Holo Stamp' pieces at their
+  bounds (873 / 2539, 264 × 130 of 2010 × 2814), downscaled with the card
+  and cut to a 200 × 103 box at 650, 1893 (`DBL_NOTCH_BOX`): the spell
+  piece (the box's dark foot arched over the hologram) under every spell
+  key, a tint's own piece on the land (its arch the pinline, toned with it;
+  the grey land the spell piece), and a dual's two pieces lerped across the
+  pinline's ramp on the pack's card before the downscale (the importer's
+  pieces path takes `{ src, right, ramp }` since this item), as #266
+  Rockfall Vale prints its arch from red into green. Each piece's soft
+  white glow above the arch (α ≤ 45 — print draws the box dark to the arch)
+  is cleared (`clearAlphaBelow`), the pack's capture of the hologram painted
+  black (grown 2 px), then M15's oval (`M15_HOLO_STAMP_OVAL`: the physical
+  hologram sits where the bordered frame sets it — the 49 stamped prints
+  read lit from 683–698 to 801–813 across, 1924–1945 to 1985–1992 down)
+  plus 2 px cut clear and ringed black; our oval art covers it.
+- **Slots** — the Card Conjurer M15 frames' (m15ub's: `CC_M15_COST`,
+  `CC_M15_TYPE_DY`, `CC_M15_ART_SLOT`) in white ink, measured on 25
+  one-faced printings against our bakes of the same names, types, costs and
+  P/T, each scan registered on the bake by the bars' edges and ends with a
+  scale and a shift per axis (the scans run 0.5 % larger than the card, a
+  tighter crop): the name 2 px up (print's baseline 186 against our 188),
+  the type line 5 px down (1264 against 1259 — DBL is a pre-2023 print,
+  which sets its type line lower than the 2023+ prints `CC_M15_TYPE_DY` is
+  measured on), the collector line's second row 4 px up
+  (`DOUBLEFEATURE_COLLECTOR`); the cost row (1.4 px), the P/T digits (0)
+  and the collector line's first row (0) as M15's. The land frame takes the
+  same nudges on M15LAND's slots. The plate is the pack's at its bounds
+  (1555 / 2492, 353 × 179 of 2010 × 2814), its dark face the digits' span;
+  a land creature draws the spell frame's plates. Print sets the name and
+  the type line in Beleren and the rules in MPlantin, as PipGlyph does: no
+  font is added.
+- **Imports.** `double-feature` is now the ONE-FACED rule: a creature,
+  instant, sorcery, enchantment, artifact or land of the set (431 of the
+  437; #427 Honeymoon Hearse, the one Vehicle, is left out — its field
+  prints red over the artifact pattern) names `doublefeature` /
+  `doublefeatureland` once verified in the card's colour (`onceVerified`,
+  exact) and, until then, lands where it always did, nearest, logging an
+  "unverified" row. A legend imports with the crown on, a rare or mythic
+  with the oval, a dual with its split pinline. Everything else of the set
+  — the 98 transform cards, the five walkers and the Vehicle — keeps the
+  old rule unchanged under `double-feature/other` (nearest, 4.11).
+- **Creator.** In the Showcase & Universes Beyond era as "Innistrad:
+  Double Feature — Double Feature" / "— Double Feature Land": the spell
+  frame for creatures, instants, sorceries, enchantments and artifacts, the
+  land frame for lands (`TREATMENT_KINDS`; no token: DBL prints none);
+  offered only in a ticked colour, and the AI's random pool reaches them
+  only there.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -11677,12 +11805,12 @@ of your own card copies nothing.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 92 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 94 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, 4.5d's saga creature, and 5.9's Innistrad: Double Feature frame and its land dress, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

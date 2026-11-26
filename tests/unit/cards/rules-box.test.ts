@@ -172,6 +172,9 @@ describe("the main box on every template", () => {
         // …and the OTJ Breaking News (TODO 4.11 wave 2): M15's margins on the
         // page's box between its rules (the run's lines from x 132).
         "breakingnews",
+        // …and the Innistrad: Double Feature pair (TODO 5.9): M15's box.
+        "doublefeature",
+        "doublefeatureland",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

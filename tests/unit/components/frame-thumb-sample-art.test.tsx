@@ -151,7 +151,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 34 of the 98 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 34 of the 101 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -193,7 +193,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the Doctor Who TARDIS (TODO 4.11 wave 2: an opaque police box round its window, no sample).
     // + the OTJ Breaking News (TODO 4.11 wave 2: an opaque page round its picture, no sample).
     // + the saga creature (TODO 4.5d: the saga's opaque master, no sample).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(99);
+    // + the Innistrad: Double Feature frame and its land dress (TODO 5.9:
+    //   the M15 frame's opaque masters, no sample).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(101);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

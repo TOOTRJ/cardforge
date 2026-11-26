@@ -1266,6 +1266,588 @@
       "the hologram: the pack paints a capture of WotC's oval in the well (684–817 × 1928–1993 px once placed and downscaled), 5–7 px below where print sets it — every lit pixel of it is painted opaque black first (grown 2 px; print's well is black round the hologram), then the prints' oval (133 × 67 at 685, 1921 — 29 stamped MKM prints, all within 1 px) plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
     ]
   },
+  "doublefeature": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "a": [
+        "img/frames/doubleFeature/a.png"
+      ],
+      "w": [
+        "img/frames/doubleFeature/w.png"
+      ],
+      "u": [
+        "img/frames/doubleFeature/u.png"
+      ],
+      "b": [
+        "img/frames/doubleFeature/b.png"
+      ],
+      "r": [
+        "img/frames/doubleFeature/r.png"
+      ],
+      "g": [
+        "img/frames/doubleFeature/g.png"
+      ],
+      "c": [
+        "img/frames/doubleFeature/a.png"
+      ],
+      "m": [
+        "img/frames/doubleFeature/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/doubleFeature/pt/w.png",
+      "u": "img/frames/doubleFeature/pt/u.png",
+      "b": "img/frames/doubleFeature/pt/b.png",
+      "r": "img/frames/doubleFeature/pt/r.png",
+      "g": "img/frames/doubleFeature/pt/g.png",
+      "c": "img/frames/doubleFeature/pt/a.png",
+      "m": "img/frames/doubleFeature/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/doubleFeature/a.png": {
+        "table": "DBL_PRINT_TONES.field.a",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 0.737 / 0.732 / 0.702 (133, 149, 151 → 98, 109, 106), fading to × 0.730 on every channel at white"
+      },
+      "img/frames/doubleFeature/b.png": {
+        "table": "DBL_PRINT_TONES.field.b + DBL_PRINT_TONES.fieldLow.b",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 0.413 / 0.806 / 0.565 (172, 36, 177 → 71, 29, 100), fading to × 0.573 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.570 / 0.531 / 0.684 (172, 81, 152 → 98, 43, 104), fading to × 0.560 on every channel at white"
+      },
+      "img/frames/doubleFeature/g.png": {
+        "table": "DBL_PRINT_TONES.field.g + DBL_PRINT_TONES.fieldLow.g",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 1.155 / 0.601 / 0.806 (58, 193, 67 → 67, 116, 54), fading to × 0.651 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.688 / 0.687 / 0.956 (138, 195, 68 → 95, 134, 65), fading to × 0.695 on every channel at white"
+      },
+      "img/frames/doubleFeature/m.png": {
+        "table": "DBL_PRINT_TONES.field.m + DBL_PRINT_TONES.fieldLow.m",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 0.983 / 0.921 / 1.263 (176, 140, 38 → 173, 129, 48), fading to × 0.945 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.827 / 0.817 / 0.984 (191, 169, 64 → 158, 138, 63), fading to × 0.824 on every channel at white"
+      },
+      "img/frames/doubleFeature/pt/a.png": {
+        "table": "DBL_PRINT_TONES.rim.a",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/u.png by 16–40 levels (max channel; full from 40): 203, 220, 219 → 162, 180, 176, each pixel scaled by its luminance against 203, 220, 219's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/b.png": {
+        "table": "DBL_PRINT_TONES.rim.b",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/w.png by 16–40 levels (max channel; full from 40): 186, 52, 151 → 122, 46, 121, each pixel scaled by its luminance against 186, 52, 151's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/g.png": {
+        "table": "DBL_PRINT_TONES.rim.g",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/w.png by 16–40 levels (max channel; full from 40): 160, 211, 63 → 118, 169, 80, each pixel scaled by its luminance against 160, 211, 63's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/m.png": {
+        "table": "DBL_PRINT_TONES.rim.m",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/w.png by 16–40 levels (max channel; full from 40): 252, 209, 32 → 217, 187, 81, each pixel scaled by its luminance against 252, 209, 32's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/r.png": {
+        "table": "DBL_PRINT_TONES.rim.r",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/w.png by 16–40 levels (max channel; full from 40): 236, 41, 34 → 182, 36, 25, each pixel scaled by its luminance against 236, 41, 34's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/u.png": {
+        "table": "DBL_PRINT_TONES.rim.u",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/w.png by 16–40 levels (max channel; full from 40): 0, 194, 223 → 75, 156, 179, each pixel scaled by its luminance against 0, 194, 223's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/pt/w.png": {
+        "table": "DBL_PRINT_TONES.rim.w",
+        "rim": "on the pixels that differ from img/frames/doubleFeature/pt/u.png by 16–40 levels (max channel; full from 40): 227, 226, 227 → 202, 198, 200, each pixel scaled by its luminance against 227, 226, 227's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/r.png": {
+        "table": "DBL_PRINT_TONES.field.r + DBL_PRINT_TONES.fieldLow.r",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 0.690 / 0.818 / 0.750 (213, 33, 24 → 147, 27, 18), fading to × 0.734 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.715 / 0.648 / 0.604 (207, 71, 48 → 148, 46, 29), fading to × 0.676 on every channel at white"
+      },
+      "img/frames/doubleFeature/u.png": {
+        "table": "DBL_PRINT_TONES.field.u + DBL_PRINT_TONES.fieldLow.u",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 0.898 / 0.543 / 0.723 (49, 164, 238 → 44, 89, 172), fading to × 0.590 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.977 / 0.704 / 0.660 (86, 196, 215 → 84, 138, 142), fading to × 0.729 on every channel at white"
+      },
+      "img/frames/doubleFeature/w.png": {
+        "table": "DBL_PRINT_TONES.field.w + DBL_PRINT_TONES.fieldLow.w",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png, above 54.76–63.33 %H (ramping across it): × 1.037 / 1.037 / 1.058 (189, 189, 189 → 196, 196, 200), fading to × 1.039 on every channel at white",
+        "fieldLow": "through img/frames/m15/regular/m15MaskFrame.png, below 54.76–63.33 %H (ramping across it): × 0.816 / 0.825 / 0.830 (223, 223, 223 → 182, 184, 185), fading to × 0.824 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/doubleFeature/a.png",
+      "img/frames/doubleFeature/b.png",
+      "img/frames/doubleFeature/g.png",
+      "img/frames/doubleFeature/m.png",
+      "img/frames/doubleFeature/pt/a.png",
+      "img/frames/doubleFeature/pt/b.png",
+      "img/frames/doubleFeature/pt/g.png",
+      "img/frames/doubleFeature/pt/m.png",
+      "img/frames/doubleFeature/pt/r.png",
+      "img/frames/doubleFeature/pt/u.png",
+      "img/frames/doubleFeature/pt/w.png",
+      "img/frames/doubleFeature/r.png",
+      "img/frames/doubleFeature/u.png",
+      "img/frames/doubleFeature/w.png",
+      "img/frames/m15/regular/m15MaskFrame.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (doubleFeature/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as every DBL printing draws them (Innistrad: Double Feature, 2022: the black-and-white 'silver screen' frame, Scryfall `inverted`); the pack's window, bars, box and plate are the regular M15 frame's, so nothing is re-cut",
+      "m = gold: every two-colour DBL card prints the gold frame (#209 Angelfire Ignition, #216 Dawnhart Wardens, #223 Florian …) — no pair dress",
+      "a = the pack's 'Artifact Frame' (doubleFeature/a.png, the blue-grey patterned field): EVERY artifact of the run prints it, whatever its colour (#23 Hedgewitch's Mask white, #111 Mask of Griselbrand black, #142 Geistflame Reservoir red, #171 Bramble Armor green, #252 The Celestus colourless) — FrameProfile.artifactMasterKeys maps every colour key to it",
+      "c = the same artifact frame: the pack draws no colourless frame and the run prints no colourless non-artifact spell",
+      "plates = the pack's 'Power/Toughness' per key (doubleFeature/pt/<k>.png, 353x179 at its bounds 1555/2492 of 2010x2814 — a dark face in a rim of the card's colour, white digits on print); c = the artifact's",
+      "toned onto the prints (DBL_PRINT_TONES through DBL_SOURCE_TONES, recorded under sourceTones) as each FILE loads: the frame field through the regular M15 Frame mask (every key: Card Conjurer drew the colours far brighter and more saturated than print — the blue 49,164,238 against 44,89,172) and the plates' rims; the bars, the box and the plate faces within 8–10 levels of the scans, as drawn"
+    ]
+  },
+  "doublefeaturecrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x258 overlay band: rows 0–257 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/doubleFeature/crowns/w.png at 0/0/100×12.117981520966596 %"
+      ],
+      "u": [
+        "img/frames/doubleFeature/crowns/u.png at 0/0/100×12.117981520966596 %"
+      ],
+      "b": [
+        "img/frames/doubleFeature/crowns/b.png at 0/0/100×12.117981520966596 %"
+      ],
+      "r": [
+        "img/frames/doubleFeature/crowns/r.png at 0/0/100×12.117981520966596 %"
+      ],
+      "g": [
+        "img/frames/doubleFeature/crowns/g.png at 0/0/100×12.117981520966596 %"
+      ],
+      "m": [
+        "img/frames/doubleFeature/crowns/m.png at 0/0/100×12.117981520966596 %"
+      ],
+      "a": [
+        "img/frames/doubleFeature/crowns/a.png at 0/0/100×12.117981520966596 %"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/doubleFeature/crowns/w.png": {
+        "table": "DBL_PRINT_TONES.crown.w",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.723 / 0.741 / 0.733 (155, 158, 161 → 112, 117, 118), fading to × 0.736 on every channel at white"
+      },
+      "img/frames/doubleFeature/crowns/u.png": {
+        "table": "DBL_PRINT_TONES.crown.u",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/w.png by 16–40 levels (max channel; full from 40): 0, 74, 116 → 11, 30, 69, each pixel scaled by its luminance against 0, 74, 116's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/crowns/b.png": {
+        "table": "DBL_PRINT_TONES.crown.b",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/w.png by 16–40 levels (max channel; full from 40): × 0.391 / 0.727 / 0.590 (69, 22, 105 → 27, 16, 62), fading to × 0.570 on every channel at white"
+      },
+      "img/frames/doubleFeature/crowns/g.png": {
+        "table": "DBL_PRINT_TONES.crown.g",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/w.png by 16–40 levels (max channel; full from 40): × 1.353 / 0.556 / 0.595 (17, 99, 37 → 23, 55, 22), fading to × 0.594 on every channel at white"
+      },
+      "img/frames/doubleFeature/crowns/m.png": {
+        "table": "DBL_PRINT_TONES.crown.m",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/w.png by 16–40 levels (max channel; full from 40): 102, 75, 1 → 63, 40, 14, each pixel scaled by its luminance against 102, 75, 1's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/crowns/a.png": {
+        "table": "DBL_PRINT_TONES.crown.a",
+        "crown": "on the pixels that differ from img/frames/doubleFeature/crowns/u.png by 16–40 levels (max channel; full from 40): × 0.580 / 0.646 / 0.635 (69, 96, 104 → 40, 62, 66), fading to × 0.634 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/doubleFeature/crowns/a.png",
+      "img/frames/doubleFeature/crowns/b.png",
+      "img/frames/doubleFeature/crowns/g.png",
+      "img/frames/doubleFeature/crowns/m.png",
+      "img/frames/doubleFeature/crowns/r.png",
+      "img/frames/doubleFeature/crowns/u.png",
+      "img/frames/doubleFeature/crowns/w.png"
+    ],
+    "notes": [
+      "the Double Feature legendary crown (TODO 5.9): the pack's 'Legend Crown' (doubleFeature/crowns/<k>.png, 2010x341 at crownBounds 0/0 of the 2010x2814 card) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos), the card corner cut, cropped to rows 0–257 — the whole top of the card (the black border, the crown's arch over the title bar in the card's colour, the bar's frame; the bar itself left clear) that every legendary DBL print carries (#1 Adeline, #59 Lier, #103 Gisa, #223 Florian, #252 The Celestus; plain: #8, #43)",
+      "keys = the pack's seven crowns: w u b r g, m (gold), a (the artifact's — every artifact of the run, any colour, prints the artifact frame: the profile's artifactKeyMap, and keyMap c → a); the pack's land crown 404s, so the land frame draws none",
+      "toned onto the prints as the file loads (DBL_PRINT_TONES.crown: the crowns' colour where it differs from another key's crown): Card Conjurer drew them far brighter than print; the red crown, which no DBL print shows, as drawn"
+    ]
+  },
+  "doublefeatureholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "200x103 notch piece (1:1 at 1500x2100, at 650,1893), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "a": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.54,
+        "topPct": 91.72,
+        "widthPct": 8.94,
+        "heightPct": 3.2
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/doubleFeature/stamps/stamp.png"
+    ],
+    "notes": [
+      "the Double Feature oval stamp notch (TODO 5.9): the pack's 'Holo Stamp' (doubleFeature/stamps/stamp.png, 264x130 — the text box's dark foot arched up round the hologram) placed at its stampBounds (873/2010, 2539/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box 200x103 at 650,1893 px of the 1500x2100 card, drawn 1:1 from there",
+      "keys = the masters' w u b r g m, a and c, every one the same piece (every master is the same dark box under the arch)",
+      "the piece's soft white glow above the arch (α ≤ 45 — print draws the box dark to the arch) is cleared (α < 50 once downscaled); the pack's capture of WotC's oval in the well (686–814 × 1928–1989 px once placed) is painted opaque black (grown 2 px), then the prints' oval — M15's (M15_HOLO_STAMP_OVAL: the physical hologram sits where the bordered frame sets it, 49 stamped DBL prints) — plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
+  "doublefeatureland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/doubleFeature/wl.png"
+      ],
+      "u": [
+        "img/frames/doubleFeature/ul.png"
+      ],
+      "b": [
+        "img/frames/doubleFeature/bl.png"
+      ],
+      "r": [
+        "img/frames/doubleFeature/rl.png"
+      ],
+      "g": [
+        "img/frames/doubleFeature/gl.png"
+      ],
+      "c": [
+        "img/frames/doubleFeature/l.png"
+      ],
+      "m": [
+        "img/frames/doubleFeature/ml.png"
+      ],
+      "wu": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/wl.png | img/frames/doubleFeature/ul.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/wl.png | img/frames/doubleFeature/ul.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "wb": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/wl.png | img/frames/doubleFeature/bl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/wl.png | img/frames/doubleFeature/bl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "ub": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/ul.png | img/frames/doubleFeature/bl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/ul.png | img/frames/doubleFeature/bl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "ur": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/ul.png | img/frames/doubleFeature/rl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/ul.png | img/frames/doubleFeature/rl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "br": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/bl.png | img/frames/doubleFeature/rl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/bl.png | img/frames/doubleFeature/rl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "bg": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/bl.png | img/frames/doubleFeature/gl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/bl.png | img/frames/doubleFeature/gl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "rg": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/rl.png | img/frames/doubleFeature/gl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/rl.png | img/frames/doubleFeature/gl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "rw": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/rl.png | img/frames/doubleFeature/wl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/rl.png | img/frames/doubleFeature/wl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "gw": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/gl.png | img/frames/doubleFeature/wl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/gl.png | img/frames/doubleFeature/wl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "gu": [
+        "img/frames/doubleFeature/l.png",
+        "(img/frames/doubleFeature/gl.png | img/frames/doubleFeature/ul.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/doubleFeature/gl.png | img/frames/doubleFeature/ul.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/doubleFeature/bl.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.b",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 180, 40, 152 → 96, 44, 117, each pixel scaled by its luminance against 180, 40, 152's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/gl.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.g",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 147, 215, 62 → 105, 154, 63, each pixel scaled by its luminance against 147, 215, 62's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/l.png": {
+        "table": "DBL_PRINT_TONES.landField",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white"
+      },
+      "img/frames/doubleFeature/ml.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.m",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 255, 222, 19 → 212, 166, 57, each pixel scaled by its luminance against 255, 222, 19's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/rl.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.r",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 255, 48, 30 → 184, 42, 16, each pixel scaled by its luminance against 255, 48, 30's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/ul.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.u",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 14, 195, 238 → 60, 150, 191, each pixel scaled by its luminance against 14, 195, 238's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/wl.png": {
+        "table": "DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.w",
+        "field": "through img/frames/m15/regular/m15MaskFrame.png: × 1.224 / 1.102 / 1.020 (49, 49, 49 → 60, 54, 50), fading to × 1.122 on every channel at white",
+        "pinline": "through img/frames/m15/regular/m15MaskPinline.png: 248, 250, 250 → 229, 230, 239, each pixel scaled by its luminance against 248, 250, 250's (at most × 1.25)"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/doubleFeature/bl.png",
+      "img/frames/doubleFeature/gl.png",
+      "img/frames/doubleFeature/l.png",
+      "img/frames/doubleFeature/ml.png",
+      "img/frames/doubleFeature/rl.png",
+      "img/frames/doubleFeature/ul.png",
+      "img/frames/doubleFeature/wl.png",
+      "img/frames/m15/regular/m15MaskFrame.png",
+      "img/frames/m15/regular/m15MaskPinline.png",
+      "img/frames/m15/regular/m15MaskRules.png"
+    ],
+    "notes": [
+      "c = the pack's grey stone 'Land Frame' (doubleFeature/l.png) whole, downscaled once to 1500x2100 (Lanczos): the run's colourless lands print it (#261 / #530 Evolving Wilds, #262 Field of Ruin, #534 Voldaren Estate)",
+      "w u b r g = the pack's land tints (doubleFeature/<k>l.png: the stone with the pinline in the colour); m = ml.png (gold: #534 Voldaren Estate, an any-colour land, prints it)",
+      "the ten two-colour PAIRS (the 'split' dress — every dual of the run: #260 Deserted Beach, #263 Haunted Ridge, #265 Overgrown Farmland, #266 Rockfall Vale, #267 Shipwreck Marsh, #528 Deathcap Glade, #529 Dreamroot Cascade, #531 Shattered Sanctum, #532 Stormcarved Coast, #533 Sundown Pass) = 4.6b's land recipe (twoColorRecipe kind 'land') over the pack's own files and masks (the regular M15 masks): l.png whole, the pinline (40→60 %W) and the box (45→57 %W, the same pixels in every tint) lerped between the two land tints, first canonical colour on the left — the tints differ from l.png only inside the Pinline mask",
+      "toned onto the prints (DBL_PRINT_TONES): the stone (49,49,49 → 60,54,50) and each tint's pinline (the white 248,250,250 → 229,230,239, the red 255,48,30 → 184,42,16 …) as the file loads, so every master and pair drawn from it carries the same pixels; the gold pinline 255,222,19 → 212,166,57 (#534); the grey land's dark pinline as drawn. The pack's pinline is drawn ~2x as wide as print's (10 px against 6–7 at HD): a drawing difference, kept (no flat zone to re-cut it through)",
+      "no plates of its own (the pack's pt/l.png 404s): a land creature draws the spell frame's plates (the profile's plateAssetPathTemplate)"
+    ]
+  },
+  "doublefeaturelandholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "200x103 notch piece (1:1 at 1500x2100, at 650,1893), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/doubleFeature/stamps/w.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/doubleFeature/stamps/u.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/doubleFeature/stamps/b.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/doubleFeature/stamps/r.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/doubleFeature/stamps/g.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/doubleFeature/stamps/m.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/doubleFeature/stamps/stamp.png at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wu": [
+        "img/frames/doubleFeature/stamps/w.png ⟷ img/frames/doubleFeature/stamps/u.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "wb": [
+        "img/frames/doubleFeature/stamps/w.png ⟷ img/frames/doubleFeature/stamps/b.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ub": [
+        "img/frames/doubleFeature/stamps/u.png ⟷ img/frames/doubleFeature/stamps/b.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "ur": [
+        "img/frames/doubleFeature/stamps/u.png ⟷ img/frames/doubleFeature/stamps/r.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "br": [
+        "img/frames/doubleFeature/stamps/b.png ⟷ img/frames/doubleFeature/stamps/r.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "bg": [
+        "img/frames/doubleFeature/stamps/b.png ⟷ img/frames/doubleFeature/stamps/g.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rg": [
+        "img/frames/doubleFeature/stamps/r.png ⟷ img/frames/doubleFeature/stamps/g.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "rw": [
+        "img/frames/doubleFeature/stamps/r.png ⟷ img/frames/doubleFeature/stamps/w.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gw": [
+        "img/frames/doubleFeature/stamps/g.png ⟷ img/frames/doubleFeature/stamps/w.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "gu": [
+        "img/frames/doubleFeature/stamps/g.png ⟷ img/frames/doubleFeature/stamps/u.png lerped (premultiplied) across procedural:ramp(40→60 %W) at 873,2539 264×130 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 200×103 at 650,1893",
+        "every pixel under α 50 cleared (the pack's soft glow above the arch)",
+        "the pack's capture (luma > 60 in box x 33–167, rows 34–99) painted opaque black, grown 2 px",
+        "the oval 45.5400/91.7200/8.9400×3.2000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.54,
+        "topPct": 91.72,
+        "widthPct": 8.94,
+        "heightPct": 3.2
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceTones": {
+      "img/frames/doubleFeature/stamps/b.png": {
+        "table": "DBL_PRINT_TONES.stamp.b",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 176, 48, 142 → 96, 44, 117, each pixel scaled by its luminance against 176, 48, 142's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/stamps/g.png": {
+        "table": "DBL_PRINT_TONES.stamp.g",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 146, 198, 57 → 105, 154, 63, each pixel scaled by its luminance against 146, 198, 57's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/stamps/m.png": {
+        "table": "DBL_PRINT_TONES.stamp.m",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 255, 223, 33 → 212, 166, 57, each pixel scaled by its luminance against 255, 223, 33's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/stamps/r.png": {
+        "table": "DBL_PRINT_TONES.stamp.r",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 255, 63, 37 → 184, 42, 16, each pixel scaled by its luminance against 255, 63, 37's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/stamps/u.png": {
+        "table": "DBL_PRINT_TONES.stamp.u",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 104, 218, 230 → 60, 150, 191, each pixel scaled by its luminance against 104, 218, 230's (at most × 1.25)"
+      },
+      "img/frames/doubleFeature/stamps/w.png": {
+        "table": "DBL_PRINT_TONES.stamp.w",
+        "arch": "on the pixels that differ from img/frames/doubleFeature/stamps/stamp.png by 16–40 levels (max channel; full from 40): 255, 255, 255 → 229, 230, 239, each pixel scaled by its luminance against 255, 255, 255's (at most × 1.25)"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/doubleFeature/stamps/b.png",
+      "img/frames/doubleFeature/stamps/g.png",
+      "img/frames/doubleFeature/stamps/m.png",
+      "img/frames/doubleFeature/stamps/r.png",
+      "img/frames/doubleFeature/stamps/stamp.png",
+      "img/frames/doubleFeature/stamps/u.png",
+      "img/frames/doubleFeature/stamps/w.png"
+    ],
+    "notes": [
+      "the Double Feature land's oval stamp notch (TODO 5.9): the pack's 'Land Holo Stamp' per colour (doubleFeature/stamps/<k>.png, 264x130 — the pinline in the colour arched up round the hologram) at its stampBounds, placed and downscaled with the card and cut to the spell notch's box (200x103 at 650,1893 px)",
+      "keys = w u b r g, m (gold: #534 Voldaren Estate), c (the grey land, whose pinline is dark: the spell piece) and the ten pairs — the two colours' pieces lerped (premultiplied) across the pinline's ramp (40→60 %W, the notch inside it) on the pack's card before the downscale, as the duals print the arch from their first colour into their second (#266 Rockfall Vale, #260 Deserted Beach)",
+      "each tint's arch toned onto its pinline's print colour as the file loads (DBL_PRINT_TONES.stamp: the pixels where the piece differs from the spell piece); the glow, the capture and the cut as the spell notch's"
+    ]
+  },
   "emblem": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

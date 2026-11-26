@@ -650,7 +650,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall" | "doublefeature";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -934,6 +934,14 @@ const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
+  // The Innistrad: Double Feature frame (TODO 5.9, one-faced): the land frame
+  // for a land, the spell frame for every other kind the `double-feature`
+  // rule keeps to (an artifact of any colour paints the frame's artifact
+  // master there — FrameProfile.artifactMasterKeys).
+  doublefeature: {
+    produces: ["doublefeatureland", "doublefeature"],
+    pick: ({ facts }) => (facts.kind === "land" ? "doublefeatureland" : "doublefeature"),
+  },
   // The 2014–19 arch's tall text box (TODO 4.55): its artifact dress for an
   // Artifact (a Clue), the plain one otherwise.
   tokentall: {
@@ -3006,8 +3014,38 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   //     the black-and-white "silver screen" frame.
   //   • Signature Spellbook (SS1 2018, SS2 2019, SS3 2020; 24 printings):
   //     the Spellbook frame — the art behind a translucent text box.
+  // Since TODO 5.9's one-faced part PipGlyph draws the DBL frame
+  // (`doublefeature`, its land dress `doublefeatureland`): a one-faced
+  // printing of a kind it dresses — the creatures, instants, sorceries,
+  // enchantments and artifacts (any colour: the frame's artifact master) and
+  // the lands, 431 of the 437 — names it once it is verified in the card's
+  // colour (`onceVerified`, exact: the crown, the stamp and the duals' split
+  // pinline are drawn there) and, until then, lands where it always did,
+  // nearest. The rest keep the old rule below (`double-feature/other`): the
+  // 98 transform cards (5.9's double-faced part), the walkers (5.13: no
+  // walker body in the frame) and #427 Honeymoon Hearse, the one Vehicle,
+  // whose field prints red over the artifact pattern (no such master in the
+  // pack).
   {
     key: "double-feature",
+    exactLabel: "Innistrad: Double Feature black-and-white frame",
+    match: {
+      sets: ["dbl"],
+      layouts: ["normal"],
+      kinds: ["creature", "instant", "sorcery", "enchantment", "artifact", "land"],
+      notCollectorIds: { dbl: ["427"] },
+    },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      onceVerified: { family: "doublefeature" },
+      exactOnceVerified: true,
+      reason: "PipGlyph's Double Feature frame isn't verified yet",
+      blockedBy: "5.9",
+    },
+  },
+  {
+    key: "double-feature/other",
     exactLabel: "Innistrad: Double Feature black-and-white frame",
     match: { sets: ["dbl"] },
     outcome: {

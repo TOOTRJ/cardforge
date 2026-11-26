@@ -186,6 +186,11 @@ export const COLLECTOR_TEMPLATES = [
   // the page, 10 / 9.5 px above M15's rows on the pack's page
   // (BREAKING_NEWS_COLLECTOR).
   "breakingnews",
+  // …and the Innistrad: Double Feature frame and its land dress (TODO 5.9,
+  // Card Conjurer's 'Double Feature (DBL)'): DBL's printings set both lines
+  // in the black border under the box on M15's rows (M15_COLLECTOR).
+  "doublefeature",
+  "doublefeatureland",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

@@ -415,6 +415,12 @@ const PICKS: readonly Pick[] = [
   // The Doctor Who TARDIS showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "tardis/u/creature-short@collector-2015", why: "Doctor Who TARDIS: CC's police-box masters with the brace drawn in, white ink on M15's slots on the pack's bars (the name 3 px up, the cost row 4 px down, the type line 2 px down, the set symbol centred in the ring), the pack's P/T box, the collector line 6 / 5 px above M15's rows" },
   { from: "tardis/wub/creature-long@stamp-m", why: "Doctor Who TARDIS: the pack's trapezoid notch with our triangle in the Universes Beyond hole, a three-colour legend on the gold master" },
+  // The Innistrad: Double Feature frame from Card Conjurer (TODO 5.9, one-faced; an addition).
+  { from: "doublefeature/u/creature-short@collector-2015", why: "Double Feature: CC's black-and-white masters toned onto print, white ink on the CC M15 slots (the name 2 px up, the type line 5 px down), the pack's plate, the collector line's second row 4 px up" },
+  { from: "doublefeature/w/creature-long@crown", why: "Double Feature: the crown band — the card's whole top in the field's tone over the white master" },
+  { from: "doublefeature/wub/creature-long@stamp-m", why: "Double Feature: the pack's arch notch with our oval at M15's place, a three-colour card on the gold master" },
+  { from: "doublefeature/w/artifact-short@artifact", why: "Double Feature: a WHITE artifact paints the artifact master (artifactMasterKeys: every colour key)" },
+  { from: "doublefeatureland/c/land-short@stamp-c", why: "Double Feature land: the grey stone master, the land type line 5 px down, the oval notch" },
   // The OTJ Breaking News showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "breakingnews/u/creature-short@collector-2015", why: "OTJ Breaking News: CC's page masters downscaled once, the name CENTRED in capitals on its own band under the masthead, the cost in a box of its own in the masthead (off the name's rows: the name keeps its band), the type line in capitals, the set symbol in its box, the page's rules box, the P/T box, the collector line in the charcoal strip" },
   { from: "breakingnews/wu/creature-long@pair-crown", why: "OTJ Breaking News: a two-colour legend — the pair master lerped across print's split under the crown band's lerped pair (the notched rule at the page's top); its five-pip cost slides right to the masthead's end, the chevron's paper piece over the chevron (lib/cards/masthead.ts)" },

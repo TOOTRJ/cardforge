@@ -138,6 +138,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tardis: ["1200x848", "4:3", 1.4113],
   // The Card Conjurer Breaking News window (TODO 4.11 wave 2): 1347 × 850 px.
   breakingnews: ["1280x800", "3:2", 1.5847],
+  // The Innistrad: Double Feature frames (TODO 5.9): the CC M15 window.
+  doublefeature: ["1184x864", "4:3", 1.366],
+  doublefeatureland: ["1184x864", "4:3", 1.366],
   fullart: ["896x1168", "3:4", 0.7605],
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],

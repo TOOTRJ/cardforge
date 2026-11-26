@@ -168,6 +168,12 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // template, no stored card — the family's sizes — so it joined without a
   // bump.
   "breakingnews",
+  // The Innistrad: Double Feature frame and its land dress (TODO 5.9, CC's
+  // 'Double Feature (DBL)' pack: the regular M15 frame's geometry and text
+  // layout in white ink): new templates, no stored card — the family's
+  // sizes — so they joined without a bump.
+  "doublefeature",
+  "doublefeatureland",
   // The Tarkir: Dragonstorm showcases (TODO 4.11, MSE masters with their
   // printed border painted; layout v68): the draconic on M15's slots, the
   // ghostfire on its own bars — both at the family's sizes, with their bump.

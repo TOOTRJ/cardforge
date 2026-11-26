@@ -605,6 +605,14 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // master), and its dress is the card's colour, never a type word, so a
   // creature wears it as the Vehicle does, on the same box: no borrowed
   // word, as Nyx and Enchanting Tales write. No print has a creature on it.)
+  // The Innistrad: Double Feature frame (TODO 5.9, one-faced) is new — no
+  // stored card sits on it — and is two bodies, as the Universes Beyond
+  // frames are: the spell frame for every kind DBL prints on it but the land
+  // (creatures, instants, sorceries, enchantments and artifacts — every
+  // artifact on the pack's artifact master, artifactMasterKeys), the land
+  // frame for lands. DBL prints no token (nor a token frame in the pack).
+  doublefeature: ["creature", "instant", "sorcery", "enchantment", "artifact"],
+  doublefeatureland: ["land"],
   m15borderless:["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
   m15borderlessland: ["land"],

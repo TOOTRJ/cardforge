@@ -156,6 +156,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The OTJ Breaking News showcase (TODO 4.11 wave 2): the page's
   // round-cornered window with the art-window check's spare.
   breakingnews: { front: [1347, 850] },
+  // The Innistrad: Double Feature frames (TODO 5.9): the CC M15 window.
+  doublefeature: { front: M15_WINDOW },
+  doublefeatureland: { front: M15_WINDOW },
   fullart: { front: [1383, 1819] },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the window's torn,
   // half-transparent edges covered with the art-window check's spare.

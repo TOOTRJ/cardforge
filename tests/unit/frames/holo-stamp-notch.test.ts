@@ -85,8 +85,10 @@ function onDisk(rel: string): Buffer | null {
  *  colour, TODO 4.11 wave 2: enchanting-tales-importer.test.ts — and the
  *  Strixhaven Mystical Archive's, PipGlyph's own arch:
  *  mystical-archive-importer.test.ts; the Doctor Who TARDIS's the pack's
- *  one trapezoid, who-tardis-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, mysticalarchiveholostamp: _archiveNotch, tardisholostamp: _tardisNotch, breakingnewsholostamp: _breakingNewsNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+ *  one trapezoid, who-tardis-importer.test.ts; the Innistrad: Double
+ *  Feature's the pack's pieces, a dual's two lerped, TODO 5.9:
+ *  dbl-double-feature-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, mysticalarchiveholostamp: _archiveNotch, tardisholostamp: _tardisNotch, breakingnewsholostamp: _breakingNewsNotch, doublefeatureholostamp: _dblNotch, doublefeaturelandholostamp: _dblLandNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
@@ -96,6 +98,8 @@ void _etalesNotch;
 void _archiveNotch;
 void _tardisNotch;
 void _breakingNewsNotch;
+void _dblNotch;
+void _dblLandNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

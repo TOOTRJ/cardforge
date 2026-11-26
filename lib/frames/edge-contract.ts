@@ -208,6 +208,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15ub: ALL_BORDER,
   m15ubartifact: ALL_BORDER,
   m15ubland: ALL_BORDER,
+  // The Innistrad: Double Feature frame and its land dress (TODO 5.9, Card
+  // Conjurer's 'Double Feature (DBL)' pack, frames bucket): the regular M15
+  // frame's black border all round, as every DBL printing draws it.
+  doublefeature: ALL_BORDER,
+  doublefeatureland: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,

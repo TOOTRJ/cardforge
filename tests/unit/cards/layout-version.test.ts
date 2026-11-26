@@ -461,6 +461,9 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "tardis",
   // TODO 4.11 wave 2's OTJ Breaking News.
   "breakingnews",
+  // TODO 5.9's Innistrad: Double Feature pair.
+  "doublefeature",
+  "doublefeatureland",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -517,6 +520,9 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "tardis",
   // TODO 4.11 wave 2's OTJ Breaking News.
   "breakingnews",
+  // TODO 5.9's Innistrad: Double Feature pair.
+  "doublefeature",
+  "doublefeatureland",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -914,6 +920,9 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "tardis",
       // …and TODO 4.11 wave 2's OTJ Breaking News: the same, no bump.
       "breakingnews",
+      // …and TODO 5.9's Innistrad: Double Feature pair: the same, no bump.
+      "doublefeature",
+      "doublefeatureland",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -3303,8 +3312,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // The saga creature (TODO 4.5d) was BORN on the saga's row (a new
     // template, no bump).
     // (…and the extended-art Prepare dress, TODO 4.27b: a new template BORN
-    // on the Prepare frame's CC M15 row — no bump.)
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "extendedartprepare"];
+    // on the Prepare frame's CC M15 row — no bump; and the Innistrad: Double
+    // Feature, TODO 5.9: a new template BORN on the CC M15 row — no bump.)
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "extendedartprepare", "doublefeature"];
     const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());

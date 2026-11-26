@@ -364,6 +364,18 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the Innistrad: Double Feature land's ten (TODO 5.9): the stone
+      // with the pinline lerped between two land tints; its spell frame has
+      // none (every two-colour DBL card prints gold), `a` its artifact frame
+      // (tests/unit/frames/dbl-double-feature-importer.test.ts).
+      if (template === "doublefeatureland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
+      if (template === "doublefeature") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m"]);
+        continue;
+      }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
