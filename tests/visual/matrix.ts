@@ -1988,8 +1988,12 @@ export function visualCases(): VisualCase[] {
     if (isDfcBackBody(template)) {
       const front: FrameTemplate = template === "m15dfclandback" ? "m15dfclandfront" : "m15dfcfront";
       const back = { frontTemplate: front };
-      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...dfcBodyRow(template, "g", "long"), ...collectorRow(front, "2023", dfcBodyRow(template, "g", "long")) } });
-      add(template, "transform", "u", "short", { suffix: "@collector-2015", back, row: { ...dfcBodyRow(template, "u"), ...collectorRow(front, "2015", dfcBodyRow(template, "u")) } });
+      // (The saga creature's back, TODO 4.5d part B: its own back face — a
+      // saga creature, the only back the gate puts on it.)
+      const bodyRow = (colour: VisualColour, shape: VisualShape) =>
+        template === "sagacreaturedfcback" ? sagaCreatureBackRow(colour, shape) : dfcBodyRow(template, colour, shape);
+      add(template, "transform", "g", "long", { suffix: "@collector", back, row: { ...bodyRow("g", "long"), ...collectorRow(front, "2023", bodyRow("g", "long")) } });
+      add(template, "transform", "u", "short", { suffix: "@collector-2015", back, row: { ...bodyRow("u", "short"), ...collectorRow(front, "2015", bodyRow("u", "short")) } });
       continue;
     }
     const primary = (hosted.get(template) ?? ["creature"])[0];
@@ -2620,6 +2624,29 @@ export function visualCases(): VisualCase[] {
   }
   add("sagadfcback", "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow("g", "long") });
   add("sagadfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow("r", "short", "foil") });
+  // TODO 4.5d, part B: the saga creature's BACK (FIN's Dominants' summons —
+  // a transform card whose back is a saga creature): baked as the back face
+  // of a creature front, every key short and long (the two-colour and
+  // three-colour rows wear gold, as the body has no pairs), the HD size, a
+  // foil back, and the crown — the Nyx crown cut round the ▼ well — on the
+  // legendary back in every key, at HD, in both finishes and squared; and
+  // the FRONT that carries it (the back's P/T in the front's tab). NEW
+  // cases: a new template, no stored card.
+  const sagaCreatureFront = { frontTemplate: "m15dfcfront" as FrameTemplate };
+  for (const colour of VISUAL_COLOURS) {
+    add("sagacreaturedfcback", "transform", colour, "short", { back: sagaCreatureFront, row: sagaCreatureBackRow(colour, "short") });
+    add("sagacreaturedfcback", "transform", colour, "long", { back: sagaCreatureFront, row: sagaCreatureBackRow(colour, "long") });
+  }
+  for (const colour of ["w", "u", "b", "r", "g", "c", "wu"] as const) {
+    add("sagacreaturedfcback", "transform", colour, "short", { suffix: "@crown", back: sagaCreatureFront, row: sagaCreatureBackRow(colour, "short", "regular", true) });
+  }
+  add("sagacreaturedfcback", "transform", "g", "long", { preset: "hd", suffix: "@hd", back: sagaCreatureFront, row: sagaCreatureBackRow("g", "long") });
+  add("sagacreaturedfcback", "transform", "w", "short", { preset: "hd", suffix: "@crown-hd", back: sagaCreatureFront, row: sagaCreatureBackRow("w", "short", "regular", true) });
+  add("sagacreaturedfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: sagaCreatureFront, row: sagaCreatureBackRow("r", "short", "foil") });
+  add("sagacreaturedfcback", "transform", "u", "short", { finish: "foil", suffix: "@crown-foil", back: sagaCreatureFront, row: sagaCreatureBackRow("u", "short", "foil", true) });
+  add("sagacreaturedfcback", "transform", "b", "short", { finish: "etched", suffix: "@crown-etched", back: sagaCreatureFront, row: sagaCreatureBackRow("b", "short", "etched", true) });
+  add("sagacreaturedfcback", "transform", "r", "short", { corners: "square", suffix: "@crown-square", back: sagaCreatureFront, row: sagaCreatureBackRow("r", "short", "regular", true) });
+  add("m15dfcfront", "transform", "w", "short", { suffix: "@saga-creature", row: sagaCreatureBackRow("w", "short") });
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
   // per card; no stored card has the key, so these are NEW cases and every
@@ -3018,6 +3045,58 @@ function sagaBackRow(colour: VisualColour, shape: VisualShape, finish: VisualCas
       art_url: "ART2",
       artist_credit: "Visual Regression",
       frame_style: { template: "sagadfcback" },
+      color_identity: IDENTITY[colour],
+    } as CardRowForBake["back_face"],
+  } as Partial<CardRowForBake>;
+}
+
+/** A transform card whose BACK is a saga CREATURE (TODO 4.5d, part B: FIN
+ *  #16 Dion, Bahamut's Dominant // Bahamut, Warden of Light's shape) — the
+ *  front a legendary creature on the transform front, the back the creature
+ *  card type with "Legendary Enchantment" in front and Saga in its subtypes
+ *  (the import's reading of "Legendary Enchantment Creature — Saga Dragon")
+ *  on the saga creature back: its chapters as PLAIN text (a back face has
+ *  no structured rows), the lines after the last chapter its second box, a
+ *  P/T on the plate. The long one: FIN #245 Esper Terra's four chapters
+ *  (one a three-badge row), two abilities and a flavour in the box (part
+ *  A's long box), an 8/8 (no kerned pair: the centred plates draw one
+ *  apart, hd-kerned-pt-centre). `crown`
+ *  switches the card's crown on (both faces are legendary). */
+function sagaCreatureBackRow(
+  colour: VisualColour,
+  shape: VisualShape,
+  finish: VisualCase["finish"] = "regular",
+  crown = false,
+): Partial<CardRowForBake> {
+  const long = shape === "long";
+  return {
+    title: long ? "Terra, Magical Adept of the Returning Esper" : "Dion, Bahamut's Dominant",
+    cost: `{3}${pips(colour, 0, 1)}`,
+    card_type: "creature",
+    supertype: "Legendary",
+    subtypes: long ? ["Human", "Wizard", "Warrior"] : ["Human", "Noble", "Knight"],
+    rules_text: long
+      ? "When Terra enters, mill five cards. Put up to one enchantment milled this way into your hand.\nTrance — {4}{R}{G}, {T}: Exile Terra, then return it to the battlefield transformed under its owner's control. Activate only as a sorcery."
+      : "Dragonfire Dive — During your turn, Dion and other Knights you control have flying.\nWhen Dion enters, create a 2/2 white Knight creature token.",
+    power: long ? "4" : "3",
+    toughness: long ? "2" : "3",
+    frame_style: { template: "m15dfcfront", finish, ...(crown ? { crown: true } : {}) } as CardRowForBake["frame_style"],
+    face_content: null,
+    back_face: {
+      title: long ? "Esper Terra, Child of Maduin" : "Bahamut, Warden of Light",
+      cost: "",
+      card_type: "creature",
+      supertype: "Legendary Enchantment",
+      subtypes: long ? ["Saga", "Wizard"] : ["Saga", "Dragon"],
+      rules_text: long
+        ? "(As this Saga enters and after your draw step, add a lore counter.)\nI, II, III — Create a token that's a copy of target nonlegendary enchantment you control. It gains haste. If it's a Saga, put up to three lore counters on it. Sacrifice it at the beginning of your next end step.\nIV — Add {W}{W}, {U}{U}, {B}{B}, {R}{R}, and {G}{G}. Exile Esper Terra, then return it to the battlefield (front face up).\nFlying, vigilance\nWard {2}"
+        : "(As this Saga enters and after your draw step, add a lore counter.)\nI, II — Wings of Light — Put a +1/+1 counter on each other creature you control. Those creatures gain flying until end of turn.\nIII — Gigaflare — Destroy target permanent. Exile Bahamut, then return it to the battlefield (front face up).\nFlying",
+      flavor_text: long ? "Summoned from the far reaches of the crystal's light." : null,
+      power: long ? "8" : "5",
+      toughness: long ? "8" : "5",
+      art_url: "ART2",
+      artist_credit: "Visual Regression",
+      frame_style: { template: "sagacreaturedfcback" },
       color_identity: IDENTITY[colour],
     } as CardRowForBake["back_face"],
   } as Partial<CardRowForBake>;
