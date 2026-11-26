@@ -122,6 +122,18 @@ const EXTENDED_ART_EDGES: EdgeContract = {
   left: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
 };
 
+/** CC's 'Universes Beyond (Extended art)' pack (TODO 4.25; measured on its
+ *  w u b r g m a l and land-tint files at 1500 × 2100): the same art to the
+ *  side edges, see-through in the 2 % band from row 229 to row 1196 (10.9 →
+ *  56.95 %H) — the regular M15 geometry's type bar shades the art from row
+ *  1197 at the edge, where the accurate extended frame's starts at 1243. */
+const UB_EXTENDED_ART_EDGES: EdgeContract = {
+  top: BORDER,
+  right: { kind: "art", except: [[0, 11.3], [56.95, 100]] },
+  bottom: BORDER,
+  left: { kind: "art", except: [[0, 11.3], [56.95, 100]] },
+};
+
 /** CC's 'Ring' pack (TODO 4.11; measured on all eight masters at 1500 ×
  *  2100): the frame field α 1.00 to the top and side edges — design, no
  *  border, its top corners the frame field's colour — and the black
@@ -266,6 +278,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // …and the Prepare frame's (TODO 4.27b): the pack's top over the Prepare
   // master's lower half, whose border is M15's.
   extendedartprepare: EXTENDED_ART_EDGES,
+  // The Universes Beyond extended-art frames (TODO 4.25, CC 'Universes Beyond
+  // (Extended art)', frames bucket): the art to the side edges, the type
+  // bar's shade from 56.95 %H (UB_EXTENDED_ART_EDGES).
+  extendedartub: UB_EXTENDED_ART_EDGES,
+  extendedartubland: UB_EXTENDED_ART_EDGES,
   // The black-bordered textless promos (TODO 4.35 / 4.42, CC 'Magic Fest
   // Promos', frames bucket): the black ring on every edge, as SCH / PF print
   // it. (The borderless textless printings are one-off designs that land

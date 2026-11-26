@@ -2483,6 +2483,576 @@
       "The dress of the extended-art printings (TODO 4.27a step 2; EOE #321–355, EOC #27 / #34, TRK #481): Card Conjurer's extended-art masters are M15's pixels from row 1320 down (checked by the run where the field mask cuts), so the station recipe's two cuts apply unchanged; above, the pack's own title bar and BLACK type bar stay whole. A colourless Spacecraft is the pack's silver artifact frame `a` (EOE #351 / #354 / #355, TRK #481)."
     ]
   },
+  "extendedartub": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packUBExtendedArt.js 'Universes Beyond (Extended art)' (Card Conjurer's Universes Beyond group): 1500 × 2100 native, the regular M15 pack's masks, the extended art window and black type bar",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/ub/extended/w.png"
+      ],
+      "u": [
+        "img/frames/m15/ub/extended/u.png"
+      ],
+      "b": [
+        "img/frames/m15/ub/extended/b.png"
+      ],
+      "r": [
+        "img/frames/m15/ub/extended/r.png"
+      ],
+      "g": [
+        "img/frames/m15/ub/extended/g.png"
+      ],
+      "c": [
+        "img/frames/m15/ub/extended/a.png"
+      ],
+      "m": [
+        "img/frames/m15/ub/extended/m.png"
+      ],
+      "wu": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "wb": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ub": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ur": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "br": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "bg": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rg": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rw": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gw": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gu": [
+        "img/frames/m15/ub/extended/m.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "wu-h": [
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "wb-h": [
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/w.png | img/frames/m15/ub/extended/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ub-h": [
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ur-h": [
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/u.png | img/frames/m15/ub/extended/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "br-h": [
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "bg-h": [
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/b.png | img/frames/m15/ub/extended/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rg-h": [
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rw-h": [
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/r.png | img/frames/m15/ub/extended/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gw-h": [
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gu-h": [
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/m15/ub/extended/l.png through img/frames/m15/regular/m15MaskType.png",
+        "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/m15/ub/extended/g.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.g",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/l.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.l",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 0.921 / 0.886 / 0.912 (214, 210, 194 → 197, 186, 177), fading to × 0.895 on every channel at white",
+        "rules": "through img/frames/m15/regular/m15MaskRules.png: × 1.045 / 1.056 / 1.128 (220, 214, 195 → 230, 226, 220), fading to × 1.059 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/m.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.m",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 0.992 / 0.969 / 0.860 (241, 227, 157 → 239, 220, 135), fading to × 0.969 on every channel at white",
+        "rules": "through img/frames/m15/regular/m15MaskRules.png: × 0.980 / 0.967 / 0.925 (249, 242, 213 → 244, 234, 197), fading to × 0.967 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/u.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.u",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 1.084 / 1.010 / 0.996 (166, 208, 239 → 180, 210, 238), fading to × 1.022 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskPinlineSuper.png",
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/m15/regular/m15MaskType.png",
+      "img/frames/m15/ub/extended/a.png",
+      "img/frames/m15/ub/extended/b.png",
+      "img/frames/m15/ub/extended/g.png",
+      "img/frames/m15/ub/extended/l.png",
+      "img/frames/m15/ub/extended/m.png",
+      "img/frames/m15/ub/extended/r.png",
+      "img/frames/m15/ub/extended/u.png",
+      "img/frames/m15/ub/extended/w.png"
+    ],
+    "notes": [
+      "the Universes Beyond extended-art frame (TODO 4.25, owner 2026-11-25): w u b r g m = the pack's colour frames whole (m15/ub/extended/<k>.png), native 1500x2100 — the prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR, 2023–25) register on them within ±3 px",
+      "colourless (c) = the pack's 'Artifact Frame' (m15/ub/extended/a.png): the pack lists no colourless frame; a colourless ARTIFACT prints it (FIC #228, ACR #307, PIP #1015, WHO #1071). The three colourless NON-artifact printings (FIN #421, WHO #923 / #332) print a see-through frame, not built: their import keeps its landing",
+      "a coloured artifact prints the artifact frame's silver field with the colour's bars and box (PIP #921, WHO #1065): not built — the frame paints the colour's master, as extendedart does, and the import keeps its landing",
+      "plates = m15ub's (the pack's `m15/ub/pt/<k>.png` at M15's plate bounds; the grey 'Colorless' plate under c and the hybrid dress): the profile reads /frames/m15ub/pt, no objects of its own",
+      "toned onto the prints (UB_EXTENDED_PRINT_TONES through UB_EXTENDED_SOURCE_TONES, recorded under sourceTones): the pack's paint is the accurate Universes Beyond pack's value for value, so the bordered family's tone pass carries over — the green title bar (g.png, gl.png), the gold title bar and text box (m.png, ml.png) and the land-grey title bar and text box (l.png) — plus the blue title bar (u.png, ul.png: 14 lighter in red on the prints), each multiplied by its gain through the pack's own Title and Rules masks as the FILE is loaded; the black type bar, the frame field, the pinline, the border and every other colour as Card Conjurer drew them",
+      "the pack's seams sealed (sealUbExtendedSeams): ~790 hairline pixels at α 98–254 where its layers don't quite meet — the title bar's caps and the text box's side rims, the same pixels on every file — made opaque outside the art slot's rows 176–1318, their colour kept, so no #101015 hairline shows (no print has one) and the caps' seam no longer runs into the window's shade above the art slot (7.6); the window and the type bar's shade as drawn",
+      "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (UB_EXTENDED_MASK: the regular M15 pack's six, its 'Super' Pinline). Gold-split <pair> = m.png whole with the split text box and pinline (ACR #166 Assassin's Trophy, PIP #1007 Wake the Past, LTR #782, WHO #1069: gold bars, the pinline in the two colours); hybrid <pair>-h = the two colour frames split across the frame ramp under the pack's grey l.png title and type bars, the split box and pinline, drawn with the grey plate (PIP #1003 / #475 Biomass Mutation)"
+    ]
+  },
+  "extendedartubcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "'Floating Legend Crowns (Universes Beyond)' (packUBLegendCrownsFloating.js), drawn as the extended-art crown is (extendedcrown: CC's autoExtendedArtFrame order)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x260 overlay band: rows 0–259 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/w.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "u": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/u.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "b": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/b.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "r": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/r.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "g": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/g.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "m": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/m.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "a": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/a.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "l": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/l.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "c": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "img/frames/m15/ub/crowns/floating/c.png at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "wu": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/w.png | img/frames/m15/ub/crowns/floating/u.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "wb": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/w.png | img/frames/m15/ub/crowns/floating/b.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "ub": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/u.png | img/frames/m15/ub/crowns/floating/b.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "ur": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/u.png | img/frames/m15/ub/crowns/floating/r.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "br": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/b.png | img/frames/m15/ub/crowns/floating/r.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "bg": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/b.png | img/frames/m15/ub/crowns/floating/g.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "rg": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/r.png | img/frames/m15/ub/crowns/floating/g.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "rw": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/r.png | img/frames/m15/ub/crowns/floating/w.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "gw": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/g.png | img/frames/m15/ub/crowns/floating/w.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ],
+      "gu": [
+        "img/black.png at 3.94/2.77/92.14×1.77 %",
+        "(img/frames/m15/ub/crowns/floating/g.png | img/frames/m15/ub/crowns/floating/u.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/black.png",
+      "img/frames/m15/crowns/m15CrownFloatingOutline.png",
+      "img/frames/m15/ub/crowns/floating/a.png",
+      "img/frames/m15/ub/crowns/floating/b.png",
+      "img/frames/m15/ub/crowns/floating/c.png",
+      "img/frames/m15/ub/crowns/floating/g.png",
+      "img/frames/m15/ub/crowns/floating/l.png",
+      "img/frames/m15/ub/crowns/floating/m.png",
+      "img/frames/m15/ub/crowns/floating/r.png",
+      "img/frames/m15/ub/crowns/floating/u.png",
+      "img/frames/m15/ub/crowns/floating/w.png"
+    ],
+    "notes": [
+      "the Universes Beyond extended-art legendary crown (TODO 4.25, owner 2026-11-25): the pack's FLOATING crown (m15/ub/crowns/floating/<k>.png, 1408x215 at the M15 floating crown's bounds 3.07/1.91/93.87x10.24 %) over the BLACK cover strip (3.94/2.77/92.14x1.77 %, drawn) with the M15 floating outline ON TOP (2.8/1.72/94.4x10.62 %) — extendedcrown's recipe and slot, composited 1:1 at 1500x2100 and cropped to rows 0–259; an overlay band over the extendedartub and extendedartubland masters",
+      "measured 2026-11-25 on 35 crowned prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR; the band over the pack's master of the print's colour, the median |ΔRGB| over the crown's pixels, best of ±4 px): this crown 1.0–16.7 (median 6.3) against the M15 floating crown's 9.0–31.3 (median 17.7), closer on all 35",
+      "keys = the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a), l (the land grey: the land frame maps c → l) and c (the grey colourless crown, unmapped by both frames); a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
+      "the ten pairs: the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, as extendedcrown's), first canonical colour on the left, drawn over the pair masters (PIP #955 Rex W|U, LTR #779 Doors of Durin R|G, WHO #997 The Dalek Emperor B|R, FIN #501 Omega G|U)"
+    ]
+  },
+  "extendedartubholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "'Universes Beyond (Extended art)' holo stamps (packUBExtendedArt.js '… Holo Stamp': m15/ub/regular/stamp)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "224x102 notch piece (1:1 at 1500x2100, stretched over 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %), the triangle region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/w.png's bar (252,254,255) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "u": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/u.png's bar (0,117,190) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "b": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/b.png's bar (39,38,36) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "r": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/r.png's bar (239,56,39) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "g": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/g.png's bar (0,123,67) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "m": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/m.png's bar (246,210,98) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "c": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartub/c.png's bar (222,223,224) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "l": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted to extendedartubland/c.png's bar (174,151,135) sampled at x 750, rows 1939–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "wu": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/wu.png's bar across x 638–861 (rows 1939–1947; 219,236,247 at x 638 → 126,185,222 at x 750 → 33,135,198 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/wu-h.png, extendedartubland/wu.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "wb": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/wb.png's bar across x 638–861 (rows 1939–1947; 224,226,227 at x 638 → 145,146,145 at x 750 → 67,66,64 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/wb-h.png, extendedartubland/wb.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "ub": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/ub.png's bar across x 638–861 (rows 1939–1947; 5,107,170 at x 638 → 20,77,113 at x 750 → 34,48,56 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/ub-h.png, extendedartubland/ub.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "ur": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/ur.png's bar across x 638–861 (rows 1939–1947; 31,109,170 at x 638 → 120,86,114 at x 750 → 208,64,59 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/ur-h.png, extendedartubland/ur.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "br": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/br.png's bar across x 638–861 (rows 1939–1947; 65,40,36 at x 638 → 139,47,38 at x 750 → 213,54,39 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/br-h.png, extendedartubland/br.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "bg": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/bg.png's bar across x 638–861 (rows 1939–1947; 34,49,40 at x 638 → 19,81,52 at x 750 → 5,112,63 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/bg-h.png, extendedartubland/bg.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "rg": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/rg.png's bar across x 638–861 (rows 1939–1947; 208,65,43 at x 638 → 119,90,53 at x 750 → 31,114,63 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/rg-h.png, extendedartubland/rg.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "rw": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/rw.png's bar across x 638–861 (rows 1939–1947; 241,82,67 at x 638 → 246,155,147 at x 750 → 250,228,227 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/rw-h.png, extendedartubland/rw.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "gw": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/gw.png's bar across x 638–861 (rows 1939–1947; 33,140,91 at x 638 → 126,189,161 at x 750 → 219,237,231 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/gw-h.png, extendedartubland/gw.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "gu": [
+        "img/frames/m15/ub/regular/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.933333333333335×4.857142857142857 %",
+        "rim tinted per column to extendedartub/gu.png's bar across x 638–861 (rows 1939–1947; 0,122,83 at x 638 → 0,120,129 at x 750 → 0,118,174 at x 861 — the pinline's procedural:ramp(40→60 %W)), the same bar on extendedartub/gu-h.png, extendedartubland/gu.png",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ]
+    },
+    "cut": {
+      "triangle": {
+        "points": [
+          [
+            687.1,
+            1924.6
+          ],
+          [
+            812.1,
+            1924.6
+          ],
+          [
+            749.6,
+            1992.5
+          ]
+        ],
+        "radius": 6.7
+      },
+      "marginPx": 2,
+      "what": "the hologram capture inside CC's triangle — never published"
+    },
+    "sourceFiles": [
+      "img/frames/m15/ub/regular/stamp/u.png"
+    ],
+    "notes": [
+      "the Universes Beyond extended-art triangle stamp's notch (TODO 4.25): the pack's piece — the text box's bottom pinline stepped up and over the stamp with its bevel — is the OLDER Universes Beyond pack's (m15/ub/regular/stamp/<k>.png, 224x102, at the pack's bounds 0.4254/0.9005/0.1494x0.0486 = 638.1, 1891.05 px), drawn 1:1 at 638,1891: its foot is the extended masters' pinline rows 1939–1947 (black from 1948 on both — the prints' black from 1947–1948), where m15ubholostamp's is the accurate pack's (to 1949): that piece over these masters stood 2 px proud at both feet, in the accurate pack's rim colours (gold 233,212,125 against this pack's 246,210,98)",
+      "ONE geometry for every key, as m15ubholostamp: the pack's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1939–1947 (flat on every master); the pack's own per-key pieces carry its pinlines' flat rims (w 252,254,255 …), so the tinted keys reproduce them outside the cut",
+      "keys: w u b r g, m (gold), c (the spell frame's colourless master, the artifact frame — its silver, from extendedartub/c), l (the land grey, from extendedartubland/c: the land frame maps c → l); then the ten pairs, the rim tinted PER COLUMN to extendedartub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid and land pair masters (checked column by column)",
+      "the triangle — UB_STAMP_HOLE (lib/cards/holo-stamp.ts) plus 2 px, as m15ubholostamp's — is cut to transparent: the piece holds a capture of WotC's hologram there (inside the hole: 0 lit pixels of it outside), which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
+  "extendedartubland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packUBExtendedArt.js 'Universes Beyond (Extended art)' (Card Conjurer's Universes Beyond group): 1500 × 2100 native, the regular M15 pack's masks, the extended art window and black type bar",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/ub/extended/wl.png"
+      ],
+      "u": [
+        "img/frames/m15/ub/extended/ul.png"
+      ],
+      "b": [
+        "img/frames/m15/ub/extended/bl.png"
+      ],
+      "r": [
+        "img/frames/m15/ub/extended/rl.png"
+      ],
+      "g": [
+        "img/frames/m15/ub/extended/gl.png"
+      ],
+      "c": [
+        "img/frames/m15/ub/extended/l.png"
+      ],
+      "m": [
+        "img/frames/m15/ub/extended/ml.png"
+      ],
+      "wu": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/wl.png | img/frames/m15/ub/extended/ul.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/wl.png | img/frames/m15/ub/extended/ul.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "wb": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/wl.png | img/frames/m15/ub/extended/bl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/wl.png | img/frames/m15/ub/extended/bl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ub": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/ul.png | img/frames/m15/ub/extended/bl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/ul.png | img/frames/m15/ub/extended/bl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "ur": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/ul.png | img/frames/m15/ub/extended/rl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/ul.png | img/frames/m15/ub/extended/rl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "br": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/bl.png | img/frames/m15/ub/extended/rl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/bl.png | img/frames/m15/ub/extended/rl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "bg": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/bl.png | img/frames/m15/ub/extended/gl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/bl.png | img/frames/m15/ub/extended/gl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rg": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/rl.png | img/frames/m15/ub/extended/gl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/rl.png | img/frames/m15/ub/extended/gl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "rw": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/rl.png | img/frames/m15/ub/extended/wl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/rl.png | img/frames/m15/ub/extended/wl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gw": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/gl.png | img/frames/m15/ub/extended/wl.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/gl.png | img/frames/m15/ub/extended/wl.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ],
+      "gu": [
+        "img/frames/m15/ub/extended/l.png",
+        "(img/frames/m15/ub/extended/gl.png | img/frames/m15/ub/extended/ul.png across procedural:ramp(45→57 %W)) through img/frames/m15/regular/m15MaskRules.png",
+        "(img/frames/m15/ub/extended/gl.png | img/frames/m15/ub/extended/ul.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/m15/ub/extended/gl.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.g",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/l.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.l",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 0.921 / 0.886 / 0.912 (214, 210, 194 → 197, 186, 177), fading to × 0.895 on every channel at white",
+        "rules": "through img/frames/m15/regular/m15MaskRules.png: × 1.045 / 1.056 / 1.128 (220, 214, 195 → 230, 226, 220), fading to × 1.059 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/ml.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.m",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 0.992 / 0.969 / 0.860 (241, 227, 157 → 239, 220, 135), fading to × 0.969 on every channel at white",
+        "rules": "through img/frames/m15/regular/m15MaskRules.png: × 0.980 / 0.967 / 0.925 (249, 242, 213 → 244, 234, 197), fading to × 0.967 on every channel at white"
+      },
+      "img/frames/m15/ub/extended/ul.png": {
+        "table": "UB_EXTENDED_PRINT_TONES.u",
+        "title": "through img/frames/m15/regular/m15MaskTitle.png: × 1.084 / 1.010 / 0.996 (166, 208, 239 → 180, 210, 238), fading to × 1.022 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/m15/regular/m15MaskPinlineSuper.png",
+      "img/frames/m15/regular/m15MaskRules.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/m15/ub/extended/bl.png",
+      "img/frames/m15/ub/extended/gl.png",
+      "img/frames/m15/ub/extended/l.png",
+      "img/frames/m15/ub/extended/ml.png",
+      "img/frames/m15/ub/extended/rl.png",
+      "img/frames/m15/ub/extended/ul.png",
+      "img/frames/m15/ub/extended/wl.png"
+    ],
+    "notes": [
+      "the Universes Beyond extended-art LAND frame (TODO 4.25): the pack's land frames whole, native 1500x2100 — c = the grey 'Land Frame' l.png (PIP #1054 Treasure Vault, WHO #1124 War Room, PIP #1034 Scavenger Grounds: 12 lands with no colour); w u b r g = the tinted ones, named letter first (wl.png … gl.png: PIP #1055 Windbrisk Heights, WHO #1054 Trenzalore Clocktower, LTC #160 The Black Gate); gold m = ml.png, the any-colour land (WHO #1084 / PIP #1023 Exotic Orchard, PIP #1039 Spire of Industry, WHO #1053 Gallifrey Council Chamber)",
+      "toned onto the prints (UB_EXTENDED_PRINT_TONES through UB_EXTENDED_SOURCE_TONES, recorded under sourceTones): the pack's paint is the accurate Universes Beyond pack's value for value, so the bordered family's tone pass carries over — the green title bar (g.png, gl.png), the gold title bar and text box (m.png, ml.png) and the land-grey title bar and text box (l.png) — plus the blue title bar (u.png, ul.png: 14 lighter in red on the prints), each multiplied by its gain through the pack's own Title and Rules masks as the FILE is loaded; the black type bar, the frame field, the pinline, the border and every other colour as Card Conjurer drew them",
+      "the pack's seams sealed (sealUbExtendedSeams): ~790 hairline pixels at α 98–254 where its layers don't quite meet — the title bar's caps and the text box's side rims, the same pixels on every file — made opaque outside the art slot's rows 176–1318, their colour kept, so no #101015 hairline shows (no print has one) and the caps' seam no longer runs into the window's shade above the art slot (7.6); the window and the type bar's shade as drawn",
+      "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (UB_EXTENDED_MASK: the regular M15 pack's six, its 'Super' Pinline). <pair> = the grey land frame l.png whole with the text box and pinline in the two land tints (<a>l.png / <b>l.png), first canonical colour on the left — 180 of the pack's 214 land printings are two-colour lands (PIP #1049–1056, WHO #1118–1125: the grey bars, the split box)",
+      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate)"
+    ]
+  },
   "extendedcrown": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
