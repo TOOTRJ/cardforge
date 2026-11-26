@@ -237,6 +237,12 @@ describe("art direction per frame", () => {
     expect(frameArtBrief("m15token")).toContain("single subject");
     expect(frameArtBrief("m20tokentext")).toContain("single subject");
     expect(frameArtBrief("m20tokentext")).toContain("WHOLE card");
+    // Innistrad: Double Feature prints every picture in black and white
+    // (TODO 5.9): an AI picture on it is monochrome too, the land dress's.
+    for (const template of ["doublefeature", "doublefeatureland"] as const) {
+      expect(frameArtBrief(template), template).toContain("black-and-white horror film");
+      expect(frameArtBrief(template), template).toContain("no color at all");
+    }
     for (const template of ["m15", "m15land", "m15artifact", "m15pw", null, undefined, "not-a-frame"]) {
       expect(frameArtBrief(template), String(template)).toBe("");
     }
