@@ -339,6 +339,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15nyx/main",
       // 4.25's Universes Beyond frames: their M15 twins' boxes.
       "m15ub/main", "m15ubartifact/main", "m15ubland/main",
+      // …and their extended-art dress: the extended frames' boxes.
+      "extendedartub/main", "extendedartubland/main",
       // 4.11's Zendikar Rising hedron showcase: the CC-framed M15 box (layout v63).
       "fullart/main",
       // 5.7's borderless double-faced bodies: m15borderless's box.
