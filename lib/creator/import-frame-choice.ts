@@ -12,6 +12,7 @@ import { parseSubtypes } from "@/lib/creator/card-fields";
 import {
   KIND_DEFS,
   borrowedFrameFits,
+  colorlessFrameFits,
   enchantmentFrameFits,
   sagaCreatureFrameFits,
   subtypeFrameFits,
@@ -173,6 +174,10 @@ export function frameFitsImport(
   if (!enchantmentFrameFits(template, { cardType: patch.card_type, supertype: patch.supertype })) return false;
   // The saga creature body (TODO 4.5d) for a saga whose words say Creature.
   if (!sagaCreatureFrameFits(template, { cardType: patch.card_type, supertype: patch.supertype })) return false;
+  // A frame whose colourless `c` is an artifact frame only (TODO 4.25: the
+  // Universes Beyond extended-art frame) for a colourless card that says
+  // Artifact — FIN #421, WHO #923 / #332 print a see-through frame.
+  if (!colorlessFrameFits(template, importFrameColorKey(template, patch), { cardType: patch.card_type, supertype: patch.supertype })) return false;
   // The borderless planeswalker's regular or tall box, as the rows pick it
   // (4.33): never the other one.
   if (!walkerRowsFrameFits(kind, template, walkerRowCount({ rulesText: patch.rules_text }))) return false;

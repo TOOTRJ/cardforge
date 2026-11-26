@@ -66,6 +66,8 @@ import {
   subtypeDressOf,
   subtypeDressReason,
   subtypeFrameFits,
+  colorlessFrameFits,
+  colorlessFrameReason,
   enchantmentDressReason,
   enchantmentFrameFits,
   isEnchantmentDress,
@@ -199,6 +201,9 @@ type CardSetupPanelProps = {
 const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
   extendedart: "Art to the side edges",
   extendedartland: "Art to the side edges",
+  // The Universes Beyond extended-art frames (TODO 4.25).
+  extendedartub: "Art to the side edges, Universes Beyond dress",
+  extendedartubland: "Art to the side edges, Universes Beyond dress",
   m15textless: "Name and art only: no type line or text box",
   m15textlessland: "Name and art only: no type line or text box",
   nyx: "Theros Beyond Death showcase",
@@ -624,6 +629,11 @@ export function CardSetupPanel({
             // The saga creature body (TODO 4.5d) is for a saga whose type
             // words say Creature — the server's rule too.
             const sagaCreatureRefused = !sagaCreatureFrameFits(choice.template, { cardType, supertype });
+            // A frame whose colourless `c` is an artifact frame only (TODO
+            // 4.25: the Universes Beyond extended-art frame) is for a
+            // colourless card only when its words say Artifact — the
+            // server's rule too.
+            const colorlessRefused = !colorlessFrameFits(choice.template, colorKey, { cardType, supertype });
             return {
               value: choice.template,
               label,
@@ -635,6 +645,8 @@ export function CardSetupPanel({
                   ? (enchantmentDressReason(choice.template) ?? undefined)
                 : sagaCreatureRefused
                   ? (sagaCreatureDressReason(choice.template) ?? undefined)
+                : colorlessRefused
+                  ? (colorlessFrameReason(choice.template) ?? undefined)
                 : !available
                   ? "Awaiting verification"
                   : !colorAvailable
@@ -675,7 +687,7 @@ export function CardSetupPanel({
                   anatomy={frameAnatomy}
                 />
               ),
-              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused || sagaCreatureRefused,
+              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused || sagaCreatureRefused || colorlessRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };
@@ -841,11 +853,16 @@ export function CardSetupPanel({
             // A double-faced front may be colourless only with "Artifact"
             // on its type line (design D2: the body's `c` is the artifact
             // stand-in; the modal front's see-through `c` once ticked, TODO
-            // 5.11a) — the same rule the back-face panel's chips apply.
+            // 5.11a) — the same rule the back-face panel's chips apply. And
+            // on a frame whose colourless `c` is an artifact frame only
+            // (TODO 4.25: the Universes Beyond extended-art frame), only an
+            // artifact may be colourless — the server's rule too.
             colorlessDisabledReason={
               dfcLayoutForKind(kind)
                 ? dfcColorlessRefusal(normalizeFrameTemplate(watchedTemplate), frameType, verifiedKeys, "front")
-                : null
+                : colorlessFrameFits(normalizeFrameTemplate(watchedTemplate), "c", frameType)
+                  ? null
+                  : colorlessFrameReason(normalizeFrameTemplate(watchedTemplate))
             }
             onPairTouched={onPairTouched}
             selection={(field.value ?? []) as ColorIdentity[]}

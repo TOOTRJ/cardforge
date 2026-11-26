@@ -36,7 +36,9 @@ const ROOT = process.cwd();
 const PUBLIC = path.join(ROOT, "public", "frames");
 const BUILD = process.env.FRAMES_BUILD_DIR ?? path.join(ROOT, ".frames-build");
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, "lib", "frames", "frame-manifest.json"), "utf8"));
-const COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
+// The plate keys (FRAME_PLATE_KEYS): the colours, and the artifact plate
+// `a` where a set has one (TODO 4.25: extendedartub).
+const COLOR_KEYS = ["w", "u", "b", "r", "g", "c", "m", "a"];
 /** A pixel at least this opaque is the plate's ink. */
 const ALPHA_INK = 128;
 

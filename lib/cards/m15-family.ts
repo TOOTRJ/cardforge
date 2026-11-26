@@ -199,6 +199,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "aftermath",
   "extendedart",
   "extendedartland",
+  // The Universes Beyond extended-art frames (TODO 4.25): new templates, no
+  // stored card — the extended frames' slots — so they joined without a bump.
+  "extendedartub",
+  "extendedartubland",
   "expeditionland",
   // The 2015 Expeditions (TODO 4.11 wave 1, CC 'BFZ Expeditions (2015)'): a
   // new template, no stored card — the family's sizes, as the 2020 look —

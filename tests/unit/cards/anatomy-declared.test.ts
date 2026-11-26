@@ -88,6 +88,9 @@ describe("where the pieces are declared", () => {
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.
       "extendedartprepare",
+      // …and the Universes Beyond extended-art frames (TODO 4.25): the
+      // floating Universes Beyond crown band and their twins' pairs.
+      "extendedartub", "extendedartubland",
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",

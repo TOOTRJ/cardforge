@@ -815,6 +815,13 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // frames — a colour's (NEO #503 Otawara), the grey C crown over the grey
   // land frame, gold.
   ["extendedartland", ["u", "c", "wub"]],
+  // TODO 4.25: the Universes Beyond extended-art frames' floating crown band
+  // (extendedartubcrown/<key>) — every colour, the artifact silver on the
+  // spell frame's colourless card (c → a), gold (a pair with its switch
+  // off wears gold; the split crown is "@pair-crown"); the land frame's
+  // colour, its land grey (c → l) and gold.
+  ["extendedartub", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  ["extendedartubland", ["u", "c", "wub"]],
   // TODO 4.6f (wave 2c): the STANDARD band over the snow frames — the
   // crowned snow prints' keys (u: J22 #12, g: PH19 #5, the gold pair wears
   // gold with its two-colour switch off: KHM #224) and the keys no print
@@ -1421,6 +1428,10 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15nyx", "artifact", "c", "@nyx-silver", { supertype: "Enchantment", subtypes: ["Equipment"] }],
   // TODO 4.25: the Universes Beyond plate at its widest.
   ["m15ub", "creature", "g", "@wide", { power: "12", toughness: "12" }],
+  // …and the Universes Beyond extended-art frame's colourless artifact
+  // creature: its `c` master is the pack's artifact frame, and the plate the
+  // silver artifact one (WHO #1071 Solemn Simulacrum), never the grey.
+  ["extendedartub", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "2", toughness: "2" }],
   // TODO 4.11: the Lord of the Rings scroll's plate at its widest, and the
   // colourless artifact creature on the light-blue artifact master and plate
   // (LTR #700 Shire Scarecrow).
@@ -1891,6 +1902,13 @@ export function visualCases(): VisualCase[] {
     row: { ...pairStyle("extendedart", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
   add("extendedartland", "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("extendedartland") });
+  // …and its Universes Beyond dress (TODO 4.25): the same three.
+  add("extendedartub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("extendedartub"), cost: "{W/U}{W/U}" } });
+  add("extendedartub", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("extendedartub", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  add("extendedartubland", "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("extendedartubland") });
   add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
   add("m15", "creature", "wu", "long", {
     suffix: "@pair-etched",
@@ -2135,6 +2153,16 @@ export function visualCases(): VisualCase[] {
   add("m15ub", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15ub", "auto", { rarity: "rare" }) });
   add("m15ub", "creature", "w", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15ub", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15ubland", "land", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15ubland", "auto", { rarity: "rare" }) });
+  // TODO 4.25: the Universes Beyond EXTENDED-ART frames' triangle (new
+  // templates, no stored card: new cases, no bump) — on a common (matte), a
+  // crowned pair, a full box against the raised pinline, the colourless
+  // artifact frame, the land at the stored bake's size, a foil.
+  add("extendedartub", "creature", "u", "short", { suffix: "@stamp-auto-common", row: stampRow("extendedartub", "auto", { rarity: "common" }) });
+  add("extendedartub", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("extendedartub", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("extendedartub", "creature", "b", "long", { suffix: "@stamp-arch", row: stampRow("extendedartub", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  add("extendedartub", "artifact", "c", "short", { suffix: "@stamp-c", row: stampRow("extendedartub", "auto", { rarity: "uncommon" }) });
+  add("extendedartubland", "land", "c", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("extendedartubland", "auto", { rarity: "rare" }) });
+  add("extendedartub", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("extendedartub", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   // TODO 4.25 follow-up (owner Round 57): "auto" stamps EVERY rarity on the
   // triangle frames — a common's and an uncommon's MATTE grey triangle
   // (new cases), at the 750 bake and at the stored bake's size.
@@ -2675,6 +2703,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "extendedartstation",
   // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
   "m15ub", "m15ubartifact", "m15ubland",
+  // …and their extended-art dress's (the pack's own piece).
+  "extendedartub", "extendedartubland",
   // TODO 4.9d: the borderless frames' arch (our own lifted pinline).
   "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation",
   // …and the borderless walkers' (owner Round 70: the window's arch, drawn
@@ -2728,6 +2758,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
 export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // TODO 4.25: the Universes Beyond extended-art pairs (one piece per pair,
+  // the same bar on the spell, hybrid and land pair masters).
+  "extendedartub", "extendedartubland",
   // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
   "m15borderless", "m15borderlessartifact", "m15borderlessland",
   // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
@@ -3185,6 +3218,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The extended-art frame and its land dress (TODO 4.7 follow-up, owner
   // Round 63): m15's two dresses over the extended pack, the land's split.
   "extendedart", "extendedartland",
+  // …and their Universes Beyond dress (TODO 4.25): the same dresses over
+  // the Universes Beyond extended pack.
+  "extendedartub", "extendedartubland",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",

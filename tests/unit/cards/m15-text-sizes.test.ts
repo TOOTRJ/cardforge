@@ -106,7 +106,9 @@ describe("one M15-era display size (layout v32)", () => {
     // TARDIS and the OTJ Breaking News (new templates: no bump).
     // …and TODO 4.5d's saga creature (a new template: no bump).
     // …and TODO 4.27b's extended-art Prepare dress (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(92);
+    // …and TODO 4.25's Universes Beyond extended-art frames (new templates:
+    // no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(94);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -218,6 +220,10 @@ describe("one M15-era display size (layout v32)", () => {
         // …and the Prepare frame's extended-art dress (TODO 4.27b), a new
         // template on the Prepare frame's (CC M15) row.
         t === "extendedartprepare" ||
+        // …and the Universes Beyond extended-art frames (TODO 4.25), new
+        // templates on extended art's (CC M15) row.
+        t === "extendedartub" ||
+        t === "extendedartubland" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -426,6 +432,10 @@ describe("baselines (TextSlot.dy)", () => {
     ["extendedart", base.title, cc],
     // …and its land dress (owner Round 63): the same pack's land frames.
     ["extendedartland", base.title, cc],
+    // The Universes Beyond extended-art frames (TODO 4.25): Card Conjurer's
+    // 'Universes Beyond (Extended art)' pack on the extended twins' slots.
+    ["extendedartub", base.title, cc],
+    ["extendedartubland", base.title, cc],
     // The Lord of the Rings scroll (layout v62, TODO 4.11): Card Conjurer's
     // 'Scroll' pack, the M15 pack's text layout — the CC type line.
     ["lotrscroll", base.title, cc],

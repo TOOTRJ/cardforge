@@ -12,6 +12,7 @@ import { ERA_TYPE_FRAME, type CardType, type ColorIdentity, type FrameTemplate }
 import {
   artifactCreatureFrameFor,
   borrowedFrameFits,
+  colorlessFrameFits,
   enchantmentFrameFits,
   enchantmentFrameFor,
   followsEnchantmentDress,
@@ -214,6 +215,10 @@ export function resolveGeneratedFrame(input: {
       // Enchantment Artifact wears it rather than its plain frame wherever
       // it is published in the card's colour (enchantmentFrameFor).
       enchantmentFrameFits(choice.template, type) &&
+      // A frame whose colourless `c` is an artifact frame only (TODO 4.25:
+      // the Universes Beyond extended-art frame) never dresses a colourless
+      // card that isn't an artifact — asked for by name or at random.
+      colorlessFrameFits(choice.template, colorKey, type) &&
       // The borderless planeswalker's tall box is for four rows or more,
       // the regular one for fewer (4.33): a gate, like the type words.
       walkerRowsFrameFits(kind, choice.template, rows),

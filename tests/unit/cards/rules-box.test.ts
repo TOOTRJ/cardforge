@@ -103,8 +103,9 @@ describe("the main box on every template", () => {
         // The station frame (TODO 4.27a): m15artifact's and m15land's box —
         // and its dresses' (step 2), the same box.
         "m15station", "m15stationland", "extendedartstation", "m15borderlessstation",
-        // The Universes Beyond frames (TODO 4.25): their M15 twins' boxes.
-        "m15ub", "m15ubartifact", "m15ubland",
+        // The Universes Beyond frames (TODO 4.25): their M15 twins' boxes —
+        // and the extended-art pair's, their extended twins' (M15's) box.
+        "m15ub", "m15ubartifact", "m15ubland", "extendedartub", "extendedartubland",
         // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): the
         // CC-framed M15 box.
         "fullart",

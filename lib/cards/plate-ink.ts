@@ -37,6 +37,9 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // within a pixel of M15's at HD.
   "/frames/m15ub/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
   "/frames/m15ubartifact/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
+  // …and the Universes Beyond extended-art spell frame's set (TODO 4.25):
+  // the same seven and the artifact plate under `a`.
+  "/frames/extendedartub/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
   // The Zendikar Rising hedron showcase (TODO 4.11): its pack's plates and
   // the 'Nickname' pack's (282 × 154), drawn at M15's plate box.
   "/frames/fullart/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },

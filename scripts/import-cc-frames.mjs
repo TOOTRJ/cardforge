@@ -836,7 +836,9 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   }
   const plates = def.plates ? { ...def.plates } : undefined;
   if (plates && !dryRun) {
-    for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`), def.plateGains?.[key] ?? null, def.plateTone ?? null);
+    // The colour keys, and the artifact plate `a` where the recipe names
+    // one (TODO 4.25's Universes Beyond extended art: FRAME_PLATE_KEYS).
+    for (const key of [...COLORS, ...(plates.a ? ["a"] : [])]) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`), def.plateGains?.[key] ?? null, def.plateTone ?? null);
     console.log(`wrote ${template} plates`);
   }
   const symbols = def.symbols ? { ...def.symbols } : undefined;

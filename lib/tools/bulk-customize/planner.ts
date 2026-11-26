@@ -185,7 +185,7 @@ function frameRefusal(
 ): string | null {
   return (
     frameGateError(template, frameGateColors(template, style, colors), verifiedKeys) ??
-    frameKindGateError(template, cardFieldsFace(face))
+    frameKindGateError(template, cardFieldsFace({ ...face, color_identity: colors }))
   );
 }
 

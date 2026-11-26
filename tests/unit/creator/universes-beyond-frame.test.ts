@@ -566,7 +566,10 @@ describe("imports follow the printing (the registry's ub/2015 rule)", () => {
     const ark = frameMatchFromScryfall(printing("40k-156"));
     expect(ark).toMatchObject({ signature: "vehicle/2015+universes-beyond", template: "m15artifact", onceVerified: "m15vehicle" });
     expect(withVerification(ark, "c", EVERY)).toMatchObject({ status: "nearest", template: "m15vehicle", reason: gap });
-    expect(frameMatchFromScryfall(printing("pip-362"))).toMatchObject({ signature: "extendedart+universes-beyond", status: "nearest", template: "extendedart" });
+    // An extended-art one lands on the extended-art frame until its own
+    // Universes Beyond dress is verified (TODO 4.25, `ub/extendedart`:
+    // tests/unit/creator/ub-extended-art-frame.test.ts).
+    expect(frameMatchFromScryfall(printing("pip-362"))).toMatchObject({ signature: "ub/extendedart", status: "nearest", template: "extendedart", onceVerified: "extendedartub" });
     // A double-faced one stays on its body.
     expect(frameMatchFromScryfall(printing("bot-1"))).toMatchObject({ signature: "transform/2015+universes-beyond", template: "m15dfcfront" });
     // The foil-etched run is a dress of its own: never this rule.

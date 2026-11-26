@@ -396,6 +396,12 @@ const UB_SEE_THROUGH_LAYERS = [
 const UB_PT_DIR = "img/frames/m15/ub/pt";
 const UB_PT = Object.fromEntries(COLORS.map((k) => [k, `${UB_PT_DIR}/${k}.png`]));
 const UB_ARTIFACT_PT = { ...UB_PT, c: `${UB_PT_DIR}/a.png` };
+/** The Universes Beyond extended-art spell frame's plates (TODO 4.25): m15ub's
+ *  seven (the grey 'Colorless' plate under `c`, which the hybrid dress
+ *  draws) and the pack's silver 'Artifact' plate under `a` — the plate a
+ *  colourless card paints there (FrameProfile.colorlessPlateKey), whose `c`
+ *  master is the artifact frame. */
+const UB_EXTENDED_PT = { ...UB_PT, a: `${UB_PT_DIR}/a.png` };
 const ubPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, ubFrameFile);
 const UB_PACK = "packUBNew.js 'Universes Beyond' (groupAccurate.js): the accurate M15 pack's masks and text layout over the m15/new/ub files";
 const UB_TONE_NOTE =
@@ -499,6 +505,166 @@ export const CC_SOURCE_TONES = Object.freeze({
   [`${UB}/lm.png`]: ubSourceTone("m"),
   [`${UB}/l.png`]: ubSourceTone("l"),
 });
+
+// --- TODO 4.25: the Universes Beyond EXTENDED-ART frames (owner approval
+// 2026-11-25, item 2 of the easy Card Conjurer batch). Card Conjurer's
+// 'Universes Beyond (Extended art)' (packUBExtendedArt.js,
+// `m15/ub/extended/`) is 1500 × 2100 NATIVE and drawn on the REGULAR M15
+// pack's geometry: its masks are `m15/regular/m15Mask*.png` (the Pinline
+// its 'Super' one), its art window the extended frame's (the art to the
+// card's side edges from the title bar to the type bar, a BLACK type bar),
+// its plates the Universes Beyond pack's (`m15/ub/pt`), its stamp pieces
+// the older Universes Beyond pack's (`m15/ub/regular/stamp`) and its
+// crowns the FLOATING Universes Beyond crowns (`m15/ub/crowns/floating`,
+// packUBLegendCrownsFloating.js). Files by letter: w u b r g m, `a` the
+// artifact frame, `l` the land frame, `v` the Vehicle frame, and the land
+// tints named letter FIRST (`wl` … `gl`, `ml` the any-colour gold land) —
+// no `c.png` (the pack lists no colourless frame).
+//
+// Measured on the prints first (Scryfall PNGs at 1500 × 2100, 2026-11-25;
+// 1,120 printings carry `frame:extendedart stamp:triangle`: WHO 406, PIP
+// 334, FIN 98, FIC 94, LTR 94, LTC 76, ACR 18):
+//   • GEOMETRY: the pack's bars, box and rims register on the prints within
+//     ±3 px (best offset per region on 10 prints of w, b, g and the artifact
+//     frame: the title bar 0…+4, the box's top and bottom −1, its side rims
+//     −2…+3, the title bar's caps −2…+2) — at least as close as the accurate
+//     extended frame (`extendedart`, whose box is 2–3 px wider each side and
+//     whose bottom pinline ends 2 px lower: the pack's pinline ends at row
+//     1947, the prints' at 1946–1947, extendedart's at 1949). Within that,
+//     the pack's text layout is the extended frame's, so the profiles keep
+//     EXTENDEDART's slots;
+//   • TONES (the tone pass's method, below): the pack's paint IS the
+//     accurate Universes Beyond pack's — g.png's title bar reads
+//     173,211,165, m.png's 241,227,157 / 249,242,213, l.png's 214,210,194 /
+//     220,214,195, value for value UB_PRINT_TONES' `from` — and the prints
+//     agree with that pass's targets (UB_EXTENDED_PRINT_TONES);
+//   • a coloured ARTIFACT prints the artifact frame's silver field with the
+//     colour's bars and box (PIP #921 / #918, WHO #1065 / #474, ACR #155), a
+//     colourless NON-artifact card a see-through frame (FIN #421, WHO #923 /
+//     #332) — neither is built here (the spell frame paints the colour's
+//     frame and `c` is the artifact frame, as m15ub's `c` was first); their
+//     imports keep their landing (lib/scryfall/frame-signatures.ts
+//     UB_EXTENDED_DRAWS).
+const UB_EXTENDED = "img/frames/m15/ub/extended";
+/** A recipe letter → the pack's file: w u b r g m a l v as named, a land
+ *  tint `wl` … `gl` / the gold land `ml` as named (letter FIRST — the pack's
+ *  own names, unlike the accurate packs' `l<k>`), and `c` the artifact
+ *  frame (the pack draws no colourless frame). */
+export const ubExtendedFrameFile = (letter) => `${UB_EXTENDED}/${letter === "c" ? "a" : letter}.png`;
+/** The pack's masks (packUBExtendedArt.js): the REGULAR M15 pack's six,
+ *  1500 × 2100, its Pinline the 'Super' one. */
+export const UB_EXTENDED_MASK = Object.freeze({
+  border: `${REG}/m15MaskBorder.png`,
+  frame: `${REG}/m15MaskFrame.png`,
+  rules: `${REG}/m15MaskRules.png`,
+  title: `${REG}/m15MaskTitle.png`,
+  type: `${REG}/m15MaskType.png`,
+  pinline: `${REG}/m15MaskPinlineSuper.png`,
+});
+/** The extended Universes Beyond frames' two-colour pair masters: 4.6b's
+ *  recipe (pairMasterLayers) over the pack's own files and masks — kind
+ *  "m15" for extendedartub (the gold-split and hybrid dresses), "land" for
+ *  extendedartubland. */
+export const ubExtendedPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, ubExtendedFrameFile, UB_EXTENDED_MASK);
+/**
+ * The pack's tones onto the prints (as UB_PRINT_TONES; the tone pass's
+ * method: the per-channel median of the region's paper at 1500 × 2100,
+ * sampled every 2 px, the brightest 5 % and the darker 40 % left out —
+ * title bar x 140–1360 × y 118–198, text box x 150–1350 × y 1350–1880; the
+ * extended frame's type bar is black, so it has no tone). Read 2026-11-25
+ * on 24 prints a colour (FIC, FIN, PIP, LTR, WHO, LTC, ACR; crowned and
+ * plain), 16 three-colour gold, 24 two-colour gold-split, 24 colourless
+ * artifacts, 12 colourless and 9 any-colour lands — medians [min–max]
+ * against the file:
+ *   • green title 186,211,177 [180–192, 207–212, 172–180] against
+ *     173,211,165: Δ +13 / 0 / +12 → UB_PRINT_TONES.g.title (its target
+ *     188,211,179). The box 216,227,215 against 219,229,218: left alone;
+ *   • gold title 237,220,135 [234–244, 217–223, 123–137] (the two-colour
+ *     spells' 241,221,132, the artifacts' 243,222,125, the any-colour lands'
+ *     242,222,126), box 243,234,199 [241–245, 233–235, 195–201] (the lands'
+ *     245,234,197) against 241,227,157 / 249,242,213: Δ up to −32 in blue →
+ *     UB_PRINT_TONES.m (239,220,135 / 244,234,197);
+ *   • land grey title 197,186,177 [195–200, 184–187, 174–178], box
+ *     231,227,220 [230–232, 226–227, 219–221] (12 lands with no colour),
+ *     the two-colour lands' title 198,185,176 (12), the hybrids' grey bars
+ *     197,192,178 (2) against 214,210,194 / 220,214,195 → UB_PRINT_TONES.l
+ *     (197,186,177 / 230,226,220);
+ *   • BLUE title 180,210,238 [165–189, 204–212, 235–240] against
+ *     166,208,239: Δ +14 / +2 / −1 — a tone of this frame's own (FIN / FIC
+ *     read 165–173, PIP, LTR, LTC, WHO and ACR 176–189; the median is the
+ *     target). The box 202,225,240 against 195,224,242 (Δ +7): left alone.
+ *     The offset is these printings' own: 12 BORDERED blue printings of
+ *     the same sets read 162–179 in red (median 171, within 5 of the
+ *     file), so the bordered m15ub/u is left as it is;
+ *   • within 8 a channel, left alone: white (title Δ 1 / −1 / −3, box
+ *     8 / 6 / 6), black, red, the artifact silver (title 1 / −3 / −5, box
+ *     4 / 0 / −1), the white and blue land tints' bars. The white land's box
+ *     reads +16 in blue on ONE card (PIP #1055 / #527 Windbrisk Heights, its
+ *     two printings): not a sample, left alone.
+ * The pack's tinted land files carry their colour's bars: gl.png's title is
+ * g.png's, ul.png's u.png's (within 2 levels), ml.png's title AND box
+ * m.png's byte for byte — so they take the same tones.
+ */
+export const UB_EXTENDED_PRINT_TONES = Object.freeze({
+  g: Object.freeze({ title: UB_PRINT_TONES.g.title }),
+  m: Object.freeze({ title: UB_PRINT_TONES.m.title, rules: UB_PRINT_TONES.m.rules }),
+  l: Object.freeze({ title: UB_PRINT_TONES.l.title, rules: UB_PRINT_TONES.l.rules }),
+  u: Object.freeze({ title: Object.freeze({ from: [166, 208, 239], to: [180, 210, 238] }) }),
+});
+const ubExtendedSourceTone = (letter) =>
+  Object.freeze({
+    masks: Object.freeze(Object.fromEntries(Object.keys(UB_EXTENDED_PRINT_TONES[letter]).map((region) => [region, UB_EXTENDED_MASK[region]]))),
+    tones: UB_EXTENDED_PRINT_TONES[letter],
+    table: `UB_EXTENDED_PRINT_TONES.${letter}`,
+  });
+/** The pack files toned (sourceTonesOf reads it): the colour's file and its
+ *  land tint share the bars, the gold land the gold file's bars and box. */
+export const UB_EXTENDED_SOURCE_TONES = Object.freeze({
+  [`${UB_EXTENDED}/g.png`]: ubExtendedSourceTone("g"),
+  [`${UB_EXTENDED}/gl.png`]: ubExtendedSourceTone("g"),
+  [`${UB_EXTENDED}/m.png`]: ubExtendedSourceTone("m"),
+  [`${UB_EXTENDED}/ml.png`]: ubExtendedSourceTone("m"),
+  [`${UB_EXTENDED}/l.png`]: ubExtendedSourceTone("l"),
+  [`${UB_EXTENDED}/u.png`]: ubExtendedSourceTone("u"),
+  [`${UB_EXTENDED}/ul.png`]: ubExtendedSourceTone("u"),
+});
+const UB_EXTENDED_PACK =
+  "packUBExtendedArt.js 'Universes Beyond (Extended art)' (Card Conjurer's Universes Beyond group): 1500 × 2100 native, the regular M15 pack's masks, the extended art window and black type bar";
+/**
+ * The pack's SEAMS, sealed (TODO 4.25): every file is opaque outside the
+ * art window but for ~790 hairline pixels at α 98–254 where its layers
+ * don't quite meet — the title bar's caps (x 78 / 89–92 / 1407–1410 / 1421,
+ * rows 60–185) and the text box's side rims (rows 1700–1899), the same
+ * pixels on every file. Over the card they let the root's #101015 through
+ * as dark hairlines no print shows, and the caps' run into the art window's
+ * shade above the art slot (the art-window check, 7.6). So outside the art
+ * slot's rows (EXTENDED_ART_SLOT: 176–1318 at HD) every pixel is made
+ * opaque, its colour kept; the window and the type bar's shade are left as
+ * drawn.
+ */
+export const UB_EXTENDED_SEAM_ROWS = Object.freeze({ from: 176, to: 1319 });
+export function sealUbExtendedSeams(buf, width, height) {
+  if (buf.length !== width * height * 4) throw new Error(`sealUbExtendedSeams: the image is not ${width}x${height} RGBA`);
+  let sealed = 0;
+  let minAlpha = 255;
+  for (let y = 0; y < height; y += 1) {
+    if (y >= UB_EXTENDED_SEAM_ROWS.from && y < UB_EXTENDED_SEAM_ROWS.to) continue;
+    for (let x = 0; x < width; x += 1) {
+      const o = (y * width + x) * 4 + 3;
+      if (buf[o] === 255) continue;
+      minAlpha = Math.min(minAlpha, buf[o]);
+      buf[o] = 255;
+      sealed += 1;
+    }
+  }
+  return `${sealed} seam px outside rows ${UB_EXTENDED_SEAM_ROWS.from}–${UB_EXTENDED_SEAM_ROWS.to - 1} made opaque (α ${sealed ? minAlpha : "–"} … 254 → 255, colour kept)`;
+}
+const UB_EXTENDED_SEAM_NOTE =
+  "the pack's seams sealed (sealUbExtendedSeams): ~790 hairline pixels at α 98–254 where its layers don't quite meet — the title bar's caps and the text box's side rims, the same pixels on every file — made opaque outside the art slot's rows 176–1318, their colour kept, so no #101015 hairline shows (no print has one) and the caps' seam no longer runs into the window's shade above the art slot (7.6); the window and the type bar's shade as drawn";
+const UB_EXTENDED_TONE_NOTE =
+  "toned onto the prints (UB_EXTENDED_PRINT_TONES through UB_EXTENDED_SOURCE_TONES, recorded under sourceTones): the pack's paint is the accurate Universes Beyond pack's value for value, so the bordered family's tone pass carries over — the green title bar (g.png, gl.png), the gold title bar and text box (m.png, ml.png) and the land-grey title bar and text box (l.png) — plus the blue title bar (u.png, ul.png: 14 lighter in red on the prints), each multiplied by its gain through the pack's own Title and Rules masks as the FILE is loaded; the black type bar, the frame field, the pinline, the border and every other colour as Card Conjurer drew them";
+const UB_EXTENDED_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (UB_EXTENDED_MASK: the regular M15 pack's six, its 'Super' Pinline)";
 /** Rec. 709 luminance of an RGB triple (tonePlateRgba8's). */
 const luma709 = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 /** One source tone, checked: `{ from, to }`, RGB 0–255, `from` no channel
@@ -605,6 +771,9 @@ export function describeSourceToneTable(tones) {
 /** A pack file's tones (CC_SOURCE_TONES), or null. */
 export function sourceTonesOf(src) {
   if (Object.hasOwn(CC_SOURCE_TONES, src)) return CC_SOURCE_TONES[src];
+  // The Universes Beyond extended-art files (TODO 4.25,
+  // UB_EXTENDED_SOURCE_TONES).
+  if (Object.hasOwn(UB_EXTENDED_SOURCE_TONES, src)) return UB_EXTENDED_SOURCE_TONES[src];
   // The LOTR ring's files (TODO 4.11, RING_SOURCE_TONES — defined with its
   // recipe below; read at call time).
   if (Object.hasOwn(RING_SOURCE_TONES, src)) return RING_SOURCE_TONES[src];
@@ -7321,6 +7490,44 @@ export const CC_TEMPLATES = {
     pack: EXTENDED_ART_PACK,
     notes: EXTENDED_ART_LAND_NOTES,
   },
+  // TODO 4.25: the Universes Beyond EXTENDED-ART frames — two NEW templates
+  // (no stored card sits on them), extendedart / extendedartland's recipes
+  // over the Universes Beyond extended pack (UB_EXTENDED; 1500 × 2100
+  // native, no resample). The plates are m15ub's (the pack draws the same
+  // `m15/ub/pt` files): no objects of their own.
+  extendedartub: {
+    colors: {
+      ...perColor((k) => [layer(ubExtendedFrameFile(k))]),
+      ...pairMasters("m15", ["split", "hybrid"], ubExtendedPairLayers),
+    },
+    masterPass: (master, width, height) => sealUbExtendedSeams(master, width, height),
+    plates: UB_EXTENDED_PT,
+    pack: UB_EXTENDED_PACK,
+    notes: [
+      "the Universes Beyond extended-art frame (TODO 4.25, owner 2026-11-25): w u b r g m = the pack's colour frames whole (m15/ub/extended/<k>.png), native 1500x2100 — the prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR, 2023–25) register on them within ±3 px",
+      "colourless (c) = the pack's 'Artifact Frame' (m15/ub/extended/a.png): the pack lists no colourless frame; a colourless ARTIFACT prints it (FIC #228, ACR #307, PIP #1015, WHO #1071). The three colourless NON-artifact printings (FIN #421, WHO #923 / #332) print a see-through frame, not built: their import keeps its landing",
+      "a coloured artifact prints the artifact frame's silver field with the colour's bars and box (PIP #921, WHO #1065): not built — the frame paints the colour's master, as extendedart does, and the import keeps its landing",
+      "plates = the pack's own (`m15/ub/pt/<k>.png`, drawn at M15's plate bounds): w u b r g m and the grey 'Colorless' plate c — the hybrid dress's (PIP #1003 / #475) — as m15ub's, and the silver 'Artifact' plate under a: the plate a colourless card paints here (FrameProfile.colorlessPlateKey), the `c` master being the artifact frame — WHO #1071 Solemn Simulacrum's plate face reads 197,209,216 / 205,215,221 (the median of its light pixels left / right of the digits, at HD), a bake on the artifact plate 191,207,220 / 201,214,222, on the grey one 216,209,201 / 232,227,221",
+      UB_EXTENDED_TONE_NOTE,
+      UB_EXTENDED_SEAM_NOTE,
+      `${UB_EXTENDED_PAIR_NOTE}. Gold-split <pair> = m.png whole with the split text box and pinline (ACR #166 Assassin's Trophy, PIP #1007 Wake the Past, LTR #782, WHO #1069: gold bars, the pinline in the two colours); hybrid <pair>-h = the two colour frames split across the frame ramp under the pack's grey l.png title and type bars, the split box and pinline, drawn with the grey plate (PIP #1003 / #475 Biomass Mutation)`,
+    ],
+  },
+  extendedartubland: {
+    colors: {
+      ...perColor((k) => [layer(ubExtendedFrameFile(k === "c" ? "l" : `${k}l`))]),
+      ...pairMasters("land", ["split"], ubExtendedPairLayers),
+    },
+    masterPass: (master, width, height) => sealUbExtendedSeams(master, width, height),
+    pack: UB_EXTENDED_PACK,
+    notes: [
+      "the Universes Beyond extended-art LAND frame (TODO 4.25): the pack's land frames whole, native 1500x2100 — c = the grey 'Land Frame' l.png (PIP #1054 Treasure Vault, WHO #1124 War Room, PIP #1034 Scavenger Grounds: 12 lands with no colour); w u b r g = the tinted ones, named letter first (wl.png … gl.png: PIP #1055 Windbrisk Heights, WHO #1054 Trenzalore Clocktower, LTC #160 The Black Gate); gold m = ml.png, the any-colour land (WHO #1084 / PIP #1023 Exotic Orchard, PIP #1039 Spire of Industry, WHO #1053 Gallifrey Council Chamber)",
+      UB_EXTENDED_TONE_NOTE,
+      UB_EXTENDED_SEAM_NOTE,
+      `${UB_EXTENDED_PAIR_NOTE}. <pair> = the grey land frame l.png whole with the text box and pinline in the two land tints (<a>l.png / <b>l.png), first canonical colour on the left — 180 of the pack's 214 land printings are two-colour lands (PIP #1049–1056, WHO #1118–1125: the grey bars, the split box)`,
+      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate; c = the grey 'Colorless' plate, the colourless land's)",
+    ],
+  },
   // TODO 4.35 / 4.42 (owner Q6 2026-10-13): the textless pair re-sourced
   // from Card Conjurer's 'Magic Fest Promos' (TEXTLESS_PROMO_PACK) — the
   // black-bordered textless promos' look the MSE masters drew softly. One
@@ -9237,6 +9444,51 @@ export function extendedCrownLayers(key) {
 }
 
 /**
+ * The Universes Beyond extended-art crown (TODO 4.25): the extended-art
+ * crown's recipe (EXTENDED_CROWN_BAND: the black cover strip drawn, the
+ * crown, the outline on top, 1:1 at 1500 × 2100, rows 0–259) over the
+ * Universes Beyond FLOATING crowns ('Floating Legend Crowns (Universes
+ * Beyond)', packUBLegendCrownsFloating.js, `m15/ub/crowns/floating/<k>.png`,
+ * 1408 × 215 at the M15 floating crown's bounds — the same outline, cover
+ * strip and bounds). Measured 2026-11-25 on 35 crowned prints (Scryfall
+ * PNGs at 1500 × 2100; the band composited over the pack's master of the
+ * print's colour, the median |ΔRGB| over the crown's pixels, best of ±4 px):
+ * the Universes Beyond crown 1.0–16.7 (median 6.3) against the M15 floating
+ * crown's 9.0–31.3 (median 17.7) — closer on every print; a colourless
+ * legendary ARTIFACT wears the silver A crown (1.7–2.7 against the grey C
+ * crown's 2.0–3.7 on FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 — A
+ * closer on all five), so the spell frame keys its colourless card (the
+ * artifact frame) by `a`; a legendary land its colour's crown (WHO #1054
+ * blue 1.7, LTC #160 black 4.7, the any-colour lands WHO #1053 / ACR #171
+ * gold 3.0 / 3.3 — the grey L crown 51–94), and `l` the colourless land's.
+ * Keys: eight of the pack's nine crowns (w u b r g, m gold, a artifact, l
+ * land — never its grey `c`, which neither frame draws: the spell frame maps
+ * c → a, the land frame c → l) and the ten pairs (the two crowns lerped
+ * across the floating crowns' 40→60 %W ramp, as extendedcrown's: the
+ * prints' split crown on PIP #955 W|U, LTR #779 R|G, WHO #997 B|R, FIN #501
+ * G|U).
+ */
+export const UB_EXTENDED_CROWN_BAND = Object.freeze({
+  ...EXTENDED_CROWN_BAND,
+  source: "img/frames/m15/ub/crowns/floating",
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", ...TWO_COLOR_PAIRS]),
+});
+const ubFloatingCrown = (k) => `${UB_EXTENDED_CROWN_BAND.source}/${k}.png`;
+/** The Universes Beyond extended-art crown band's layers for a key, in CC's
+ *  draw order (extendedCrownLayers' with the Universes Beyond crowns). */
+export function ubExtendedCrownLayers(key) {
+  if (!UB_EXTENDED_CROWN_BAND.keys.includes(key)) throw new Error(`ubExtendedCrownLayers: no crown for key ${key}`);
+  const pair = TWO_COLOR_PAIRS.includes(key) ? key.split("") : null;
+  return [
+    placed(BORDERLESS_CROWN.eraseSrc, UB_EXTENDED_CROWN_BAND.cover),
+    pair
+      ? placed(ubFloatingCrown(pair[0]), UB_EXTENDED_CROWN_BAND.crown, { right: ubFloatingCrown(pair[1]), ramp: [...BORDERLESS_CROWN.ramp] })
+      : placed(ubFloatingCrown(key), UB_EXTENDED_CROWN_BAND.crown),
+    placed(BORDERLESS_CROWN.outlineSrc, UB_EXTENDED_CROWN_BAND.outline),
+  ];
+}
+
+/**
  * What the importer checks on the full 1500 × 2100 extended-crown composite
  * before it crops the band (pure): `lastAlphaRow` must be below the band's
  * rows; `peakRow`, the first opaque row at the centre column, is the
@@ -9771,6 +10023,21 @@ export const CC_OVERLAY_BANDS = {
       "the band's slot is CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN, from row 0): since TODO 4.7 the extendedart masters are Card Conjurer's extended frames, whose title bar tops out at 4.98 %H as FDN #442 / #455 print it (over the old MSE masters, whose bar topped out at 5.43 %H, the slot sat 10 px lower)",
     ],
   },
+  // TODO 4.25: the Universes Beyond extended-art crown — the extendedcrown
+  // recipe over the Universes Beyond floating crowns.
+  extendedartubcrown: {
+    pack: "'Floating Legend Crowns (Universes Beyond)' (packUBLegendCrownsFloating.js), drawn as the extended-art crown is (extendedcrown: CC's autoExtendedArtFrame order)",
+    band: UB_EXTENDED_CROWN_BAND,
+    keys: UB_EXTENDED_CROWN_BAND.keys,
+    layers: ubExtendedCrownLayers,
+    findings: extendedCrownFindings,
+    notes: [
+      "the Universes Beyond extended-art legendary crown (TODO 4.25, owner 2026-11-25): the pack's FLOATING crown (m15/ub/crowns/floating/<k>.png, 1408x215 at the M15 floating crown's bounds 3.07/1.91/93.87x10.24 %) over the BLACK cover strip (3.94/2.77/92.14x1.77 %, drawn) with the M15 floating outline ON TOP (2.8/1.72/94.4x10.62 %) — extendedcrown's recipe and slot, composited 1:1 at 1500x2100 and cropped to rows 0–259; an overlay band over the extendedartub and extendedartubland masters",
+      "measured 2026-11-25 on 35 crowned prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR; the band over the pack's master of the print's colour, the median |ΔRGB| over the crown's pixels, best of ±4 px): this crown 1.0–16.7 (median 6.3) against the M15 floating crown's 9.0–31.3 (median 17.7), closer on all 35",
+      "keys = eight of the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a) and l (the land grey: the land frame maps c → l); not the pack's grey colourless C crown, which neither frame draws; a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
+      "the ten pairs: the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, as extendedcrown's), first canonical colour on the left, drawn over the pair masters (PIP #955 Rex W|U, LTR #779 Doors of Durin R|G, WHO #997 The Dalek Emperor B|R, FIN #501 Omega G|U)",
+    ],
+  },
   m15crown: {
     pack: "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js, groupAccurate.js — the pack the M15 masters come from)",
     band: CROWN_BAND,
@@ -10096,6 +10363,16 @@ export const UB_NOTCH_BOX = Object.freeze({ x: 638, y: 1891, width: 223, height:
 const UB_NOTCH_FOOT_Y = 1944 - UB_NOTCH_BOX.y;
 const UB_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"];
 
+/** The Universes Beyond EXTENDED-ART notch's box on the 1500 × 2100 card
+ *  (TODO 4.25): the pack's piece is 224 × 102 at 638.1, 1891.05 px, 1:1. */
+export const UB_EXTENDED_NOTCH_BOX = Object.freeze({ x: 638, y: 1891, width: 224, height: 102 });
+/** Its mono keys: the spell frame's seven (c = its artifact-frame master)
+ *  and the land frame's colourless grey. */
+const UB_EXTENDED_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "c", "l"];
+/** The extended Universes Beyond masters' bottom pinline: rows 1939–1947
+ *  (black from 1948), flat at x 750 on every master. */
+const UB_EXTENDED_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1939, 1947], tolerance: 2 });
+
 /** The notch pieces the importer builds, by bucket folder. `shape` is the
  *  CC piece whose geometry every key takes, at CC's bounds (1:1 at HD);
  *  `arc` its rim colour; `barOf` the master (template/key under the build
@@ -10193,6 +10470,46 @@ export const HOLO_STAMP_NOTCHES = {
       "ONE geometry for every key, as m15holostamp: CC's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947; CC's own per-key pieces carry the same flat rims (w 244,243,236, r 209,77,53, m 233,212,125, a 223,225,225, l 165,152,138 — the accurate pack's pinlines), so the tinted keys reproduce them outside the cut",
       "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c), l (the land taupe, from m15ubland/c) and c (the see-through spell frame's white rim, sampled from m15ub/c — TODO 4.25 follow-up, as m15holostamp's c is from m15/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
       "the triangle — CC's 'Gray Holo Stamp' shape fitted (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px — is cut to transparent: every colour piece holds a capture of WotC's hologram there, which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's gray.png is the fit's reference only and is not read by the build",
+    ],
+  },
+  // TODO 4.25: the Universes Beyond EXTENDED-ART triangle notch — the
+  // m15ubholostamp recipe over the older Universes Beyond pack's own U piece,
+  // which the extended pack draws (1:1 at HD: the pack is 1500 px native).
+  extendedartubholostamp: {
+    pack: "'Universes Beyond (Extended art)' holo stamps (packUBExtendedArt.js '… Holo Stamp': m15/ub/regular/stamp)",
+    shape: {
+      src: "img/frames/m15/ub/regular/stamp/u.png",
+      size: { width: UB_EXTENDED_NOTCH_BOX.width, height: UB_EXTENDED_NOTCH_BOX.height },
+      bounds: {
+        leftPct: (UB_EXTENDED_NOTCH_BOX.x / 1500) * 100,
+        topPct: (UB_EXTENDED_NOTCH_BOX.y / 2100) * 100,
+        widthPct: (UB_EXTENDED_NOTCH_BOX.width / 1500) * 100,
+        heightPct: (UB_EXTENDED_NOTCH_BOX.height / 2100) * 100,
+      },
+      arc: [0, 117, 190],
+    },
+    keys: [...UB_EXTENDED_NOTCH_MONO_KEYS, ...TWO_COLOR_PAIRS],
+    barOf: {
+      w: "extendedartub/w",
+      u: "extendedartub/u",
+      b: "extendedartub/b",
+      r: "extendedartub/r",
+      g: "extendedartub/g",
+      m: "extendedartub/m",
+      c: "extendedartub/c",
+      l: "extendedartubland/c",
+      ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, `extendedartub/${pair}`])),
+    },
+    rampKeys: [...TWO_COLOR_PAIRS],
+    barSharedBy: Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, [`extendedartub/${pair}-h`, `extendedartubland/${pair}`]])),
+    barSample: UB_EXTENDED_BAR_SAMPLE,
+    triangle: UB_STAMP_HOLE,
+    cutMarginPx: 2,
+    notes: [
+      `the Universes Beyond extended-art triangle stamp's notch (TODO 4.25): the pack's piece — the text box's bottom pinline stepped up and over the stamp with its bevel — is the OLDER Universes Beyond pack's (m15/ub/regular/stamp/<k>.png, ${UB_EXTENDED_NOTCH_BOX.width}x${UB_EXTENDED_NOTCH_BOX.height}, at the pack's bounds 0.4254/0.9005/0.1494x0.0486 = 638.1, 1891.05 px), drawn 1:1 at ${UB_EXTENDED_NOTCH_BOX.x},${UB_EXTENDED_NOTCH_BOX.y}: its foot is the extended masters' pinline rows 1939–1947 (black from 1948 on both — the prints' black from 1947–1948), where m15ubholostamp's is the accurate pack's (to 1949): that piece over these masters stood 2 px proud at both feet, in the accurate pack's rim colours (gold 233,212,125 against this pack's 246,210,98)`,
+      "ONE geometry for every key, as m15ubholostamp: the pack's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1939–1947 (flat on every master); the pack's own per-key pieces carry its pinlines' flat rims (w 252,254,255 …), so the tinted keys reproduce them outside the cut",
+      "keys: w u b r g, m (gold), c (the spell frame's colourless master, the artifact frame — its silver, from extendedartub/c), l (the land grey, from extendedartubland/c: the land frame maps c → l); then the ten pairs, the rim tinted PER COLUMN to extendedartub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid and land pair masters (checked column by column)",
+      "the triangle — UB_STAMP_HOLE (lib/cards/holo-stamp.ts) plus 2 px, as m15ubholostamp's — is cut to transparent: the piece holds a capture of WotC's hologram there (inside the hole: 0 lit pixels of it outside), which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
     ],
   },
   // TODO 4.11: the Lord of the Rings scroll's triangle notch — the pack's
@@ -10651,6 +10968,9 @@ export const NOTCH_FOOT = Object.freeze({
   // The Universes Beyond notch (TODO 4.25): both feet of the resampled
   // piece, 638 + 2…10 and 638 + 212…220 at HD.
   m15ubholostamp: Object.freeze({ y: UB_NOTCH_FOOT_Y, runs: Object.freeze([Object.freeze([2, 10]), Object.freeze([212, 220])]) }),
+  // The Universes Beyond extended-art notch (TODO 4.25): both feet of the
+  // pack's 1:1 piece at row 1944, 638 + 20…42 and 638 + 183…204 at HD.
+  extendedartubholostamp: Object.freeze({ y: 1944 - UB_EXTENDED_NOTCH_BOX.y, runs: Object.freeze([Object.freeze([20, 42]), Object.freeze([183, 204])]) }),
   m15pwholostamp: Object.freeze({ y: 36, runs: Object.freeze([Object.freeze([2, 12]), Object.freeze([170, 181])]) }),
 });
 

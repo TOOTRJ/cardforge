@@ -537,7 +537,7 @@ function CardImage({
   // The two-colour look's stat plate and the anatomy overlays (the crown
   // band) — the preview's twins (lib/cards/anatomy.ts). Nothing until a
   // profile declares pair masters / an overlay and the card's switch is on.
-  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)), layout);
   const allOverlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
@@ -4327,7 +4327,7 @@ export function frameAssetPathsFor(source: CardPreviewData): string[] {
   );
   // The plate key the card paints (plateKeyFor — a hybrid pair's grey "c")
   // and its anatomy overlays (the crown band), as CardImage resolves them.
-  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)), layout);
   const paths: string[] = [];
   // Only the plates the card DRAWS (TODO 4.5.0): a body's P/T, loyalty or
   // defense plate is a type-gated slot, and a bucket plate that fails to

@@ -164,6 +164,10 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
   extendedartland: { front: [1500, 1142] },
+  // The Universes Beyond extended-art frames (TODO 4.25): the extended
+  // frame's window, no see-through master.
+  extendedartub: { front: [1500, 1142] },
+  extendedartubland: { front: [1500, 1142] },
   m15fullartland: { front: [1382, 1875] },
   fullartland: { front: [1500, 2100] },
   // The older full-art basics (TODO 4.40 / 4.41): the stone ring's window,

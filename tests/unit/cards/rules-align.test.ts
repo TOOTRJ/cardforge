@@ -163,7 +163,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the Enchanting Tales, the Dominaria United Stained Glass and the
     // Strixhaven Mystical Archive, TODO 4.11 wave 2, as every showcase.)
     // (…and the Doctor Who TARDIS and the OTJ Breaking News, TODO 4.11 wave 2, as every showcase.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(82);
+    // (…and the Universes Beyond extended-art frames, TODO 4.25, as extended art.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(84);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

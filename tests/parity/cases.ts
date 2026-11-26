@@ -194,6 +194,11 @@ const PICKS: readonly Pick[] = [
   // --- the Universes Beyond frames (TODO 4.25): the triangle stamp ----------
   { from: "m15ub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond: the triangle stamp's notch and art (a new shape in both renderers), the pair master and the split crown band" },
   { from: "m15ub/g/creature-short@wide", why: "Universes Beyond: the pack's own plate under 12/12" },
+  // …and their extended-art dress (TODO 4.25): the UB extended pack's masters
+  // under the extended frame's slots, its floating crown band and its own
+  // triangle notch.
+  { from: "extendedartub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond extended art: the gold-split pair master, the split floating UB crown band and the pack's own triangle notch, white type ink on the black bar" },
+  { from: "extendedartubland/c/land-long@crown", why: "Universes Beyond extended art: the grey land master (toned), no cost, the land grey floating crown" },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

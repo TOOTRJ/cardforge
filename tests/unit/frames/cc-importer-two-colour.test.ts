@@ -343,6 +343,16 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and their Universes Beyond dress (TODO 4.25): the same dresses over
+      // the Universes Beyond extended pack (tests/unit/frames/ub-extended-art.test.ts).
+      if (template === "extendedartub") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
+        continue;
+      }
+      if (template === "extendedartubland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       // …and the MKM dossier's ten (TODO 4.11 wave 2): the pack's two colour
       // frames lerped across print's ramp (tests/unit/frames/mkm-dossier-importer.test.ts);
       // …and the Doctor Who TARDIS's ten: its frames and braces lerped

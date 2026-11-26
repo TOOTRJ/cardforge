@@ -161,6 +161,27 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Baldur's Gate", "clb", "600", "a890abef-5291-4ffd-9c15-41c776ea9a00"),
     c: ref("Dark Depths", "puma", "U35", "e8fa97f8-2f52-426a-84f3-a7b85fda1344"),
   },
+  // The Universes Beyond extended-art crown (TODO 4.25): Universes Beyond's
+  // floating crowns — a crowned print per colour from Doctor Who, The Lord
+  // of the Rings and Final Fantasy Commander, a three-colour gold one, and a
+  // colourless legendary ARTIFACT for `c` (the spell frame's colourless
+  // master is the artifact frame; its crown the silver A).
+  extendedartub: {
+    w: ref("Thancred Waters", "fic", "139", "bcd85c4e-c674-4753-ae82-80293554fdc5"),
+    u: ref("Osgood, Operation Double", "who", "958", "88ce4ff5-7b9e-4ef8-9a7e-9d148983b04e"),
+    b: ref("Lobelia Sackville-Baggins", "ltr", "768", "c6ee59c0-6e62-4f41-a27d-a54d25df1e32"),
+    r: ref("Yasmin Khan", "who", "983", "60c1aefd-fb8a-42a7-b59f-b05c05cef8f8"),
+    g: ref("Susan Foreman", "who", "991", "9ca13436-2e25-4853-be97-cff5675b41f8"),
+    m: ref("The Valeyard", "who", "1041", "d154b5ec-9fd0-4627-bcf8-7993f1ab5b6b"),
+    c: ref("Phial of Galadriel", "ltr", "793", "d20aabf4-5409-4228-956c-ab764afd45a8"),
+  },
+  // …and its land dress: the three crowned lands in print — blue, black and
+  // the any-colour gold.
+  extendedartubland: {
+    u: ref("Trenzalore Clocktower", "who", "1054", "7f517d29-aa30-4890-ba4e-b572ac873bb4"),
+    b: ref("The Black Gate", "ltc", "160", "d6f6dca3-c618-4916-b93c-17c83ac3af0b"),
+    m: ref("Gallifrey Council Chamber", "who", "1053", "0e03370a-05a7-4f84-aadd-9eba459e2696"),
+  },
   // The black-bordered textless promos (TODO 4.35 follow-up, owner Round
   // 63): the standard band over the promo masters — Magic Spotlight's
   // Vendilion Clique (PSPL #8), the Store Championship legends (SCH #38 red,

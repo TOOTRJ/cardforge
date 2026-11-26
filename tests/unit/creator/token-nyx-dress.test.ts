@@ -180,7 +180,7 @@ describe("the Nyx dress of the full-art tokens", () => {
         const look = resolveTwoColor(profile, { twoColor: true }, { cardType: "token", supertype: "Enchantment Creature", colors: ["white", "blue"], cost: null } as never);
         expect(look, t).toBeNull();
         expect(pickFrameColorKey(["white", "blue"])).toBe("m");
-        expect(plateKeyFor("m", look), t).toBe("m");
+        expect(plateKeyFor("m", look, profile), t).toBe("m");
         // …and normalizeAnatomy drops the switch: the dress draws no pairs.
         expect(normalizeAnatomy({ template: t, twoColor: true }, t, "token"), t).not.toHaveProperty("twoColor");
       }

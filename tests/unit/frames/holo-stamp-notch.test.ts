@@ -348,6 +348,8 @@ describe("published to the frames bucket", () => {
     // The Universes Beyond triangle's (TODO 4.25): 9 bar keys (c since the
     // see-through colourless master) + 10 pairs.
     expect(Object.keys(files).filter((k) => /^m15ubholostamp\//.test(k))).toHaveLength(38);
+    // …and its extended-art dress's (TODO 4.25): 8 bar keys + 10 pairs.
+    expect(Object.keys(files).filter((k) => /^extendedartubholostamp\//.test(k))).toHaveLength(36);
   });
 
   it("provenance records the pinned commit, the one source piece per pack, the tint per key and the cut — never the per-key CC pieces", () => {
@@ -363,12 +365,16 @@ describe("published to the frames bucket", () => {
         const barOf = (def.barOf as Record<string, string>)[key];
         if (def.rampKeys?.includes(key)) {
           // The piece's columns on the card and the masters that share the
-          // bar: M15's 654–845 px, the Universes Beyond piece's 638–860.
-          const [x0, xMid, x1, shared] =
+          // bar: M15's 654–845 px, the Universes Beyond piece's 638–860, its
+          // extended-art piece's 638–861 (TODO 4.25: 224 px, the bar at rows
+          // 1939–1947).
+          const [x0, xMid, x1, shared, rows] =
             folder === "m15ubholostamp"
-              ? [638, 749, 860, `m15ub/${key}-h\\.png, m15ubartifact/${key}\\.png, m15ubland/${key}\\.png`]
-              : [654, 750, 845, `m15/${key}-h\\.png, m15artifact/${key}\\.png, m15vehicle/${key}\\.png, m15nyx/${key}\\.png, m15nyx/${key}-h\\.png, m15land/${key}\\.png, m15snow/${key}\\.png, m15snowland/${key}\\.png`];
-          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x ${x0}–${x1} \\(rows 1940–1947; \\d+,\\d+,\\d+ at x ${x0} → \\d+,\\d+,\\d+ at x ${xMid} → \\d+,\\d+,\\d+ at x ${x1} — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on ${shared}$`));
+              ? [638, 749, 860, `m15ub/${key}-h\\.png, m15ubartifact/${key}\\.png, m15ubland/${key}\\.png`, "1940–1947"]
+              : folder === "extendedartubholostamp"
+                ? [638, 750, 861, `extendedartub/${key}-h\\.png, extendedartubland/${key}\\.png`, "1939–1947"]
+                : [654, 750, 845, `m15/${key}-h\\.png, m15artifact/${key}\\.png, m15vehicle/${key}\\.png, m15nyx/${key}\\.png, m15nyx/${key}-h\\.png, m15land/${key}\\.png, m15snow/${key}\\.png, m15snowland/${key}\\.png`, "1940–1947"];
+          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x ${x0}–${x1} \\(rows ${rows}; \\d+,\\d+,\\d+ at x ${x0} → \\d+,\\d+,\\d+ at x ${xMid} → \\d+,\\d+,\\d+ at x ${x1} — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on ${shared}$`));
         } else {
           expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`rim tinted to ${barOf}\\.png's bar \\(\\d+,\\d+,\\d+\\)`));
         }

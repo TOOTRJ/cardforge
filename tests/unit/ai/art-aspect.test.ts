@@ -142,6 +142,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
+  // The Universes Beyond extended-art frames (TODO 4.25): the extended frame's art slot.
+  extendedartub: ["1168x896", "4:3", 1.314],
+  extendedartubland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],
   // The extended-art Prepare dress (TODO 4.27b): extendedart's art slot.
   extendedartprepare: ["1168x896", "4:3", 1.314],
