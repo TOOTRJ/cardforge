@@ -935,9 +935,11 @@ const FAMILIES: Record<
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
   // The Innistrad: Double Feature frame (TODO 5.9, one-faced): the land frame
-  // for a land, the spell frame for every other kind the `double-feature`
-  // rule keeps to (an artifact of any colour paints the frame's artifact
-  // master there — FrameProfile.artifactMasterKeys).
+  // for a land, the spell frame for every other kind the
+  // `double-feature/one-faced` rule keeps to (an artifact of any colour
+  // paints the frame's artifact master there — FrameProfile.
+  // artifactMasterKeys — verified for a coloured one only with `c` too:
+  // artifactMasterReviewKey, applied by finalizeImportMatch).
   doublefeature: {
     produces: ["doublefeatureland", "doublefeature"],
     pick: ({ facts }) => (facts.kind === "land" ? "doublefeatureland" : "doublefeature"),
@@ -3021,14 +3023,18 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // the lands, 431 of the 437 — names it once it is verified in the card's
   // colour (`onceVerified`, exact: the crown, the stamp and the duals' split
   // pinline are drawn there) and, until then, lands where it always did,
-  // nearest. The rest keep the old rule below (`double-feature/other`): the
-  // 98 transform cards (5.9's double-faced part), the walkers (5.13: no
-  // walker body in the frame) and #427 Honeymoon Hearse, the one Vehicle,
-  // whose field prints red over the artifact pattern (no such master in the
-  // pack).
+  // nearest — under a key and a label of its OWN
+  // (`double-feature/one-faced`): the frame_requests rows logged before it
+  // under `double-feature` are the walkers', the transform cards' and the
+  // Hearse's as much as these, and must not read as answered once this
+  // frame is verified. The rest keep the old rule below, under its old key
+  // (`double-feature`): the 98 transform cards (5.9's double-faced part),
+  // the walkers (5.13: no walker body in the frame) and #427 Honeymoon
+  // Hearse, the one Vehicle, whose field prints red over the artifact
+  // pattern (no such master in the pack; 5.9 too).
   {
-    key: "double-feature",
-    exactLabel: "Innistrad: Double Feature black-and-white frame",
+    key: "double-feature/one-faced",
+    exactLabel: "Innistrad: Double Feature black-and-white frame (one-faced)",
     match: {
       sets: ["dbl"],
       layouts: ["normal"],
@@ -3045,14 +3051,17 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
   },
   {
-    key: "double-feature/other",
+    key: "double-feature",
     exactLabel: "Innistrad: Double Feature black-and-white frame",
     match: { sets: ["dbl"] },
     outcome: {
       status: "nearest",
       template: { family: "m15" },
       reason: "PipGlyph doesn't have Double Feature's black-and-white frame yet",
-      blockedBy: "4.11",
+      // Per landing: a walker (it lands on a walker frame) waits for 5.13's
+      // walker body; the transform cards and the Hearse for 5.9's other
+      // part (the transform pack, the Vehicle's red field).
+      blockedBy: (template) => (template !== null && getFrameProfile(template).loyaltyRows ? "5.13" : "5.9"),
       // The M15 frame here is a stand-in itself: a verified artifact frame
       // is never kept over the Vehicle frame (Honeymoon Hearse DBL #427).
       landOnOnceVerified: { ...vehicleStandIn("in Double Feature's black-and-white frame"), overOwnFrame: true },

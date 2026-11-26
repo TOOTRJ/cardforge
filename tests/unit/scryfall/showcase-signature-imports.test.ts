@@ -20,11 +20,12 @@ import printings from "./fixtures/showcase-signature-printings.json";
 //     were EXACT on M15 (`era/2015`, `transform/2015`, `vehicle/2015`) and
 //     logged nothing. Now `nearest` on the same landing, with a row.
 //     (Since TODO 5.9's one-faced part a one-faced DBL card it dresses names
-//     the Double Feature frame once verified — `double-feature`, nearest on
-//     the same landing until then, the row's cause "unverified"; the
-//     transform cards, the walkers and the Vehicle keep the old rule,
-//     `double-feature/other`: tests/unit/scryfall/dbl-double-feature-imports
-//     .test.ts.)
+//     the Double Feature frame once verified — `double-feature/one-faced`,
+//     nearest on the same landing until then, the row's cause
+//     "unverified"; the transform cards, the walkers and the Vehicle keep
+//     the old rule under its old key, `double-feature`, its item now the
+//     one each waits for (5.9, a walker 5.13):
+//     tests/unit/scryfall/dbl-double-feature-imports.test.ts.)
 //   • LTC #411–490 print LTR's scroll frame: they fell to the generic
 //     `showcase` rule (M15).
 //   • MUL's three Theros demigods (+ halo-foil twins) print the THB
@@ -64,12 +65,12 @@ const elsewhere = (key: Key, set: string) => scryfallCardSchema.parse({ ...print
 describe("the rule table", () => {
   it("adds the two set signatures before the masterpiece and generic showcase rules", () => {
     const at = (key: string) => FRAME_SIGNATURE_KEYS.indexOf(key);
-    expect(at("double-feature")).toBeGreaterThan(at("showcase/mul"));
-    expect(at("double-feature/other")).toBe(at("double-feature") + 1);
-    expect(at("signature-spellbook")).toBe(at("double-feature/other") + 1);
+    expect(at("double-feature/one-faced")).toBeGreaterThan(at("showcase/mul"));
+    expect(at("double-feature")).toBe(at("double-feature/one-faced") + 1);
+    expect(at("signature-spellbook")).toBe(at("double-feature") + 1);
     expect(at("signature-spellbook")).toBeLessThan(at("masterpiece"));
     // …and before every rule that called them exact.
-    for (const later of ["transform/2015", "vehicle/2015", "era/2015"]) expect(at("double-feature")).toBeLessThan(at(later));
+    for (const later of ["transform/2015", "vehicle/2015", "era/2015"]) expect(at("double-feature/one-faced")).toBeLessThan(at(later));
   });
 });
 
@@ -98,15 +99,19 @@ describe("Innistrad: Double Feature (DBL) is nearest on the frame it always land
     }
   });
 
-  it("is `double-feature` (one-faced: the frame once verified, 5.9) or `double-feature/other` (item 4.11), nearest, and lands where it did", () => {
+  it("is `double-feature/one-faced` (the frame once verified) or `double-feature` (the old rule), nearest, item 5.9, and lands where it did", () => {
     for (const [key, landing] of rows) {
       const one = ONE_FACED.has(key);
       expect(frameMatchFromScryfall(P[key]), key).toMatchObject({
-        signature: one ? "double-feature" : "double-feature/other",
+        signature: one ? "double-feature/one-faced" : "double-feature",
         status: "nearest",
         reason: one ? UNVERIFIED : REASON,
-        blockedBy: one ? "5.9" : "4.11",
-        exactLabel: "Innistrad: Double Feature black-and-white frame",
+        // The transform card and the Vehicle wait for 5.9's other part (a
+        // walker for 5.13: tests/unit/scryfall/dbl-double-feature-imports).
+        blockedBy: "5.9",
+        exactLabel: one
+          ? "Innistrad: Double Feature black-and-white frame (one-faced)"
+          : "Innistrad: Double Feature black-and-white frame",
       });
       const patch = imported(key);
       expect(patch.frame_template, key).toBe(landing);
@@ -126,7 +131,7 @@ describe("Innistrad: Double Feature (DBL) is nearest on the frame it always land
     for (const [key, landing] of rows) {
       const one = ONE_FACED.has(key);
       expect(requestRow(key), key).toMatchObject({
-        signature: one ? "double-feature" : "double-feature/other",
+        signature: one ? "double-feature/one-faced" : "double-feature",
         status: "nearest",
         cause: one ? "unverified" : "missing",
         setCode: "dbl",

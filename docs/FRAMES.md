@@ -6992,14 +6992,26 @@ no sweep, no badge; nobody can pick either until a colour is verified.
   Mask white, #111 Mask of Griselbrand black, #142 Geistflame Reservoir
   red, #171 Bramble Armor green, #252 The Celestus colourless):
   `FrameProfile.artifactMasterKeys` maps EVERY colour key to `a` — the first
-  profile to dress a coloured key by type (the gate stays per colour:
-  verifying doublefeature/w publishes the white master and the artifact one
-  for a white artifact). `c` is the same artifact file (the pack draws no
-  colourless frame; the run prints no colourless non-artifact spell). The
+  profile to dress a coloured key by type. Verifying doublefeature/w
+  publishes the WHITE master only: its references are white non-artifacts,
+  so that tick never looked at `a`. The `c` row's references are the
+  colourless artifacts (#252, #253), which paint `a`: an ARTIFACT in w, u,
+  b, r, g or m is offered — picked, imported exact, drawn at random by the
+  AI, kept by a remix, saved — only once its colour AND `c` are verified
+  (`artifactMasterReviewKey` in `lib/cards/frame-availability.ts`, the ONE
+  rule: `frameGateError`'s and `isFrameComboAvailable`'s `type`, and
+  `verifiedKeysForType` for a caller that hands the set on). The coloured
+  artifacts are alternates on their colour's row (w #23 / #271, b #111 /
+  #362, r #142 / #444, g #171 / #455 / #487; no blue or two-colour
+  artifact is printed), so a reviewer sees `a` in context there. `c` is the
+  same artifact file (the pack draws no colourless frame; the run prints no
+  colourless non-artifact spell). The
   land frame: `c` the grey stone 'Land Frame' (#261 / #530 Evolving Wilds,
   #262 Field of Ruin), w u b r g the land tints (`<k>l.png`: the stone with
-  the pinline in the colour), m the gold land (#534 Voldaren Estate, an
-  any-colour land), and the ten DUALS every two-colour land of the run
+  the pinline in the colour), m the gold land (#534 Voldaren Estate: an
+  any-colour land, colourless in its identity but gold in the mana it makes
+  — the importer reads `produced_mana` — and a reference on the `m` row),
+  and the ten DUALS every two-colour land of the run
   prints (#260 Deserted Beach … #533 Sundown Pass): 4.6b's land recipe over
   the pack's own files and masks — the stone whole, the pinline lerped
   between the two tints, the first colour on the left
@@ -7066,22 +7078,30 @@ no sweep, no badge; nobody can pick either until a colour is verified.
   a land creature draws the spell frame's plates. Print sets the name and
   the type line in Beleren and the rules in MPlantin, as PipGlyph does: no
   font is added.
-- **Imports.** `double-feature` is now the ONE-FACED rule: a creature,
-  instant, sorcery, enchantment, artifact or land of the set (431 of the
-  437; #427 Honeymoon Hearse, the one Vehicle, is left out — its field
-  prints red over the artifact pattern) names `doublefeature` /
-  `doublefeatureland` once verified in the card's colour (`onceVerified`,
-  exact) and, until then, lands where it always did, nearest, logging an
-  "unverified" row. A legend imports with the crown on, a rare or mythic
-  with the oval, a dual with its split pinline. Everything else of the set
-  — the 98 transform cards, the five walkers and the Vehicle — keeps the
-  old rule unchanged under `double-feature/other` (nearest, 4.11).
+- **Imports.** A rule of its own, `double-feature/one-faced` ("Innistrad:
+  Double Feature black-and-white frame (one-faced)"): a creature, instant,
+  sorcery, enchantment, artifact or land of the set (431 of the 437; #427
+  Honeymoon Hearse, the one Vehicle, is left out — its field prints red
+  over the artifact pattern) names `doublefeature` / `doublefeatureland`
+  once verified in the card's colour — a coloured artifact once `c` is
+  too (above) — (`onceVerified`, exact) and, until then, lands where it
+  always did, nearest, logging an "unverified" row. A legend imports with
+  the crown on, a rare or mythic with the oval, a dual with its split
+  pinline, #534 Voldaren Estate on the gold land. Everything else of the
+  set — the 98 transform cards, the five walkers and the Vehicle — keeps
+  the old rule under its OLD key and label, `double-feature` (nearest):
+  the `frame_requests` rows logged before this frame are theirs as much as
+  the one-faced cards', and must not read "Built" once it is verified. Its
+  item is the one each waits for — 5.13 for a walker (it lands on a walker
+  frame), 5.9 for the rest (a `blockedBy` per landing).
 - **Creator.** In the Showcase & Universes Beyond era as "Innistrad:
   Double Feature — Double Feature" / "— Double Feature Land": the spell
   frame for creatures, instants, sorceries, enchantments and artifacts, the
   land frame for lands (`TREATMENT_KINDS`; no token: DBL prints none);
-  offered only in a ticked colour, and the AI's random pool reaches them
-  only there.
+  offered only in a ticked colour (an artifact's needing `c` too), and the
+  AI's random pool reaches them only there. An AI picture on either is
+  asked for in black and white, as every DBL printing's art is
+  (`lib/ai/frame-art-brief.ts`).
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
