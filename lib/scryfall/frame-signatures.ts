@@ -645,6 +645,11 @@ type Match = {
    *  (PrintingFacts.dfc.kind): `saga` for a transforming Saga on the
    *  double-faced saga front (TODO 5.5 (b)). */
   dfcKinds?: readonly NonNullable<DfcImportFacts["kind"]>[];
+  /** NOT a printing that lands on one of these BACK bodies (PrintingFacts.
+   *  dfc.backBody, set only when nothing blocks the landing): a piece of
+   *  the printing the back body draws itself (TODO 4.5d part B: the saga
+   *  creature back's Nyx starfield). */
+  notDfcBackBodies?: readonly FrameTemplate[];
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
@@ -852,6 +857,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.dfcBlocked && (!facts.dfc?.blocked || !match.dfcBlocked.includes(facts.dfc.blocked))) return false;
   if (match.dfcLook && (facts.dfc?.look ?? "bordered") !== match.dfcLook) return false;
   if (match.dfcKinds && (!facts.dfc?.kind || !match.dfcKinds.includes(facts.dfc.kind))) return false;
+  if (match.notDfcBackBodies && facts.dfc?.kind && facts.dfc.backBody && match.notDfcBackBodies.includes(facts.dfc.backBody)) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -1338,8 +1344,12 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // praetors), the battle fronts and the double-faced tokens (5.5). A
   // walker face (5.13), a colourless face without the Artifact word (5.11)
   // and a modal printing before 5.1b have rules of their own. 5.5 built
-  // those bodies; what still holds the gap (frames audit 2026-11-22) is
-  // FIN's transform cards whose back is a Saga creature — 4.5d's part B.
+  // those bodies; what held the gap last (frames audit 2026-11-22) were
+  // FIN's transform cards whose back is a Saga creature — 4.5d's part B,
+  // which lands them on the transform front and the saga creature back
+  // (`transform/2015`, the borderless ones `borderless/dfc`). Its item
+  // stays 4.5d: the `era/2015+dfc` rows logged before part B are FIN's.
+  // The extended-art ones keep the `extendedart+dfc` rule (5.7b).
   dfc: {
     match: {
       anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
@@ -1507,8 +1517,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't have the tall text box of this token frame yet",
     blockedBy: "4.55",
   },
+  // (FIN's Dominants print the `enchantment` effect for their BACK, a saga
+  // creature on the textured saga — its starfield the saga creature back's
+  // own masters (TODO 4.5d part B): no gap where the printing lands there.)
   nyx: {
-    match: { effectsAny: ["enchantment"], notKinds: ["token"] },
+    match: { effectsAny: ["enchantment"], notKinds: ["token"], notDfcBackBodies: ["sagacreaturedfcback"] },
     reason: "PipGlyph doesn't draw the Nyx starfield on this frame yet",
     blockedBy: "4.7",
   },
@@ -3672,7 +3685,7 @@ function gapDrawnOnOwnFrame(rule: Rule, key: GapKey, on: FrameTemplate, border: 
  *  crop is the window, 1.18): a maker's pick only. (The double-faced saga
  *  BACK, TODO 5.5 (b) PR 2, is a back body like the others: a Saga back's
  *  printing resolves to its front.) */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback", "sagadfcback"];
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback", "sagadfcback", "sagacreaturedfcback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);

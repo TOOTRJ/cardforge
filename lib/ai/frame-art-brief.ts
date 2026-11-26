@@ -143,7 +143,7 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
   },
   {
     brief: "A tall storybook scene for one face of a two-faced saga: one strong subject composed for a tall, narrow panel — the other face has a picture of its own.",
-    templates: ["sagadfcfront", "sagadfcback"],
+    templates: ["sagadfcfront", "sagadfcback", "sagacreaturedfcback"],
   },
 ];
 

@@ -48,7 +48,11 @@
 //     say Saga, on the ▼ family and the bordered look) derives the saga
 //     back (`backBodyFor` → `sagadfcback`) where it is published in the
 //     colour the back wears, else its type's body as before; on an update
-//     the stored body wins as for every back.
+//     the stored body wins as for every back;
+//   • a saga CREATURE back (TODO 4.5d, part B: a back whose subtypes say
+//     Saga and whose type words say Creature — FIN's summons) derives the
+//     saga creature back (`sagacreaturedfcback`) the same way, asked first;
+//     short of it, exactly the body it derived before.
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
 // admin's frame preview skips verification.
@@ -326,7 +330,7 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   const keepsStoredBody = storedWins && !typeChanged;
   const derived = backBodyFor(
     layout,
-    { cardType: backType, subtypes: back.subtypes as readonly string[] | string | null | undefined },
+    { cardType: backType, supertype: back.supertype, subtypes: back.subtypes as readonly string[] | string | null | undefined },
     family,
     dfcLookOf(front),
     (template) =>

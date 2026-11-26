@@ -46,6 +46,9 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // 285 × 156, drawn at M15's plate box by m15dfcback and m15dfcbackleft):
   // the body with its lit bevel, none of the soft shadow.
   "/frames/m15dfcback/pt/{color}.png": { left: 0.0736, top: 0.0512, right: 0.993, bottom: 0.8654 },
+  // …and the saga creature back's (TODO 4.5d, part B): those plates toned
+  // onto FIN's, their alpha the same — the same ink.
+  "/frames/sagacreaturedfcback/pt/{color}.png": { left: 0.0736, top: 0.0512, right: 0.993, bottom: 0.8654 },
   "/frames/m15borderless/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   "/frames/m15borderlessartifact/pt/{color}.png": { left: 0.051, top: 0.0071, right: 1, bottom: 0.9286 },
   // The flip creatures' plates (TODO 4.21a, layout v38): CC's two-plate image
