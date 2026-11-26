@@ -10225,15 +10225,32 @@ summon back saved before it keeps the ▼ back, or its legacy back).
   gold master, no dot: TODO 5.19) — once BOTH combos are verified
   (`finalizeImportMatch`), else exactly as on main (the front's standard
   frame, a legacy back: `tests/unit/scryfall/saga-dfc-imports.test.ts`
-  holds all 34 to origin/main's landing). The registry: `transform/2015`
-  (the borderless `borderless/dfc`, nearest on the bordered bodies), nearest
-  for the Universes Beyond dress alone — every FIN printing's, which no
-  double-faced body draws (4.25); the `nyx` gap is not named where the
-  printing lands on this body (`notDfcBackBodies`: its starfield is the
-  body's own masters). The EXTENDED-ART printings keep today's landing (the
-  extended-art frame, a legacy back: no extended-art double-faced body,
-  5.7b). The `dfc` gap no longer names FIN's summons; its item stays 4.5d
-  for the `era/2015+dfc` rows logged before.
+  holds all 34 to origin/main's landing). The registry: a rule of its own,
+  `saga/creature/dfc/2015` (`Match.dfcBackBodies`: a transform printing
+  whose back lands on this body; item 4.5d), ahead of `transform/2015`.
+  While the body is unticked in the back's colour the import names IT —
+  `finalizeImportMatch` answers that signature, "the back face's saga
+  creature frame isn't verified in <colour> yet", `unverified` (the request
+  log's "Not yet verified"), 4.5d — never the Universes Beyond gap the
+  landing would have once both faces land. Once ticked it is exact on the
+  front body, nearest for the Universes Beyond dress (every FIN printing's,
+  which no double-faced body draws: 4.25) and, on the two-colour summons
+  (#229, #245 and their twins), the `two-colour` gap too: the front body
+  draws its pairs but this back wears gold (`Rule.undrawnGaps`, which the
+  answered-row check honours as well). The borderless printings keep
+  `borderless/dfc` (nearest on the bordered bodies, 5.7). The `nyx` gap is
+  not named where the printing lands on this body (`notDfcBackBodies`: its
+  starfield is the body's own masters). The EXTENDED-ART printings keep
+  today's landing (the extended-art frame, a legacy back: no extended-art
+  double-faced body, 5.7b). The `dfc` gap no longer names FIN's summons;
+  its item stays 4.5d for the `era/2015+dfc` rows logged before.
+- **A battle's back** is the ▼ back whatever its type (`bodyFor`, never
+  `backBodyFor`): a battle whose back is a saga creature or an enchantment
+  Saga saves on `m15dfcback`, the body the creator (`battleBackBodyFor`)
+  and the remix derive. A LAND back never wears this body
+  (`sagaCreatureBackBodyFor`: main's `m15dfclandback`). The creator's
+  Legendary entry judges the back on the body the form derives
+  (`legendaryVariationOf`'s `backBody`, `DerivedBackBodyContext`).
 - **Left** (not built here): the two-colour pair dress (FIN #229 R W, #245
   G R — gold bars, each half's paper and field in its colour; the body has
   no pair masters, and `sagacreature` has none to start from), the
