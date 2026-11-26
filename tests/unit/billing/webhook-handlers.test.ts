@@ -2242,45 +2242,54 @@ describe("handleStripeEvent — payment failed and money going back", () => {
   };
 
   it("tells the user ONCE per failed invoice, with the grace end, and sends the email", async () => {
-    const stamp = "2026-11-05T12:00:00.000Z";
-    const { admin, inserts, updates } = makeDunningAdmin({ stamp });
-    await handleStripeEvent(
-      { id: "evt_pf", type: "invoice.payment_failed", data: { object: failedInvoice } } as never,
-      { admin, stripe: makeStripeWithSubs([pastDue]).stripe },
-    );
-    // The sync stamped the failure (kept from the profile) and wrote past_due.
-    expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_status: "past_due", payment_failed_at: stamp });
-    const notice = inserts.find((i) => i.table === "notifications");
-    expect(notice?.row).toMatchObject({
-      recipient_id: "user-1",
-      type: "payment_failed",
-      payload: {
-        invoiceId: "in_fail",
-        amountCents: 1500,
-        currency: "usd",
-        attempt: 1,
-        tier: "pro",
-        interval: "month",
-        nextAttemptAt: new Date(1_790_300_000 * 1000).toISOString(),
-        graceUntil: "2026-11-19T12:00:00.000Z",
-        hostedInvoiceUrl: "https://invoice.stripe.com/i/fail",
-      },
-    });
-    expect(email.send).toHaveBeenCalledTimes(1);
-    const [message, options] = email.send.mock.calls[0] as [{ subject: string; html: string }, { idempotencyKey: string }];
-    expect(message.subject).toBe("Your PipGlyph Pro payment didn't go through");
-    expect(message.html).toContain("November 19, 2026");
-    expect(options.idempotencyKey).toBe("payment-failed:in_fail");
+    // The grace end is told only while it is ahead of "now" (dunningGraceUntil):
+    // the clock is pinned to the day after the failure so the test doesn't
+    // expire with the calendar (it went red on 2026-11-19).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-06T00:00:00.000Z"));
+    try {
+      const stamp = "2026-11-05T12:00:00.000Z";
+      const { admin, inserts, updates } = makeDunningAdmin({ stamp });
+      await handleStripeEvent(
+        { id: "evt_pf", type: "invoice.payment_failed", data: { object: failedInvoice } } as never,
+        { admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+      );
+      // The sync stamped the failure (kept from the profile) and wrote past_due.
+      expect(updates.find((u) => u.table === "profiles")?.values).toMatchObject({ subscription_status: "past_due", payment_failed_at: stamp });
+      const notice = inserts.find((i) => i.table === "notifications");
+      expect(notice?.row).toMatchObject({
+        recipient_id: "user-1",
+        type: "payment_failed",
+        payload: {
+          invoiceId: "in_fail",
+          amountCents: 1500,
+          currency: "usd",
+          attempt: 1,
+          tier: "pro",
+          interval: "month",
+          nextAttemptAt: new Date(1_790_300_000 * 1000).toISOString(),
+          graceUntil: "2026-11-19T12:00:00.000Z",
+          hostedInvoiceUrl: "https://invoice.stripe.com/i/fail",
+        },
+      });
+      expect(email.send).toHaveBeenCalledTimes(1);
+      const [message, options] = email.send.mock.calls[0] as [{ subject: string; html: string }, { idempotencyKey: string }];
+      expect(message.subject).toBe("Your PipGlyph Pro payment didn't go through");
+      expect(message.html).toContain("November 19, 2026");
+      expect(options.idempotencyKey).toBe("payment-failed:in_fail");
 
-    // Stripe's retry re-delivers the same invoice: told already.
-    const again = makeDunningAdmin({ stamp, alreadyNotified: true });
-    email.send.mockClear();
-    await handleStripeEvent(
-      { id: "evt_pf_2", type: "invoice.payment_failed", data: { object: { ...failedInvoice, attempt_count: 2 } } } as never,
-      { admin: again.admin, stripe: makeStripeWithSubs([pastDue]).stripe },
-    );
-    expect(again.inserts.filter((i) => i.table === "notifications")).toEqual([]);
-    expect(email.send).not.toHaveBeenCalled();
+      // Stripe's retry re-delivers the same invoice: told already.
+      const again = makeDunningAdmin({ stamp, alreadyNotified: true });
+      email.send.mockClear();
+      await handleStripeEvent(
+        { id: "evt_pf_2", type: "invoice.payment_failed", data: { object: { ...failedInvoice, attempt_count: 2 } } } as never,
+        { admin: again.admin, stripe: makeStripeWithSubs([pastDue]).stripe },
+      );
+      expect(again.inserts.filter((i) => i.table === "notifications")).toEqual([]);
+      expect(email.send).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("says nothing for a $0 invoice, a non-subscription invoice, or a secondary subscription beside a live plan", async () => {
