@@ -6438,6 +6438,18 @@ export const M15_NYX_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "a", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
+/** The Nyx crown CUT round the ▼ back's right well (TODO 4.5d, part B: the
+ *  saga creature's back — FIN #16, #58, #104, #133, #229, #245 print it):
+ *  `m15nyxdfccrownright/<key>.png`, the m15nyxcrown band through
+ *  m15dfccrownright's cut (scripts/build-saga-creature-back-frames.mjs,
+ *  CROWN_KEYS in scripts/lib/saga-creature-back.mjs). No pairs: the body has
+ *  none. */
+export const M15_NYX_DFC_CROWN_RIGHT: FrameOverlaySlot = {
+  ...M15_CROWN,
+  assetPathTemplate: "/frames/m15nyxdfccrownright/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a"],
+};
+
 /**
  * The Nyx Constellation frame's legendary crown (template `nyx`; owner
  * 2026-10-13): `nyxcrown/<key>.png`. The eleven Theros Beyond Death
@@ -7935,6 +7947,50 @@ const SAGACREATURE: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
+// The saga creature's BACK (TODO 4.5d, part B): Final Fantasy's Dominants
+// transform into summons whose BACK face is a saga creature — FIN #13 Summon:
+// Alexander, #16 Bahamut, Warden of Light, #58 Shiva, Warden of Ice, #104
+// Braska's Final Aeon, #133 Ifrit, Warden of Inferno, #185 Summon: Esper
+// Maduin, #229 Phoenix, Warden of Fire, #245 Esper Terra and their PFIN
+// prerelease twins — every one on today's ▼ (no family effect). No Card
+// Conjurer pack draws it: the masters are PipGlyph's own composite
+// (scripts/build-saga-creature-back-frames.mjs, scripts/lib/saga-creature-
+// back.mjs) — the part A master with m15dfcback's dark title bar and ▼ well
+// over its title row and m15dfcback's type bar moved down 420 px onto its
+// RAISED type row (the saga back's 593 less the 173 the body raises it), the
+// paper (band, chapter column, second box) and both bars toned onto FIN's
+// prints. So the profile is the SAGA CREATURE's — the band, the rail, the
+// art window, the raised type line and symbol, the second box with its one
+// centred line and the plate a float — with the ▼ back's deltas (M15DFCBACK,
+// SAGADFCBACK): no cost; WHITE name and type ink; the name band ending
+// before the well; the colour-indicator dot on every coloured back, moved
+// down with its bar (indicatorDyPct: 420 px under the ▼ back's 1239 — the
+// prints centre it ≈ 1657, FIN #16 / #58 / #185), the type line indented
+// past it; and the P/T on the dark back's plate in white ink (DFC_BACK_PT:
+// the prints' "5/5" on #16, "4/5" on #58). Set on the PROFILES entry only.
+// ---------------------------------------------------------------------------
+
+const SAGACREATUREDFCBACK: FrameProfile = {
+  ...SAGACREATURE,
+  label: "Saga creature (transform back)",
+  dfc: { layout: "transform", role: "back", well: "right" },
+  hideCost: true,
+  title: {
+    ...SAGACREATURE.title,
+    rect: { ...SAGACREATURE.title.rect, widthPct: DFC_RIGHT_WELL_TITLE_RIGHT_PCT - SAGACREATURE.title.rect.leftPct },
+    colorHex: DFC_BACK_INK,
+  },
+  type: { ...SAGACREATURE.type, colorHex: DFC_BACK_INK },
+  // The dark back's plates toned onto FIN's (scripts/lib/saga-creature-
+  // back.mjs PLATE_TONES: the bars are, so the ▼ back's own would sit a
+  // shade off beside them); their alpha — the ink's geometry — is the ▼
+  // back's.
+  pt: { ...DFC_BACK_PT, plateAssetPathTemplate: "/frames/sagacreaturedfcback/pt/{color}.png" },
+  indicator: "coloured",
+  indicatorDyPct: (SAGA_TYPE_ROW_DY_PX - SAGA_CREATURE_RAISE_PX) / 21,
+};
+
+// ---------------------------------------------------------------------------
 // The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
 // §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
 // CC-framed M15 skeleton as the transform bodies — the drop housing with its
@@ -8732,6 +8788,17 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagacreature: {
     ...SAGACREATURE,
     overlays: [{ ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
+  // …and its double-faced BACK (TODO 4.5d, part B): see SAGACREATUREDFCBACK.
+  // The legendary crown — the Nyx crown cut round the ▼ well, as six of the
+  // eight printed backs wear it (M15_NYX_DFC_CROWN_RIGHT; `c` on the silver
+  // `a`) — and the collector line on M15's rows, as every printed back sets
+  // it (FIN #16's "R 0016 FFXVI / FIN • EN"); both opt-in per card. No stamp
+  // (never on a back face), no pairs.
+  sagacreaturedfcback: {
+    ...SAGACREATUREDFCBACK,
+    overlays: [{ ...M15_NYX_DFC_CROWN_RIGHT, keyMap: { c: "a" } }],
     collector: M15_COLLECTOR,
   },
   // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in

@@ -297,9 +297,11 @@ const isTemplate = (value: string | null | undefined): value is FrameTemplate =>
  * logged on the later frame itself is signatureDrawnOn's.
  * The "+dfc" rows can't be read this way: the transform printings logged
  * `era/2015+dfc` on the standard frame before the double-faced bodies, and
- * today's live cause — FIN's transform cards whose back is a Saga creature
- * (4.5d part B) — logs the very same signature and frame, with nothing in
- * the row to tell them apart. They stay open (and leave the windows).
+ * the last live cause — FIN's transform cards whose back is a Saga creature,
+ * which land on the transform front and the saga creature back since 4.5d
+ * part B (`saga/creature/dfc/2015`, its own rows from then on) — logged the
+ * very same signature and frame before it, with nothing in the row to tell
+ * them apart. They stay open (and leave the windows).
  */
 export function signatureAnsweredOnceVerified(
   signature: string,

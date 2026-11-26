@@ -86,8 +86,11 @@ describe("the profile", () => {
     const box = colorIndicatorBox(back.indicatorDyPct);
     const centreY = ((box.topPct + box.heightPct / 2) / 100) * 2100;
     expect(centreY).toBeCloseTo(1239 + 593, 0);
-    // …and no other body moves its dot.
-    for (const t of FRAME_TEMPLATE_VALUES) if (t !== SAGA_BACK_BODY) expect(getFrameProfile(t).indicatorDyPct, t).toBeUndefined();
+    // …and no other body moves its dot (but the saga creature's back, TODO
+    // 4.5d part B, on its own raised type row: saga-creature-back.test.ts).
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      if (t !== SAGA_BACK_BODY && t !== "sagacreaturedfcback") expect(getFrameProfile(t).indicatorDyPct, t).toBeUndefined();
+    }
   });
 });
 

@@ -24,7 +24,7 @@ import {
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { colorlessFaceFits, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
+import { colorlessFaceFits, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, sagaCreatureBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
@@ -209,9 +209,16 @@ export function validateReferenceForCombo(
       // back's type (a land back wears the land back) name the body.
       if (dfcBodyOf(template)?.layout === "transform" && isDeclaredDfcBody(template) && (card.layout ?? "") === "transform") {
         // (A Saga back — TODO 5.5 (b), PR 2 — wears the double-faced saga
-        // back where one exists for its family and look.)
+        // back where one exists for its family and look; a saga CREATURE
+        // back — TODO 4.5d part B, FIN's summons — the saga creature back.)
         const backTypes = parseTypeLine(back?.type_line);
         const wears =
+          sagaCreatureBackBodyFor(
+            "transform",
+            { cardType: backTypes.card_type, supertype: backTypes.supertype, subtypes: backTypes.subtypes_text },
+            dfcIconFamilyFromEffects(card.frame_effects),
+            dfcLookOf(template),
+          ) ??
           sagaBackBodyFor(
             "transform",
             backTypes.card_type,

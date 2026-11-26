@@ -339,6 +339,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // own, but the switch is the CARD's — its back draws it (TLA #117
       // Fire Lord Sozin's legendary back), as the battle's.
       "sagadfcfront",
+      // The saga creature's back (TODO 4.5d, part B): the Nyx crown cut round
+      // the ▼ well, no pairs.
+      "sagacreaturedfcback",
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title
       // bar (SOS #170 Abigale), no pairs.
       "prepare",
@@ -385,7 +388,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
       // way; nor the MUL Tarkir dragon wings, which split the frame itself,
       // twoColorSplit.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && t !== "sagacreaturedfcback" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {

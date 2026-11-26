@@ -224,6 +224,9 @@ describe("bake path = preview path", () => {
                 : template === "m15nyx"
                   ? // The Nyx dress's crown (4.7): the band with the starfield strip.
                     "m15nyxcrown"
+                  : template === "sagacreaturedfcback"
+                    ? // …cut round the ▼ well on the saga creature's back (4.5d part B).
+                      "m15nyxdfccrownright"
                   : template === "nyx"
                     ? // The Nyx Constellation frame's crown: that band, its arms faded.
                       "nyxcrown"

@@ -261,6 +261,9 @@ export function isDeclaredDfcBody(template: FrameTemplate | string | null | unde
   // …and its back (5.5 (b), PR 2): no row either — a Saga back face picks
   // it (sagaBackBodyFor), never a face type alone.
   if (template === SAGA_BACK_BODY) return true;
+  // …and the saga creature's back (TODO 4.5d, part B): no row either — a
+  // Saga back whose type words say Creature picks it (sagaCreatureBackBodyFor).
+  if (template === SAGA_CREATURE_BACK_BODY) return true;
   for (const entry of [...Object.values(DFC_BODIES), ...Object.values(DFC_BORDERLESS_BODIES)]) {
     if (typeof entry === "string" ? entry === template : Object.values(entry).includes(template as FrameTemplate)) return true;
   }
@@ -345,7 +348,8 @@ export function namesSagaSubtype(subtypes: readonly string[] | string | null | u
  * is MOM's or LCI's plain ▲ / ▼) and the bordered look. A Saga back of
  * another family or the borderless look has no saga body: it stays on the
  * body `bodyFor` gives it (today's). A saga CREATURE back (FIN's summons,
- * a P/T plate) is another body — TODO 4.5d.
+ * a P/T plate) is another body — TODO 4.5d, sagaCreatureBackBodyFor, which
+ * backBodyFor asks first.
  */
 export function sagaBackBodyFor(
   layout: DfcLayout,
@@ -359,21 +363,69 @@ export function sagaBackBodyFor(
   return SAGA_BACK_BODY;
 }
 
+/** The saga creature's BACK (TODO 4.5d, part B): the body of a transform
+ *  BACK face that is a Saga whose type words say Creature — FIN's
+ *  Dominants' summons — the saga creature body (`sagacreature`: the band,
+ *  the raised type bar, the second box, the P/T) under the ▼ back's dark
+ *  bars. */
+export const SAGA_CREATURE_BACK_BODY: FrameTemplate = "sagacreaturedfcback";
+
+/** The frame signature of a transform printing whose back lands on it
+ *  (lib/scryfall/frame-signatures.ts, the rule's base key) — what
+ *  finalizeImportMatch names while that back body waits for its tick. */
+export const SAGA_CREATURE_BACK_SIGNATURE = "saga/creature/dfc/2015";
+
+/** True when a face's type words say `word` — its card type or a word of
+ *  its supertype (never `printed_types`), as the creator's typeLineHasWord
+ *  reads them. */
+function faceSaysWord(face: { cardType?: string | null; supertype?: string | null }, word: string): boolean {
+  const wanted = word.toLowerCase();
+  if ((face.cardType ?? "").toLowerCase() === wanted) return true;
+  return (face.supertype ?? "").split(/\s+/).some((part) => part.trim().toLowerCase() === wanted);
+}
+
 /**
- * The BACK body a face derives, the saga back included — the ONE answer the
- * server's gate, the creator, the import and the remix ask: the saga back
- * (sagaBackBodyFor) where `offered` says it may be worn (the caller's
+ * The saga CREATURE back a transform back face wears, or null: a back whose
+ * subtypes say Saga and whose type words say Creature — the card type or a
+ * supertype word (FIN's summons import as the creature card type with
+ * "Enchantment" in front: "Legendary Enchantment Creature — Saga Dragon") —
+ * on today's ▼ (`arrows`: every printed one is FIN's plain ▲ / ▼) and the
+ * bordered look. Short of that (another family, the borderless look) the
+ * back keeps the body it derived before its body existed (backBodyFor).
+ */
+export function sagaCreatureBackBodyFor(
+  layout: DfcLayout,
+  face: { cardType: string | null | undefined; supertype?: string | null; subtypes?: readonly string[] | string | null },
+  family: DfcIconFamily = DEFAULT_DFC_ICON,
+  look: DfcLook = DEFAULT_DFC_LOOK,
+): FrameTemplate | null {
+  if (layout !== "transform" || family !== "arrows" || look !== "bordered") return null;
+  // (A LAND back keeps the land back whatever its other words say — the
+  // body bodyFor keys on the land card type.)
+  if (face.cardType === "emblem" || face.cardType === "land") return null;
+  if (!namesSagaSubtype(face.subtypes) || !faceSaysWord(face, "Creature")) return null;
+  return SAGA_CREATURE_BACK_BODY;
+}
+
+/**
+ * The BACK body a face derives, the saga backs included — the ONE answer the
+ * server's gate, the creator, the import and the remix ask: the saga
+ * creature back (sagaCreatureBackBodyFor) and then the saga back
+ * (sagaBackBodyFor), each where `offered` says it may be worn (the caller's
  * verification: published in the back's colour), else `bodyFor`'s — exactly
  * today's body for every back that is not a Saga, and for a Saga back while
- * its body isn't published.
+ * its body isn't published (an unoffered saga creature back derives what it
+ * did before its body existed).
  */
 export function backBodyFor(
   layout: DfcLayout,
-  face: { cardType: string | null | undefined; subtypes?: readonly string[] | string | null },
+  face: { cardType: string | null | undefined; supertype?: string | null; subtypes?: readonly string[] | string | null },
   family: DfcIconFamily = DEFAULT_DFC_ICON,
   look: DfcLook = DEFAULT_DFC_LOOK,
   offered: (template: FrameTemplate) => boolean = () => true,
 ): FrameTemplate | null {
+  const creature = sagaCreatureBackBodyFor(layout, face, family, look);
+  if (creature && offered(creature)) return creature;
   const saga = sagaBackBodyFor(layout, face.cardType, face.subtypes, family, look);
   if (saga && offered(saga)) return saga;
   return bodyFor(layout, "back", face.cardType, family, look);

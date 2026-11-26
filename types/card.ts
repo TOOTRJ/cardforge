@@ -537,6 +537,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // composite (scripts/build-saga-creature-frames.mjs): no Card Conjurer or
   // MSE source. An addition: no stored card changes.
   "sagacreature",
+  // …and its double-faced BACK (TODO 4.5d, part B): FIN's Dominants' summons
+  // — the saga creature body under the ▼ back's dark bars, PipGlyph's own
+  // composite (scripts/build-saga-creature-back-frames.mjs). A back body,
+  // never a card's own template. An addition: no stored card changes.
+  "sagacreaturedfcback",
   "adventure",
   // The Prepare frame (TODO 4.27, Secrets of Strixhaven 2026): the M15
   // frame with the spell on a PAGE on the right — its own name, cost and
@@ -758,6 +763,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   sagadfcfront: "Saga (transform front)",
   sagadfcback: "Saga (transform back)",
   sagacreature: "Saga creature",
+  sagacreaturedfcback: "Saga creature (transform back)",
   adventure: "Adventure",
   prepare: "Prepare",
   flip: "Flip",
@@ -943,6 +949,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   sagadfcfront: "m15",
   sagadfcback: "m15",
   sagacreature: "m15",
+  sagacreaturedfcback: "m15",
   adventure: "m15",
   prepare: "m15",
   flip: "m15",

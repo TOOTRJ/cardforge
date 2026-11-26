@@ -335,6 +335,7 @@ export function cardFormSchemaFor(
             layout: dfcLayout,
             backType: back.card_type,
             backSubtypes: back.subtypes_text,
+            backSupertype: back.supertype,
             family: dfcFamilyOf(values.frame_style?.dfcIcon),
             look: dfcLook,
             backColorIdentity: back.color_identity,

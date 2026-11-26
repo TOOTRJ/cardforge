@@ -244,6 +244,31 @@ describe("a double-faced card: one switch, both faces", () => {
     });
   });
 
+  it("the back is judged on the body the FORM derives for it (backBody: creatorBackBodyFor) — a Saga back's saga body draws none, a saga creature back's does", () => {
+    expect(frameAnatomyOf("sagadfcback").crown).toBeFalsy();
+    expect(frameAnatomyOf("sagacreaturedfcback").crown).toBe(true);
+    const legendarySagaBack = { backCardType: "enchantment", backSupertype: "Legendary" } as const;
+    // On the saga back (5.5 (b)) the back draws no crown: the word goes to the front.
+    expect(legendaryVariationOf(dfc({ ...legendarySagaBack, backBody: "sagadfcback" }))).toMatchObject({
+      available: true,
+      selected: false,
+      switchShown: false,
+      addsWordTo: "front",
+    });
+    // Where the form derives the ▼ back (the saga back unpublished), it does.
+    expect(legendaryVariationOf(dfc({ ...legendarySagaBack, backBody: "m15dfcback" }))).toMatchObject({ selected: true, switchShown: true });
+    // FIN's summons (4.5d part B): the saga creature back wears the crown.
+    expect(
+      legendaryVariationOf(dfc({ backCardType: "creature", backSupertype: "Legendary Enchantment", backBody: "sagacreaturedfcback" })),
+    ).toMatchObject({ available: true, selected: true, switchShown: true, addsWordTo: null });
+    // A battle's back is the ▼ back whatever body is passed.
+    expect(
+      legendaryVariationOf(
+        input({ template: "battle", cardType: "battle", supertype: "", cost: "{2}{W}", backCardType: "creature", backSupertype: "Legendary", hasBackFace: true, backBody: "sagadfcback" }),
+      ),
+    ).toMatchObject({ available: true, selected: true });
+  });
+
   it("the modal land front draws no crown and the save drops its switch: not offered, whatever the back is", () => {
     const state = legendaryVariationOf(
       input({ template: "m15mdfclandfront", cardType: "land", backCardType: "creature", backSupertype: "Legendary" }),

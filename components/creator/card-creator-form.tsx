@@ -115,7 +115,7 @@ import {
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { useTypesFieldSync } from "@/components/creator/types-field";
 import { BorrowedWordSeedsProvider, useBorrowedWordSeedsOwner } from "@/components/creator/borrowed-words";
-import { BackIsOwnFaceContext } from "@/components/creator/panels/legendary-variation";
+import { BackIsOwnFaceContext, DerivedBackBodyContext } from "@/components/creator/panels/legendary-variation";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
@@ -1423,12 +1423,14 @@ export function CardCreatorForm({
           verifiedKeys: battleVerifiedKeys,
         })
       : // (A Saga back — TODO 5.5 (b), PR 2 — on the saga back where it is
-        // published in the back's colour: lib/creator/saga-back.ts.)
+        // published in the back's colour, a saga CREATURE back — TODO 4.5d
+        // part B — on the saga creature back: lib/creator/saga-back.ts.)
         creatorBackBodyFor({
           mode,
           layout: dfcLayout,
           backType: watched.back_face.card_type,
           backSubtypes: watched.back_face.subtypes_text,
+          backSupertype: watched.back_face.supertype,
           family: dfcFamily,
           look: dfcLookOf(watched.frame_style?.template),
           backColorIdentity: watched.back_face.color_identity,
@@ -4239,6 +4241,7 @@ export function CardCreatorForm({
             layout: submitDfcLayout,
             backType: values.back_face.card_type,
             backSubtypes: values.back_face.subtypes_text,
+            backSupertype: values.back_face.supertype,
             family: dfcIconOf({ frameStyle: values.frame_style }),
             look: dfcLookOf(submitTemplate),
             backColorIdentity: values.back_face.color_identity,
@@ -6223,6 +6226,7 @@ export function CardCreatorForm({
         <GuestGateProvider value={guestGate}>
         <BorrowedWordSeedsProvider value={borrowedSeeds}>
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
+        <DerivedBackBodyContext.Provider value={dfcBackBody}>
         <form
           noValidate
           onSubmit={onFormSubmit}
@@ -6275,6 +6279,7 @@ export function CardCreatorForm({
             {actionBar}
           </SurfaceCard>
         </form>
+        </DerivedBackBodyContext.Provider>
         </BackIsOwnFaceContext.Provider>
         </BorrowedWordSeedsProvider>
         </GuestGateProvider>
@@ -6291,6 +6296,7 @@ export function CardCreatorForm({
       <GuestGateProvider value={guestGate}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
+      <DerivedBackBodyContext.Provider value={dfcBackBody}>
       <form
         noValidate
         onSubmit={onFormSubmit}
@@ -6426,6 +6432,7 @@ export function CardCreatorForm({
         </aside>
         )}
       </form>
+      </DerivedBackBodyContext.Provider>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
       </GuestGateProvider>

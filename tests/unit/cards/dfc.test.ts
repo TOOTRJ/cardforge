@@ -41,8 +41,9 @@ describe("the vocabulary", () => {
 });
 
 const TRANSFORM_FRONTS = ["m15dfcfront", "m15dfclandfront", "m15borderlessdfcfront"] as const;
-// (…and the double-faced saga back, TODO 5.5 (b) PR 2: a Saga back face.)
-const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15borderlessdfcback", "sagadfcback"] as const;
+// (…and the double-faced saga back, TODO 5.5 (b) PR 2: a Saga back face;
+// and the saga creature back, TODO 4.5d part B: a saga CREATURE back face.)
+const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15borderlessdfcback", "sagadfcback", "sagacreaturedfcback"] as const;
 // The modal bodies (TODO 5.1b).
 const MODAL_FRONTS = ["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"] as const;
 const MODAL_BACKS = ["m15mdfcback", "m15mdfclandback", "m15borderlessmdfcback"] as const;

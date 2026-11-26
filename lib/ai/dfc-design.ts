@@ -262,13 +262,13 @@ export type DfcDesignFrame = {
 const NO_DESIGN_FRAME: DfcDesignFrame = { verifiedKeys: new Set(), picked: null };
 
 /** The back body the creator derives for the card (creatorBackBodyFor: its
- *  type, subtypes, family, the front's look and the colour) — ONE answer
- *  for the fit and the lint. Null for a token pair (its own derivation) or
- *  when no body exists. */
+ *  type, supertype, subtypes, family, the front's look and the colour) —
+ *  ONE answer for the fit and the lint. Null for a token pair (its own
+ *  derivation) or when no body exists. */
 function dfcDerivedBackBody(
   kind: AiDfcKind,
   front: FrameTemplate,
-  back: Pick<BackFaceDesign, "card_type" | "subtypes" | "color_identity">,
+  back: Pick<BackFaceDesign, "card_type" | "supertype" | "subtypes" | "color_identity">,
   frontColour: readonly ColorIdentity[],
   verifiedKeys: ReadonlySet<string>,
   family: DfcIconFamily,
@@ -280,6 +280,7 @@ function dfcDerivedBackBody(
     layout,
     backType: back.card_type,
     backSubtypes: back.subtypes,
+    backSupertype: back.supertype,
     family,
     look: dfcLookOf(front),
     backColorIdentity: back.color_identity,

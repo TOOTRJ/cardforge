@@ -37,8 +37,10 @@ import {
 } from "@/lib/creator/card-kinds";
 import {
   DEFAULT_DFC_ICON,
+  SAGA_CREATURE_BACK_BODY,
   bodyFor,
   sagaBackBodyFor,
+  sagaCreatureBackBodyFor,
   colorlessFaceAllowed,
   colorlessFaceFits,
   dfcBodyOf,
@@ -675,9 +677,10 @@ export function undrawableSymbolsNotice(
  *   • "walker-face" — either face is a planeswalker (5.13; the back is
  *     dropped, droppedFaceOf);
  *   • "face-type" — a face is not one of wave 1's six face types, or is a
- *     Saga with no body yet (the saga fronts land on theirs and MOM's / LCI's
- *     Saga backs on the double-faced saga back, 5.5 (b); FIN's saga CREATURE
- *     backs are 4.5d's; a battle front stays a battle, 4.21b / 5.5);
+ *     Saga with no body yet (the saga fronts land on theirs, MOM's / LCI's
+ *     Saga backs on the double-faced saga back, 5.5 (b), and FIN's saga
+ *     CREATURE backs on the saga creature back, 4.5d part B; a battle front
+ *     stays a battle, 4.21b / 5.5);
  *   • "no-body" — the layout has no body for a face (none since 5.1b's
  *     modal pair; a later layout's rows turn a printing onto them by
  *     themselves once `bodyFor` answers);
@@ -807,15 +810,28 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   }
   // A Saga BACK (TODO 5.5 (b), PR 2: MOM's five praetors and their promos,
   // LCI #189 / #296 — an enchantment back on today's ▼) wears the
-  // double-faced saga back; a saga CREATURE back (FIN's summons, 4.5d) or a
-  // Saga back of another family has no body: today's landing.
-  const sagaBack = back.saga ? sagaBackBodyFor(layout, back.cardType, ["Saga"], family, "bordered") : null;
+  // double-faced saga back, and a saga CREATURE back (TODO 4.5d, part B:
+  // FIN's Dominants' summons — "Legendary Enchantment Creature — Saga
+  // Dragon", the creature card type with Enchantment in front) the saga
+  // creature back; a Saga back of another family has no body: today's
+  // landing.
+  const sagaBack = back.saga
+    ? (sagaCreatureBackBodyFor(layout, { cardType: back.cardType, supertype: back.supertype, subtypes: ["Saga"] }, family, "bordered") ??
+      sagaBackBodyFor(layout, back.cardType, ["Saga"], family, "bordered"))
+    : null;
   if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || (back.saga && !sagaBack)) {
+    return blocked("face-type");
+  }
+  // An EXTENDED-ART summon (FIN #428, #438, #448, #458, #494, #511) keeps
+  // the landing it had before the saga creature back existed — the
+  // extended-art frame, a legacy back — rather than lose its dress on the
+  // bordered bodies: no extended-art double-faced body exists (5.7b).
+  if (sagaBack === SAGA_CREATURE_BACK_BODY && (card.frame_effects ?? []).some((effect) => effect.toLowerCase() === "extendedart")) {
     return blocked("face-type");
   }
   // The borderless bodies (TODO 5.7) where the printing wears that look and
   // both faces have one; else the bordered bodies, as before. (The saga
-  // back has no borderless body: such a printing lands on the bordered
+  // backs have no borderless body: such a printing lands on the bordered
   // ones, as a borderless land face does.)
   const borderlessFront = printedLook === "borderless" && !sagaBack ? bodyFor(layout, "front", front.cardType, family, "borderless") : null;
   const borderlessBack = printedLook === "borderless" && !sagaBack ? bodyFor(layout, "back", back.cardType, family, "borderless") : null;

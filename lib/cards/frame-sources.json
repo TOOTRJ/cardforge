@@ -11652,6 +11652,74 @@
       "keys: w u b r g, m (gold), a (the colourless key's silver: m15nyx maps c → a) and the ten pairs — the first colour's crown and strip on the left, the second's on the right, through m15crown's untilted crown ramp 45→55 %W; never l or c (no Nyx land or see-through master)"
     ]
   },
+  "m15nyxdfccrownright": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-saga-creature-back-frames.mjs",
+    "derivedFrom": "the published m15nyxcrown/<k> bands (the Nyx dress's crown, TODO 4.7: see \"m15nyxcrown\") cut round the ▼ back's RIGHT well exactly as m15dfccrownright cuts m15crown (scripts/lib/cc-frames.mjs cutCrownBand, DFC_CROWN_WELLS.right) through the alpha of Card Conjurer's '(Back)' crown twins (img/frames/m15/transform/crowns/regular/new/<k>.png, never published)",
+    "output": "1500x410, webp q90",
+    "recipe": {
+      "w": "the well's circle (1355.5, 160.5) r 61.0 (fit 0.50 px), its hole ending at row 220",
+      "u": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220",
+      "b": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220",
+      "r": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220",
+      "g": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220",
+      "m": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220",
+      "a": "the well's circle (1355.5, 160.5) r 60.8 (fit 0.48 px), its hole ending at row 220"
+    },
+    "colors": {
+      "w": [
+        "m15nyxcrown/w.png@0be33ca7f865",
+        "cc:img/frames/m15/transform/crowns/regular/new/w.png@27d87d70051f (alpha in the well region)"
+      ],
+      "u": [
+        "m15nyxcrown/u.png@f00f804b24c8",
+        "cc:img/frames/m15/transform/crowns/regular/new/u.png@adafa48589ed (alpha in the well region)"
+      ],
+      "b": [
+        "m15nyxcrown/b.png@5631e5a294d2",
+        "cc:img/frames/m15/transform/crowns/regular/new/b.png@a8d323769fe4 (alpha in the well region)"
+      ],
+      "r": [
+        "m15nyxcrown/r.png@7d7840dac8b3",
+        "cc:img/frames/m15/transform/crowns/regular/new/r.png@7fcdbb43e244 (alpha in the well region)"
+      ],
+      "g": [
+        "m15nyxcrown/g.png@a621e0a7b476",
+        "cc:img/frames/m15/transform/crowns/regular/new/g.png@f2cde6c89054 (alpha in the well region)"
+      ],
+      "m": [
+        "m15nyxcrown/m.png@bd1d4d299ecf",
+        "cc:img/frames/m15/transform/crowns/regular/new/m.png@04f2956e9d60 (alpha in the well region)"
+      ],
+      "a": [
+        "m15nyxcrown/a.png@381f370a7d28",
+        "cc:img/frames/m15/transform/crowns/regular/new/a.png@8b9a5bd95d8f (alpha in the well region)"
+      ]
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/transform/crowns/regular/new/a.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/b.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/g.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/m.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/r.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/u.png",
+      "cc:img/frames/m15/transform/crowns/regular/new/w.png",
+      "m15nyxcrown/a.png",
+      "m15nyxcrown/b.png",
+      "m15nyxcrown/g.png",
+      "m15nyxcrown/m.png",
+      "m15nyxcrown/r.png",
+      "m15nyxcrown/u.png",
+      "m15nyxcrown/w.png"
+    ],
+    "notes": [
+      "TODO 4.5d part B: the crown of the saga creature's back (sagacreaturedfcback) — FIN #16, #58, #104, #133, #229, #245 print the Nyx crown wrapped round the ▼ well",
+      "outside the well region (x 1264–1419 × y 93–225) the piece is the m15nyxcrown band byte for byte; the starfield strip (16.37–83.68 %W) ends left of it",
+      "keys: w u b r g m and a (c → a); no pairs (the body has no pair masters)"
+    ]
+  },
   "m15pw": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -18649,6 +18717,193 @@
       "TODO 4.5d: the saga creature — FIN / FIC / PFIN's \"Summon:\" cards (2025); no Card Conjurer or MSE pack draws it",
       "c = the textured saga pack's artifact silver over m15nyx/c (FIN #1 Summon: Bahamut's frame); the prints' see-through rail and box are not drawn"
     ]
+  },
+  "sagacreaturedfcback": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-saga-creature-back-frames.mjs",
+    "derivedFrom": "the published sagacreature/<k> masters (TODO 4.5d part A, PipGlyph's own: see \"sagacreature\") with the published m15dfcback/<k> masters' title bar + ▼ well and type bar (Card Conjurer imports: see \"m15dfcback\") laid over them through Card Conjurer's masks; the paper (the band, the chapter column, the second box) and both bars toned onto FIN's printed summon backs (scripts/lib/saga-creature-back.mjs SAGA_CREATURE_BACK_TONES)",
+    "output": "1500x2100, the masters' corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "masks": {
+        "title": "cc:img/frames/m15/transform/regular/new/maskTitle.png@a2bebb355f9e",
+        "type": "cc:img/frames/m15/regular/m15MaskType.png@40600c4681c7",
+        "sagaType": "cc:img/frames/saga/sagaMaskType.png@3e55a05502c1",
+        "sagaText": "cc:img/frames/saga/sagaMaskText.png@2bf40fcbd802",
+        "sagaBanner": "cc:img/frames/saga/sagaMaskBanner.png@d120739e6f94",
+        "rules": "cc:img/frames/m15/regular/m15MaskRules.png@bdb5f8788628"
+      },
+      "typeDy": "420 px (the saga's 593 less the 173 the body raises its bar; the moved M15 type mask's best fit to the saga pack's own raised 173 px: L1 175293, its anti-aliased edges)",
+      "titleToneFade": "x 1240 → 1262 px (the ▼ well untoned)",
+      "paper": "the saga pack's text mask less its ribbon, cut and squeezed as the part A master (165 + 8 rows, the fold), the band over the window's columns whole, and M15's rules mask from row 1723 down (its top rim copied up under the raised bar)",
+      "tones": {
+        "w": {
+          "title": "× 1.080 / 1.072 / 0.965 (162, 153, 142 → 175, 164, 137), fading to × 1.067 on every channel at white",
+          "type": "× 1.073 / 1.071 / 0.959 (165, 155, 146 → 177, 166, 140), fading to × 1.064 on every channel at white",
+          "paper": "× 0.810 / 0.773 / 0.706 (252, 251, 248 → 204, 194, 175), fading to × 0.776 on every channel at white"
+        },
+        "u": {
+          "title": "× 1.033 / 1.282 / 1.360 (61, 103, 139 → 63, 132, 189), fading to × 1.256 on every channel at white",
+          "type": "× 0.879 / 1.224 / 1.306 (66, 107, 144 → 58, 131, 188), fading to × 1.185 on every channel at white",
+          "paper": "× 0.590 / 0.725 / 0.861 (239, 247, 252 → 141, 179, 217), fading to × 0.707 on every channel at white"
+        },
+        "b": {
+          "title": "× 0.733 / 0.707 / 0.650 (86, 82, 80 → 63, 58, 52), fading to × 0.709 on every channel at white",
+          "type": "× 0.721 / 0.691 / 0.646 (86, 81, 79 → 62, 56, 51), fading to × 0.695 on every channel at white",
+          "paper": "× 0.826 / 0.807 / 0.789 (236, 238, 237 → 195, 192, 187), fading to × 0.810 on every channel at white"
+        },
+        "r": {
+          "title": "× 1.315 / 1.529 / 2.375 (178, 70, 32 → 234, 107, 76), fading to × 1.460 on every channel at white",
+          "type": "× 1.309 / 1.507 / 2.281 (178, 69, 32 → 233, 104, 73), fading to × 1.443 on every channel at white",
+          "paper": "× 0.933 / 0.694 / 0.598 (252, 242, 239 → 235, 168, 143), fading to × 0.740 on every channel at white"
+        },
+        "g": {
+          "title": "× 1.308 / 1.646 / 1.579 (52, 79, 57 → 68, 130, 90), fading to × 1.590 on every channel at white",
+          "type": "× 1.255 / 1.608 / 1.579 (51, 79, 57 → 64, 127, 90), fading to × 1.552 on every channel at white",
+          "paper": "× 0.599 / 0.711 / 0.634 (242, 246, 243 → 145, 175, 154), fading to × 0.682 on every channel at white"
+        },
+        "m": {
+          "title": "× 1.230 / 1.295 / 1.475 (161, 132, 59 → 198, 171, 87), fading to × 1.284 on every channel at white",
+          "type": "× 1.077 / 1.178 / 1.491 (182, 146, 57 → 196, 172, 85), fading to × 1.160 on every channel at white",
+          "paper": "× 0.896 / 0.875 / 0.795 (251, 248, 239 → 225, 217, 190), fading to × 0.874 on every channel at white"
+        }
+      },
+      "plates": {
+        "placement": "282×154 at (1136, 1858) px (M15.pt.plateRect), lanczos3 — where the profile draws the plate",
+        "read": "x 1185–1200 × y 1900–1975, x 1385–1395 × y 1900–1975",
+        "tones": {
+          "w": "× 0.977 / 0.994 / 0.890 (175, 162, 154 → 171, 161, 137), fading to × 0.983 on every channel at white",
+          "u": "× 1.073 / 1.215 / 1.227 (55, 107, 154 → 59, 130, 189), fading to × 1.200 on every channel at white",
+          "b": "× 0.774 / 0.776 / 0.723 (93, 85, 83 → 72, 66, 60), fading to × 0.772 on every channel at white",
+          "r": "× 1.480 / 1.764 / 2.704 (152, 55, 27 → 225, 97, 73), fading to × 1.664 on every channel at white",
+          "g": "× 1.375 / 1.535 / 1.824 (48, 86, 51 → 66, 132, 93), fading to × 1.527 on every channel at white",
+          "m": "× 1.248 / 1.274 / 1.426 (145, 124, 61 → 181, 158, 87), fading to × 1.273 on every channel at white"
+        }
+      }
+    },
+    "colors": {
+      "w": [
+        "sagacreature/w.png@a38001cabfc0",
+        "m15dfcback/w.png@fae725a6ad69 (title bar, ▼ well, type bar)"
+      ],
+      "u": [
+        "sagacreature/u.png@896c3b8c7592",
+        "m15dfcback/u.png@988e035dcf02 (title bar, ▼ well, type bar)"
+      ],
+      "b": [
+        "sagacreature/b.png@3c7c0b402167",
+        "m15dfcback/b.png@cd529342ee3e (title bar, ▼ well, type bar)"
+      ],
+      "r": [
+        "sagacreature/r.png@40c065b1d3ab",
+        "m15dfcback/r.png@fe5a929fd235 (title bar, ▼ well, type bar)"
+      ],
+      "g": [
+        "sagacreature/g.png@eaefaa4a4fc7",
+        "m15dfcback/g.png@3cddb652b6e8 (title bar, ▼ well, type bar)"
+      ],
+      "m": [
+        "sagacreature/m.png@63bb638aa1f7",
+        "m15dfcback/m.png@6e2dbe62fe42 (title bar, ▼ well, type bar)"
+      ],
+      "c": [
+        "sagacreature/c.png@2aeddac83a88",
+        "m15dfcback/c.png@18945d44dd2e (title bar, ▼ well, type bar)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "162,153,142 → 175,164,137 (print 175,164,137)",
+        "type (toned)": "165,155,146 → 177,166,140 (print 177,166,140)",
+        "paper (toned)": "252,251,248 → 203,194,176 (print 204,194,175)"
+      },
+      "u": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "61,103,139 → 63,132,189 (print 63,132,189)",
+        "type (toned)": "66,107,144 → 58,131,188 (print 58,131,188)",
+        "paper (toned)": "239,247,252 → 141,179,216 (print 141,179,217)"
+      },
+      "b": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "86,82,80 → 63,58,52 (print 63,58,52)",
+        "type (toned)": "86,81,79 → 62,56,51 (print 62,56,51)",
+        "paper (toned)": "236,238,237 → 195,192,187 (print 195,192,187)"
+      },
+      "r": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "178,70,32 → 234,107,76 (print 234,107,76)",
+        "type (toned)": "178,69,32 → 233,104,73 (print 233,104,73)",
+        "paper (toned)": "252,242,239 → 233,168,144 (print 235,168,143)"
+      },
+      "g": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "52,79,57 → 68,130,90 (print 68,130,90)",
+        "type (toned)": "51,79,57 → 64,127,90 (print 64,127,90)",
+        "paper (toned)": "242,246,243 → 146,174,154 (print 145,175,154)"
+      },
+      "m": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "161,132,59 → 198,171,87 (print 198,171,87)",
+        "type (toned)": "182,146,57 → 196,172,85 (print 196,172,85)",
+        "paper (toned)": "251,248,239 → 224,217,191 (print 225,217,190)"
+      },
+      "c": {
+        "title": 158986,
+        "type": 162634
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/regular/m15MaskRules.png",
+      "cc:img/frames/m15/regular/m15MaskType.png",
+      "cc:img/frames/m15/transform/regular/new/maskTitle.png",
+      "cc:img/frames/saga/sagaMaskBanner.png",
+      "cc:img/frames/saga/sagaMaskText.png",
+      "cc:img/frames/saga/sagaMaskType.png",
+      "m15dfcback/b.png",
+      "m15dfcback/c.png",
+      "m15dfcback/g.png",
+      "m15dfcback/m.png",
+      "m15dfcback/pt/b.png",
+      "m15dfcback/pt/c.png",
+      "m15dfcback/pt/g.png",
+      "m15dfcback/pt/m.png",
+      "m15dfcback/pt/r.png",
+      "m15dfcback/pt/u.png",
+      "m15dfcback/pt/w.png",
+      "m15dfcback/r.png",
+      "m15dfcback/u.png",
+      "m15dfcback/w.png",
+      "sagacreature/b.png",
+      "sagacreature/c.png",
+      "sagacreature/g.png",
+      "sagacreature/m.png",
+      "sagacreature/r.png",
+      "sagacreature/u.png",
+      "sagacreature/w.png"
+    ],
+    "notes": [
+      "TODO 4.5d part B: the BACK of FIN's Dominants — saga CREATURE backs (FIN #13, #16, #58, #104, #133, #185, #229, #245 and PFIN's prerelease twins): the part A body under the ▼ back's dark bars; no Card Conjurer or MSE pack draws it",
+      "toned onto print before the first tick (as the saga back, owner 2026-10-17): the paper to the printed backs' greyed box, the title and type bars per key; `from` is re-read on every run and must match the table within 2 levels a channel",
+      "m: FIN's gold bars (#229, #245 — two-colour backs, whose pair dress is a follow-up); its paper to LCI #189's printed gold saga back (no gold summon back was printed)",
+      "c = the part A master's artifact silver under m15dfcback/c's bronze bars, untoned (no colourless summon is double-faced)"
+    ],
+    "plates": {
+      "w": "m15dfcback/pt/w.png@eb3b5cd2819c toned 175,162,154 → 171,161,137 (print 171,161,137)",
+      "u": "m15dfcback/pt/u.png@b195a9a94201 toned 55,107,154 → 59,130,189 (print 59,130,189)",
+      "b": "m15dfcback/pt/b.png@1c41f454e2b4 toned 93,85,83 → 72,66,60 (print 72,66,60)",
+      "r": "m15dfcback/pt/r.png@a4483f6420f6 toned 152,55,27 → 225,96,74 (print 225,97,73)",
+      "g": "m15dfcback/pt/g.png@be5ede22c67c toned 48,86,51 → 65,132,93 (print 66,132,93)",
+      "m": "m15dfcback/pt/m.png@8d5223f0e4bc toned 145,124,61 → 181,158,87 (print 181,158,87)",
+      "c": "m15dfcback/pt/c.png@f7b8ebcc1537 as published"
+    }
   },
   "sagadfcback": {
     "source": "pipglyph",

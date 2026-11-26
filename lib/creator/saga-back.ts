@@ -5,7 +5,9 @@
 // subtypes say Saga (MOM's praetors, LCI #189 Huatli) — draws its back on
 // the double-faced saga back (`sagadfcback`: the saga's chapter rail under
 // the ▼ back's dark bars) once that body is published in the colour the
-// back wears; short of that, on the body its type derives, as before.
+// back wears; short of that, on the body its type derives, as before. A
+// Saga back whose type words say Creature (FIN's summons, TODO 4.5d part B)
+// draws on the saga creature back (`sagacreaturedfcback`) the same way.
 // The server's gate decides the same way (lib/cards/dfc-gate.ts
 // resolveDfcBackFace, `backBodyFor`), so the body the form derives — for the
 // live preview and the save's payload — is the body the server stores.
@@ -19,9 +21,11 @@
 
 import {
   SAGA_BACK_BODY,
+  SAGA_CREATURE_BACK_BODY,
   backBodyFor,
   isDfcBackBody,
   sagaBackBodyFor,
+  sagaCreatureBackBodyFor,
   type DfcIconFamily,
   type DfcLayout,
   type DfcLook,
@@ -36,6 +40,9 @@ export function creatorBackBodyFor(input: {
   backType: string | null | undefined;
   /** The back's subtypes — the form's text or a stored list. */
   backSubtypes: readonly string[] | string | null | undefined;
+  /** The back's supertype words ("Legendary Enchantment"): a Creature word
+   *  there makes a Saga back a saga creature (TODO 4.5d, part B). */
+  backSupertype?: string | null;
   family: DfcIconFamily;
   look: DfcLook;
   backColorIdentity: readonly ColorIdentity[] | null | undefined;
@@ -45,13 +52,15 @@ export function creatorBackBodyFor(input: {
   storedBackTemplate?: string | null;
   storedFamily?: DfcIconFamily | null;
 }): FrameTemplate | null {
-  const saga = sagaBackBodyFor(input.layout, input.backType || null, input.backSubtypes, input.family, input.look);
+  const face = { cardType: input.backType || null, supertype: input.backSupertype ?? null, subtypes: input.backSubtypes };
+  const saga = sagaBackBodyFor(input.layout, face.cardType, input.backSubtypes, input.family, input.look);
+  const sagaCreature = sagaCreatureBackBodyFor(input.layout, face, input.family, input.look);
   const stored = input.storedBackTemplate;
   if (
     input.mode === "edit" &&
     stored &&
     isDfcBackBody(stored) &&
-    (stored === SAGA_BACK_BODY || saga !== null) &&
+    (stored === SAGA_BACK_BODY || stored === SAGA_CREATURE_BACK_BODY || saga !== null || sagaCreature !== null) &&
     (input.storedFamily ?? null) === input.family
   ) {
     return stored as FrameTemplate;
@@ -60,7 +69,7 @@ export function creatorBackBodyFor(input: {
     input.backColorIdentity && input.backColorIdentity.length > 0 ? input.backColorIdentity : input.frontColorIdentity;
   return backBodyFor(
     input.layout,
-    { cardType: input.backType || null, subtypes: input.backSubtypes },
+    face,
     input.family,
     input.look,
     (template) => isFrameComboAvailable(template, pickFrameColorKey(colour ? [...colour] : undefined), input.verifiedKeys),

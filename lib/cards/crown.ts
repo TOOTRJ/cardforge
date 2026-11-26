@@ -283,6 +283,16 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     gw: ref("Polukranos, Engine of Ruin", "mom", "200", "47f7d313-8333-41fe-8bfa-c96774dac228"),
     ub: ref("Rona, Tolarian Obliterator", "mom", "75", "f487b582-e73f-4325-939f-95fc5a9aba49"),
   },
+  // The saga creature's back (TODO 4.5d, part B): FIN's legendary summon
+  // backs wear the Nyx crown cut round the ▼ well — w, u, b and r (no green,
+  // gold or colourless legendary one: FIN #185's back is not legendary, #229
+  // and #245 are two-colour).
+  sagacreaturedfcback: {
+    w: ref("Bahamut, Warden of Light", "fin", "16", "8c0f9306-2058-476d-a711-bd37a6e15e42"),
+    u: ref("Shiva, Warden of Ice", "fin", "58", "1f163763-4802-4a96-a5bc-f3c381db7b5c"),
+    b: ref("Braska's Final Aeon", "fin", "104", "4ec91fe8-b3da-47fa-b45e-94b62a260aba"),
+    r: ref("Ifrit, Warden of Inferno", "fin", "133", "9a069e96-2786-493d-aca8-f70611435dbe"),
+  },
   m15dfclandfront: {
     c: ref("Havengul Laboratory", "slx", "9", "823b019e-10c0-4712-8167-d4f37a71e782"),
   },

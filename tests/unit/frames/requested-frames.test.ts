@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FRAME_SIGNATURE_KEYS, FRAME_SIGNATURE_RULES, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { FRAME_SIGNATURE_KEYS, FRAME_SIGNATURE_RULES, dfcBackBodiesOfRule, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
 import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import anatomyPrintings from "../scryfall/fixtures/anatomy-printings.json";
@@ -203,6 +203,36 @@ describe("requestedFrameStatus — the registry and the verified combos, never a
       const exact = outcome.status === "exact" || (outcome.onceVerified !== undefined && outcome.exactOnceVerified === true);
       expect(exactFramesOfSignature(rule.key).length > 0, rule.key).toBe(exact);
     }
+  });
+
+  it("counts a rule's BACK body: FIN's summons read Built only once the saga creature back is verified in every printed colour (4.5d part B)", () => {
+    // The rule's outcome names the transform FRONT body (the dfc family);
+    // its printings land on the saga creature back too, and are exact only
+    // once both faces are verified (finalizeImportMatch).
+    const signature = "saga/creature/dfc/2015";
+    const body: FrameTemplate = "sagacreaturedfcback";
+    const frames = exactFramesOfSignature(signature);
+    expect(frames).toContain(body);
+    expect(frames).toContain("m15dfcfront");
+    const printed = FRAME_COLOR_KEYS.filter((colour) => frameReferenceOptions(body, colour).length > 0);
+    expect(printed).toEqual(["w", "u", "b", "r", "g"]);
+    const bodyKeys = FRAME_COLOR_KEYS.map((colour) => frameComboKey(body, colour));
+    // Every other frame verified, the back body in no colour: Being checked, never Built.
+    expect(requestedFrameStatus(signature, verifiedExcept(...bodyKeys))).toBe("checking");
+    // Partly ticked (white only, then every printed colour but green): still Being checked.
+    expect(requestedFrameStatus(signature, verifiedExcept(...bodyKeys.filter((key) => key !== frameComboKey(body, "w"))))).toBe("checking");
+    expect(requestedFrameStatus(signature, verifiedExcept(frameComboKey(body, "g")))).toBe("checking");
+    // Every printed colour ticked (gold and colourless have no printing): Built.
+    expect(requestedFrameStatus(signature, verifiedExcept(frameComboKey(body, "m"), frameComboKey(body, "c")))).toBe("built");
+    expect(requestedFrameStatus(signature, ALL_VERIFIED)).toBe("built");
+    // A front body short of a printed colour holds it back as well.
+    expect(requestedFrameStatus(signature, verifiedExcept(frameComboKey("m15dfcfront", "w")))).toBe("checking");
+    // Rule for rule: every base rule's back bodies are among its exact frames.
+    for (const rule of FRAME_SIGNATURE_RULES) {
+      if (splitSignature(rule.key).gap !== null || exactFramesOfSignature(rule.key).length === 0) continue;
+      for (const back of dfcBackBodiesOfRule(rule)) expect(exactFramesOfSignature(rule.key), rule.key).toContain(back);
+    }
+    expect(dfcBackBodiesOfRule(FRAME_SIGNATURE_RULES.find((rule) => rule.key === signature)!)).toEqual([body]);
   });
 
   it("covers every public signature without throwing", () => {

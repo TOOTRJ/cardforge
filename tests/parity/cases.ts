@@ -292,6 +292,9 @@ const PICKS: readonly Pick[] = [
   { from: "sagadfcfront/r/saga-short@fan-wide-pt", why: "double-faced saga front (5.5 (b)): a two-digit reverse P/T left-aligned at the tab" },
   { from: "sagadfcback/u/transform-short", why: "double-faced saga back (5.5 (b) PR 2): the saga rail from plain text under the ▼ back's white name and type line, the colour dot on the saga's type row" },
   { from: "sagadfcback/wub/transform-long", why: "double-faced saga back (5.5 (b) PR 2): four chapters, a long name before the well, the dot in three wedges" },
+  { from: "sagacreaturedfcback/w/transform-short", why: "saga creature back (4.5d part B): the band and the rail from plain text under the ▼ back's white name, the dot on the raised type bar, ONE centred line in the second box, the P/T on the toned dark plate" },
+  { from: "sagacreaturedfcback/r/transform-short@crown", why: "saga creature back (4.5d part B): the Nyx crown cut round the ▼ well" },
+  { from: "sagacreaturedfcback/g/transform-long", why: "saga creature back (4.5d part B): four chapters (a three-badge stack), two abilities and a flavour in the second box beside the plate (an 8/8: no kerned pair)" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   // The colourless modal card (TODO 5.11a, STX #6 Wandering Archaic): the

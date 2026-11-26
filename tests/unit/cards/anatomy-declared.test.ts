@@ -84,6 +84,9 @@ describe("where the pieces are declared", () => {
       // The double-faced saga front (TODO 5.5 (b)): the same — its back
       // draws the crown through the card's switch, the front none.
       "sagadfcfront",
+      // The saga creature's back (TODO 4.5d, part B): the Nyx crown cut round
+      // the ▼ well.
+      "sagacreaturedfcback",
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title bar.
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.

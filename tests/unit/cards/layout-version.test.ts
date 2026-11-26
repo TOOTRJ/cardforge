@@ -441,6 +441,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.5d's saga creature.
   "sagacreature",
+  // …and its double-faced back (TODO 4.5d, part B).
+  "sagacreaturedfcback",
   // …and its extended-art dress (TODO 4.27b).
   "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
@@ -497,6 +499,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "prepare",
   // TODO 4.5d's saga creature.
   "sagacreature",
+  // …and its double-faced back (TODO 4.5d, part B).
+  "sagacreaturedfcback",
   // …and its extended-art dress (TODO 4.27b).
   "extendedartprepare",
   // TODO 4.11 wave 1's 2015 Expeditions.
@@ -894,6 +898,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "prepare",
       // …and TODO 4.5d's saga creature: the same, no bump.
       "sagacreature",
+      // …and its double-faced back (TODO 4.5d, part B): the same, no bump.
+      "sagacreaturedfcback",
       // …and TODO 4.27b's extended-art Prepare dress: the same, no bump.
       "extendedartprepare",
       // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
@@ -1165,7 +1171,8 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     // A NEW chapter-rail template no card was ever baked on needs none
     // either: TODO 5.5 (b)'s double-faced saga front and back.
     // …nor TODO 4.5d's saga creature.
-    const newChapters = ["sagadfcfront", "sagadfcback", "sagacreature"];
+    // …nor its double-faced back (part B).
+    const newChapters = ["sagadfcfront", "sagadfcback", "sagacreature", "sagacreaturedfcback"];
     expect([...V33_SCOPE_TEMPLATES.chapters, ...newChapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
     for (const t of newChapters) expect(V33_SCOPE_TEMPLATES.chapters, t).not.toContain(t);
   });
@@ -3304,7 +3311,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // template, no bump).
     // (…and the extended-art Prepare dress, TODO 4.27b: a new template BORN
     // on the Prepare frame's CC M15 row — no bump.)
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "extendedartprepare"];
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews", "sagacreature", "sagacreaturedfcback", "extendedartprepare"];
     const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "sncartdeco", "dndsourcebook", "dossier", "enchantingtales", "stainedglass", "mysticalarchive", "tardis", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());

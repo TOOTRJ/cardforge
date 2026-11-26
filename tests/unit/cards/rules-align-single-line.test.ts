@@ -43,8 +43,10 @@ describe("which profiles centre a single line", () => {
       // …and the saga creature's second box (TODO 4.5d): its one line —
       // an ability or the flavour — centred ("centerAny").
       "sagacreature",
+      // …and its double-faced back (part B): the same box.
+      "sagacreaturedfcback",
     ]);
-    for (const t of centring) expect(getFrameProfile(t).rules.alignSingleLine).toBe(t === "sagacreature" ? "centerAny" : "center");
+    for (const t of centring) expect(getFrameProfile(t).rules.alignSingleLine).toBe(t === "sagacreature" || t === "sagacreaturedfcback" ? "centerAny" : "center");
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
       for (const slot of [p.title, p.type, p.footer, p.adventure?.rules, p.secondFace?.rules]) {

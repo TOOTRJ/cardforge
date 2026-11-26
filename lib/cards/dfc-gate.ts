@@ -48,7 +48,11 @@
 //     say Saga, on the ▼ family and the bordered look) derives the saga
 //     back (`backBodyFor` → `sagadfcback`) where it is published in the
 //     colour the back wears, else its type's body as before; on an update
-//     the stored body wins as for every back.
+//     the stored body wins as for every back;
+//   • a saga CREATURE back (TODO 4.5d, part B: a back whose subtypes say
+//     Saga and whose type words say Creature — FIN's summons) derives the
+//     saga creature back (`sagacreaturedfcback`) the same way, asked first;
+//     short of it, exactly the body it derived before.
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
 // admin's frame preview skips verification.
@@ -324,14 +328,21 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   // frame-list outage never refuses it; withVerifiedKeysIfConsulted).
   const typeChanged = (input.stored?.back?.card_type ?? null) !== backType;
   const keepsStoredBody = storedWins && !typeChanged;
-  const derived = backBodyFor(
-    layout,
-    { cardType: backType, subtypes: back.subtypes as readonly string[] | string | null | undefined },
-    family,
-    dfcLookOf(front),
-    (template) =>
-      keepsStoredBody || Boolean(input.skipVerification) || isFrameComboAvailable(template, pickFrameColorKey(wornColour), input.verifiedKeys),
-  );
+  // A BATTLE's back is always the ▼ back its type derives (TODO 5.5: the
+  // creator's battleBackBodyFor, the remix and the import all name
+  // `bodyFor`'s) — never a saga body, whatever its subtypes say: a battle
+  // with a Saga back saved on the ▼ back once a saga body was published
+  // otherwise met a body it never sent (the independent check of #833).
+  const derived = body?.battle
+    ? bodyFor(layout, "back", backType, family, dfcLookOf(front))
+    : backBodyFor(
+        layout,
+        { cardType: backType, supertype: back.supertype, subtypes: back.subtypes as readonly string[] | string | null | undefined },
+        family,
+        dfcLookOf(front),
+        (template) =>
+          keepsStoredBody || Boolean(input.skipVerification) || isFrameComboAvailable(template, pickFrameColorKey(wornColour), input.verifiedKeys),
+      );
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
   let template: FrameTemplate;

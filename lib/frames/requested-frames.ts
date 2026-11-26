@@ -2,6 +2,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import {
   FRAME_SIGNATURE_KEYS,
   FRAME_SIGNATURE_RULES,
+  dfcBackBodiesOfRule,
   signatureDrawnOn,
   templatesOfRule,
 } from "@/lib/scryfall/frame-signatures";
@@ -218,17 +219,27 @@ export function answeredSignaturePairs(verifiedKeys?: ReadonlySet<string>): stri
  *  + `exactOnceVerified` — the M20 tokens, the tall box, the older full-art
  *  basics…). Empty for a gap signature (its piece is the missing part) and
  *  for a rule with no exact frame. Every frame the rule can land on counts:
- *  a family rule names all of the family's. */
+ *  a family rule names all of the family's — and the BACK body a rule's
+ *  printings land on (`dfcBackBodiesOfRule`: FIN's summons on the saga
+ *  creature back, TODO 4.5d part B), whose outcome names the front body
+ *  alone: the import is exact only once both faces are verified, so the
+ *  back body must be verified too before the frame reads "Built". */
 export function exactFramesOfSignature(signature: string): readonly FrameTemplate[] {
   if (splitSignature(signature).gap !== null) return [];
   const rule = RULE_BY_KEY.get(signature);
   if (!rule) return [];
   const { outcome } = rule;
-  if (outcome.status === "exact") return templatesOfRule(rule);
+  const withBackBodies = (fronts: readonly FrameTemplate[]): readonly FrameTemplate[] => {
+    const backs = dfcBackBodiesOfRule(rule);
+    return backs.length === 0 ? fronts : [...new Set([...fronts, ...backs])];
+  };
+  if (outcome.status === "exact") return withBackBodies(templatesOfRule(rule));
   if (outcome.onceVerified !== undefined && outcome.exactOnceVerified === true) {
     // templatesOfRule names the stand-in AND the later frame; only the later
     // one is the frame the printing wears.
-    return templatesOfRule({ ...rule, outcome: { ...outcome, template: outcome.onceVerified, onceVerified: undefined } });
+    return withBackBodies(
+      templatesOfRule({ ...rule, outcome: { ...outcome, template: outcome.onceVerified, onceVerified: undefined } }),
+    );
   }
   return [];
 }

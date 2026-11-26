@@ -23,7 +23,7 @@ import { standardFrameFor } from "@/lib/creator/frame-picker";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
-import { templateHasBackFace } from "@/lib/cards/dfc";
+import { SAGA_CREATURE_BACK_SIGNATURE, templateHasBackFace } from "@/lib/cards/dfc";
 import { ARCH_TOKEN_TEMPLATES, isArchTallTokenTemplate, isM20NyxTokenTemplate, m20TokenTemplate, m20TokenTwinWithoutNyx, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
@@ -645,6 +645,15 @@ type Match = {
    *  (PrintingFacts.dfc.kind): `saga` for a transforming Saga on the
    *  double-faced saga front (TODO 5.5 (b)). */
   dfcKinds?: readonly NonNullable<DfcImportFacts["kind"]>[];
+  /** NOT a printing that lands on one of these BACK bodies (PrintingFacts.
+   *  dfc.backBody, set only when nothing blocks the landing): a piece of
+   *  the printing the back body draws itself (TODO 4.5d part B: the saga
+   *  creature back's Nyx starfield). */
+  notDfcBackBodies?: readonly FrameTemplate[];
+  /** A printing that lands on one of these BACK bodies (PrintingFacts.dfc.
+   *  backBody, nothing blocking the landing): FIN's summons on the saga
+   *  creature back (TODO 4.5d part B). */
+  dfcBackBodies?: readonly FrameTemplate[];
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
@@ -716,6 +725,11 @@ type Rule = {
    *  crown, not 4.6f; the layout frames' two-colour gap follows the frame
    *  the printing lands on) — named after the swap too. */
   gapBlockedBy?: Partial<Record<GapKey, BlockedBy>>;
+  /** Pieces the landing does NOT draw although the frame the match names
+   *  does (gapDrawnBy reads that frame alone): a double-faced landing whose
+   *  BACK body lacks them — the saga creature back has no pair masters, so a
+   *  two-colour summon's back wears gold (TODO 4.5d part B). */
+  undrawnGaps?: readonly GapKey[];
 };
 
 type Ctx = {
@@ -852,6 +866,8 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.dfcBlocked && (!facts.dfc?.blocked || !match.dfcBlocked.includes(facts.dfc.blocked))) return false;
   if (match.dfcLook && (facts.dfc?.look ?? "bordered") !== match.dfcLook) return false;
   if (match.dfcKinds && (!facts.dfc?.kind || !match.dfcKinds.includes(facts.dfc.kind))) return false;
+  if (match.notDfcBackBodies && facts.dfc?.kind && facts.dfc.backBody && match.notDfcBackBodies.includes(facts.dfc.backBody)) return false;
+  if (match.dfcBackBodies && (!facts.dfc?.kind || !facts.dfc.backBody || !match.dfcBackBodies.includes(facts.dfc.backBody))) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -1338,8 +1354,12 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // praetors), the battle fronts and the double-faced tokens (5.5). A
   // walker face (5.13), a colourless face without the Artifact word (5.11)
   // and a modal printing before 5.1b have rules of their own. 5.5 built
-  // those bodies; what still holds the gap (frames audit 2026-11-22) is
-  // FIN's transform cards whose back is a Saga creature — 4.5d's part B.
+  // those bodies; what held the gap last (frames audit 2026-11-22) were
+  // FIN's transform cards whose back is a Saga creature — 4.5d's part B,
+  // which lands them on the transform front and the saga creature back
+  // (`transform/2015`, the borderless ones `borderless/dfc`). Its item
+  // stays 4.5d: the `era/2015+dfc` rows logged before part B are FIN's.
+  // The extended-art ones keep the `extendedart+dfc` rule (5.7b).
   dfc: {
     match: {
       anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
@@ -1507,8 +1527,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't have the tall text box of this token frame yet",
     blockedBy: "4.55",
   },
+  // (FIN's Dominants print the `enchantment` effect for their BACK, a saga
+  // creature on the textured saga — its starfield the saga creature back's
+  // own masters (TODO 4.5d part B): no gap where the printing lands there.)
   nyx: {
-    match: { effectsAny: ["enchantment"], notKinds: ["token"] },
+    match: { effectsAny: ["enchantment"], notKinds: ["token"], notDfcBackBodies: ["sagacreaturedfcback"] },
     reason: "PipGlyph doesn't draw the Nyx starfield on this frame yet",
     blockedBy: "4.7",
   },
@@ -1642,6 +1665,7 @@ function withGaps(
         // …and after the swap on a base that is exact once verified.
         ...(!exactBase && base.outcome.exactOnceVerified ? { gapsOnceVerified: gaps.slice(index) } : {}),
         ...(Object.keys(blockedByOverride).length > 0 ? { gapBlockedBy: blockedByOverride } : {}),
+        ...(base.undrawnGaps ? { undrawnGaps: base.undrawnGaps } : {}),
       };
     }),
     base,
@@ -3224,6 +3248,26 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     DFC_BODY_GAPS,
   ),
+  // --- 4.5d part B: the saga creature's back ---------------------------------
+  // A transform printing whose BACK is a saga creature (FIN's Dominants'
+  // summons: dfcImportOf puts the back on `sagacreaturedfcback`) — the
+  // transform front and the saga creature back, verified on both faces like
+  // every double-faced landing. A rule of its own so that, while the back
+  // body waits for its tick, the import names IT (finalizeImportMatch:
+  // "Not yet verified", this signature, 4.5d) — never the Universes Beyond
+  // dress every FIN printing also wears, which is its first gap once both
+  // faces land. Its two-colour summons' backs wear gold (the body has no pair
+  // masters): the `two-colour` gap holds although the front draws its pairs.
+  ...withGaps(
+    {
+      key: SAGA_CREATURE_BACK_SIGNATURE,
+      exactLabel: "Saga creature (transform back) frame",
+      match: { frames: ["2015"], kinds: ["transform"], dfcBackBodies: ["sagacreaturedfcback"] },
+      outcome: { status: "exact", template: { family: "dfc" }, blockedBy: "4.5d" },
+      undrawnGaps: ["two-colour"],
+    },
+    ["layout", "parchment-land-back", ...DFC_BODY_GAPS.filter((gap) => gap !== "layout")],
+  ),
   ...withGaps(
     {
       key: "transform/2015",
@@ -3519,6 +3563,18 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
   return later ? [...of(rule.outcome.template), ...of(later)] : of(rule.outcome.template);
 }
 
+/** The BACK bodies a rule's printings land on (`Match.dfcBackBodies`, its
+ *  own match and its `allOf` parts — never an `anyOf` branch): the saga
+ *  creature back of `saga/creature/dfc/2015` (TODO 4.5d part B). The
+ *  outcome names the FRONT body only; an import of such a printing is exact
+ *  only once the back body is verified too (finalizeImportMatch), so a
+ *  reader of "where does this frame stand" counts these with
+ *  templatesOfRule (lib/frames/requested-frames.ts exactFramesOfSignature). */
+export function dfcBackBodiesOfRule(rule: Rule): readonly FrameTemplate[] {
+  const of = (match: Match): FrameTemplate[] => [...(match.dfcBackBodies ?? []), ...(match.allOf ?? []).flatMap(of)];
+  return [...new Set(of(rule.match))];
+}
+
 const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
 
 /** The frames a signature's own rule NAMES — the template its printing is
@@ -3647,6 +3703,10 @@ function gapDrawnOnOwnFrame(rule: Rule, key: GapKey, on: FrameTemplate, border: 
     later !== undefined &&
     rule.outcome.exactOnceVerified === true &&
     (typeof later === "string" ? [later] : FAMILIES[later.family].produces).includes(on);
+  // A gap the rule says its frames never draw (`undrawnGaps`: the saga
+  // creature back's two colours — the FRONT body draws its pairs, the back
+  // wears gold) is never drawn on them.
+  if (rule.undrawnGaps?.includes(key)) return false;
   if ((typeof rule.gapBlockedBy?.[key] === "string" && !onLater) || !gapDrawnBy(key, on, border)) return false;
   const base = rule.key.slice(0, rule.key.indexOf("+"));
   if (key === "two-colour" && TWO_COLOUR_OLDER_THAN_HYBRID.has(base) && !gapDrawnBy("two-colour-hybrid", on)) {
@@ -3672,7 +3732,7 @@ function gapDrawnOnOwnFrame(rule: Rule, key: GapKey, on: FrameTemplate, border: 
  *  crop is the window, 1.18): a maker's pick only. (The double-faced saga
  *  BACK, TODO 5.5 (b) PR 2, is a back body like the others: a Saga back's
  *  printing resolves to its front.) */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback", "sagadfcback"];
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback", "sagadfcback", "sagacreaturedfcback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);
@@ -3707,12 +3767,16 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     return typeof spec === "string" ? spec : FAMILIES[spec.family].pick(ctx);
   };
   // A gap rule is no gap where the frame it lands on draws that piece (the
-  // crown, a two-colour dress — gapDrawnBy): the next rule decides.
+  // crown, a two-colour dress — gapDrawnBy): the next rule decides. (A
+  // piece the rule's landing never draws — Rule.undrawnGaps — is a gap
+  // whatever the frame it names draws.)
+  const drawnOn = (candidate: Rule, gap: GapKey, on: FrameTemplate) =>
+    !candidate.undrawnGaps?.includes(gap) && gapDrawnBy(gap, on, ctx.border);
   const rule =
     FRAME_SIGNATURE_RULES.find(
       (candidate) =>
         matches(candidate.match, ctx) &&
-        !(candidate.gaps && gapDrawnBy(candidate.gaps[0], templateOf(candidate), ctx.border)),
+        !(candidate.gaps && drawnOn(candidate, candidate.gaps[0], templateOf(candidate))),
     ) ?? FRAME_SIGNATURE_RULES[FRAME_SIGNATURE_RULES.length - 1];
   const template = templateOf(rule);
 
@@ -3787,7 +3851,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   // gapDrawnBy) is no gap there.
   const holding = (list: readonly GapKey[] | undefined, on: FrameTemplate) =>
     list
-      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on, ctx.border))
+      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !drawnOn(rule, gap, on))
       : [];
   const gaps = holding(rule.gaps, template);
 

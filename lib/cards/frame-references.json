@@ -4087,6 +4087,65 @@
       "m": null
     }
   },
+  "sagacreaturedfcback": {
+    "note": "The saga creature's BACK (TODO 4.5d, part B): Final Fantasy's Dominants' summons — a transform card whose back face is a saga creature, the saga creature body (the reminder band, the raised type bar, the second box, the P/T) under the ▼ back's dark bars, its dot moved down with the bar, the Nyx crown cut round the well on a legendary back. Every reference is the printing's BACK face (face 1). White: FIN #16 Bahamut, Warden of Light (legendary) and #13 Summon: Alexander. Gold: no gold summon back was printed — the two two-colour ones (FIN #229 R W, #245 G R) print the two-colour dress (gold bars, each half's paper in its colour), a follow-up. Colourless: none printed (the part A body's artifact silver stands in). The date-stamped prerelease twins (PFIN #16s–#245s) print the same and are left out for their scans' cast.",
+    "colors": {
+      "w": [
+        {
+          "name": "Bahamut, Warden of Light",
+          "set": "fin",
+          "scryfallId": "8c0f9306-2058-476d-a711-bd37a6e15e42",
+          "face": 1,
+          "curated": true
+        },
+        {
+          "name": "Summon: Alexander",
+          "set": "fin",
+          "scryfallId": "5f51c853-949d-44e9-a3a2-02e1ce69a147",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "u": [
+        {
+          "name": "Shiva, Warden of Ice",
+          "set": "fin",
+          "scryfallId": "1f163763-4802-4a96-a5bc-f3c381db7b5c",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "b": [
+        {
+          "name": "Braska's Final Aeon",
+          "set": "fin",
+          "scryfallId": "4ec91fe8-b3da-47fa-b45e-94b62a260aba",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "r": [
+        {
+          "name": "Ifrit, Warden of Inferno",
+          "set": "fin",
+          "scryfallId": "9a069e96-2786-493d-aca8-f70611435dbe",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "g": [
+        {
+          "name": "Summon: Esper Maduin",
+          "set": "fin",
+          "scryfallId": "0f503360-216a-4629-89b2-d32072850aef",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "adventure": {
     "colors": {
       "w": [

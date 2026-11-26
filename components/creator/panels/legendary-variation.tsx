@@ -30,7 +30,7 @@ import {
   withLegendaryWord,
   type LegendaryVariation,
 } from "@/lib/creator/legendary-variation";
-import type { ColorIdentity } from "@/types/card";
+import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 /** Whether the card's BACK is a face of its own, where the form knows
  *  better than `has_back_face` (TODO 5.5, owner Round 68): a battle's back
@@ -39,6 +39,13 @@ import type { ColorIdentity } from "@/types/card";
  *  for a battle, null everywhere else (the back is the form's
  *  `has_back_face`). */
 export const BackIsOwnFaceContext = createContext<boolean | null>(null);
+
+/** The body the form derives for a double-faced card's back
+ *  (creatorBackBodyFor / battleBackBodyFor — what the live preview draws
+ *  and the save stores), so the crown entry judges the back on THAT body
+ *  (TODO 4.5d part B: a saga body draws no crown, a saga creature back's
+ *  does). Undefined outside the form: legendaryVariationOf derives it. */
+export const DerivedBackBodyContext = createContext<FrameTemplate | null | undefined>(undefined);
 
 /** The entry's state for the form's current values — the chip, the
  *  Variations summary and the anatomy panel's switch all read this. */
@@ -61,6 +68,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
     ],
   });
   const backIsOwnFace = useContext(BackIsOwnFaceContext);
+  const derivedBackBody = useContext(DerivedBackBodyContext);
   return legendaryVariationOf({
     template,
     crown,
@@ -72,6 +80,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
     dfcIcon,
     backCardType: backType,
     backSupertype,
+    ...(derivedBackBody !== undefined ? { backBody: derivedBackBody } : {}),
     hasBackFace: backIsOwnFace ?? Boolean(hasBackFace),
     typeLineLocked,
   });
