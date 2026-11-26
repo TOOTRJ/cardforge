@@ -235,12 +235,16 @@ describe("the layout frames' two-colour gap is answered frame by frame (its item
     expect(frameRequestAnswered(row("layout/2015+two-colour", "split"), NONE)).toBe(true);
   });
 
-  it("a saga's or an adventure's stays open on 4.6f, and the hybrid split stays open", () => {
+  it("an adventure's stays open on 4.6f, the saga's is answered since its own 4.6f family drew the pairs, and the hybrid split stays open", () => {
     const pairs = answeredSignaturePairs(ALL_VERIFIED);
-    for (const pair of ["layout/2015+two-colour|saga", "layout/2015+two-colour|adventure", "layout/2015+two-colour-hybrid|split"]) {
+    for (const pair of ["layout/2015+two-colour|adventure", "layout/2015+two-colour-hybrid|split", "layout/2015+two-colour-hybrid|saga"]) {
       expect(pairs, pair).not.toContain(pair);
     }
-    expect(signatureBlockedBy("layout/2015+two-colour", "saga")).toBe("4.6f");
+    // TODO 4.6f (owner 2026-11-25): the saga draws the gold-split dress (no
+    // hybrid saga was printed).
+    expect(pairs).toContain("layout/2015+two-colour|saga");
+    expect(frameRequestAnswered(row("layout/2015+two-colour", "saga"), ALL_VERIFIED)).toBe(true);
+    expect(signatureBlockedBy("layout/2015+two-colour", "adventure")).toBe("4.6f");
     expect(signatureBlockedBy("layout/2015+two-colour", "split")).toBe("4.26");
   });
 
@@ -258,7 +262,6 @@ describe("a row logged on a fall-forward frame is never answered there (the inde
   // The printing still lands on its own frame today, where the gap holds.
   const printing = (data: Record<string, unknown>, key: string) => frameMatchFromScryfall(scryfallCardSchema.parse(data[key]));
   const LAYOUT_ROWS: [string, Record<string, unknown>, string, string][] = [
-    ["khm-201", anatomyPrintings, "layout/2015+two-colour", "saga"], // a two-colour saga
     ["mh3-196", adventurePrintings.printings, "layout/2015+two-colour", "adventure"], // a two-colour adventure
     ["eld-212", adventurePrintings.printings, "layout/2015+two-colour-hybrid", "adventure"], // a hybrid adventure
   ];
@@ -271,6 +274,15 @@ describe("a row logged on a fall-forward frame is never answered there (the inde
       expect(answeredSignaturePairs(ALL_VERIFIED), `${signature} on ${template}`).not.toContain(`${signature}|${template}`);
     }
     expect(frameRequestAnswered(row(signature, frame), ALL_VERIFIED)).toBe(false);
+  });
+
+  it("khm-201: exact on the saga frame since 4.6f drew its pairs — its row on its own frame is answered, on the plain frame it stays open", () => {
+    const match = printing(anatomyPrintings, "khm-201");
+    expect(match).toMatchObject({ signature: "layout/2015", status: "exact", template: "saga" });
+    for (const template of ["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15devoid"]) {
+      expect(frameRequestAnswered(row("layout/2015+two-colour", template), ALL_VERIFIED), `on ${template}`).toBe(false);
+    }
+    expect(frameRequestAnswered(row("layout/2015+two-colour", "saga"), ALL_VERIFIED)).toBe(true);
   });
 
   it("a borderless walker's two-colour row on the plain frame or the bordered walker frame stays open", () => {

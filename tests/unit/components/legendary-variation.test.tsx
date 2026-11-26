@@ -172,7 +172,6 @@ describe("where it lives", () => {
   });
 
   it.each([
-    ["saga", "enchantment", "saga"],
     ["emblem", "emblem", "emblem"],
     ["adventure", "creature", "adventure"],
     ["aftermath", "sorcery", "aftermath"],
@@ -181,6 +180,13 @@ describe("where it lives", () => {
     render(<Harness template={template} cardType={cardType} kind={kind} verified={[`${template}/w`, `${template}/c`]} />);
     expect(screen.queryByTestId("variations-section")).toBeNull();
     expect(chipCount()).toBe(0);
+  });
+
+  it("saga: its crown is drawn since TODO 4.6f (DSK #75) — the section shows, the entry offered", () => {
+    render(<Harness template="saga" cardType="enchantment" kind="saga" verified={["saga/w", "saga/c"]} />);
+    const section = screen.getByTestId("variations-section");
+    expect(within(section).queryByRole("radiogroup", { name: "Frame variations" })).toBeNull();
+    expect(chipOff(chip())).toBe(false);
   });
 
   it.each([
@@ -267,7 +273,8 @@ describe("an edit of a card that is not legendary (the type line is locked)", ()
   });
 
   it("on a frame with no crown at all: nothing (as before 3b.17)", () => {
-    render(<Harness stored={{ template: "saga" }} cardType="enchantment" supertype="" />);
+    // (The saga drew none until TODO 4.6f; the aftermath draws none.)
+    render(<Harness stored={{ template: "aftermath" }} cardType="sorcery" supertype="" />);
     expect(chipCount()).toBe(0);
     expect(crownSwitch()).toBeNull();
     expect(reason()).toBeNull();

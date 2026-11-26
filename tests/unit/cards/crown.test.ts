@@ -81,6 +81,8 @@ describe("which card draws the crown", () => {
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // The saga frame (TODO 4.6f): M15's band, its arms faded (sagacrown).
+      "saga",
       // The Prepare frame (TODO 4.27): M15's band over its M15 title bar.
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.
@@ -210,6 +212,10 @@ describe("the crowned prints the crown is judged against", () => {
     // The textless promos (4.35 follow-up): blue, red and gold crowned promos.
     expect(Object.keys(CROWN_REFERENCES.m15textless ?? {}).sort()).toEqual(["m", "r", "u"]);
     expect(crownReferenceFor("m15textless", "u")).toMatchObject({ set: "pspl", collectorNumber: "8" });
+    // The saga frame (4.6f): the only two crowned plain sagas — DSK #75
+    // (blue) and PH18 #4 (three colours: gold).
+    expect(Object.keys(CROWN_REFERENCES.saga ?? {}).sort()).toEqual(["m", "u"]);
+    expect(crownReferenceFor("saga", "u")).toMatchObject({ set: "dsk", collectorNumber: "75" });
     // Scryfall ids only (never a scan).
     for (const refs of Object.values(CROWN_REFERENCES)) {
       for (const ref of Object.values(refs ?? {})) expect(ref?.scryfallId).toMatch(/^[0-9a-f-]{36}$/);

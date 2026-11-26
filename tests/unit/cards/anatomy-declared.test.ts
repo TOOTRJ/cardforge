@@ -84,6 +84,9 @@ describe("where the pieces are declared", () => {
       // The double-faced saga front (TODO 5.5 (b)): the same — its back
       // draws the crown through the card's switch, the front none.
       "sagadfcfront",
+      // The saga frame (TODO 4.6f, owner 2026-11-25): M15's band with its
+      // arms faded onto the masters' pinline (sagacrown), and its pairs.
+      "saga",
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title bar.
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.
@@ -111,6 +114,11 @@ describe("where the pieces are declared", () => {
     // the gold rim, no pair masters), no rules-box switches.
     expect(frameAnatomyOf("m15textless")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: false, border: false });
     expect(anatomyDefaults("m15textless")).toEqual({ crown: true });
+    // The saga frame (TODO 4.6f): the crown band and the gold-split pairs (no
+    // hybrid saga was printed); no stamp, no collector line.
+    expect(frameAnatomyOf("saga")).toEqual({ crown: true, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: false, border: false });
+    expect(anatomyDefaults("saga")).toEqual({ crown: true, twoColor: true });
+    expect(getFrameProfile("saga").overlays?.map((slot) => slot.anatomy)).toEqual(["crown"]);
     // The borderless land (TODO 4.56): the split pair — no crown — and,
     // since 4.9d, the collector slot and its own stamp notch.
     expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });

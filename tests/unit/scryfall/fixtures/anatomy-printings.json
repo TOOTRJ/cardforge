@@ -709,5 +709,35 @@
       "W"
     ],
     "rarity": "rare"
+  },
+  "dsk-75": {
+    "id": "aaeba193-05d3-4c2d-a304-bbe7114c2eef",
+    "oracle_id": "98a13f7b-ebe7-4a90-a0b9-95dccfff7fa6",
+    "name": "The Tale of Tamiyo",
+    "released_at": "2024-09-27",
+    "layout": "saga",
+    "set": "dsk",
+    "set_name": "Duskmourn: House of Horror",
+    "set_type": "expansion",
+    "collector_number": "75",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Mill"
+    ],
+    "type_line": "Legendary Enchantment — Saga",
+    "mana_cost": "{2}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "rarity": "rare"
   }
 }

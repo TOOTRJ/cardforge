@@ -389,7 +389,8 @@ into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
   beside the masters at native size (the rail's `saga/chapter/badge.png`,
   118 × 132, and `saga/chapter/divider.png`, 592 × 9, which both renderers
   draw) — and `maskInputs`, pack masks RECORDED for a later recipe (the
-  two-colour saga's pair masters, 4.6f): fetched into the cache, listed in
+  two-colour saga's pair masters, 4.6f — built since: [The saga's crown and
+  pairs](#the-sagas-crown-and-pairs-46f)): fetched into the cache, listed in
   provenance, never written to the build folder or the bucket — see
   [The saga (4.21c)](#the-saga-421c);
 - the double-faced saga front (5.5 (b)): `sagadfcfront` from the
@@ -2292,8 +2293,8 @@ of them, DOM → MH3):
   and the text stay above the sheens.
 - **Masks.** The pack's nine masks (Pinline, Title, Type, Frame, Banner,
   Banner (Right), Text, Text (Right), Border) are recorded on the recipe as
-  `maskInputs` for the two-colour saga's pair masters (4.6f) and are never
-  published.
+  `maskInputs` and are never published; the two-colour saga's pair masters
+  (4.6f, [below](#the-sagas-crown-and-pairs-46f)) draw through four of them.
 - **Owner decisions** (owner round 34, 2026-10-06 — the before/after
   sheets' five sections signed off, every question answered AS BUILT):
   1. a saga with no reminder starts its chapters at the rail's top;
@@ -2316,7 +2317,8 @@ of them, DOM → MH3):
   a row keeps its badge.
 - **What it does not do**: flavour text (no printed saga has any — a typed
   one is not drawn, as on main); a saga creature's P/T (4.5d); the crown and
-  the pairs (4.6f); the holofoil stamp (4.9d); DMU's read-ahead frame, whose
+  the pairs (4.6f — drawn since, [below](#the-sagas-crown-and-pairs-46f));
+  the holofoil stamp (4.9d); DMU's read-ahead frame, whose
   reminder box is 97 px taller (chapters from 717 px) — a read-ahead
   reminder steps down inside the regular box instead; NEO's transforming
   sagas (5.5).
@@ -2339,7 +2341,7 @@ its reference. **References** (`lib/cards/frame-references.json`): w u b r
 g keep their DOM defaults; gold is 40K #126 The Horus Heresy with LTC #58
 In the Darkness Bind Them (three-colour prints on the plain gold frame; NEO
 The Kami War is a transforming saga with an enchantment frame effect, and
-KHM's two-colour sagas wait for 4.6f's pair masters); colourless is MH2
+KHM's two-colour sagas are the pair masters' — 4.6f, [below](#the-sagas-crown-and-pairs-46f)); colourless is MH2
 #259 alone; no FIN Summon and no DMU read-ahead saga is listed. The walker
 rows moved onto the shared arithmetic unchanged:
 `tests/unit/cards/loyalty-rows-pinned.test.ts` holds every size, row, line
@@ -2347,6 +2349,128 @@ and foil stripe of 24 layouts on the three walker bodies to what layout
 v41 computed, and `tests/unit/render/pw-rows-pinned-bake.test.tsx` 28
 m15pw bakes (750 and HD, regular and foil) to the pixels main baked.
 Sheets: scratchpad `c421c/sheets/`.
+
+#### The saga's crown and pairs (4.6f)
+
+TODO 4.6f's saga family (owner 2026-11-25; after the adventure's, one
+family per PR). Two pieces on the `saga` entry, each opt-in per card
+through the switches m15 has (`frame_style.crown`, `twoColor`): an
+ADDITION — no bump, no sweep, no badge. A stored saga names neither switch
+(every save before this dropped them: the template drew neither), so it
+bakes as it did; a new saga starts with both on (`anatomyDefaults`); an
+import follows its printing (`printed_crown` for the `legendary` effect,
+`printed_two_color` for a two-colour 2015-frame printing). The double-faced
+sagas (`sagadfcfront` / `sagadfcback`) and the saga creature
+(`sagacreature`) are not part of it: their title bars carry the transform
+well or their masters are composites of their own, so neither the band nor
+these pair masters applies as it is (NEO #221's two-colour saga front and
+TLA's legendary saga fronts are their bodies' follow-ups).
+
+What print does (Scryfall 2026-11-25, `layout:saga frame:2015`, the
+black-bordered plain printings; read at 1500 × 2100, nothing kept): two
+plain sagas are printed crowned (`frame:legendary`) — DSK #75 The Tale of
+Tamiyo (blue) and PH18 #4 The Legend of Arena (three colours, gold)
+(`CROWN_REFERENCES.saga`) — with the STANDARD 2015 crown in the card's
+colour; the two-colour ones are KHM #201–234's twenty, WOE #200 The
+Apprentice's Folly and their reprints (CLB #846, CMM #916, LCC #272),
+every one a gold cost — no hybrid saga was printed (`layout:saga
+is:hybrid`: none). The Universes Beyond two-colour sagas (WHO, PIP, LTC,
+TRK, MSH, TMT) keep their `universes-beyond` gap.
+
+- **The crown is m15's band, its arms faded** (`SAGA_CROWN`,
+  `sagacrown/<key>`): Card Conjurer's saga pack draws M15's title bar
+  through m15MaskTitle (the masters' bar faces 104–210 px against M15's
+  104–208), so the m15crown band registers as it does on m15 — on DSK #75
+  and PH18 #4 the crown's top edge lies within 1 px of the band's, its
+  ears' and arms' outer edges within 0–3 px. But the masters' pinline
+  beside the window and down the rail is the pack's other tone, the
+  adventure pack's (r 239,56,39 against the band's 209,77,53; g 0,123,67
+  against 42,108,69; b 39,38,36 against 58,56,50; gold 246,210,98 against
+  233,212,125; w 252,254,255 against 244,243,236; blue's is the band's own),
+  and the right arm's inner face (x 1390–1403 at row 400) is not the
+  masters' pinline column (1385–1399): drawn as published, the arms end in
+  a tone step and a jog at row 408. So the bands take the Nyx Constellation
+  crown's one cut ([The constellation crown](#the-constellation-crown),
+  owner Round 59; the adventure's crown takes it too): alpha × (1 − t) over
+  rows 372 → 408, the crown handing over to the master's own pinline
+  (`scripts/lib/saga-crown.mjs`, `scripts/build-saga-crown.mjs`; PipGlyph's
+  own cut of the published bands, no Card Conjurer file read). On the left
+  the arm's foot lies over the top of the ribbon's fold, which shows from
+  under it as the arm narrows, as on both prints. Keys: w u b r g, m, the
+  land crown `l` (the template's colourless master is the pack's 'Land
+  Frame': `keyMap: { c: "l" }`, as m15land) and the ten pairs (none printed
+  crowned; a legendary two-colour saga wears its pair's band over its pair
+  master, as m15 does). The masters are not re-toned (their pinline is a
+  correction of the frame, another step). 17 bands, PNG + WebP.
+- **The pairs carry 4.6b's recipe onto the pack's own masks**
+  (`sagaPairLayers`, `scripts/lib/cc-frames.mjs`; Card Conjurer has no
+  two-colour saga recipe — its `cardFrameProperties` knows none of the
+  pack's masks; a user stacks them by hand): `twoColorMasters: ["split"]`,
+  gold-split `saga/<pair>` only:
+  - the gold master `sagaFrameM.png` whole — the frame body, both bars and
+    the ribbon's gold outlines are gold on every print (row 1000, x
+    1410–1440: R 191–242, G 172–232, B 75–177 on KHM #201 / #219, LCC
+    #272, WOE #200, the gold master's 191–216, 166–196, 90–113);
+  - the pinline (`sagaMaskPinline`: the rail's left line, the window's
+    right line, both bars' rings) split across 4.6b's 40→60 %W — WOE #200's
+    rail-top ring reads its blue to x 600 and its red from x 900, and the
+    window's right line is the second colour on every print;
+  - the text box's PAPER (`sagaMaskText`) split from the first colour's
+    paper to the second's across 15→43 %W (`SAGA_PAIR_TEXT_RAMP`): each
+    column's median over the chapter rows de-shaded between the print's two
+    ends, the 17 prints whose papers differ by 6 levels or more cross
+    10 / 50 / 90 % at 273 / 435 / 607 px (median; WOE #200 255 / 435 /
+    607) — wider than the pack's Text (Right) mask (277 → 582 px), which
+    stays an input;
+  - the RIBBON in two halves: the first colour through the pack's Banner
+    mask, the second through Banner (Right) (x 115/120–165 from row 543),
+    and the pack's own 'Banner Pinstripe (Multicolored)'
+    (`sagaMidStripe.png`, 13 × 1000 px of black at α 233) at its bounds on
+    the seam (x 109, rows 642–1641: `SAGA_PAIR_PINSTRIPE_AT`, native size)
+    — KHM #215 at row 1000 reads blue x 72–108, black 110–121, red 124–152.
+  The same run rebuilds the seven one-colour masters and the rail's two
+  pieces byte for byte. An all-hybrid cost (none printed) draws the same
+  gold-split master, as m15artifact's does (`resolveTwoColor`).
+- **The ribbon's fold** (the folded back above chapter I) is the GOLD
+  master's on a pair master: the pack's Banner mask covers the ribbon's
+  front only (its left edge sweeping in from x 65 at rows 350–480), so
+  `sagaFrameM.png`'s tan-brown fold (128,101,72) shows through there —
+  `saga/ur` equals `saga/m` at (80, 350), (85, 400) and (90, 450), where
+  `saga/u` is 0,92,149. Print shows the fold tan to gold-brown on every
+  saga, one-colour ones too (DSK #75's blue saga a tan fold, DOM #21's
+  white one gold-brown, KHM #215's U|R one gold), so the pairs match print
+  there; it is the ONE-colour masters that paint the fold in the card's
+  colour (Card Conjurer's) — correcting those is a correction of every
+  one-colour saga master (before / after + sweep), not this addition. The
+  owner's sheet shows a pair's fold beside a one-colour fold and print's.
+- **Verification (V-A):** the pairs ride the template's `m` tick, the crown
+  the colour ticks (the saga is verified in all seven keys); the owner
+  signs a contact sheet off in the PR.
+- **Registry:** the `crown` and `two-colour` gaps drop on the saga by
+  themselves (`gapDrawnBy`): DSK #75, PH18 #4, KHM #201–234, WOE #200 and
+  the reprints import `exact`; a request row `layout/2015+two-colour` or
+  `+crown` logged on the saga frame reads as answered (`signatureDrawnOn`,
+  the function-valued item since #828), one logged on the plain frame it
+  fell forward to stays open. `two-colour-hybrid` stays (no hybrid dress).
+- **A known effect on TLA's legendary saga fronts** (TLA #27 / #61 / #145 /
+  #186, their `ptla` stamps, the borderless #354–358): they land on the
+  plain saga, `nearest` (`dfc/colourless-face`, 5.11), with their
+  colourless "Legendary Creature — Avatar" back as a LEGACY back, drawn on
+  the front's frame with the front's switches. The import names the crown
+  from the printing's `legendary` frame effect (`printsStandardCrown`),
+  which describes the back, and the saga now keeps it: the front (not
+  legendary) draws none, the legacy back draws the saga crown in the
+  front's colour (the back-face preview, `?face=back`). Print does crown
+  that back, on another body. New imports only — stored cards keep their
+  frame_style. Pinned by `tests/unit/scryfall/saga-crown-legacy-back.test.ts`;
+  the alternative, not built, keys the import's crown switch on the FRONT
+  face's type line.
+- **Tests:** `tests/unit/frames/saga-crown-pairs.test.ts` (the recipes,
+  the published objects and provenance, the bands' and pair masters'
+  pixels), `tests/unit/render/saga-crown-pairs-bake.test.tsx` (real bakes:
+  a stored card unchanged, the band inside its rows, the pair master and
+  the hybrid cost), the matrix's `saga/*` `@crown` / `@pair*` cases and
+  three parity cases.
 
 ### The 2003 footer ink (4.23a, layout v44)
 
@@ -7189,7 +7313,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
     are — where the section shows at all: it shows only when it has
     something to pick (a land mode, a frame chip, or the offered chip —
     owner 2026-10-12), so a kind whose section would hold only the dead
-    chip (emblem, saga, adventure, aftermath, flip) has none, as before;
+    chip (emblem, adventure, aftermath, flip — not the saga, whose crown
+    is drawn since 4.6f) has none, as before;
   - **selected** only while the switch is exactly `true` AND a face has the
     word "Legendary" — the crown is drawn. A new card that is not legendary
     holds the new-card default (`crown: true`) and still reads unselected;
@@ -7277,7 +7402,9 @@ default.
 — and, since 4.6f wave 2c, the m15snow and m15snowland entries, whose
 masters share the M15 pack's geometry ([Devoid and
 snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
-adventure, saga, the tokens or a showcase (4.6f and the token items; the
+adventure, the tokens or a showcase (4.6f and the token items; the saga
+draws the same band with its arms faded onto its masters' pinline, its own
+folder — [The saga's crown and pairs](#the-sagas-crown-and-pairs-46f); the
 one showcase that prints it, the Theros constellation frame, draws the Nyx
 crown band with faded arms — [The constellation
 crown](#the-constellation-crown); the
@@ -7356,11 +7483,12 @@ m15land (the land frame and bars, the split in the two land tints; MKM
 - **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
-  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
+  (`two-colour-hybrid`). What no frame draws yet — adventures,
   extended art (its crown band draws no pairs: wave 2b) — keeps the
   `two-colour` gaps, now pointing at 4.6f (the borderless frames draw theirs
   since wave 2a, the snow frames since wave 2c, the borderless land since
-  4.56, below; devoid's two-colour printings ARE its gold frame, so the gap
+  4.56, below, the saga its gold-split since its own 4.6f family; devoid's
+  two-colour printings ARE its gold frame, so the gap
   is no gap there); an M20 token's gaps point at 4.48 (its own central rim
   split and pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the

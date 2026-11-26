@@ -122,6 +122,10 @@ describe("the declared pair masters", () => {
       // …and the OTJ Breaking News' ten (TODO 4.11 wave 2): the same, across
       // print's split (tests/unit/frames/otp-breaking-news-importer.test.ts).
       breakingnews: 10,
+      // …and the saga's ten (TODO 4.6f): 4.6b's gold-split on the pack's own
+      // masks, the ribbon in its two colours; no hybrid saga was printed
+      // (tests/unit/frames/saga-crown-pairs.test.ts).
+      saga: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

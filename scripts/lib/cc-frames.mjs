@@ -2642,11 +2642,13 @@ const BATTLE_TRANSFORM =
 // to the right, drawn 6 px tall), published at native size as
 // saga/chapter/badge.png and saga/chapter/divider.png (SAGA_CHAPTER_PIECES).
 //
-// The pack's nine masks (SAGA_MASK_INPUTS) are importer INPUTS for the
-// two-colour saga's pair masters (TODO 4.6f: `saga/<pair>.png` through
-// twoColorRecipe, the banner split by Banner / Banner (Right), the text box
-// by Text / Text (Right)): recorded here and in provenance, fetched into the
-// cache with the masters, and never published — no `saga/mask/*` object.
+// The pack's nine masks (SAGA_MASK_INPUTS) are importer INPUTS: recorded
+// here and in provenance, fetched into the cache with the masters, and never
+// published — no `saga/mask/*` object. The two-colour saga's pair masters
+// (TODO 4.6f, sagaPairLayers below) draw through four of them: the ribbon
+// split by Banner / Banner (Right), the text box's paper and the pinline
+// across ramps through Text and Pinline (Text (Right)'s own ramp is
+// narrower than print's and stays an input).
 // ---------------------------------------------------------------------------
 const SAGA = "img/frames/saga";
 /** packSagaRegular.js `masks`, by the pack's own names (design D2). */
@@ -2669,6 +2671,97 @@ export const SAGA_CHAPTER_PIECES = Object.freeze({
   "chapter/badge": `${SAGA}/sagaChapter.png`,
   "chapter/divider": `${SAGA}/sagaDivider.png`,
 });
+
+// ---------------------------------------------------------------------------
+// The saga's two-colour pair masters (TODO 4.6f; owner 2026-11-25):
+// `saga/<pair>` (gold-split). Card Conjurer has no two-colour saga recipe
+// (creator-23.js's cardFrameProperties knows none of the pack's masks; a
+// user stacks them by hand), so this is 4.6b's recipe (twoColorRecipe)
+// carried onto the pack's OWN masks (SAGA_MASK_INPUTS) — its Pinline, its
+// Text box, its Banner and Banner (Right) — over the same pack files as the
+// seven one-colour masters, and the pack's own 'Banner Pinstripe
+// (Multicolored)' (sagaMidStripe.png) at its bounds.
+//
+// What print does (Scryfall 2026-11-25: `layout:saga frame:2015 c=2`, the
+// black-bordered plain printings — KHM #201–234's twenty two-colour sagas,
+// WOE #200 The Apprentice's Folly, the reprints CLB #846, CMM #916, LCC
+// #272; read at 1500 × 2100):
+//   • the frame body, both bars and the ribbon's gold outlines GOLD (m.png:
+//     at row 1000, x 1410–1440, the body right of the window reads R
+//     191–242, G 172–232, B 75–177 on KHM #201 / #219, LCC #272 and WOE
+//     #200 — the gold master's 191–216, 166–196, 90–113 there — and the
+//     strip left of the ribbon is gold on all four);
+//   • the pinline (the rail's left line, the window's right line, both bars'
+//     rings) split across 4.6b's 40→60 %W: WOE #200's rail-top ring reads
+//     the blue 3,107,165 to x 600 and the red 208,75,51 from x 900; the
+//     window's right line is the SECOND colour on every print (WOE #200 red,
+//     KHM #201 green, KHM #219 black);
+//   • the RIBBON in two halves — the first colour through the pack's Banner,
+//     the second through Banner (Right) (x 115/120–165 from row 543) — with a
+//     dark seam between them (KHM #215 at row 1000: blue x 72–108, black
+//     110–121, red 124–152, gold outlines at 64–70 and 156–162): the pack's
+//     pinstripe, 13 × 1000 px black (α 233) at x 109, rows 642–1641
+//     (SAGA_PAIR_PINSTRIPE_AT, CC's bounds; KHM #215's seam runs ~650 →
+//     ~1600);
+//   • the text box's PAPER split from the first colour's paper to the
+//     second's (WOE #200's blue paper 228,234,241 at x 180 → the red's
+//     239,225,216 at x 720): each column's median over the chapter rows
+//     de-shaded between the print's own two ends, the 17 prints whose two
+//     papers differ by 6 levels or more cross 10 / 50 / 90 % at 273 / 435 /
+//     607 px (median; 18.2 / 29.0 / 40.5 %W; WOE #200 255 / 435 / 607, CMM
+//     #916 262 / 398 / 555) — SAGA_PAIR_TEXT_RAMP, 15 → 43 %W (10 / 50 / 90
+//     at 18.3 / 29.0 / 40.2 %W), wider than the pack's Text (Right) mask
+//     (277 → 582 px: 20.5 / 28.6 / 36.7 %W), which stays an input.
+// No HYBRID saga was printed (Scryfall `layout:saga is:hybrid`: none), so
+// the saga draws the gold-split dress only (an all-hybrid cost draws it
+// too, as m15artifact's does). The folded back of the ribbon above the
+// first chapter is the GOLD master's on a pair: the Banner mask covers the
+// ribbon's front only, so sagaFrameM's tan-brown fold (128,101,72) shows
+// through — as print's fold is tan to gold-brown on every saga. It is the
+// one-colour masters that paint the fold in the card's colour (a correction
+// of those, not this addition). The crown over a pair is the
+// saga's own band of the pair (sagacrown/<pair>, built by
+// scripts/build-saga-crown.mjs). Verification: a pair rides the template's
+// `m` tick (4.6b's V-A).
+// ---------------------------------------------------------------------------
+
+/** The text box paper's split, [from, to] in % of the card's width (see
+ *  above): 225 → 645 px, 10 / 50 / 90 % at 18.3 / 29.0 / 40.2 %W. */
+export const SAGA_PAIR_TEXT_RAMP = Object.freeze([15, 43]);
+
+/** The pack's 'Banner Pinstripe (Multicolored)' bounds (packSagaRegular.js:
+ *  x 0.0727, y 0.3058, 0.0087 × 0.4762 of the card), as a card-% rect: 13 ×
+ *  1000 px at 109, 642 — its native size, no resample. */
+export const SAGA_PAIR_PINSTRIPE_AT = Object.freeze({ leftPct: 7.27, topPct: 30.58, widthPct: 0.87, heightPct: 47.62 });
+
+/** The pack's masks and the pinstripe the pair masters draw through. */
+export const SAGA_PAIR_MASK = Object.freeze({
+  pinline: SAGA_MASK_INPUTS.Pinline,
+  text: SAGA_MASK_INPUTS.Text,
+  banner: SAGA_MASK_INPUTS.Banner,
+  bannerRight: SAGA_MASK_INPUTS["Banner (Right)"],
+  pinstripe: `${SAGA}/sagaMidStripe.png`,
+});
+
+/** The layers of one saga pair master (see above): `dress` "split" only (no
+ *  hybrid saga was printed). */
+export function sagaPairLayers(pair, dress) {
+  const [a, b] = pairSides(pair);
+  if (dress !== "split") throw new Error(`sagaPairLayers: no ${dress} dress (no hybrid saga was printed)`);
+  const file = (k) => `${SAGA}/regular/sagaFrame${k.toUpperCase()}.png`;
+  const split = (mask, ramp) => ({ src: file(a), right: file(b), ramp: [...ramp], mask });
+  return [
+    layer(file("m")),
+    split(SAGA_PAIR_MASK.text, SAGA_PAIR_TEXT_RAMP),
+    layer(file(a), SAGA_PAIR_MASK.banner),
+    layer(file(b), SAGA_PAIR_MASK.bannerRight),
+    placed(SAGA_PAIR_MASK.pinstripe, SAGA_PAIR_PINSTRIPE_AT),
+    split(SAGA_PAIR_MASK.pinline, PAIR_RAMPS.pinline),
+  ];
+}
+
+const SAGA_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.6f, owner 2026-11-25): Card Conjurer has no two-colour saga recipe, so 4.6b's (twoColorRecipe) carried onto the pack's own masks (sagaPairLayers) — gold-split <pair> = sagaFrameM.png whole, the text box's paper split across 15→43 %W (SAGA_PAIR_TEXT_RAMP, measured on 17 KHM / WOE / CMM / CLB / LCC prints), the ribbon's first colour through Banner and its second through Banner (Right) with the pack's pinstripe (sagaMidStripe.png at its bounds) on the seam, and the pinline across 40→60 %W; no hybrid dress (none printed)";
 
 // ---------------------------------------------------------------------------
 // The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
@@ -7605,6 +7698,8 @@ export const CC_TEMPLATES = {
     colors: {
       ...perColor((k) => [layer(`${SAGA}/regular/sagaFrame${k.toUpperCase()}.png`)], WUBRGM),
       c: [layer(`${SAGA}/regular/l.png`)],
+      // TODO 4.6f: the two-colour pair masters, gold-split only (sagaPairLayers).
+      ...pairMasters("m15", ["split"], (pair, dress) => sagaPairLayers(pair, dress)),
     },
     pieces: SAGA_CHAPTER_PIECES,
     maskInputs: SAGA_MASK_INPUTS,
@@ -7615,7 +7710,9 @@ export const CC_TEMPLATES = {
       "colourless = CC's 'Land Frame' (saga/regular/l.png), the land saga (owner decision 2026-09-29): the only printed colourless saga is MH2 #259 Urza's Saga, an Enchantment Land; a colourless non-land saga wears it too (none was printed)",
       "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
       "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
-      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)",
+      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs, recorded as maskInputs and never published — the two-colour pair masters (TODO 4.6f, below) draw through Pinline, Text, Banner and Banner (Right), and the pinstripe addon 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) on their ribbon's seam; its 'Holo Stamp' addon is not drawn (4.9d)",
+      SAGA_PAIR_NOTE,
+      "the legendary crown (TODO 4.6f): the sagacrown overlay — our m15crown band with its arms' last rows faded (scripts/build-saga-crown.mjs), the pack's title bar on M15's rows (its Title mask is m15MaskTitle) while its pinline is the regular pack's other tone (r 239,56,39, the adventure pack's) on w, b, r, g and m (u's is the band's; the land frame's, which the colourless key wears with the land crown l, within 9 levels)",
     ],
   },
   // 5.5 (b) — the double-faced saga's FRONT (NEO #141 Fable of the
