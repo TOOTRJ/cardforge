@@ -1312,9 +1312,12 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // triangle-stamped plain prints read wear it; from Marvel's Spider-Man,
   // 2025-09, Universes Beyond prints the M15 frame with the oval or no
   // stamp). PipGlyph draws it on the plain spell, artifact and land frames
-  // (`ub/2015`); on any other body — a saga, an adventure, a Vehicle, a
-  // double-faced card, extended art — the printing keeps its frame as the
-  // nearest.
+  // (`ub/2015`) and on extended art's spell and land frames
+  // (`ub/extendedart`, 4.25 — never a coloured artifact, a see-through
+  // colourless card, a Vehicle or the Nyx field); on any other body — a
+  // saga, an adventure, a Vehicle, a double-faced card, those extended-art
+  // printings — the printing keeps its frame as the nearest. (The words
+  // below still say "plain … frames only": unchanged by 4.25.)
   "universes-beyond": {
     match: UB_DRESS,
     reason: "this printing wears the Universes Beyond dress, which PipGlyph draws on its plain spell, artifact and land frames only",
