@@ -9978,7 +9978,8 @@ back).
   exactly as on main: the front's standard frame with a legacy back
   (`tests/unit/scryfall/saga-dfc-imports.test.ts` holds every one of the
   124 transforming-saga printings to origin/main's landing until then). A
-  saga CREATURE back (FIN) keeps today's landing (`face-type`). The AI deck
+  saga CREATURE back (FIN) lands on its own body since TODO 4.5d part B
+  ("The saga creature's back", below). The AI deck
   remix follows the import (`remixFrameFor`, `dfcImportLanding`).
 - **Owner Round 75 (2026-10-18)** — the look is signed off, and:
   1. **Adopt** (`adoptDfcBodiesAction`): an imported legacy DFC whose back is
@@ -10014,8 +10015,8 @@ kept in the row and not drawn).
   #71; PFIN's seven prerelease stamps) and 22 borderless, Scryfall
   2026-10-28. Every one prints Universes Beyond's triangle stamp. The
   transform BACKS that are saga creatures (FIN's Dominants' summons, 34
-  printings) are part B (the ▼ variant), as are the 3 colourless ones' see-
-  through rail and box.
+  printings) are part B's body ("The saga creature's back", below); the 3
+  colourless ones' see-through rail and box are not built (below).
 - **What print shows** (22 black-bordered prints read at 1500 × 2100, the
   numbers in `scripts/lib/saga-creature.mjs`): the TEXTURED saga (the
   starfield frame field) with the reminder as a BAND across the card under
@@ -10122,6 +10123,126 @@ kept in the row and not drawn).
     pack's own drawing, not a tone;
   - the box's right edge is m15nyx's (1409 px; print 1402): its rim meets
     the frame field's curve on 1723–1850, which no cut moves cleanly.
+- **The colourless see-through** (FIN #1 Summon: Bahamut, and its #356 /
+  PFIN #1s twins — the only colourless summons; no colourless summon is
+  double-faced): print lets the art through the rail's paper, the band, the
+  second box and both bars, the picture running under the whole frame. NOT
+  built (part B, 2026-11-25): it is new master work, not a cut — no pack
+  draws a see-through textured saga (Card Conjurer's saga packs have no
+  `c`, M15's see-through `c` has no rail, band or raised bar), so each
+  translucent region's alpha would be authored against one print. `c`
+  stays the artifact silver; a follow-up in TODO 4.5d.
+
+### The saga creature's back (4.5d, part B)
+
+TODO 4.5d, part B, 2026-11-25 (`feat/saga-creature-back`). An ADDITION: a
+new back body, `sagacreaturedfcback`, with its own plates and its crown
+pieces; no layout bump, no sweep, no badge; stored cards keep their look (a
+summon back saved before it keeps the ▼ back, or its legacy back).
+
+- **What it dresses.** The back of a transform card whose BACK face is a
+  Saga whose type words say Creature — Final Fantasy's Dominants, which
+  transform into their summons: FIN #13 Crystal Fragments // Summon:
+  Alexander, #16 Dion // Bahamut, Warden of Light, #58 Jill // Shiva, #104
+  Jecht // Braska's Final Aeon, #133 Clive // Ifrit, #185 Esper Origins //
+  Summon: Esper Maduin, #229 Joshua // Phoenix (R W), #245 Terra // Esper
+  Terra (G R), and PFIN's seven prerelease twins — 15 black-bordered; 6
+  extended-art (#428 … #511) and 13 borderless (#318 … #542). Every one on
+  today's ▼ (no family effect). The FRONTS are ordinary transform fronts —
+  `m15dfcfront` (six legendary creatures, crowned; #13 a white Equipment;
+  #185 a green sorcery). Scryfall 2026-11-25.
+- **What print shows** (FIN #13 / #16 / #58 / #104 / #133 / #185 / #229 /
+  #245 at 1500 × 2100): the saga creature body of part A — the reminder band,
+  the rail, the type bar raised 173 px, the second box, M15's plate spot —
+  under the ▼ back's DARK title bar and well and its dark type bar; the
+  paper greyed like every transform back's box; the colour dot on the
+  raised bar (its outline centred at 1658.5–1659 px); the P/T in white on
+  the dark back's plate; the six legendary backs crowned with the Nyx
+  crown (the crown with the starfield strip inside it) wrapped round the
+  well; the collector line on M15's rows. The two two-colour backs print
+  the pair dress (gold bars, each half's paper and frame field in its own
+  colour).
+- **The masters** are PipGlyph's own composite of published masters
+  (`scripts/build-saga-creature-back-frames.mjs`, every number in
+  `scripts/lib/saga-creature-back.mjs`; frames bucket only, provenance in
+  `lib/cards/frame-sources.json`), the saga back's way: the part A
+  `sagacreature/<k>` master whole, `m15dfcback/<k>`'s title bar and ▼ well
+  laid over it through Card Conjurer's 'Transform (Back) (New)' title mask,
+  and its type bar through CC's M15 type mask moved down 420 px — the saga
+  back's 593 less the 173 the body raises the bar (the run refuses any other
+  fit within ±2 rows). Toned onto print before the first tick
+  (`toneSourceRegions`, the saga back's reading — the per-channel median,
+  every 2 px, the brightest 5 % and the darker 40 % out): the PAPER (the
+  band, the chapter column, the second box — the saga pack's text mask less
+  its ribbon, cut as part A cut the master, and M15's box from row 1723) →
+  w 204,194,175 · u 141,179,217 · b 195,192,187 · r 235,168,143 · g
+  145,175,154; the TITLE and TYPE bars → FIN's (w 175,164,137 / 177,166,140,
+  u 63,132,189 / 58,131,188, b 63,58,52 / 62,56,51, r 234,107,76 /
+  233,104,73, g 68,130,90 / 64,127,90, gold 198,171,87 / 196,172,85 from
+  the two-colour summons). `m`'s paper is LCI #189's printed gold saga back
+  (no gold summon back was printed); `c` untoned (no colourless one). The
+  prerelease scans are set aside for their blue cast. Keys w u b r g m c.
+- **Its plates** (`sagacreaturedfcback/pt/<k>`): `m15dfcback/pt/<k>`
+  toned the same way onto FIN's plates (read where the profile draws them:
+  w 171,161,137 · u 59,130,189 · b 72,66,60 · r 225,97,73 · g 66,132,93 ·
+  gold 181,158,87) — the bars are toned, so the ▼ back's own plates would
+  sit a shade off beside them (r 152,55,27 against print's 225,97,73). Their
+  alpha is the ▼ back's (`lib/cards/plate-ink.ts`: the same ink); `c` is
+  m15dfcback's, byte for byte.
+- **Its crown** (`m15nyxdfccrownright/<k>`, keys w u b r g m a): the
+  published `m15nyxcrown` band cut round the ▼ well exactly as
+  `m15dfccrownright` cuts `m15crown` (`cutCrownBand`, `DFC_CROWN_WELLS.right`):
+  the band byte for byte outside the well region (the starfield strip ends
+  left of it), the alpha of Card Conjurer's '(Back)' crown twin inside.
+  Opt-in per card through the card's crown switch, as every DFC body's.
+- **The profile** (`SAGACREATUREDFCBACK`) is the saga creature's — band,
+  rail, window, raised type line and symbol, second box (its one line
+  centred, the plate a float) — with the ▼ back's deltas: no cost, WHITE
+  name and type ink, the name band ending before the well, the colour dot on
+  every coloured back moved down with its bar (`indicatorDyPct` = 420 / 21
+  %H: centred at 1659 px), the type line indented past it, and the P/T on
+  the dark back's plate box (`DFC_BACK_PT`) with the toned plates. The
+  PROFILES entry adds the crown and M15's collector line; no stamp (never on
+  a back), no pairs.
+- **Which back wears it** — ONE answer, `backBodyFor` (`lib/cards/dfc.ts`),
+  asked first: `sagaCreatureBackBodyFor` — a TRANSFORM back whose subtypes
+  say Saga and whose type words say Creature (the card type or a supertype
+  word: FIN imports as the creature card type with "Enchantment" in front),
+  on the ▼ family and the bordered look — wears it where it is published in
+  the colour the back wears; short of that, EXACTLY the body the back
+  derived before (the ▼ back for the import's spelling; the saga back for
+  the enchantment-card-type spelling). The server's gate (`resolveDfcBackFace`,
+  which now hands it the back's supertype), the creator (`creatorBackBodyFor`
+  with `backSupertype`: the live preview, the save, the form's colourless
+  check) and the reference validator read it. On an edit the stored body
+  wins, as for every back. Its text: the back's PLAIN rules text (a back
+  face carries no rows) — the chapters on the rail, the lines after the last
+  chapter in the second box (`splitSagaCreatureText`, as part A's import);
+  the P/T the back's own.
+- **The import** (`dfcImportOf`): the black-bordered and borderless
+  printings land on the transform bodies — `m15dfcfront`, the back on this
+  body in its own colour (a two-colour back stored as `["multicolor"]`, the
+  gold master, no dot: TODO 5.19) — once BOTH combos are verified
+  (`finalizeImportMatch`), else exactly as on main (the front's standard
+  frame, a legacy back: `tests/unit/scryfall/saga-dfc-imports.test.ts`
+  holds all 34 to origin/main's landing). The registry: `transform/2015`
+  (the borderless `borderless/dfc`, nearest on the bordered bodies), nearest
+  for the Universes Beyond dress alone — every FIN printing's, which no
+  double-faced body draws (4.25); the `nyx` gap is not named where the
+  printing lands on this body (`notDfcBackBodies`: its starfield is the
+  body's own masters). The EXTENDED-ART printings keep today's landing (the
+  extended-art frame, a legacy back: no extended-art double-faced body,
+  5.7b). The `dfc` gap no longer names FIN's summons; its item stays 4.5d
+  for the `era/2015+dfc` rows logged before.
+- **Left** (not built here): the two-colour pair dress (FIN #229 R W, #245
+  G R — gold bars, each half's paper and field in its colour; the body has
+  no pair masters, and `sagacreature` has none to start from), the
+  extended-art and borderless summon backs (5.7b / 4.38), the colourless
+  see-through (above; no colourless summon back exists). The prints set the
+  dot ~7 px further right (centre x 148 against the ▼ back's 141) and the
+  type line from 203 (ours 207): FIN's printing of its ▼ backs (the plain
+  ▼ back FIN #39 Hydaelyn reads the same 148.5), not this body's — left as
+  the ▼ back draws it.
 
 ### Double-sided tokens (5.5 (c))
 
@@ -11677,12 +11798,12 @@ of your own card copies nothing.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 92 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 93 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature and its double-faced back, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

@@ -381,9 +381,11 @@ Rules and gotchas:
   row, its back required; `dfcLayoutForCard` is the one "is this card
   double-faced" for a kind with a two-faced frame; a transform BACK that is
   an enchantment Saga — MOM's praetors, LCI #189 — wears `sagadfcback`, 5.5
-  (b) PR 2, where it is published in the back's colour, else the ▼ back:
-  `backBodyFor` in `lib/cards/dfc.ts` is the answer the gate, the creator
-  and the import share) —
+  (b) PR 2, and one whose type words say Creature — FIN's summons —
+  `sagacreaturedfcback`, 4.5d part B (asked first; it reads the back's
+  SUPERTYPE too), each where it is published in the back's colour, else the
+  body it derived before: `backBodyFor` in `lib/cards/dfc.ts` is the answer
+  the gate, the creator and the import share) —
   the tab is the one source of "which face": each back field sits on the
   step of its front twin (`panels/back-face-panels.tsx`, `BACK_FIELD_STEP`
   in `lib/creator/face-tabs.ts`; the same `back_face.*` paths), the preview
