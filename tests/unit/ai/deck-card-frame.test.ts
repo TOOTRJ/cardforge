@@ -25,7 +25,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // — each only where verified in the card's colour.
 //
 // Two verified sets: `supabase/seed.sql` (the mirror of production's ticks,
-// snapshotted 2026-10-14 — production may be ahead of it) and EVERY combo
+// snapshotted 2026-11-22 — production may be ahead of it) and EVERY combo
 // ticked (what each card lands on once its dress is verified).
 //
 // Stubbed: Supabase, the ledger, the image generators and the card actions
@@ -170,7 +170,8 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["Vehicle", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Vehicle"], rules_text: "Flying\nCrew 2", power: "3", toughness: "3" }), "noncreature", "m15vehicle", "m15vehicle"],
   ["Spacecraft with a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: `${STATION_LINE}\n9+ | Flying`, power: "4", toughness: "4" }), "noncreature", "m15station", "m15station"],
   ["Spacecraft without a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: "Flying", power: "4", toughness: "4" }), "noncreature", "m15artifact", "m15artifact"],
-  ["Planet with a tier", card({ card_type: "land", cost: "—", color_identity: ["colorless"], subtypes: ["Planet"], rules_text: `{T}: Add {C}.\n${PLANET_LINE}\n6+ | {T}: Add {C}{C}.` }), "land", "m15land", "m15stationland"],
+  // m15stationland/c is ticked on production (the seed mirror of 2026-11-22).
+  ["Planet with a tier", card({ card_type: "land", cost: "—", color_identity: ["colorless"], subtypes: ["Planet"], rules_text: `{T}: Add {C}.\n${PLANET_LINE}\n6+ | {T}: Add {C}{C}.` }), "land", "m15stationland", "m15stationland"],
   ["token (creature)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: null, power: "1", toughness: "1" }), "creature", "m20token", "m20token"],
   ["token (creature with text)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: "Vigilance", power: "1", toughness: "1" }), "creature", "m20tokentext", "m20tokentext"],
   ["token (Treasure)", card({ card_type: "token", cost: "—", supertype: "Artifact", subtypes: ["Treasure"], color_identity: ["colorless"], rules_text: "{T}, Sacrifice this artifact: Add one mana of any color." }), "noncreature", "m20tokenartifacttext", "m20tokenartifacttext"],

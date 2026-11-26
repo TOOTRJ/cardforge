@@ -109,6 +109,11 @@ describe("0117 — Chronoshear Archivist moves to the Snow frame", () => {
     const verified = new Set(
       lits(allColours).flatMap((t) => lits(colours).map((k) => frameComboKey(t, k))),
     );
+    // …and the single rows (m15snow is one since the 2026-11-22 refresh: its
+    // ticks were made at two layout versions).
+    for (const [, template, colour] of block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)) {
+      verified.add(frameComboKey(template, colour));
+    }
     expect(verified.has("m15snow/u")).toBe(true);
     expect(frameGateError("m15snow", ["blue"], verified)).toBeNull();
     // Still an artifact in the creator. The template doesn't change the kind.

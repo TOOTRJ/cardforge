@@ -655,7 +655,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "dropped_face": undefined,
     "flavor_text": undefined,
     "frame_match": {
-      "blockedBy": "4.10",
+      "blockedBy": "4.10g",
       "exactLabel": "Adventure frame ()",
       "reason": "PipGlyph's layout frames are M15-era",
       "signature": "layout/older",
@@ -778,7 +778,7 @@ Draw a card.",
     "dropped_face": undefined,
     "flavor_text": undefined,
     "frame_match": {
-      "blockedBy": "4.10",
+      "blockedBy": "4.10g",
       "exactLabel": "Split frame ()",
       "reason": "PipGlyph's layout frames are M15-era",
       "signature": "layout/older",

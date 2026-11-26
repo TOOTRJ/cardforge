@@ -75,10 +75,13 @@ two-colour land stored with no frame template, like production's Shadowwood
 Hollow), likes / comments / follows (the triggers turn those
 into 19 notifications), two decks, an active + closed + upcoming challenge, a
 published + a scheduled site update, and production's verified frame combos
-(`supabase/seed.sql`: 353 as of 2026-10-14). A refresh of that list does not
+(`supabase/seed.sql`: 655 as of 2026-11-22, with the layout version each tick
+recorded). A refresh of that list does not
 reach this database on its own: it has already run `seed.sql`, and the CLI
 never re-runs a seed file (see below). Run the file's frame_reviews block in
-the dev branch's SQL editor after each refresh.
+the dev branch's SQL editor after each refresh; a row the dev branch already
+holds keeps its own version (`on conflict do nothing`), so the refresh's PR
+names any UPDATE a gate needs.
 
 ### When to use the Docker stack instead
 

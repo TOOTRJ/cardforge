@@ -24,7 +24,7 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
 import { templateHasBackFace } from "@/lib/cards/dfc";
-import { isArchTallTokenTemplate, isM20NyxTokenTemplate, m20TokenTemplate, m20TokenTwinWithoutNyx, tokenHeightForText } from "@/lib/cards/token-height";
+import { ARCH_TOKEN_TEMPLATES, isArchTallTokenTemplate, isM20NyxTokenTemplate, m20TokenTemplate, m20TokenTwinWithoutNyx, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -689,8 +689,12 @@ type Outcome = {
    *  verified, for the printings `match` holds on — `template` stays the
    *  printing's own frame and the status its own. A match whose reason is
    *  `gap`'s (the piece that landing draws) says `reason` after the swap;
-   *  one a gap before it named keeps its reason. */
-  landOnOnceVerified?: { template: FrameTemplate; match: Match; gap: GapKey; reason: Text; overOwnFrame?: true };
+   *  one a gap before it named keeps its reason. `answersRows`: the
+   *  printing's own dress exists, as a creator pick that is never an
+   *  import's landing (an edge-to-edge frame, 1.18: the borderless
+   *  Spacecraft) — so a request row of `gap` logged on this landing, which
+   *  draws the piece, is answered (signatureDrawnOn). */
+  landOnOnceVerified?: { template: FrameTemplate; match: Match; gap: GapKey; reason: Text; overOwnFrame?: true; answersRows?: true };
 };
 
 type Rule = {
@@ -1140,6 +1144,12 @@ const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15borderlesspwtall: "m15pw",
 };
 
+/** The bordered frame an import of this edge-to-edge one lands on (1.18),
+ *  or undefined — the frame a request row of its printing names. */
+export function borderedLandingOf(template: FrameTemplate): FrameTemplate | undefined {
+  return BORDERED_EQUIVALENT[template];
+}
+
 // ---------------------------------------------------------------------------
 // Anatomy gaps: pieces of a printing PipGlyph doesn't draw yet. A rule that
 // can be exact lists the gaps that make it `nearest` (owner question 1's
@@ -1327,13 +1337,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // bodies — the saga fronts (NEO's transforming Sagas) and backs (the MOM
   // praetors), the battle fronts and the double-faced tokens (5.5). A
   // walker face (5.13), a colourless face without the Artifact word (5.11)
-  // and a modal printing before 5.1b have rules of their own.
+  // and a modal printing before 5.1b have rules of their own. 5.5 built
+  // those bodies; what still holds the gap (frames audit 2026-11-22) is
+  // FIN's transform cards whose back is a Saga creature — 4.5d's part B.
   dfc: {
     match: {
       anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
     },
     reason: "PipGlyph doesn't draw the double-faced marks on this frame yet",
-    blockedBy: "5.5",
+    blockedBy: "4.5d",
   },
   // The Ixalan parchment land back (TODO 5.8): XLN / RIX / LCI's transform
   // land backs print their own frame (uppercase name, a banner type line,
@@ -1749,12 +1761,14 @@ const stationStandIn = (
  *      reason and item stand).
  *  The dress's own verified frame wins over the stand-in (withVerification).
  *  A gap rule of a `nearest` base (the showcases) records no gaps: it is
- *  found by its key. */
+ *  found by its key. `reason` / `blockedBy` replace the gap's own words and
+ *  item where the dress has nothing left to build (the borderless
+ *  Spacecraft: its frame exists as a pick, 1.18 keeps it off the landing). */
 function stationDress(
   rules: Rule[],
-  dress: { standIn?: NonNullable<Outcome["landOnOnceVerified"]>; own?: TemplateSpec; exact?: true },
+  dress: { standIn?: NonNullable<Outcome["landOnOnceVerified"]>; own?: TemplateSpec; exact?: true; reason?: string; blockedBy?: string },
 ): Rule[] {
-  const { standIn, own, exact } = dress;
+  const { standIn, own, exact, reason, blockedBy } = dress;
   return rules.map((rule) =>
     rule.key.endsWith("+station")
       ? {
@@ -1764,6 +1778,8 @@ function stationDress(
             ...(standIn ? { landOnOnceVerified: standIn } : {}),
             ...(own ? { onceVerified: own } : {}),
             ...(own && exact ? { exactOnceVerified: true as const } : {}),
+            ...(reason ? { reason } : {}),
+            ...(blockedBy ? { blockedBy } : {}),
           },
           ...(own && exact ? { gapsOnceVerified: rule.gaps } : {}),
         }
@@ -1789,6 +1805,18 @@ const DFC_BODY_GAPS: readonly GapKey[] = M15_ERA_GAPS.filter((gap) => gap !== "d
  *  two-colour dress (4.6f) the other layout frames wait on. */
 const PER_PART_COLOUR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["split", "aftermath"]);
 const LAYOUT_TWO_COLOUR_ITEM: BlockedBy = (template) => (template && PER_PART_COLOUR_TEMPLATES.has(template) ? "4.26" : "4.6f");
+
+/** The 2014–19 arch token's frames (lib/cards/token-height.ts
+ *  ARCH_TOKEN_TEMPLATES: every height, plain and artifact). */
+const ARCH_TOKEN_FRAMES: ReadonlySet<FrameTemplate> = new Set(
+  Object.values(ARCH_TOKEN_TEMPLATES).flatMap(({ plain, artifact }) => [plain, artifact]),
+);
+
+/** The item the 2015 frame's crown gap waits on, per landing frame: a
+ *  legendary arch token's crown (GS1 #T1, TGK1 #11; always gold, TDOM #10)
+ *  is its own item, 4.53b (frames audit 2026-11-22) — 4.6f's crowns never
+ *  reach a token; every other frame keeps the gap's own item. */
+const ERA_CROWN_ITEM: BlockedBy = (template) => (template && ARCH_TOKEN_FRAMES.has(template) ? "4.53b" : GAPS.crown.blockedBy);
 
 // ---------------------------------------------------------------------------
 // The rules, in order. First match wins.
@@ -2020,7 +2048,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       outcome: { status: "exact", template: "bloomburrow" },
     },
     ["dfc", "two-colour", "two-colour-hybrid"],
-    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+    { dfc: "4.11", "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
   {
     key: "showcase/blb/anime",
@@ -2093,7 +2121,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       outcome: { status: "exact", template: "avatar" },
     },
     ["dfc", "two-colour", "two-colour-hybrid"],
-    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+    { dfc: "4.11", "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
   // The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2; Card
   // Conjurer's 'Enchanting Tales' pack): the bonus sheet WOT #1–63 — 63
@@ -2400,7 +2428,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // it is no import's landing (Scryfall's art crop is the window: 1.18), so
   // the import lands on the BORDERED station frame once that is verified in
   // the card's colour (stationDress, as the borderless Vehicle does), the
-  // artifact frame before.
+  // artifact frame before. Nothing is left to build (frames audit
+  // 2026-11-22): the words say where it lands and where the borderless
+  // frame is, the item is 1.18's landing rule, and a request row logged on
+  // the bordered Station frame is answered (`answersRows`).
   ...stationDress(
     withGaps(
       {
@@ -2411,7 +2442,14 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
       ["station", "etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
     ),
-    { standIn: stationStandIn("borderless", "an import draws its picture in the bordered Station frame's window") },
+    {
+      standIn: {
+        ...stationStandIn("borderless", "it lands on the bordered Station frame; the borderless Station frame can be picked in the creator"),
+        answersRows: true,
+      },
+      reason: "a borderless Spacecraft lands on the bordered Station frame once that is verified in its colour; the borderless Station frame can be picked in the creator",
+      blockedBy: "1.18",
+    },
   ),
 
   // --- 1.19 steps 3–7: the other full-art and textless printings ----------
@@ -3068,6 +3106,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         outcome: { status: "exact", template: { family: "extended" }, landOnOnceVerified: vehicleStandIn("extended art") },
       },
       ["layout", "dfc", "station", "etched", "border", "universes-beyond", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
+      // An extended-art double-faced printing (60 transform, 24 modal) waits
+      // on its own faces, 5.7b — not the standard frame's dfc item.
+      { dfc: "5.7b" },
     ),
     {
       standIn: stationStandIn("extended art", "PipGlyph's extended-art Station frame isn't verified in its colour yet"),
@@ -3099,7 +3140,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: "m15artifact",
       reason: "PipGlyph has no coloured artifact frame for this border era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
   {
@@ -3115,7 +3156,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: "m15artifact",
       reason: "PipGlyph has no coloured artifact frame for this border era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
 
@@ -3139,7 +3180,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "dfc" },
       reason: "PipGlyph's transform frames are M15-era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
   // A devoid or snow double-faced printing (MH3's five devoid MDFCs, KHM
@@ -3272,7 +3313,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "m15" },
       reason: "PipGlyph's layout frames are M15-era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
 
@@ -3294,7 +3335,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "retro" },
       reason: "PipGlyph has no planeswalker frame for this border era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
   ...withGaps(
@@ -3314,7 +3355,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "modern" },
       reason: "PipGlyph has no planeswalker frame for this border era",
-      blockedBy: "4.10",
+      blockedBy: "4.10g",
     },
   },
   ...withGaps(
@@ -3436,6 +3477,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // only one face is the enchantment — FIN's Dominants, NEO's sagas) and a
   // token (4.51's `nyx-dress`) never reach it, and the borderless,
   // extended-art and showcase printings are named by earlier rules.
+  // A legendary arch token's crown is 4.53b's, not 4.6f's (ERA_CROWN_ITEM).
   ...nyxOnceVerified(
     withGaps(
       {
@@ -3445,6 +3487,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         outcome: { status: "exact", template: { family: "m15" } },
       },
       M15_ERA_GAPS,
+      { crown: ERA_CROWN_ITEM },
     ),
   ),
   {
@@ -3498,8 +3541,8 @@ export function ownFramesOfSignature(signature: string): readonly FrameTemplate[
  * by `template`, the frame the logged import landed on (4.6 review
  * 2026-09-29): the same printing imports exact now, so the admin page lists
  * the row as answered, not as open and blocked by an item. Only when that
- * frame is one the signature's own rule names (a borderless printing that
- * landed on its bordered equivalent is still not exact) and draws the gap's
+ * frame is one the signature's own rule names (or stands for one: below)
+ * and draws the gap's
  * piece (gapDrawnBy — for a family that waits on another item for it, only
  * on the frame the rule names once verified: the M20 token's crown and pairs
  * on the full-art templates, never on the arch). A "two-colour" row logged before the hybrid dress
@@ -3509,9 +3552,32 @@ export function ownFramesOfSignature(signature: string): readonly FrameTemplate[
  * (GOLD_PAIR_TEMPLATES: devoid's one hybrid printing is an MDFC, logged
  * under the dfc gap, never this one). A split-only frame that hosts
  * creatures (m15artifact, m15snow) keeps such a row open: it can't tell a
- * hybrid printing from a gold one.
+ * hybrid printing from a gold one — but only for the rules whose gap is
+ * older than its hybrid twin (TWO_COLOUR_OLDER_THAN_HYBRID): every other
+ * rule's "+two-colour" rows were never hybrid.
+ *
+ * Where a row was logged (frames audit 2026-11-22) — the frame it names:
+ *   • a frame of the signature's own rule that dresses a kind the rule
+ *     holds to (framesOfRuleKinds: never a fall-forward — a layout or
+ *     walker printing logged on the plain frame);
+ *   • the BORDERED landing of an edge-to-edge frame the rule names (1.18:
+ *     an import's picture is the window's, so a borderless printing logs
+ *     the frame it landed on — m15 for m15borderless): drawn when every
+ *     such borderless twin of that landing draws the piece
+ *     ("borderless/standard+crown" logged on m15, drawn since 4.6f);
+ *   • the stand-in landing of a dress PipGlyph offers only as a pick
+ *     (`landOnOnceVerified.answersRows`: the borderless Spacecraft on the
+ *     bordered Station frame).
+ * A per-frame item (a function of the landing frame: the layout frames'
+ * two-colour gap, 4.26 on split and aftermath, 4.6f on the rest) names who
+ * draws the piece ON that frame, so gapDrawnBy answers it frame by frame; a
+ * family-wide one (the token crown: 4.48's) waits on the frame the rule
+ * names once verified. `border` is the printed border where the caller
+ * knows it (the admin page reads it off the row's set,
+ * lib/frames/frame-requests.ts): only a white one is drawn, and only on
+ * the 1997 and 2003 frames — without it a "+border" row stays open.
  */
-export function signatureDrawnOn(signature: string, template: string | null | undefined): boolean {
+export function signatureDrawnOn(signature: string, template: string | null | undefined, border?: string): boolean {
   const rule = RULE_BY_KEY.get(signature);
   const plus = signature.lastIndexOf("+");
   if (!rule || !template || plus < 0) return false;
@@ -3519,6 +3585,57 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   if (!Object.prototype.hasOwnProperty.call(GAPS, gap)) return false;
   const key = gap as GapKey;
   const on = template as FrameTemplate;
+  const standIn = rule.outcome.landOnOnceVerified;
+  if (standIn?.answersRows && standIn.gap === key && standIn.template === on) return gapDrawnBy(key, on, border);
+  const own = framesOfRuleKinds(rule);
+  const worn = own.includes(on) ? [on] : own.filter((frame) => BORDERED_EQUIVALENT[frame] === on);
+  return worn.length > 0 && worn.every((frame) => gapDrawnOnOwnFrame(rule, key, frame, border));
+}
+
+/** Every `kinds` list a match requires (its own and its `allOf` parts' —
+ *  a gap rule is `allOf: [base, gap]`; never an `anyOf` branch). */
+function requiredKindLists(match: Match): (readonly CardKind[])[] {
+  return [...(match.kinds ? [match.kinds] : []), ...(match.allOf ?? []).flatMap(requiredKindLists)];
+}
+
+const framesOfRuleKindsMemo = new Map<string, readonly FrameTemplate[]>();
+/** The frames a rule names that dress a kind its match holds to — the
+ *  frames its printings WEAR. A family names more (`layout/2015`'s m15
+ *  family names m15, m15land…; `borderless/planeswalker`'s names
+ *  m15borderless), and a row logged on one of those is a fall-forward: the
+ *  creator logs the frame the form landed on (`landedTemplate`), the plain
+ *  frame where the layout or walker frame wasn't published in the colour
+ *  (KHM #201's saga, MH3 #196's adventure, DMU #375's walker on m15) — and
+ *  the printing still lands on its own frame, where the gap holds. Such a
+ *  row is never answered (frames audit 2026-11-22, the independent check). */
+function framesOfRuleKinds(rule: Rule): readonly FrameTemplate[] {
+  let frames = framesOfRuleKindsMemo.get(rule.key);
+  if (!frames) {
+    const lists = requiredKindLists(rule.match);
+    frames = templatesOfRule(rule).filter((frame) =>
+      lists.every((kinds) => kinds.some((kind) => templateSupportsKind(frame, kind))),
+    );
+    framesOfRuleKindsMemo.set(rule.key, frames);
+  }
+  return frames;
+}
+
+/** The rules whose `two-colour` gap is older than its hybrid twin: TODO
+ *  4.6.0 split `two-colour-hybrid` off on 2026-09-29, the request log began
+ *  the day before, so a "+two-colour" row of theirs may be a hybrid
+ *  printing. Every later rule's gap — the layout frames', the Vehicle's,
+ *  Universes Beyond's — was born beside the hybrid one: its rows never are. */
+const TWO_COLOUR_OLDER_THAN_HYBRID: ReadonlySet<string> = new Set([
+  "era/2015",
+  "era/1997",
+  "era/2003",
+  "borderless/standard",
+  "extendedart",
+  "token/m20",
+]);
+
+/** signatureDrawnOn on one frame the rule names. */
+function gapDrawnOnOwnFrame(rule: Rule, key: GapKey, on: FrameTemplate, border: string | undefined): boolean {
   // A gap the family waits on another item for counts as drawn only on the
   // frame the rule names once verified (the M20 token's crown and pairs on
   // the full-art templates, TODO 4.48) — never on its stand-in, and only
@@ -3530,8 +3647,9 @@ export function signatureDrawnOn(signature: string, template: string | null | un
     later !== undefined &&
     rule.outcome.exactOnceVerified === true &&
     (typeof later === "string" ? [later] : FAMILIES[later.family].produces).includes(on);
-  if ((rule.gapBlockedBy?.[key] && !onLater) || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
-  if (key === "two-colour" && !gapDrawnBy("two-colour-hybrid", on)) {
+  if ((typeof rule.gapBlockedBy?.[key] === "string" && !onLater) || !gapDrawnBy(key, on, border)) return false;
+  const base = rule.key.slice(0, rule.key.indexOf("+"));
+  if (key === "two-colour" && TWO_COLOUR_OLDER_THAN_HYBRID.has(base) && !gapDrawnBy("two-colour-hybrid", on)) {
     // …nor a token's (no cost: a token never prints the hybrid dress — the
     // M20 token's pairs on the full-art templates, TODO 4.48).
     return (
@@ -3781,8 +3899,10 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The border gap is ONE gap for white, silver, gold and yellow (TODO
     // 4.30): only a WHITE border is drawn, and only by a frame whose profile
     // declares it (the 1997 and 2003 frames). A caller that doesn't know the
-    // printing's border (signatureDrawnOn: a logged "+border" row may be a
-    // gold-bordered World Championship card) gets false.
+    // printing's border (signatureDrawnOn without one: a logged "+border"
+    // row may be a gold-bordered World Championship card) gets false; the
+    // admin page reads it off the row's set (lib/frames/frame-requests.ts
+    // printedBorderOfRowSet).
     case "border":
       return border === "white" && frameAnatomyOf(template).border;
     case "crown":

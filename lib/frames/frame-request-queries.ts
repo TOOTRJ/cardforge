@@ -6,6 +6,7 @@ import { FRAME_TEMPLATE_SET, type FrameTemplate } from "@/types/card";
 import { describeFrame } from "@/lib/creator/frame-resolve";
 import {
   FRAME_REQUEST_ART_FLAGS,
+  frameRequestAnswered,
   isForGoodSignature,
   scryfallPrintingUrl,
   signatureBlockedBy,
@@ -13,7 +14,7 @@ import {
   type FrameRequestCause,
   type FrameRequestStatus,
 } from "@/lib/frames/frame-requests";
-import { isKnownFrameSignature, legacyTallBoxAnswered, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { isKnownFrameSignature } from "@/lib/scryfall/frame-signatures";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 
@@ -103,14 +104,17 @@ type RpcRow = {
 const isTemplate = (value: string | null): value is FrameTemplate =>
   value != null && Object.prototype.hasOwnProperty.call(FRAME_TEMPLATE_SET, value);
 
-/** Pure: RPC rows → panel rows. `verifiedKeys` (the verified combos) answers
- *  the rows whose printings land on a frame of their own once it is ticked:
- *  the arch's tall box (TODO 4.55, legacyTallBoxAnswered) — the import of
- *  such a printing landed on the regular box, which never draws it. */
+/** Pure: RPC rows → panel rows. A row is answered (`drawnNow`) by
+ *  frameRequestAnswered: the frame it landed on draws its piece (the row's
+ *  set says a white border), or — `verifiedKeys`, the verified combos — the
+ *  printing lands on a frame of its own that does once that is ticked (the
+ *  Nyx frame, the full-art token, the arch's tall box…). */
 export function mapFrameRequestRows(rows: readonly RpcRow[], verifiedKeys: ReadonlySet<string> = new Set()): FrameRequestRow[] {
   return rows.map((row) => {
-    const drawnNow =
-      signatureDrawnOn(row.signature, row.template) || legacyTallBoxAnswered(row.signature, row.set_code, verifiedKeys);
+    const drawnNow = frameRequestAnswered(
+      { signature: row.signature, template: row.template, setCode: row.set_code },
+      verifiedKeys,
+    );
     return {
       signature: row.signature,
       label: row.label,

@@ -459,10 +459,14 @@ describe("two-colour borderless lands on the import (TODO 4.56)", () => {
     expect(frameMatchFromScryfall(printing("spg-109")).status).toBe("nearest");
   });
 
-  it("the old request rows read as answered on the frame itself, never on the bordered landing", () => {
+  it("the old request rows read as answered on the frame itself and on the bordered landing they were logged on", () => {
     expect(signatureDrawnOn("borderless/land+two-colour", "m15borderlessland")).toBe(true);
-    expect(signatureDrawnOn("borderless/land+two-colour", "m15land")).toBe(false);
+    // An import's picture is the window's (1.18): a borderless land logs the
+    // bordered land frame it landed on — answered there once the borderless
+    // twin draws the piece (frames audit 2026-11-22).
+    expect(signatureDrawnOn("borderless/land+two-colour", "m15land")).toBe(true);
     expect(signatureDrawnOn("borderless/land+crown", "m15borderlessland")).toBe(false);
+    expect(signatureDrawnOn("borderless/land+crown", "m15land")).toBe(false);
     for (const key of ["borderless/land+shadow-box", "borderless/land+short-box", "borderless/land+dark-type-and-box"]) {
       expect(isKnownFrameSignature(key), key).toBe(true);
       expect(signatureDrawnOn(key, "m15borderlessland"), key).toBe(false);

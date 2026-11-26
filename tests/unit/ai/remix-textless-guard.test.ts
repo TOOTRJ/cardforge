@@ -17,6 +17,7 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 1.24 — an AI remix never saves a text on a frame that draws none.
@@ -30,7 +31,7 @@ import { FRAME_TEMPLATE_VALUES, type CardType, type ColorIdentity, type FrameTem
 //   1. WHICH frames hide text, and which registry rules reach them;
 //   2. the guard's three answers (stands / stand-in / nothing else);
 //   3. a sweep over every recorded printing × the verified-list variants:
-//      with production's list nothing differs from the code before the
+//      with the 2026-10-14 list nothing differs from the code before the
 //      guard, and where something differs it is a text that was hidden;
 //   4. the same rule in resolveGeneratedFrame's random pool.
 // The step's wiring is deck-remix-step-frame.test.ts and
@@ -53,7 +54,9 @@ function productionVerifiedKeys(): Set<string> {
   }
   return keys;
 }
-const PROD = productionVerifiedKeys();
+/** Production's list as these cases were written against it — before the
+ *  2026-11-22 refresh. */
+const PROD = asBeforeSeedRefresh(productionVerifiedKeys());
 const ALL = new Set(every(FRAME_TEMPLATE_VALUES));
 const minus = (keys: ReadonlySet<string>, ...templates: string[]) =>
   new Set([...keys].filter((key) => !templates.some((t) => key.startsWith(`${t}/`))));
@@ -194,7 +197,7 @@ describe("remixSavedFrame — the guard", () => {
   });
 });
 
-describe("the one place production's list differs from before the guard: an off-kind own card on a textless token height", () => {
+describe("the one place the 2026-10-14 list differs from before the guard: an off-kind own card on a textless token height", () => {
   // The server's kind gate never refuses a border-era standard (an off-kind
   // legacy card stays editable), so a card whose card_type is NOT token can
   // be stored on `m20token`; #533 keeps that frame. The height rule
@@ -219,7 +222,7 @@ describe("the one place production's list differs from before the guard: an off-
     expect(remixSavedFrame({ ...card, rulesText: null, flavorText: null, standIn: ownCardTextStandIn(creature, PROD) })).toBe("m20token");
   });
 
-  it("an own TOKEN there is untouched by the guard on production's list (its text finds its box, as before)", () => {
+  it("an own TOKEN there is untouched by the guard on the 2026-10-14 list (its text finds its box, as before)", () => {
     const token = { ...creature, card_type: "token" as CardType, supertype: "Creature" };
     const tokenCard = { ...card, cardType: token.card_type, supertype: token.supertype, flavorText: "New flavour." };
     const before = autoTokenTextBoxFrame(tokenCard);
@@ -409,7 +412,7 @@ describe("resolveGeneratedFrame — the same rule in the AI's random pool", () =
     expect(token({ rulesText: "Vigilance" }, only, 0)).toBe("m20token");
   });
 
-  it("with production's list a text token lands on a box, as before", () => {
+  it("with the 2026-10-14 list a text token lands on a box, as before", () => {
     for (const random of SPREAD) {
       const picked = token({ rulesText: "Vigilance" }, PROD, random);
       expect(["m15tokentext", "m20tokentext"]).toContain(picked);
