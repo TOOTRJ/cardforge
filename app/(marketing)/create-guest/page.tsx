@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getFantasyGameSystem } from "@/lib/cards/queries";
 import { isDesignAiConfigured } from "@/lib/ai/provider";
-import { getVerifiedFrameKeysPublic } from "@/lib/cards/frame-reviews";
+import { readVerifiedFrameKeysForStaticPage } from "@/lib/cards/frame-reviews";
+import { FrameListUnavailableNotice } from "@/components/creator/frame-list-unavailable-notice";
 import { PageContainer } from "@/components/layout/page-container";
 import { guestAuthHref } from "@/lib/creator/guest-draft";
 
@@ -52,8 +53,14 @@ export default async function PreviewPage() {
   // Published (template, color) combos gate every kind chip and frame tile;
   // read through the public client so the page stays ISR. Without these
   // the guest creator offered only Creature — every other kind sat behind a
-  // "Soon" badge — which contradicted the copy above.
-  const verifiedFrameKeys = gameSystem ? await getVerifiedFrameKeysPublic() : [];
+  // "Soon" badge — which contradicted the copy above. A read that fails is
+  // never every frame "Soon" without a word, and never CACHED for the hour:
+  // at run time it throws, so a regeneration keeps the last good page
+  // (readVerifiedFrameKeysForStaticPage); during the build it is SAID (the
+  // notice below).
+  const { keys: verifiedFrameKeys, unavailable: frameListUnavailable } = gameSystem
+    ? await readVerifiedFrameKeysForStaticPage()
+    : { keys: [], unavailable: false };
 
   if (!gameSystem) {
     return <SchemaUnseeded />;
@@ -91,6 +98,8 @@ export default async function PreviewPage() {
           </Button>
         }
       />
+
+      {frameListUnavailable ? <FrameListUnavailableNotice className="mt-8" cached /> : null}
 
       <div className="mt-10">
         <CardCreatorForm

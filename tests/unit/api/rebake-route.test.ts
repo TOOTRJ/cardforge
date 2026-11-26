@@ -132,4 +132,25 @@ describe("POST /api/admin/rebake — the shared sweep lease", () => {
     expect(state.acquire).not.toHaveBeenCalled();
     expect(state.batch).not.toHaveBeenCalled();
   });
+
+  it("reports a card a frame asset stopped on its own as failed, with the asset — the driver goes on", async () => {
+    state.batch.mockResolvedValue({ ...batchResult(1), assetStops: [{ id: "stuck", paths: ["frames/never-promoted/w.png"] }] });
+    const res = await post("scope=sweep");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.failed).toEqual([
+      { id: "stuck", error: "Frame assets unavailable (the site CDN or the frames bucket): frames/never-promoted/w.png" },
+    ]);
+  });
+
+  it("answers 503 + Retry-After naming the asset when it is down for every card (the driver backs off)", async () => {
+    state.batch.mockResolvedValue({ ...batchResult(3), processed: [], assetsUnavailable: ["frames/m15pw/loyaltyup.png"] });
+    const res = await post("scope=sweep");
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("60");
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error).toMatch(/Frame assets unavailable .*frames\/m15pw\/loyaltyup\.png/);
+  });
 });

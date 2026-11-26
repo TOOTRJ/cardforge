@@ -317,16 +317,23 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   // other back of its type derives (today's), so nothing is refused that was
   // saved before.
   const wornColour = storedHasBody ? backColourOf(input.stored?.back, input.frontColorIdentity) : backColourOf(back, input.frontColorIdentity);
+  const storedWins = storedHasBody && !input.stored?.familyChanged;
+  // A stored body that stays — the same family, the same back type — is
+  // kept whatever is published (below): its derivation never asks the
+  // verified list, so an edit that leaves the back alone reads none (a
+  // frame-list outage never refuses it; withVerifiedKeysIfConsulted).
+  const typeChanged = (input.stored?.back?.card_type ?? null) !== backType;
+  const keepsStoredBody = storedWins && !typeChanged;
   const derived = backBodyFor(
     layout,
     { cardType: backType, subtypes: back.subtypes as readonly string[] | string | null | undefined },
     family,
     dfcLookOf(front),
-    (template) => Boolean(input.skipVerification) || isFrameComboAvailable(template, pickFrameColorKey(wornColour), input.verifiedKeys),
+    (template) =>
+      keepsStoredBody || Boolean(input.skipVerification) || isFrameComboAvailable(template, pickFrameColorKey(wornColour), input.verifiedKeys),
   );
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
-  const storedWins = storedHasBody && !input.stored?.familyChanged;
   let template: FrameTemplate;
   if (storedWins && dfcLookOf(storedBody) !== dfcLookOf(front)) {
     // A front moved onto a body of the OTHER look (TODO 5.7: the borderless
@@ -341,7 +348,6 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     // back retyped as a Saga on the ▼ back — is not a move, whether or not
     // the saga back is published: the stored body stays, as the creator
     // draws it.)
-    const typeChanged = (input.stored?.back?.card_type ?? null) !== backType;
     if (typeChanged && derived !== storedBody && bodyFor(layout, "back", backType, family, dfcLookOf(front)) !== storedBody) {
       return { ok: false, field: "back_face.card_type", message: DFC_BACK_BODY_SET };
     }

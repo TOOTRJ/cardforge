@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { checkScryfallRateLimit, logScryfallCall } from "@/lib/scryfall/rate-limit";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { getEntitlements } from "@/lib/billing/entitlements";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { describeCapacity, remainingCapacity, type CardCapacity } from "@/lib/billing/capacity-copy";
@@ -58,6 +59,18 @@ function record(access: Access, event: string, props: Record<string, string | nu
   recordToolEventLater({ slug: BULK_CUSTOMIZE_TOOL_SLUG, userId: access.userId, event, access: access.via, props });
 }
 
+/** The verified frame list, or null when it can't be read right now (the
+ *  reader logged it; lib/cards/frame-list-unavailable.ts) — never an empty
+ *  list standing for "nothing is published". */
+async function verifiedFrameListOrNull(): Promise<string[] | null> {
+  try {
+    return await getVerifiedFrameKeys();
+  } catch (err) {
+    if (isVerifiedFramesUnavailable(err)) return null;
+    throw err;
+  }
+}
+
 /** How many of a selection come from each door (a deck's entries, the
  *  collection, the tool page's search). */
 function sourceCounts(sources: readonly BulkSource[]) {
@@ -109,6 +122,15 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
   const from = sourceCounts(parsed.data);
 
   const { resolved, skipped } = await resolveBulkSources(access.userId, parsed.data);
+  // The verified frame list, read ONCE and before any Scryfall call: one
+  // that can't be read refuses the batch in words that say try again —
+  // never every card landing as if nothing were published.
+  const verifiedList = await verifiedFrameListOrNull();
+  if (!verifiedList) {
+    record(access, "prepare_failed", { reason: "frame_list_unavailable", cards: resolved.length, ...from });
+    return { ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE };
+  }
+  const verifiedKeys = new Set(verifiedList);
   let cards: BulkPreparedCard[] = [];
   if (resolved.length > 0) {
     const limit = await checkScryfallRateLimit(access.userId, "deck_import");
@@ -122,7 +144,6 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
       record(access, "prepare_failed", { reason: "scryfall_unavailable", cards: resolved.length, ...from });
       return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
     }
-    const verifiedKeys = new Set(await getVerifiedFrameKeys());
     for (const source of resolved) {
       const card = printings.get(source.scryfallId.toLowerCase());
       if (!card) {
@@ -143,8 +164,7 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
     cards = cards.slice(0, 100);
   }
 
-  const [verifiedKeys, entitlements, capacity, credits] = await Promise.all([
-    getVerifiedFrameKeys(),
+  const [entitlements, capacity, credits] = await Promise.all([
     getEntitlements(),
     getCardCapacity(),
     getFreshCreditBalance(),
@@ -154,7 +174,7 @@ export async function prepareBulkCustomizeAction(sourcesInput: unknown): Promise
     ok: true,
     cards,
     skipped,
-    verifiedKeys,
+    verifiedKeys: verifiedList,
     removeWatermark: entitlements.removeWatermark,
     capacity,
     credits,
@@ -208,6 +228,13 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
     return { ok: false, error: skipped[0]?.reason ?? "None of these cards can be customized." };
   }
 
+  // The verified frame list before any Scryfall call or charge: one that
+  // can't be read refuses the batch in words that say try again.
+  const verifiedList = await verifiedFrameListOrNull();
+  if (!verifiedList) {
+    refused("frame_list_unavailable", { cards: resolved.length });
+    return { ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE };
+  }
   const limit = await checkScryfallRateLimit(access.userId, "deck_import_commit");
   if (!limit.ok) {
     refused("rate_limited", { cards: resolved.length });
@@ -220,7 +247,7 @@ export async function startBulkCustomizeAction(input: unknown): Promise<BulkStar
     return { ok: false, error: "Scryfall didn't answer — try again in a moment." };
   }
 
-  const verifiedKeys = new Set(await getVerifiedFrameKeys());
+  const verifiedKeys = new Set(verifiedList);
   const entitlements = await getEntitlements();
   const entries: BulkCustomizeJobPlan["entries"] = [];
   for (const source of resolved) {

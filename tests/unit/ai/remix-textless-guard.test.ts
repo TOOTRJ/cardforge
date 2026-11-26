@@ -207,7 +207,12 @@ describe("the one place production's list differs from before the guard: an off-
   const card = { template: "m20token" as FrameTemplate, cardType: creature.card_type, supertype: null, subtypes: creature.subtypes, rulesText: creature.rules_text, power: "1", toughness: "1", colorIdentity: creature.color_identity, verifiedKeys: PROD };
 
   it("it kept the textless height with its text before; it takes the default frame now, and keeps the height with no text", () => {
-    expect(ownCardRemixFrame(creature, PROD, { singleFace: true }).frame_template).toBe("m20token");
+    // Since the rendering-safety fix the server's kind gate refuses a
+    // creature on the full-art token frames (they dress the token kind
+    // alone), so the own-card remix keeps no template for one: the default
+    // landing, before the guard below is even asked. The guard's own answers
+    // for such a card are unchanged.
+    expect(ownCardRemixFrame(creature, PROD, { singleFace: true }).frame_template).toBeUndefined();
     expect(autoTokenTextBoxFrame({ ...card, flavorText: "New flavour." })).toBe("m20token");
     expect(ownCardTextStandIn(creature, PROD)).toBeNull();
     expect(remixSavedFrame({ ...card, flavorText: "New flavour.", standIn: ownCardTextStandIn(creature, PROD) })).toBeUndefined();

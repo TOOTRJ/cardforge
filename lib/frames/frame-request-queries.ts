@@ -15,6 +15,7 @@ import {
 } from "@/lib/frames/frame-requests";
 import { isKnownFrameSignature, legacyTallBoxAnswered, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 
 // ---------------------------------------------------------------------------
 // /admin/frame-requests reads (TODO 1.6, migration 0123): the requests per
@@ -176,7 +177,8 @@ export async function getFrameRequestSummary(
       console.warn("getFrameRequestSummary: rpc error", error.message);
       return empty("Couldn't read the request log.");
     }
-    // (An unreadable list answers nothing more: getVerifiedFrameKeys is [] then.)
+    // (An unreadable list throws — VerifiedFramesUnavailableError — and the
+    // summary says so below, never every request "not yet verified".)
     const verified = new Set(await getVerifiedFrameKeys());
     const rows = sortFrameRequestRows(mapFrameRequestRows((data ?? []) as RpcRow[], verified));
     return {
@@ -190,6 +192,6 @@ export async function getFrameRequestSummary(
       "getFrameRequestSummary: failed",
       error instanceof Error ? error.message : error,
     );
-    return empty("Couldn't read the request log.");
+    return empty(isVerifiedFramesUnavailable(error) ? "Couldn't read the verified frame list." : "Couldn't read the request log.");
   }
 }

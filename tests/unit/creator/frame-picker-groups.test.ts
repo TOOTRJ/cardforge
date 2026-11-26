@@ -618,8 +618,43 @@ describe("the frame picker's groups: a classification change only", () => {
   });
 
   // --- what did NOT change -------------------------------------------------
+  // The kind gate: identical but for the token frames past the 2014–19
+  // arch's own pair (the text boxes, 4.49 (b), and the M20+ full-art
+  // design, 4.48 / 4.50), which dress the token kind ALONE since the
+  // rendering-safety fix — as the Nyx dress (4.51) and the tall boxes (4.55,
+  // both dropped from the dump) already did. Main let a planeswalker, a land
+  // or an instant save on them; the picker never offered one (`supports`,
+  // below, is main's). Every changed row is such a frame refusing a kind it
+  // took on main; none of them refuses a token.
+  it("refuses — which kinds a frame refuses: main's, but the newer token frames refuse every kind but the token", () => {
+    const tokenFrames = [
+      "m15tokentext",
+      "m15tokenartifacttext",
+      "m20token",
+      "m20tokentext",
+      "m20tokentall",
+      "m20tokenartifact",
+      "m20tokenartifacttext",
+      "m20tokenartifacttall",
+    ];
+    const moved = changed("refuses");
+    expect(moved.length).toBeGreaterThan(0);
+    for (const key of moved) {
+      const [template, kind] = key.split("|");
+      expect(tokenFrames, key).toContain(template);
+      expect(kind, key).not.toBe("token");
+      expect([main.refuses[key], branch.refuses[key]], key).toEqual([false, true]);
+    }
+    for (const template of tokenFrames) {
+      expect(branch.refuses[`${template}|token`], template).toBe(false);
+      for (const kind of CARD_KIND_VALUES) {
+        const key = `${template}|${kind}`;
+        if (kind !== "token" && key in branch.refuses) expect(branch.refuses[key], key).toBe(true);
+      }
+    }
+  });
+
   it.each([
-    ["refuses", "which kinds a frame refuses (the picker's and the server's kind gate)"],
     ["supports", "which kinds a frame is offered to"],
     ["base", "the Frame-section base of every frame, per kind"],
     ["resolve", "the published-frame resolver, every kind × frame × colour × policy"],

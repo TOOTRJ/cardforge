@@ -5,6 +5,12 @@ import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation
 import { revalidatePath } from "next/cache";
 import { addCardAiFields, inheritedAiParts, verifiedAiClaims } from "@/lib/cards/ai-provenance-server";
 import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
+import {
+  FRAME_LIST_UNAVAILABLE_CODE,
+  FRAME_LIST_UNAVAILABLE_MESSAGE,
+  isVerifiedFramesUnavailable,
+  withVerifiedKeysIfConsulted,
+} from "@/lib/cards/frame-list-unavailable";
 import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import {
   cardFieldsFace,
@@ -306,9 +312,30 @@ export type CreateCardOptions = {
 };
 
 
+/** A save the verified frame list couldn't be read for (a PostgREST or
+ *  pooler hiccup, lib/cards/frame-list-unavailable.ts): refused in words
+ *  that say try again — never "that frame isn't available", which is what
+ *  an unread list read as before. Every gate that reads the list runs
+ *  before the row is written, so nothing was saved. */
+function frameListUnavailable(): CardActionFailure {
+  return { ok: false, code: FRAME_LIST_UNAVAILABLE_CODE, formError: FRAME_LIST_UNAVAILABLE_MESSAGE };
+}
+
 export async function createCardAction(
   payload: unknown,
   options: CreateCardOptions = {},
+): Promise<CreateCardResult> {
+  try {
+    return await createCard(payload, options);
+  } catch (err) {
+    if (isVerifiedFramesUnavailable(err)) return frameListUnavailable();
+    throw err;
+  }
+}
+
+async function createCard(
+  payload: unknown,
+  options: CreateCardOptions,
 ): Promise<CreateCardResult> {
   // A payload that still names a RETIRED template (TODO 4.54) saves on the
   // frame its own text asks for, not just the bare one the schema reads.
@@ -821,6 +848,20 @@ export async function updateCardAction(
   cardId: string,
   payload: unknown,
 ): Promise<UpdateCardResult> {
+  try {
+    return await updateCard(cardId, payload);
+  } catch (err) {
+    // (The edit's gates read the list before the row is written, as the
+    // create's do — frameListUnavailable.)
+    if (isVerifiedFramesUnavailable(err)) return frameListUnavailable();
+    throw err;
+  }
+}
+
+async function updateCard(
+  cardId: string,
+  payload: unknown,
+): Promise<UpdateCardResult> {
   const parsed = updateCardSchema.safeParse(payload);
   if (!parsed.success) {
     return {
@@ -1123,23 +1164,31 @@ export async function updateCardAction(
     data.card_type !== undefined ||
     data.supertype !== undefined
   ) {
-    const frontColourError = dfcFrontColorError(
-      nextFrontTemplate,
-      {
-        cardType: data.card_type !== undefined ? data.card_type : existing.card_type,
-        supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
-      },
-      update.color_identity ?? existing.color_identity,
-      templateTakesBackBody(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
-    );
     // The see-through `c` not ticked (TODO 5.11a) is a VERIFICATION refusal:
     // a card already stored on it stays editable (the legacy pin — its frame
     // and colour unchanged), and an admin's frame preview may save it.
-    const seeThroughPinned =
-      frontColourError === DFC_SEE_THROUGH_UNVERIFIED &&
+    const seeThroughPin =
       nextFrontTemplate === (existing.frame_style as { template?: string } | null)?.template &&
       pickFrameColorKey(existing.color_identity ?? []) === "c" &&
       !isArtifactFrameType({ cardType: existing.card_type, supertype: existing.supertype });
+    // The list is read only when the rule looks at it (a colourless front
+    // with no Artifact word on a see-through body) — and never for a card
+    // the pin keeps, whose verdict it can't change: an edit that leaves the
+    // frame and colour alone is never refused by a frame-list outage.
+    const frontColourError = await withVerifiedKeysIfConsulted(
+      (verifiedKeys) =>
+        dfcFrontColorError(
+          nextFrontTemplate,
+          {
+            cardType: data.card_type !== undefined ? data.card_type : existing.card_type,
+            supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+          },
+          update.color_identity ?? existing.color_identity,
+          !templateTakesBackBody(nextFrontTemplate) ? new Set<string>() : seeThroughPin ? null : verifiedKeys,
+        ),
+      verifiedKeysOf,
+    );
+    const seeThroughPinned = frontColourError === DFC_SEE_THROUGH_UNVERIFIED && seeThroughPin;
     if (frontColourError && !seeThroughPinned) {
       if (frontColourError === DFC_SEE_THROUGH_UNVERIFIED && (await previewAllowed())) {
         becomesPreview = !previewCard;
@@ -1154,13 +1203,24 @@ export async function updateCardAction(
       back: nextBackFace,
       family: nextFrameStyle.dfcIcon,
       frontColorIdentity: update.color_identity ?? existing.color_identity,
-      verifiedKeys: templateTakesBackBody(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
       stored: { back: storedBackFace, familyChanged },
     };
-    let gate = resolveDfcBackFace(gateInput);
+    // The editor resends the back on every token and double-faced edit, but
+    // the gate checks only a changed body or colour (the legacy pin): the
+    // list is read only when it looks at it, so a retitle, or Re-art's new
+    // picture, is never refused by a frame-list outage.
+    let gate = await withVerifiedKeysIfConsulted(
+      (verifiedKeys) =>
+        resolveDfcBackFace({
+          ...gateInput,
+          verifiedKeys: templateTakesBackBody(nextFrontTemplate) ? verifiedKeys : new Set<string>(),
+        }),
+      verifiedKeysOf,
+    );
     if (!gate.ok && gate.code === "unverified" && (await previewAllowed())) {
       becomesPreview = !previewCard;
-      gate = resolveDfcBackFace({ ...gateInput, skipVerification: true });
+      // ("unverified" means the gate read the list: this is the cached set.)
+      gate = resolveDfcBackFace({ ...gateInput, verifiedKeys: await verifiedKeysOf(), skipVerification: true });
     }
     if (!gate.ok) {
       return { ok: false, fieldErrors: { [gate.field]: gate.message } };

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ToolShell } from "@/components/tools/tool-shell";
 import { TokenKitWorkspace } from "@/components/tools/token-kit/token-kit-workspace";
 import { downloadBrandMark, getEntitlements } from "@/lib/billing/entitlements";
-import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { readVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { FrameListUnavailableNotice } from "@/components/creator/frame-list-unavailable-notice";
 import { listMyDecks } from "@/lib/decks/queries";
 import { openTool } from "@/lib/tools/queries";
 import { listRecentTokenKits } from "@/lib/tools/token-kit/queries";
@@ -28,11 +29,14 @@ export default async function TokenKitPage() {
   const [decks, recent, verified, entitlements] = await Promise.all([
     listMyDecks(),
     listRecentTokenKits(entry.userId),
-    getVerifiedFrameKeys(),
+    readVerifiedFrameKeys(),
     getEntitlements(),
   ]);
   return (
     <ToolShell entry={entry}>
+      {/* A frame list that couldn't be read is SAID — never every token
+          "can't be drawn yet" without a word. */}
+      {verified.unavailable ? <FrameListUnavailableNotice className="mb-6" /> : null}
       <TokenKitWorkspace
         decks={decks.map((deck) => ({
           id: deck.id,
@@ -42,7 +46,7 @@ export default async function TokenKitPage() {
           visibility: deck.visibility,
         }))}
         recent={recent}
-        verifiedKeys={verified}
+        verifiedKeys={verified.keys}
         cleanDownloads={!downloadBrandMark(entitlements)}
       />
     </ToolShell>
