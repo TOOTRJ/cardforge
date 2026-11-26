@@ -2633,6 +2633,16 @@
         "(img/frames/m15/ub/extended/g.png | img/frames/m15/ub/extended/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinlineSuper.png"
       ]
     },
+    "plates": {
+      "w": "img/frames/m15/ub/pt/w.png",
+      "u": "img/frames/m15/ub/pt/u.png",
+      "b": "img/frames/m15/ub/pt/b.png",
+      "r": "img/frames/m15/ub/pt/r.png",
+      "g": "img/frames/m15/ub/pt/g.png",
+      "c": "img/frames/m15/ub/pt/c.png",
+      "m": "img/frames/m15/ub/pt/m.png",
+      "a": "img/frames/m15/ub/pt/a.png"
+    },
     "sourceTones": {
       "img/frames/m15/ub/extended/g.png": {
         "table": "UB_EXTENDED_PRINT_TONES.g",
@@ -2665,13 +2675,21 @@
       "img/frames/m15/ub/extended/m.png",
       "img/frames/m15/ub/extended/r.png",
       "img/frames/m15/ub/extended/u.png",
-      "img/frames/m15/ub/extended/w.png"
+      "img/frames/m15/ub/extended/w.png",
+      "img/frames/m15/ub/pt/a.png",
+      "img/frames/m15/ub/pt/b.png",
+      "img/frames/m15/ub/pt/c.png",
+      "img/frames/m15/ub/pt/g.png",
+      "img/frames/m15/ub/pt/m.png",
+      "img/frames/m15/ub/pt/r.png",
+      "img/frames/m15/ub/pt/u.png",
+      "img/frames/m15/ub/pt/w.png"
     ],
     "notes": [
       "the Universes Beyond extended-art frame (TODO 4.25, owner 2026-11-25): w u b r g m = the pack's colour frames whole (m15/ub/extended/<k>.png), native 1500x2100 — the prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR, 2023–25) register on them within ±3 px",
       "colourless (c) = the pack's 'Artifact Frame' (m15/ub/extended/a.png): the pack lists no colourless frame; a colourless ARTIFACT prints it (FIC #228, ACR #307, PIP #1015, WHO #1071). The three colourless NON-artifact printings (FIN #421, WHO #923 / #332) print a see-through frame, not built: their import keeps its landing",
       "a coloured artifact prints the artifact frame's silver field with the colour's bars and box (PIP #921, WHO #1065): not built — the frame paints the colour's master, as extendedart does, and the import keeps its landing",
-      "plates = m15ub's (the pack's `m15/ub/pt/<k>.png` at M15's plate bounds; the grey 'Colorless' plate under c and the hybrid dress): the profile reads /frames/m15ub/pt, no objects of its own",
+      "plates = the pack's own (`m15/ub/pt/<k>.png`, drawn at M15's plate bounds): w u b r g m and the grey 'Colorless' plate c — the hybrid dress's (PIP #1003 / #475) — as m15ub's, and the silver 'Artifact' plate under a: the plate a colourless card paints here (FrameProfile.colorlessPlateKey), the `c` master being the artifact frame — WHO #1071 Solemn Simulacrum's plate face reads 197,209,216 / 205,215,221 (the median of its light pixels left / right of the digits, at HD), a bake on the artifact plate 191,207,220 / 201,214,222, on the grey one 216,209,201 / 232,227,221",
       "toned onto the prints (UB_EXTENDED_PRINT_TONES through UB_EXTENDED_SOURCE_TONES, recorded under sourceTones): the pack's paint is the accurate Universes Beyond pack's value for value, so the bordered family's tone pass carries over — the green title bar (g.png, gl.png), the gold title bar and text box (m.png, ml.png) and the land-grey title bar and text box (l.png) — plus the blue title bar (u.png, ul.png: 14 lighter in red on the prints), each multiplied by its gain through the pack's own Title and Rules masks as the FILE is loaded; the black type bar, the frame field, the pinline, the border and every other colour as Card Conjurer drew them",
       "the pack's seams sealed (sealUbExtendedSeams): ~790 hairline pixels at α 98–254 where its layers don't quite meet — the title bar's caps and the text box's side rims, the same pixels on every file — made opaque outside the art slot's rows 176–1318, their colour kept, so no #101015 hairline shows (no print has one) and the caps' seam no longer runs into the window's shade above the art slot (7.6); the window and the type bar's shade as drawn",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (UB_EXTENDED_MASK: the regular M15 pack's six, its 'Super' Pinline). Gold-split <pair> = m.png whole with the split text box and pinline (ACR #166 Assassin's Trophy, PIP #1007 Wake the Past, LTR #782, WHO #1069: gold bars, the pinline in the two colours); hybrid <pair>-h = the two colour frames split across the frame ramp under the pack's grey l.png title and type bars, the split box and pinline, drawn with the grey plate (PIP #1003 / #475 Biomass Mutation)"
@@ -2724,11 +2742,6 @@
       "l": [
         "img/black.png at 3.94/2.77/92.14×1.77 %",
         "img/frames/m15/ub/crowns/floating/l.png at 3.07/1.91/93.87×10.24 %",
-        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
-      ],
-      "c": [
-        "img/black.png at 3.94/2.77/92.14×1.77 %",
-        "img/frames/m15/ub/crowns/floating/c.png at 3.07/1.91/93.87×10.24 %",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
       ],
       "wu": [
@@ -2787,7 +2800,6 @@
       "img/frames/m15/crowns/m15CrownFloatingOutline.png",
       "img/frames/m15/ub/crowns/floating/a.png",
       "img/frames/m15/ub/crowns/floating/b.png",
-      "img/frames/m15/ub/crowns/floating/c.png",
       "img/frames/m15/ub/crowns/floating/g.png",
       "img/frames/m15/ub/crowns/floating/l.png",
       "img/frames/m15/ub/crowns/floating/m.png",
@@ -2798,7 +2810,7 @@
     "notes": [
       "the Universes Beyond extended-art legendary crown (TODO 4.25, owner 2026-11-25): the pack's FLOATING crown (m15/ub/crowns/floating/<k>.png, 1408x215 at the M15 floating crown's bounds 3.07/1.91/93.87x10.24 %) over the BLACK cover strip (3.94/2.77/92.14x1.77 %, drawn) with the M15 floating outline ON TOP (2.8/1.72/94.4x10.62 %) — extendedcrown's recipe and slot, composited 1:1 at 1500x2100 and cropped to rows 0–259; an overlay band over the extendedartub and extendedartubland masters",
       "measured 2026-11-25 on 35 crowned prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR; the band over the pack's master of the print's colour, the median |ΔRGB| over the crown's pixels, best of ±4 px): this crown 1.0–16.7 (median 6.3) against the M15 floating crown's 9.0–31.3 (median 17.7), closer on all 35",
-      "keys = the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a), l (the land grey: the land frame maps c → l) and c (the grey colourless crown, unmapped by both frames); a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
+      "keys = eight of the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a) and l (the land grey: the land frame maps c → l); not the pack's grey colourless C crown, which neither frame draws; a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
       "the ten pairs: the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, as extendedcrown's), first canonical colour on the left, drawn over the pair masters (PIP #955 Rex W|U, LTR #779 Doors of Durin R|G, WHO #997 The Dalek Emperor B|R, FIN #501 Omega G|U)"
     ]
   },
@@ -3050,7 +3062,7 @@
       "toned onto the prints (UB_EXTENDED_PRINT_TONES through UB_EXTENDED_SOURCE_TONES, recorded under sourceTones): the pack's paint is the accurate Universes Beyond pack's value for value, so the bordered family's tone pass carries over — the green title bar (g.png, gl.png), the gold title bar and text box (m.png, ml.png) and the land-grey title bar and text box (l.png) — plus the blue title bar (u.png, ul.png: 14 lighter in red on the prints), each multiplied by its gain through the pack's own Title and Rules masks as the FILE is loaded; the black type bar, the frame field, the pinline, the border and every other colour as Card Conjurer drew them",
       "the pack's seams sealed (sealUbExtendedSeams): ~790 hairline pixels at α 98–254 where its layers don't quite meet — the title bar's caps and the text box's side rims, the same pixels on every file — made opaque outside the art slot's rows 176–1318, their colour kept, so no #101015 hairline shows (no print has one) and the caps' seam no longer runs into the window's shade above the art slot (7.6); the window and the type bar's shade as drawn",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (UB_EXTENDED_MASK: the regular M15 pack's six, its 'Super' Pinline). <pair> = the grey land frame l.png whole with the text box and pinline in the two land tints (<a>l.png / <b>l.png), first canonical colour on the left — 180 of the pack's 214 land printings are two-colour lands (PIP #1049–1056, WHO #1118–1125: the grey bars, the split box)",
-      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate)"
+      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate; c = the grey 'Colorless' plate, the colourless land's)"
     ]
   },
   "extendedcrown": {

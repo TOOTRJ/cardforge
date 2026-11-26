@@ -1428,6 +1428,10 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15nyx", "artifact", "c", "@nyx-silver", { supertype: "Enchantment", subtypes: ["Equipment"] }],
   // TODO 4.25: the Universes Beyond plate at its widest.
   ["m15ub", "creature", "g", "@wide", { power: "12", toughness: "12" }],
+  // …and the Universes Beyond extended-art frame's colourless artifact
+  // creature: its `c` master is the pack's artifact frame, and the plate the
+  // silver artifact one (WHO #1071 Solemn Simulacrum), never the grey.
+  ["extendedartub", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "2", toughness: "2" }],
   // TODO 4.11: the Lord of the Rings scroll's plate at its widest, and the
   // colourless artifact creature on the light-blue artifact master and plate
   // (LTR #700 Shire Scarecrow).

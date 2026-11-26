@@ -937,7 +937,7 @@ function CardFace({
     // The second part's own colour (TODO 4.26): the Prepare page overlay.
     part: part ?? null,
   };
-  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
+  const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts), layout);
   const allOverlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
   // The white border (TODO 4.30): one inline SVG over the master's black
   // border, the same bytes the bake draws (lib/cards/white-border.ts) —

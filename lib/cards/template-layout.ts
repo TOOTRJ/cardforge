@@ -715,6 +715,13 @@ export type FrameProfile = {
    *  Absent: the split dress keeps the card's colour key (gold "m"), the
    *  hybrid dress the grey "c". Code-owned; set only on PROFILES entries. */
   twoColorPlate?: string;
+  /** The stat plate a COLOURLESS card paints when no two-colour look names
+   *  one (lib/cards/anatomy.ts plateKeyFor): TODO 4.25's Universes Beyond
+   *  extended-art frame, whose `c` master is the pack's ARTIFACT frame —
+   *  "a", the silver artifact plate (WHO #1071 Solemn Simulacrum), while
+   *  its grey "c" plate stays the hybrid dress's. Absent: the colour key
+   *  ("c"). A FRAME_PLATE_KEYS key its plate folder holds. Code-owned. */
+  colorlessPlateKey?: string;
   /** The legendary crown is baked INTO this template's masters (TODO 4.6f,
    *  wave 2a): beside each `<template>/<key>.png` a `<key>-legendary.png`
    *  draws the same frame with the crown — the borderless FLOATING crown,
@@ -5781,19 +5788,26 @@ const EXTENDEDARTLAND: FrameProfile = {
 // rims register on the prints within ±3 px — within that of the accurate
 // extended frame's — so each is its extended twin's profile, slot for slot
 // (EXTENDEDART / EXTENDEDARTLAND), with:
-//   • the Universes Beyond plates — the pack draws m15ub's own (`m15/ub/pt`),
-//     so the profiles read /frames/m15ub/pt (no objects of their own);
+//   • the Universes Beyond plates — the pack draws m15ub's own (`m15/ub/pt`):
+//     the land frame reads /frames/m15ub/pt (its grey `c` the colourless
+//     land's); the spell frame its own set, /frames/extendedartub/pt — the
+//     same seven and the pack's silver 'Artifact' plate under `a`, which a
+//     colourless card paints (colorlessPlateKey: WHO #1071 Solemn
+//     Simulacrum), while the grey `c` stays the hybrid dress's;
 //   • the colourless master = the pack's ARTIFACT frame (it lists no
 //     colourless frame): no see-through `c`, no art under the frame, no
-//     type-dressed master (the three colourless non-artifact printings,
-//     FIN #421 and WHO #923 / #332, print a see-through frame — not built).
+//     type-dressed master — and so a colourless card wears it only with an
+//     Artifact word (lib/creator/card-kinds.ts colorlessFrameFits: the
+//     three colourless non-artifact printings, FIN #421 and WHO #923 / #332,
+//     print a see-through frame — not built).
 // Their crown band and triangle notch are declared on their PROFILES entries.
 const EXTENDEDARTUB: FrameProfile = {
   ...EXTENDEDART,
   label: "Extended Art Universes Beyond",
   underFrameArt: undefined,
   artifactMasterKeys: undefined,
-  pt: { ...EXTENDEDART.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
+  pt: { ...EXTENDEDART.pt!, plateAssetPathTemplate: "/frames/extendedartub/pt/{color}.png" },
+  colorlessPlateKey: "a",
 };
 const EXTENDEDARTUBLAND: FrameProfile = {
   ...EXTENDEDARTLAND,
@@ -6609,8 +6623,9 @@ export const EXTENDED_ART_UB_CROWN: FrameOverlaySlot = {
   rect: EXTENDED_CROWN.rect,
   assetPathTemplate: "/frames/extendedartubcrown/{key}.png",
   // UB_EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test
-  // holds them together).
-  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  // holds them together) — no `c`: both frames map it (the spell frame
+  // c → a, the land frame c → l), so the grey C crown is never drawn.
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
 /**

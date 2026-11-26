@@ -4874,6 +4874,118 @@
       "width": 1500,
       "height": 2100
     },
+    "extendedartub/pt/a.png": {
+      "hash": "42ece74d0edd",
+      "sha256": "42ece74d0eddaac220011a019f37660d692ae3422cf565df768e0e6a6ae76a8d",
+      "bytes": 31644,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/a.webp": {
+      "hash": "8db31c0c0db9",
+      "sha256": "8db31c0c0db97e298cbdadf5c48909995f902dccad35f51a496f0e00ac8e60fa",
+      "bytes": 3870,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/b.png": {
+      "hash": "093300d0bf21",
+      "sha256": "093300d0bf21974121cbf2e5cd522e650eebbff3aee5d79617e354445261c7ec",
+      "bytes": 32784,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/b.webp": {
+      "hash": "68112cd24adb",
+      "sha256": "68112cd24adb9567fb2c5cb150134e431cafd6ccdf8db49574eb0e4108bd572a",
+      "bytes": 3906,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/c.png": {
+      "hash": "a06cbcb9e765",
+      "sha256": "a06cbcb9e76569232691c090ed9630a4020f5ab2efcbe92ad1e11433412cfef8",
+      "bytes": 34180,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/c.webp": {
+      "hash": "05ea47aae354",
+      "sha256": "05ea47aae354daa7c320ea250befeff4c7c0bf7f844db516068c0bc8e5f7b117",
+      "bytes": 4016,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/g.png": {
+      "hash": "76a7b4606b2a",
+      "sha256": "76a7b4606b2a121d148bb8926a00c15bf8ca795ea4776dc59d9ae0e80c395ccf",
+      "bytes": 39058,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/g.webp": {
+      "hash": "29dffed8cccd",
+      "sha256": "29dffed8cccde06942387213609b2788dd9d8479e028ca22cbfae5fd26ffdbd1",
+      "bytes": 4252,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/m.png": {
+      "hash": "d1500afdb191",
+      "sha256": "d1500afdb1913fdae5dc73a18cd7f8985a6b05313e2e2174887136bb4e284389",
+      "bytes": 34782,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/m.webp": {
+      "hash": "4e217c74b575",
+      "sha256": "4e217c74b5758c0c0006a74efd6aff78c30ae76cbc712c2c8e63bbaa70507021",
+      "bytes": 4344,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/r.png": {
+      "hash": "d3cbb4f4a010",
+      "sha256": "d3cbb4f4a0100b600577efeba4f403ce891cf06349d2c6cd147a72e6e6865941",
+      "bytes": 39622,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/r.webp": {
+      "hash": "5a8b70586844",
+      "sha256": "5a8b7058684440450a5758eab18a6c0d3f359c460d1e0976a1813fd3a08cb15f",
+      "bytes": 4416,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/u.png": {
+      "hash": "e82be2a68f8c",
+      "sha256": "e82be2a68f8c3e4bc8fe8de6f7f14319998d579dda7f3b5d48d182df595e84c8",
+      "bytes": 34519,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/u.webp": {
+      "hash": "07bfc8a8cc45",
+      "sha256": "07bfc8a8cc45d26953e9e5f99a2c505cccfa7059ef20d0bb61eba9f2e903c927",
+      "bytes": 4222,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/w.png": {
+      "hash": "78c5d5cb3939",
+      "sha256": "78c5d5cb3939e923029cddd408afaa15e0522c519d17109e508badf5aabbcd9b",
+      "bytes": 35427,
+      "width": 282,
+      "height": 154
+    },
+    "extendedartub/pt/w.webp": {
+      "hash": "d2c363ab4804",
+      "sha256": "d2c363ab4804805f38862ab198d7f599495de8bd52f9b829bc47be49282e1b75",
+      "bytes": 3952,
+      "width": 282,
+      "height": 154
+    },
     "extendedartub/r.png": {
       "hash": "5a9ffd2685bb",
       "sha256": "5a9ffd2685bb1d091475be5f91b8d187375262687ee9da4dddaa952e532e2167",
@@ -5137,20 +5249,6 @@
       "hash": "9b955b22ca2c",
       "sha256": "9b955b22ca2c39115b6337de23a02993bc6a3c9169fcc6b926dd2c632e34c921",
       "bytes": 15838,
-      "width": 1500,
-      "height": 260
-    },
-    "extendedartubcrown/c.png": {
-      "hash": "571bd5b5a65e",
-      "sha256": "571bd5b5a65ee283fca11ac921c81878c05a0e801f0db1d24a81154aa7362488",
-      "bytes": 36783,
-      "width": 1500,
-      "height": 260
-    },
-    "extendedartubcrown/c.webp": {
-      "hash": "a674bbfcdd7f",
-      "sha256": "a674bbfcdd7f3eebc2b72ccd77a8687b943957081ae03114c1eda2bcbb2673b9",
-      "bytes": 14620,
       "width": 1500,
       "height": 260
     },

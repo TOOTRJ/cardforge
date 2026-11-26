@@ -109,11 +109,15 @@ export const FRAME_MASTER_KEYS = [...FRAME_COLOR_KEYS, "a", ...TWO_COLOR_MASTER_
 
 export type FrameMasterKey = (typeof FRAME_MASTER_KEYS)[number];
 
-/** Every stat-plate key (`pt/{color}.png`): the colour keys. A two-colour
- *  card's plate is one of them (plateKeyFor: gold-split "m", hybrid "c"),
- *  never a pair; a new plate dress (4.6d's Vehicle "v") joins here, so the
- *  bake's plate path never falls back to another file than the preview's. */
-export const FRAME_PLATE_KEYS = [...FRAME_COLOR_KEYS] as const;
+/** Every stat-plate key (`pt/{color}.png`): the colour keys, and "a" — the
+ *  silver ARTIFACT plate a colourless card paints on a profile that names
+ *  it (FrameProfile.colorlessPlateKey, TODO 4.25: the Universes Beyond
+ *  extended-art frame, whose `c` master is the artifact frame while its grey
+ *  `c` plate is the hybrid dress's). A two-colour card's plate is one of the
+ *  colour keys (plateKeyFor: gold-split "m", hybrid "c"), never a pair; a
+ *  new plate dress (4.6d's Vehicle "v") joins here, so the bake's plate path
+ *  never falls back to another file than the preview's. */
+export const FRAME_PLATE_KEYS = [...FRAME_COLOR_KEYS, "a"] as const;
 
 type ReferenceRow = Record<FrameColorKey, FrameReference | null>;
 

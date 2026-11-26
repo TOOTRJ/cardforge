@@ -49,9 +49,9 @@ function plateKeysOf(template: string): string[] {
   const profile = getFrameProfile(template);
   const keys = new Set<string>();
   for (const colorKey of FRAME_COLOR_KEYS) {
-    keys.add(plateKeyFor(colorKey, null));
+    keys.add(plateKeyFor(colorKey, null, profile));
     for (const dress of profile.twoColorMasters ?? []) {
-      keys.add(plateKeyFor(colorKey, { pair: "wu", dress, masterKey: "wu" } as TwoColorLook));
+      keys.add(plateKeyFor(colorKey, { pair: "wu", dress, masterKey: "wu" } as TwoColorLook, profile));
     }
   }
   return [...keys];

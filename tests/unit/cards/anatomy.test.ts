@@ -221,10 +221,26 @@ describe("the two-colour look", () => {
   });
 
   it("the plate: the colour key, except the hybrid dress's grey 'c'", () => {
-    expect(plateKeyFor("m", null)).toBe("m");
-    expect(plateKeyFor("w", null)).toBe("w");
-    expect(plateKeyFor("m", { pair: "wu", dress: "split", masterKey: "wu" })).toBe("m");
-    expect(plateKeyFor("m", { pair: "gw", dress: "hybrid", masterKey: "gw-h" })).toBe("c");
+    expect(plateKeyFor("m", null, null)).toBe("m");
+    expect(plateKeyFor("w", null, null)).toBe("w");
+    expect(plateKeyFor("c", null, null)).toBe("c");
+    expect(plateKeyFor("m", { pair: "wu", dress: "split", masterKey: "wu" }, null)).toBe("m");
+    expect(plateKeyFor("m", { pair: "gw", dress: "hybrid", masterKey: "gw-h" }, null)).toBe("c");
+  });
+
+  it("…and a colourless card's on a profile that names it (TODO 4.25: the Universes Beyond extended-art frame's silver artifact 'a'), the hybrid dress keeping the grey 'c'", () => {
+    const ub = getFrameProfile("extendedartub");
+    expect(ub.colorlessPlateKey).toBe("a");
+    expect(plateKeyFor("c", null, ub)).toBe("a");
+    // Every other key, and both pair dresses, as on any profile.
+    for (const key of ["w", "u", "b", "r", "g", "m"]) expect(plateKeyFor(key, null, ub), key).toBe(key);
+    expect(plateKeyFor("m", { pair: "wu", dress: "split", masterKey: "wu" }, ub)).toBe("m");
+    expect(plateKeyFor("m", { pair: "gw", dress: "hybrid", masterKey: "gw-h" }, ub)).toBe("c");
+    // The land frame's colourless land keeps the grey land plate.
+    expect(getFrameProfile("extendedartubland").colorlessPlateKey).toBeUndefined();
+    expect(plateKeyFor("c", null, getFrameProfile("extendedartubland"))).toBe("c");
+    // No other profile names one.
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).colorlessPlateKey !== undefined)).toEqual(["extendedartub"]);
   });
 });
 

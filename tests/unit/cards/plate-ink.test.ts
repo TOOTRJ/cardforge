@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { PLATE_INK, plateInkRect } from "@/lib/cards/plate-ink";
 import { getFrameProfile, type StatSlot } from "@/lib/cards/template-layout";
+import { FRAME_PLATE_KEYS } from "@/lib/cards/frame-reference-registry";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,9 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/m15vehicle/pt/{color}.png": { w: "f92bc5fc9c08", u: "f92bc5fc9c08", b: "f92bc5fc9c08", r: "f92bc5fc9c08", g: "f92bc5fc9c08", c: "f92bc5fc9c08", m: "f92bc5fc9c08" },
   "/frames/m15ub/pt/{color}.png": { w: "78c5d5cb3939", u: "e82be2a68f8c", b: "093300d0bf21", r: "d3cbb4f4a010", g: "76a7b4606b2a", c: "a06cbcb9e765", m: "d1500afdb191" },
   "/frames/m15ubartifact/pt/{color}.png": { w: "78c5d5cb3939", u: "e82be2a68f8c", b: "093300d0bf21", r: "d3cbb4f4a010", g: "76a7b4606b2a", c: "42ece74d0edd", m: "d1500afdb191" },
+  // TODO 4.25: the Universes Beyond extended-art spell frame's set — m15ub's
+  // seven and m15ubartifact's silver `c` under `a`.
+  "/frames/extendedartub/pt/{color}.png": { w: "78c5d5cb3939", u: "e82be2a68f8c", b: "093300d0bf21", r: "d3cbb4f4a010", g: "76a7b4606b2a", c: "a06cbcb9e765", m: "d1500afdb191", a: "42ece74d0edd" },
   "/frames/fullart/pt/{color}.png": { w: "4ae40cef9ffc", u: "8433f74c69c0", b: "8c3a6c92fcd4", r: "5580e064c8c0", g: "9030aca20c2a", c: "09c7003b1068", m: "63f463781d3b" },
   "/frames/m15dfcback/pt/{color}.png": { w: "eb3b5cd2819c", u: "b195a9a94201", b: "1c41f454e2b4", r: "a4483f6420f6", g: "be5ede22c67c", c: "f7b8ebcc1537", m: "8d5223f0e4bc" },
   "/frames/m15borderless/pt/{color}.png": { w: "27f7c5b0b36d", u: "f5cfb86d08b1", b: "8aa1a934257b", r: "c04b88ddea3b", g: "22975809834a", c: "37051a7bc4ca", m: "d7d60b3cbd8e" },
@@ -61,10 +65,11 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/lotr/pt/{color}.png": { w: "caa4db7dc77d", u: "50e582ea8089", b: "ae34f219042a", r: "3e5c61ae9f6a", g: "25fa07910ca3", c: "e577c1bacc6e", m: "3be4849e81cb" },
 };
 
-/** A plate template's bucket colours: colour key → manifest hash. */
+/** A plate template's bucket plates: plate key (FRAME_PLATE_KEYS — the
+ *  colours, and the artifact plate `a` where a set has one) → manifest hash. */
 function bucketHashes(template: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+  for (const key of FRAME_PLATE_KEYS) {
     const entry = manifest.files[template.replace(/^\/frames\//, "").replace("{color}", key)];
     if (entry) out[key] = entry.hash;
   }
@@ -72,7 +77,7 @@ function bucketHashes(template: string): Record<string, string> {
 }
 const PUBLIC = path.join(process.cwd(), "public", "frames");
 const BUILD = process.env.FRAMES_BUILD_DIR ?? path.join(process.cwd(), ".frames-build");
-const COLORS = ["w", "u", "b", "r", "g", "c", "m"];
+const COLORS: readonly string[] = FRAME_PLATE_KEYS;
 
 /** Every plate asset a profile draws. */
 function plateTemplates(): Set<string> {

@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "853c6dd21e2d9feb"
+    "manifest": "50f98d502897c003"
   },
   "cases": {
     "adventure/b/adventure-long": "79ea512d1db3721e:42614af9",
@@ -543,9 +543,10 @@
     "extendedartub/b/sorcery-short": "230c6bcb87d8f160:e5e1bf0f",
     "extendedartub/c/artifact-short": "80ab0cd0665cdb16:a7c6df91",
     "extendedartub/c/artifact-short@stamp-c": "6e10fea555b20451:87f0fb67",
-    "extendedartub/c/creature-long": "c6a5223636f44d46:7a7c3898",
-    "extendedartub/c/creature-long@crown": "565e4427c0a59b2b:5cebf595",
-    "extendedartub/c/creature-short": "a9e0a47aeaee8a9f:1819e5ff",
+    "extendedartub/c/creature-long": "b4bf64c83cc1361a:7a7c3898",
+    "extendedartub/c/creature-long@crown": "d348d6a0896c26d8:5cebf595",
+    "extendedartub/c/creature-short": "d1b4e9b6d0d88011:1819e5ff",
+    "extendedartub/c/creature-short@artifact": "c7c6c6ce642c5ae2:96ec31a9",
     "extendedartub/g/creature-long": "9c2d696c76db9ab2:32e74561",
     "extendedartub/g/creature-long@crown": "66a64c9e608e708a:0d01d3c0",
     "extendedartub/g/creature-long@hd": "5dd1ee230a565948:63213496",

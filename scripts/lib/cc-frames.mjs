@@ -396,6 +396,12 @@ const UB_SEE_THROUGH_LAYERS = [
 const UB_PT_DIR = "img/frames/m15/ub/pt";
 const UB_PT = Object.fromEntries(COLORS.map((k) => [k, `${UB_PT_DIR}/${k}.png`]));
 const UB_ARTIFACT_PT = { ...UB_PT, c: `${UB_PT_DIR}/a.png` };
+/** The Universes Beyond extended-art spell frame's plates (TODO 4.25): m15ub's
+ *  seven (the grey 'Colorless' plate under `c`, which the hybrid dress
+ *  draws) and the pack's silver 'Artifact' plate under `a` — the plate a
+ *  colourless card paints there (FrameProfile.colorlessPlateKey), whose `c`
+ *  master is the artifact frame. */
+const UB_EXTENDED_PT = { ...UB_PT, a: `${UB_PT_DIR}/a.png` };
 const ubPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, ubFrameFile);
 const UB_PACK = "packUBNew.js 'Universes Beyond' (groupAccurate.js): the accurate M15 pack's masks and text layout over the m15/new/ub files";
 const UB_TONE_NOTE =
@@ -7495,12 +7501,13 @@ export const CC_TEMPLATES = {
       ...pairMasters("m15", ["split", "hybrid"], ubExtendedPairLayers),
     },
     masterPass: (master, width, height) => sealUbExtendedSeams(master, width, height),
+    plates: UB_EXTENDED_PT,
     pack: UB_EXTENDED_PACK,
     notes: [
       "the Universes Beyond extended-art frame (TODO 4.25, owner 2026-11-25): w u b r g m = the pack's colour frames whole (m15/ub/extended/<k>.png), native 1500x2100 — the prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR, 2023–25) register on them within ±3 px",
       "colourless (c) = the pack's 'Artifact Frame' (m15/ub/extended/a.png): the pack lists no colourless frame; a colourless ARTIFACT prints it (FIC #228, ACR #307, PIP #1015, WHO #1071). The three colourless NON-artifact printings (FIN #421, WHO #923 / #332) print a see-through frame, not built: their import keeps its landing",
       "a coloured artifact prints the artifact frame's silver field with the colour's bars and box (PIP #921, WHO #1065): not built — the frame paints the colour's master, as extendedart does, and the import keeps its landing",
-      "plates = m15ub's (the pack's `m15/ub/pt/<k>.png` at M15's plate bounds; the grey 'Colorless' plate under c and the hybrid dress): the profile reads /frames/m15ub/pt, no objects of its own",
+      "plates = the pack's own (`m15/ub/pt/<k>.png`, drawn at M15's plate bounds): w u b r g m and the grey 'Colorless' plate c — the hybrid dress's (PIP #1003 / #475) — as m15ub's, and the silver 'Artifact' plate under a: the plate a colourless card paints here (FrameProfile.colorlessPlateKey), the `c` master being the artifact frame — WHO #1071 Solemn Simulacrum's plate face reads 197,209,216 / 205,215,221 (the median of its light pixels left / right of the digits, at HD), a bake on the artifact plate 191,207,220 / 201,214,222, on the grey one 216,209,201 / 232,227,221",
       UB_EXTENDED_TONE_NOTE,
       UB_EXTENDED_SEAM_NOTE,
       `${UB_EXTENDED_PAIR_NOTE}. Gold-split <pair> = m.png whole with the split text box and pinline (ACR #166 Assassin's Trophy, PIP #1007 Wake the Past, LTR #782, WHO #1069: gold bars, the pinline in the two colours); hybrid <pair>-h = the two colour frames split across the frame ramp under the pack's grey l.png title and type bars, the split box and pinline, drawn with the grey plate (PIP #1003 / #475 Biomass Mutation)`,
@@ -7518,7 +7525,7 @@ export const CC_TEMPLATES = {
       UB_EXTENDED_TONE_NOTE,
       UB_EXTENDED_SEAM_NOTE,
       `${UB_EXTENDED_PAIR_NOTE}. <pair> = the grey land frame l.png whole with the text box and pinline in the two land tints (<a>l.png / <b>l.png), first canonical colour on the left — 180 of the pack's 214 land printings are two-colour lands (PIP #1049–1056, WHO #1118–1125: the grey bars, the split box)`,
-      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate)",
+      "no plates of its own: a land creature draws m15ub's (the profile's plateAssetPathTemplate; c = the grey 'Colorless' plate, the colourless land's)",
     ],
   },
   // TODO 4.35 / 4.42 (owner Q6 2026-10-13): the textless pair re-sourced
@@ -9454,15 +9461,17 @@ export function extendedCrownLayers(key) {
  * artifact frame) by `a`; a legendary land its colour's crown (WHO #1054
  * blue 1.7, LTC #160 black 4.7, the any-colour lands WHO #1053 / ACR #171
  * gold 3.0 / 3.3 — the grey L crown 51–94), and `l` the colourless land's.
- * Keys: the pack's nine crowns (w u b r g, m gold, a artifact, l land, c
- * colourless) and the ten pairs (the two crowns lerped across the floating
- * crowns' 40→60 %W ramp, as extendedcrown's: the prints' split crown on
- * PIP #955 W|U, LTR #779 R|G, WHO #997 B|R, FIN #501 G|U).
+ * Keys: eight of the pack's nine crowns (w u b r g, m gold, a artifact, l
+ * land — never its grey `c`, which neither frame draws: the spell frame maps
+ * c → a, the land frame c → l) and the ten pairs (the two crowns lerped
+ * across the floating crowns' 40→60 %W ramp, as extendedcrown's: the
+ * prints' split crown on PIP #955 W|U, LTR #779 R|G, WHO #997 B|R, FIN #501
+ * G|U).
  */
 export const UB_EXTENDED_CROWN_BAND = Object.freeze({
   ...EXTENDED_CROWN_BAND,
   source: "img/frames/m15/ub/crowns/floating",
-  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", "c", ...TWO_COLOR_PAIRS]),
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", ...TWO_COLOR_PAIRS]),
 });
 const ubFloatingCrown = (k) => `${UB_EXTENDED_CROWN_BAND.source}/${k}.png`;
 /** The Universes Beyond extended-art crown band's layers for a key, in CC's
@@ -10025,7 +10034,7 @@ export const CC_OVERLAY_BANDS = {
     notes: [
       "the Universes Beyond extended-art legendary crown (TODO 4.25, owner 2026-11-25): the pack's FLOATING crown (m15/ub/crowns/floating/<k>.png, 1408x215 at the M15 floating crown's bounds 3.07/1.91/93.87x10.24 %) over the BLACK cover strip (3.94/2.77/92.14x1.77 %, drawn) with the M15 floating outline ON TOP (2.8/1.72/94.4x10.62 %) — extendedcrown's recipe and slot, composited 1:1 at 1500x2100 and cropped to rows 0–259; an overlay band over the extendedartub and extendedartubland masters",
       "measured 2026-11-25 on 35 crowned prints (WHO, PIP, FIN, FIC, LTR, LTC, ACR; the band over the pack's master of the print's colour, the median |ΔRGB| over the crown's pixels, best of ±4 px): this crown 1.0–16.7 (median 6.3) against the M15 floating crown's 9.0–31.3 (median 17.7), closer on all 35",
-      "keys = the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a), l (the land grey: the land frame maps c → l) and c (the grey colourless crown, unmapped by both frames); a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
+      "keys = eight of the pack's nine crowns: w u b r g, m (gold), a (the artifact silver: a colourless legendary ARTIFACT wears it — FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 read 1.7–2.7 against the grey C crown's 2.0–3.7 — so the spell frame, whose colourless master is the artifact frame, maps c → a) and l (the land grey: the land frame maps c → l); not the pack's grey colourless C crown, which neither frame draws; a legendary land wears its colour's crown (WHO #1054 Trenzalore Clocktower blue, LTC #160 The Black Gate black, the any-colour WHO #1053 / ACR #171 gold)",
       "the ten pairs: the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, as extendedcrown's), first canonical colour on the left, drawn over the pair masters (PIP #955 Rex W|U, LTR #779 Doors of Durin R|G, WHO #997 The Dalek Emperor B|R, FIN #501 Omega G|U)",
     ],
   },

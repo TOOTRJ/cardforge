@@ -718,13 +718,23 @@ export function resolveTwoColor(
 }
 
 /** The stat plate (`pt/{color}.png`) a card paints: its colour key, except
- *  the hybrid dress's grey plate ("c", m15PTC) and a pair on a profile that
+ *  the hybrid dress's grey plate ("c", m15PTC), a pair on a profile that
  *  names its pairs' plate (FrameProfile.twoColorPlate — the full-art
- *  token's grey "c", 4.48). A gold-split pair elsewhere keeps the gold "m"
- *  plate its colour key already is. */
-export function plateKeyFor(colorKey: string, look: TwoColorLook | null): string {
+ *  token's grey "c", 4.48) and a colourless card on a profile that names
+ *  its plate (FrameProfile.colorlessPlateKey — the Universes Beyond
+ *  extended-art frame's silver artifact "a", 4.25). A gold-split pair
+ *  elsewhere keeps the gold "m" plate its colour key already is. Every
+ *  renderer path (both renderers, the finish masks, the bake's preload)
+ *  reads it with the card's profile. */
+export function plateKeyFor(
+  colorKey: string,
+  look: TwoColorLook | null,
+  profile: Pick<FrameProfile, "colorlessPlateKey"> | null,
+): string {
   if (look?.plateKey) return look.plateKey;
-  return look?.dress === "hybrid" ? "c" : colorKey;
+  if (look?.dress === "hybrid") return "c";
+  if (!look && colorKey === "c" && profile?.colorlessPlateKey) return profile.colorlessPlateKey;
+  return colorKey;
 }
 
 // ---------------------------------------------------------------------------

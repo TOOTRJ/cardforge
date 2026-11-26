@@ -77,11 +77,16 @@ describe("the recipe", () => {
     expect(Object.keys(land.colors).filter((k) => k.length === 1).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
     expect(land.colors.c).toEqual([{ src: `${UBX}/l.png` }]);
     for (const key of ["w", "u", "b", "r", "g", "m"]) expect(land.colors[key], key).toEqual([{ src: `${UBX}/${key}l.png` }]);
-    // No plates of their own (the profiles read m15ub's) and the seam pass on both.
-    for (const def of [spell, land]) {
-      expect(def.plates).toBeUndefined();
-      expect(typeof def.masterPass).toBe("function");
-    }
+    // The seam pass on both. The land frame has no plates of its own (its
+    // profile reads m15ub's); the spell frame its own set — the pack's
+    // seven UB plates and the silver 'Artifact' plate under `a`, which its
+    // colourless card paints.
+    for (const def of [spell, land]) expect(typeof def.masterPass).toBe("function");
+    expect(land.plates).toBeUndefined();
+    expect(spell.plates).toEqual({
+      ...Object.fromEntries(["w", "u", "b", "r", "g", "c", "m"].map((k) => [k, `img/frames/m15/ub/pt/${k}.png`])),
+      a: "img/frames/m15/ub/pt/a.png",
+    });
     expect(ubExtendedFrameFile("c")).toBe(`${UBX}/a.png`);
     expect(ubExtendedFrameFile("wl")).toBe(`${UBX}/wl.png`);
     expect(ubExtendedFrameFile("v")).toBe(`${UBX}/v.png`);
@@ -120,9 +125,10 @@ describe("the recipe", () => {
       { src: `${UBX}/bl.png`, right: `${UBX}/gl.png`, ramp: [45, 57], mask: `${REG}/m15MaskRules.png` },
       { src: `${UBX}/bl.png`, right: `${UBX}/gl.png`, ramp: [40, 60], mask: `${REG}/m15MaskPinlineSuper.png` },
     ]);
-    // Every file the two templates read is the pack's or the regular pack's masks.
+    // Every file the two templates read is the pack's, its UB plates or the
+    // regular pack's masks.
     for (const t of ["extendedartub", "extendedartubland"]) {
-      for (const file of sourceFilesFor(templates[t] as never)) expect(file, t).toMatch(/^img\/frames\/m15\/(ub\/extended\/[a-z]+|regular\/m15Mask[A-Za-z]+)\.png$/);
+      for (const file of sourceFilesFor(templates[t] as never)) expect(file, t).toMatch(/^img\/frames\/m15\/(ub\/extended\/[a-z]+|ub\/pt\/[a-z]|regular\/m15Mask[A-Za-z]+)\.png$/);
     }
   });
 });
@@ -198,7 +204,11 @@ describe("the crown band", () => {
     expect([...def.keys]).toEqual([...EXTENDED_ART_UB_CROWN.keys]);
     expect(UB_EXTENDED_CROWN_BAND).toMatchObject({ cover: EXTENDED_CROWN_BAND.cover, crown: EXTENDED_CROWN_BAND.crown, outline: EXTENDED_CROWN_BAND.outline, rows: 260 });
     const floating = "img/frames/m15/ub/crowns/floating";
-    for (const key of ["w", "a", "l", "c"]) {
+    // Never the pack's grey `c` crown: the spell frame maps c → a, the land
+    // frame c → l, so nothing draws it (and the build makes none).
+    expect(UB_EXTENDED_CROWN_BAND.keys).not.toContain("c");
+    expect(() => ubExtendedCrownLayers("c")).toThrow();
+    for (const key of ["w", "a", "l"]) {
       const layers = ubExtendedCrownLayers(key);
       const m15 = extendedCrownLayers("w");
       expect(layers.map((l) => l.src), key).toEqual([BORDERLESS_CROWN.eraseSrc, `${floating}/${key}.png`, BORDERLESS_CROWN.outlineSrc]);
@@ -255,7 +265,15 @@ describe("the provenance", () => {
     }
     expect(Object.keys(SOURCES.extendedartub.colors ?? {})).toHaveLength(27);
     expect(Object.keys(SOURCES.extendedartubland.colors ?? {})).toHaveLength(17);
-    expect(Object.keys(SOURCES.extendedartubcrown.colors ?? {})).toHaveLength(19);
+    expect(Object.keys(SOURCES.extendedartubcrown.colors ?? {})).toHaveLength(18);
+    // The spell frame's own plates: the pack's seven UB plates and its
+    // silver 'Artifact' plate under `a` (the land frame draws m15ub's).
+    const ptDir = "img/frames/m15/ub/pt";
+    expect((SOURCES.extendedartub as { plates?: Record<string, string> }).plates).toEqual({
+      ...Object.fromEntries(["w", "u", "b", "r", "g", "c", "m"].map((k) => [k, `${ptDir}/${k}.png`])),
+      a: `${ptDir}/a.png`,
+    });
+    expect((SOURCES.extendedartubland as { plates?: unknown }).plates).toBeUndefined();
     expect(Object.keys(SOURCES.extendedartubholostamp.colors ?? {})).toHaveLength(18);
     expect(SOURCES.extendedartub.sourceTones).toBeDefined();
   });
@@ -272,6 +290,15 @@ describe("the published masters", () => {
     for (const rel of MASTERS) expect(MANIFEST[rel], rel).toMatchObject({ width: 1500, height: 2100 });
     for (const key of EXTENDED_ART_UB_CROWN.keys) expect(MANIFEST[`extendedartubcrown/${key}.png`], key).toMatchObject({ width: 1500, height: 260 });
     for (const key of EXTENDED_ART_UB_HOLO_STAMP.keys) expect(MANIFEST[`extendedartubholostamp/${key}.png`], key).toMatchObject({ width: 224, height: 102 });
+    // No `c` crown is published (nothing draws it).
+    expect(MANIFEST["extendedartubcrown/c.png"]).toBeUndefined();
+    // The spell frame's plates: m15ub's seven, byte for byte, and the silver
+    // artifact plate under `a` — m15ubartifact's `c`, byte for byte.
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      for (const ext of ["png", "webp"]) expect(MANIFEST[`extendedartub/pt/${key}.${ext}`]?.sha256, `${key}.${ext}`).toBe(MANIFEST[`m15ub/pt/${key}.${ext}`]?.sha256);
+    }
+    for (const ext of ["png", "webp"]) expect(MANIFEST[`extendedartub/pt/a.${ext}`]?.sha256, ext).toBe(MANIFEST[`m15ubartifact/pt/c.${ext}`]?.sha256);
+    expect(MANIFEST["extendedartub/pt/a.png"]?.sha256).not.toBe(MANIFEST["m15ub/pt/c.png"]?.sha256);
     for (const rel of Object.keys(MANIFEST).filter((k) => /^extendedartub/.test(k) && k.endsWith(".png"))) {
       expect(MANIFEST[rel.replace(/\.png$/, ".webp")], rel).toBeDefined();
     }
