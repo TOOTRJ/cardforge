@@ -1113,6 +1113,46 @@ export function sagaCreatureDressReason(template: FrameTemplate): string | null 
   return isSagaCreatureDress(template) ? `The ${FRAME_TEMPLATE_LABELS[template]} frame is for sagas that are creatures` : null;
 }
 
+// ---------------------------------------------------------------------------
+// Colourless on an ARTIFACT frame (TODO 4.25): a template whose colourless
+// `c` master is the pack's artifact frame, with no see-through colourless
+// master beside it, dresses a colourless card only when its type words say
+// Artifact — the card type or a supertype word, never `printed_types`. Print
+// never puts a colourless creature, instant, sorcery or enchantment on the
+// silver artifact frame there (FIN #421, WHO #923 / #332 print a see-through
+// frame, not built). The import rule leaves those printings out
+// (`ub/extendedart`); this is the same rule on every other way onto the
+// frame: the server's kind gate (lib/cards/frame-kind-gate.ts), the
+// creator's frame and colour chips, resolveGeneratedFrame's pool and the
+// remix landings (through the kind gate). A coloured card, and every other
+// template, is untouched.
+// ---------------------------------------------------------------------------
+
+/** The templates whose colourless `c` is an artifact frame only. */
+const COLORLESS_ARTIFACT_FRAMES: readonly FrameTemplate[] = ["extendedartub"];
+
+/** True when the template's colourless `c` dresses artifacts only. */
+export function colorlessIsArtifactFrame(template: FrameTemplate): boolean {
+  return COLORLESS_ARTIFACT_FRAMES.includes(template);
+}
+
+/** True when a card of frame colour key `colorKey` (pickFrameColorKey) and
+ *  these type words may wear the template as far as its colourless frame
+ *  goes: a coloured card, a frame whose `c` is not an artifact frame only,
+ *  or a card whose words say Artifact. */
+export function colorlessFrameFits(template: FrameTemplate, colorKey: string, type: TypeWordsFace): boolean {
+  return colorKey !== "c" || !colorlessIsArtifactFrame(template) || typeLineHasWord(type, "Artifact");
+}
+
+/** Why a colourless card that is no artifact can't wear the template (the
+ *  frame chip's and the `c` colour chip's reason, the gate's words), or null
+ *  on any other template. */
+export function colorlessFrameReason(template: FrameTemplate): string | null {
+  return colorlessIsArtifactFrame(template)
+    ? `A colourless card wears the ${FRAME_TEMPLATE_LABELS[template]} frame only as an artifact: its colourless frame is the artifact frame`
+    : null;
+}
+
 /**
  * The frame the type words pick for a card of `kind` on `template`: a SAGA
  * on the saga frame takes the saga creature body when its words say

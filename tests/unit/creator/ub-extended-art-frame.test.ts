@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import printingsData from "./fixtures/ub-extended-art-printings.json";
 import referencePrintings from "../cards/fixtures/reference-printings.json";
+import type { CardPreviewData } from "@/components/cards/card-preview";
 import { anatomyDefaults, frameAnatomyOf } from "@/lib/cards/anatomy";
+import { cardFieldsFace, frameKindGateError, frameKindUpdateGateError } from "@/lib/cards/frame-kind-gate";
+import { frameAssetPathsFor } from "@/lib/render/card-image";
+import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
+import { colorlessFrameFits, colorlessFrameReason, colorlessIsArtifactFrame } from "@/lib/creator/card-kinds";
+import { ownCardRemixFrame } from "@/lib/ai/remix-mechanics";
 import { crownReferenceFor } from "@/lib/cards/crown";
 import { frameComboKey, FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
@@ -79,7 +85,7 @@ describe("two templates of their own", () => {
 describe("the profiles", () => {
   it("are their extended twins' slots, sizes and text with the Universes Beyond plates, crown band and triangle notch", () => {
     for (const t of UBX) {
-      const { label, pt, overlays, underFrameArt, artifactMasterKeys, twoColorMasters, twoColorForLands, ...rest } = getFrameProfile(t);
+      const { label, pt, overlays, underFrameArt, artifactMasterKeys, twoColorMasters, twoColorForLands, colorlessPlateKey, ...rest } = getFrameProfile(t);
       const {
         label: twinLabel,
         pt: twinPt,
@@ -95,9 +101,14 @@ describe("the profiles", () => {
       expect(twinUnder === undefined, t).toBe(t === "extendedartubland");
       expect(twinArtifact === undefined, t).toBe(t === "extendedartubland");
       expect(label).not.toBe(twinLabel);
-      // The plates are m15ub's (the pack draws the same files), at the box and ink of the twin's.
-      expect(pt, t).toEqual({ ...twinPt, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" });
-      expect(PLATE_INK["/frames/m15ub/pt/{color}.png"]).toBeDefined();
+      // The plates are the pack's own UB plates, at the box and ink of the
+      // twin's: m15ub's for the land frame; the spell frame's own set (the
+      // same seven and the silver artifact plate under `a`, which its
+      // colourless card paints).
+      const plates = t === "extendedartub" ? "/frames/extendedartub/pt/{color}.png" : "/frames/m15ub/pt/{color}.png";
+      expect(pt, t).toEqual({ ...twinPt, plateAssetPathTemplate: plates });
+      expect(PLATE_INK[plates]).toEqual(PLATE_INK["/frames/m15ub/pt/{color}.png"]);
+      expect(colorlessPlateKey, t).toBe(t === "extendedartub" ? "a" : undefined);
       // The colourless master is the pack's artifact frame: no art under the
       // frame, no type-dressed master.
       expect(underFrameArt, t).toBeUndefined();
@@ -125,7 +136,8 @@ describe("the profiles", () => {
   it("the crown is the extended crown's slot on the Universes Beyond band; the notch the triangle's, on the pack's own piece", () => {
     expect(EXTENDED_ART_UB_CROWN.rect).toEqual(EXTENDED_CROWN.rect);
     expect(EXTENDED_ART_UB_CROWN.assetPathTemplate).toBe("/frames/extendedartubcrown/{key}.png");
-    expect(EXTENDED_ART_UB_CROWN.keys).toEqual(["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]);
+    // No `c`: the spell frame maps it to `a`, the land frame to `l`.
+    expect(EXTENDED_ART_UB_CROWN.keys).toEqual(["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]);
     expect(EXTENDED_ART_UB_HOLO_STAMP.assetPathTemplate).toBe("/frames/extendedartubholostamp/{key}.png");
     expect(EXTENDED_ART_UB_HOLO_STAMP).toMatchObject({ stamp: (M15UB_HOLO_STAMP as { stamp?: unknown }).stamp });
     expect(EXTENDED_ART_UB_HOLO_STAMP.rect).toEqual({ leftPct: (638 / 1500) * 100, topPct: (1891 / 2100) * 100, widthPct: (224 / 1500) * 100, heightPct: (102 / 2100) * 100 });
@@ -261,5 +273,135 @@ describe("the AI deck remix lands where the import lands", () => {
 
   it("a printing the frames don't draw never moves with the ticks", () => {
     for (const key of ["pip-921", "fin-421", "fic-109"]) expect(remix(key, EVERY), key).toEqual(remix(key, NO_UBX));
+  });
+});
+
+// The spell frame's colourless `c` is the pack's ARTIFACT frame (it has no
+// see-through master): print puts a colourless artifact there (WHO #1071
+// Solemn Simulacrum, LTR #793 Phial of Galadriel) and never a colourless
+// creature, instant, sorcery or enchantment (FIN #421, WHO #923 / #332 print
+// a see-through frame, not built).
+const card = (over: Partial<CardPreviewData>): CardPreviewData =>
+  ({
+    title: "Solemn Simulacrum",
+    cost: "{4}",
+    cardType: "creature",
+    supertype: "Artifact",
+    subtypes: ["Golem"],
+    rarity: "rare",
+    colorIdentity: [],
+    rulesText: "When this creature enters, you may search your library for a basic land card.",
+    flavorText: "",
+    power: "2",
+    toughness: "2",
+    artUrl: null,
+    frameStyle: { template: "extendedartub" },
+    ...over,
+  }) as unknown as CardPreviewData;
+
+describe("a colourless card on the spell frame paints the silver artifact plate", () => {
+  it("a colourless artifact creature warms (and draws) pt/a — the hybrid dress keeps the grey pt/c, every colour its own", () => {
+    const plates = (c: CardPreviewData) => frameAssetPathsFor(c).filter((p) => p.includes("/pt/"));
+    expect(plates(card({}))).toEqual(["/frames/extendedartub/pt/a.png"]);
+    expect(plates(card({ colorIdentity: ["white"] }))).toEqual(["/frames/extendedartub/pt/w.png"]);
+    expect(plates(card({ colorIdentity: ["white", "blue"], cost: "{2}{W}{U}" }))).toEqual(["/frames/extendedartub/pt/m.png"]);
+    expect(plates(card({ colorIdentity: ["white", "blue"], cost: "{2}{W}{U}", frameStyle: { template: "extendedartub", twoColor: true } as CardPreviewData["frameStyle"] }))).toEqual([
+      "/frames/extendedartub/pt/m.png",
+    ]);
+    expect(
+      plates(card({ colorIdentity: ["green", "blue"], cost: "{G/U}{G/U}", supertype: null, frameStyle: { template: "extendedartub", twoColor: true } as CardPreviewData["frameStyle"] })),
+    ).toEqual(["/frames/extendedartub/pt/c.png"]);
+    // The land frame's colourless land creature keeps the grey land plate.
+    expect(plates(card({ cardType: "land", supertype: "Creature", frameStyle: { template: "extendedartubland" } as CardPreviewData["frameStyle"] }))).toEqual([
+      "/frames/m15ub/pt/c.png",
+    ]);
+  });
+});
+
+describe("a colourless card wears the spell frame only as an artifact (its `c` is the artifact frame)", () => {
+  it("the rule: colourless + no Artifact word is refused on extendedartub alone — never on a coloured card, the land frame or extended art", () => {
+    expect(FRAME_TEMPLATE_VALUES.filter(colorlessIsArtifactFrame)).toEqual(["extendedartub"]);
+    for (const key of ["w", "u", "b", "r", "g", "m"]) expect(colorlessFrameFits("extendedartub", key, { cardType: "creature" }), key).toBe(true);
+    expect(colorlessFrameFits("extendedartub", "c", { cardType: "artifact" })).toBe(true);
+    expect(colorlessFrameFits("extendedartub", "c", { cardType: "creature", supertype: "Artifact" })).toBe(true);
+    expect(colorlessFrameFits("extendedartub", "c", { cardType: "creature", supertype: "Legendary Artifact" })).toBe(true);
+    for (const cardType of ["creature", "instant", "sorcery", "enchantment"]) {
+      expect(colorlessFrameFits("extendedartub", "c", { cardType }), cardType).toBe(false);
+      expect(colorlessFrameFits("extendedartub", "c", { cardType, supertype: "Legendary" }), cardType).toBe(false);
+    }
+    expect(colorlessFrameFits("extendedartubland", "c", { cardType: "land" })).toBe(true);
+    expect(colorlessFrameFits("extendedart", "c", { cardType: "creature" })).toBe(true);
+    expect(colorlessFrameReason("extendedartub")).toMatch(/only as an artifact/);
+    expect(colorlessFrameReason("extendedart")).toBeNull();
+  });
+
+  it("the server's kind gate refuses it (create and update), and reads nothing without the colours", () => {
+    const face = (over: Record<string, unknown>) => cardFieldsFace({ card_type: "creature", supertype: null, subtypes: ["Eldrazi"], title: "Ultima", rules_text: "", ...over });
+    expect(frameKindGateError("extendedartub", face({ color_identity: [] }))).toMatch(/only as an artifact.*pick another frame or a colour/);
+    expect(frameKindGateError("extendedartub", face({ color_identity: ["colorless"] }))).toMatch(/only as an artifact/);
+    expect(frameKindGateError("extendedartub", face({ color_identity: [], supertype: "Artifact" }))).toBeNull();
+    expect(frameKindGateError("extendedartub", face({ color_identity: ["white"] }))).toBeNull();
+    expect(frameKindGateError("extendedartub", face({}))).toBeNull();
+    expect(frameKindGateError("extendedart", face({ color_identity: [] }))).toBeNull();
+    // An edit that takes the Artifact word off a colourless card there, or
+    // makes a creature there colourless, is refused.
+    const artifact = face({ color_identity: [], supertype: "Artifact" });
+    expect(frameKindUpdateGateError({ existingTemplate: "extendedartub", nextTemplate: undefined, existing: artifact, next: face({ color_identity: [] }) })).toMatch(/only as an artifact/);
+    expect(
+      frameKindUpdateGateError({ existingTemplate: "extendedartub", nextTemplate: undefined, existing: face({ color_identity: ["white"] }), next: face({ color_identity: [] }) }),
+    ).toMatch(/only as an artifact/);
+    expect(frameKindUpdateGateError({ existingTemplate: "extendedartub", nextTemplate: undefined, existing: artifact, next: artifact })).toBeNull();
+  });
+
+  it("resolveGeneratedFrame never puts a colourless non-artifact there, asked for by name or at random", () => {
+    const pick = (cardType: "creature" | "instant" | "artifact", supertype: string | null, colorIdentity: string[], fallback: "random" | "none") =>
+      resolveGeneratedFrame({
+        cardType,
+        requested: "extendedartub",
+        colorIdentity: colorIdentity as never,
+        verifiedKeys: EVERY,
+        face: { cardType, supertype, subtypes: [], title: "X", rulesText: "" },
+        random: () => 0,
+        fallback,
+      });
+    expect(pick("creature", "Artifact", [], "none")).toBe("extendedartub");
+    expect(pick("artifact", null, [], "none")).toBe("extendedartub");
+    expect(pick("creature", null, ["white"], "none")).toBe("extendedartub");
+    expect(pick("creature", null, [], "none")).toBeNull();
+    expect(pick("instant", null, [], "none")).toBeNull();
+    expect(pick("creature", null, [], "random")).not.toBe("extendedartub");
+    for (let i = 0; i < 40; i += 1) {
+      const at = resolveGeneratedFrame({
+        cardType: "creature",
+        requested: "random",
+        colorIdentity: [],
+        verifiedKeys: EVERY,
+        face: { cardType: "creature", supertype: null, subtypes: [], title: "X", rulesText: "" },
+        random: () => i / 40,
+      });
+      expect(at, String(i)).not.toBe("extendedartub");
+    }
+  });
+
+  it("an own-card remix keeps the frame for a colourless artifact and falls back for anything else colourless", () => {
+    const source = (over: Record<string, unknown>) =>
+      ({ frame_style: { template: "extendedartub" }, color_identity: [], card_type: "creature", supertype: "Artifact", subtypes: ["Golem"], title: "Solemn Simulacrum", rules_text: "", ...over }) as never;
+    expect(ownCardRemixFrame(source({}), EVERY).frame_template).toBe("extendedartub");
+    expect(ownCardRemixFrame(source({ supertype: null }), EVERY).frame_template).toBeUndefined();
+    expect(ownCardRemixFrame(source({ supertype: null, color_identity: ["white"] }), EVERY).frame_template).toBe("extendedartub");
+  });
+});
+
+describe("the rule names gaps after the swap only where the printing has them", () => {
+  it("ub/extendedart is no gap rule: its listed gaps are read from the printing, never assumed (every captured printing it names is exact once ticked)", () => {
+    expect(FRAME_SIGNATURE_KEYS).toContain("ub/extendedart");
+    let named = 0;
+    for (const key of Object.keys(printings)) {
+      const match = frameMatchFromScryfall(printing(key));
+      if (match.signature !== "ub/extendedart") continue;
+      named += 1;
+      expect(match.onceVerifiedMatch, key).toEqual({ status: "exact", reason: null });
+    }
+    expect(named).toBeGreaterThan(10);
   });
 });

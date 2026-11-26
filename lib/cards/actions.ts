@@ -990,6 +990,7 @@ async function updateCard(
         subtypes: data.subtypes !== undefined ? data.subtypes : existing.subtypes,
         title: data.title !== undefined ? data.title : existing.title,
         rules_text: data.rules_text !== undefined ? data.rules_text : existing.rules_text,
+        color_identity: data.color_identity !== undefined ? data.color_identity : existing.color_identity,
       }),
     });
     if (kindError) {

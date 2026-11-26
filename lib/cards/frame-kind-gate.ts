@@ -1,9 +1,12 @@
-import type { CardType, FrameTemplate } from "@/types/card";
+import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 import {
   BASIC_ONLY_FRAME_REASON,
   KIND_DEFS,
+  colorlessFrameFits,
+  colorlessFrameReason,
   enchantmentDressReason,
   enchantmentFrameFits,
   isSingleBasicLand,
@@ -41,6 +44,11 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // arch's own pair dress tokens alone, and the new layout frames (Prepare,
 // the saga creature) the card types their kind draws. An emblem wears the
 // emblem frame alone, on a layout template too.
+// And a frame whose colourless `c` is an artifact frame only (TODO 4.25: the
+// Universes Beyond extended-art frame) dresses a colourless card only when
+// its words say Artifact (colorlessFrameFits) — read where the face names
+// its colours (cardFieldsFace of a payload or a row: every save, the AI
+// jobs, the remix landings, the bulk planner).
 // ---------------------------------------------------------------------------
 
 /** The card fields the kind gate reads, in the snake_case a payload or a
@@ -51,16 +59,25 @@ export type CardKindFields = {
   subtypes?: readonly string[] | null;
   title?: string | null;
   rules_text?: string | null;
+  /** The card's colours: the colourless-artifact frame rule reads them;
+   *  absent, that rule is not checked. */
+  color_identity?: readonly ColorIdentity[] | null;
 };
 
-/** A payload or row as the face the basic-land rule reads. */
-export function cardFieldsFace(fields: CardKindFields): BasicLandFace {
+/** The face the kind gate reads: the basic-land rule's, and the card's
+ *  colours where the caller has them (undefined: the colourless-artifact
+ *  frame rule is not checked). */
+export type KindGateFace = BasicLandFace & { colorIdentity?: readonly ColorIdentity[] | null };
+
+/** A payload or row as the face the kind gate reads. */
+export function cardFieldsFace(fields: CardKindFields): KindGateFace {
   return {
     cardType: fields.card_type,
     supertype: fields.supertype,
     subtypes: fields.subtypes,
     title: fields.title,
     rulesText: fields.rules_text,
+    ...(fields.color_identity !== undefined ? { colorIdentity: fields.color_identity } : {}),
   };
 }
 
@@ -69,7 +86,7 @@ export function cardFieldsFace(fields: CardKindFields): BasicLandFace {
  *  as in the renderers. */
 export function frameKindGateError(
   template: FrameTemplate | string | null | undefined,
-  face: BasicLandFace,
+  face: KindGateFace,
 ): string | null {
   const resolved = normalizeFrameTemplate(template);
   const kind = kindFromCard(face.cardType as CardType | null | undefined, resolved);
@@ -108,6 +125,11 @@ export function frameKindGateError(
   if (!sagaCreatureFrameFits(resolved, face)) {
     return `${sagaCreatureDressReason(resolved)} — pick another frame.`;
   }
+  // A frame whose colourless `c` is an artifact frame only (TODO 4.25)
+  // dresses a colourless card only when its words say Artifact.
+  if (face.colorIdentity !== undefined && !colorlessFrameFits(resolved, pickFrameColorKey(face.colorIdentity), face)) {
+    return `${colorlessFrameReason(resolved)} — pick another frame or a colour.`;
+  }
   return null;
 }
 
@@ -120,8 +142,8 @@ export function frameKindUpdateGateError(input: {
   existingTemplate: FrameTemplate | string | null | undefined;
   /** Undefined when the patch leaves the frame alone. */
   nextTemplate: FrameTemplate | string | null | undefined;
-  existing: BasicLandFace;
-  next: BasicLandFace;
+  existing: KindGateFace;
+  next: KindGateFace;
 }): string | null {
   const { existingTemplate, nextTemplate } = input;
   const error = frameKindGateError(nextTemplate ?? existingTemplate, input.next);
