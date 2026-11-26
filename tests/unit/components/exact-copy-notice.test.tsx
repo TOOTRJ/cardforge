@@ -188,4 +188,39 @@ describe("ExactCopyNotice", () => {
     expect(toast.error).toHaveBeenCalledWith("Your collection is full.");
     expect(screen.getByRole("button", { name: "Add to my collection" })).toBeTruthy();
   });
+
+  // A request that never answers (offline, a stale action after a deploy)
+  // used to leave "Loading your decks…" for good, or every Add button
+  // disabled: the read had no catch, the add no try (the 2026-11 save audit).
+  it("a deck list that can't be read says so — never 'Loading…' for good", async () => {
+    deckActions.picker.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<ExactCopyNotice realCardName="Llanowar Elves" scryfallId={SCRYFALL} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add the real card to a deck" }));
+    });
+    await waitFor(() => expect(screen.getByText("Your decks couldn't be loaded. Close this and try again.")).toBeTruthy());
+    expect(screen.queryByText("Loading your decks…")).toBeNull();
+  });
+
+  it("an add that throws is said, and the buttons come back", async () => {
+    deckActions.picker.mockResolvedValue({ ok: true, decks: [{ id: "d1", title: "Elves", format: "commander" }] });
+    deckActions.add.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<ExactCopyNotice realCardName="Llanowar Elves" scryfallId={SCRYFALL} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Add the real card to a deck" }));
+    });
+    const add = await screen.findByRole("button", { name: "Add to Elves" });
+    await act(async () => {
+      fireEvent.click(add);
+    });
+    expect(toast.error).toHaveBeenCalledWith("Llanowar Elves couldn't be added to Elves. Try again.");
+    const again = screen.getByRole("button", { name: "Add to Elves" }) as HTMLButtonElement;
+    expect(again.disabled).toBe(false);
+    // …and it works the next time.
+    deckActions.add.mockResolvedValue({ ok: true });
+    await act(async () => {
+      fireEvent.click(again);
+    });
+    expect(toast.success).toHaveBeenCalledWith("Added Llanowar Elves to Elves.");
+  });
 });

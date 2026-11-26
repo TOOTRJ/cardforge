@@ -91,6 +91,29 @@ export function frameKindGateError(
   return null;
 }
 
+/**
+ * The update gate's refusal in the maker's words when an EDIT renames a
+ * basic land its basic-only frame knows by NAME — Wastes is "Basic Land"
+ * with no land type, so the name is what makes it basic (lib/cards/watermark.ts
+ * basicLandManaKey): renamed, it is a nonbasic, which the frame doesn't
+ * draw. The frame is locked on an edit, so the gate's "pick another frame"
+ * is no answer there: this one goes on the title field. Null when the
+ * refusal is anything else (the caller keeps the gate's own words).
+ */
+export function renamedBasicLandTitleError(input: {
+  /** The template as it will be saved. */
+  template: FrameTemplate | string | null | undefined;
+  existing: BasicLandFace;
+  next: BasicLandFace;
+}): string | null {
+  if (!templateIsBasicOnly(normalizeFrameTemplate(input.template))) return null;
+  if (!isSingleBasicLand(input.existing) || isSingleBasicLand(input.next)) return null;
+  // Only the name: the same card under its stored name is still a basic.
+  if (!isSingleBasicLand({ ...input.next, title: input.existing.title })) return null;
+  const name = (input.existing.title ?? "").trim();
+  return `Renaming ${name} makes it a nonbasic land, which this frame doesn't draw — keep the name “${name}”.`;
+}
+
 /** The update form of the gate. It checks the card as it will be saved and
  *  refuses when the patch changes the frame, or when it turns a card the
  *  frame could draw into one it can't (a full-art Plains renamed to a

@@ -177,7 +177,6 @@ describe("updateCardAction kind gate", () => {
     const cases: Array<[Record<string, unknown>, Record<string, unknown>]> = [
       [plainsRow, { subtypes: ["Plains", "Island"] }],
       [plainsRow, { card_type: "creature" }],
-      [{ ...plainsRow, title: "Wastes", subtypes: [], color_identity: ["colorless"] }, { title: "Barren Plain" }],
       [{ ...plainsRow, title: "Forest", supertype: null, subtypes: ["Forest"], color_identity: ["green"] }, { rules_text: "{T}: Add {G}." }],
       [{ ...plainsRow, rules_text: "({T}: Add {W}.)" }, { supertype: "" }],
     ];
@@ -186,6 +185,37 @@ describe("updateCardAction kind gate", () => {
       const result = await updateCardAction(CARD, patch);
       expect(result, JSON.stringify(patch)).toMatchObject({ ok: false, fieldErrors: { frame_style: expect.any(String) } });
     }
+  });
+
+  // A full-art Wastes is basic by its NAME ("Basic Land", no land type):
+  // renamed on an edit, whose frame is locked, it is refused on its TITLE
+  // field, in words the maker can act on — never a toast that says to pick
+  // another frame (the 2026-11 save audit).
+  it("refuses renaming a full-art Wastes on its title field: keep the name", async () => {
+    const wastesRow = { ...plainsRow, title: "Wastes", subtypes: [], color_identity: ["colorless"] };
+    state.existing = wastesRow;
+    expect(await updateCardAction(CARD, { title: "Barren Plain" })).toEqual({
+      ok: false,
+      fieldErrors: {
+        title: "Renaming Wastes makes it a nonbasic land, which this frame doesn't draw — keep the name “Wastes”.",
+      },
+    });
+    // A Snow-Covered Wastes the same, in its own name.
+    state.existing = { ...wastesRow, title: "Snow-Covered Wastes", supertype: "Basic Snow" };
+    expect(await updateCardAction(CARD, { title: "Frozen Waste" })).toMatchObject({
+      ok: false,
+      fieldErrors: { title: expect.stringMatching(/^Renaming Snow-Covered Wastes .* keep the name “Snow-Covered Wastes”\.$/) },
+    });
+    // The name kept (another field edited): past the gates.
+    state.existing = wastesRow;
+    await expect(updateCardAction(CARD, { flavor_text: "Nothing grows." })).rejects.toThrow(PAST_GATES);
+    // Any other refusal keeps the gate's own words on the frame: a Plains
+    // made a dual is not a rename.
+    state.existing = plainsRow;
+    expect(await updateCardAction(CARD, { title: "Tundra", subtypes: ["Plains", "Island"] })).toMatchObject({
+      ok: false,
+      fieldErrors: { frame_style: "Full-art basic frames are for basic lands — pick another frame." },
+    });
   });
 
   it("refuses moving a planeswalker onto the hedron frame", async () => {

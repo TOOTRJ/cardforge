@@ -10,8 +10,10 @@ import {
   cardFieldsFace,
   frameKindGateError,
   frameKindUpdateGateError,
+  renamedBasicLandTitleError,
 } from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
+import { editFrameFollow, type EditFollowFace } from "@/lib/creator/edit-frame-follow";
 import {
   missingSecondFaceName,
   SECOND_FACE_NAME_ERROR,
@@ -82,13 +84,14 @@ import {
 } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isArtifactFrameType } from "@/lib/cards/anatomy";
-import { PIPGLYPH_ROSE_WATERMARK, usesDefaultWatermark } from "@/lib/cards/watermark";
+import { PIPGLYPH_ROSE_WATERMARK, sameWatermark, usesDefaultWatermark } from "@/lib/cards/watermark";
 import {
   VISIBILITY_VALUES,
   frameStyleRequiresPremium,
   type CardInsert,
   type CardUpdate,
   type ColorIdentity,
+  type FrameTemplate,
   type Visibility,
 } from "@/types/card";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -876,13 +879,49 @@ export async function updateCardAction(
   const previewAllowed = async () =>
     (previewCard || data.frame_preview === true) && (await viewerIsAdmin());
 
+  // The frame that follows the text (owner decision 2026-11-22,
+  // lib/creator/edit-frame-follow.ts): an edit never sends its template, so
+  // the token's box and height and the borderless walker's tall box follow
+  // the text HERE — judged from the stored row to the row as the edit leaves
+  // it, by the function the creator's edit preview asks too: only while the
+  // stored frame is the one its stored text picks (a frame that disagrees is
+  // a pick, and stays), only onto a frame verified in the card's colour,
+  // never an admin's frame preview. The move then passes the gates below as
+  // any frame change does. A crafted payload that names a frame decides it
+  // itself.
+  let followedTemplate: FrameTemplate | undefined;
+  if (data.frame_style === undefined) {
+    const followInput = {
+      storedTemplate: (existing.frame_style as { template?: string } | null)?.template,
+      stored: existing as EditFollowFace,
+      next: {
+        card_type: data.card_type !== undefined ? data.card_type : existing.card_type,
+        supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+        subtypes: data.subtypes !== undefined ? data.subtypes : existing.subtypes,
+        title: data.title !== undefined ? data.title : existing.title,
+        rules_text: data.rules_text !== undefined ? data.rules_text : existing.rules_text,
+        flavor_text: data.flavor_text !== undefined ? data.flavor_text : existing.flavor_text,
+        power: data.power !== undefined ? data.power : existing.power,
+        toughness: data.toughness !== undefined ? data.toughness : existing.toughness,
+        face_content: (data.face_content !== undefined ? data.face_content : existing.face_content) as EditFollowFace["face_content"],
+      },
+      colorIdentity: data.color_identity ?? existing.color_identity,
+      framePreview: previewCard,
+    };
+    // The verified set is read only when the text asks for a move.
+    if (editFrameFollow(followInput).moved) {
+      followedTemplate = editFrameFollow({ ...followInput, verifiedKeys: await verifiedKeysOf() }).moved ?? undefined;
+    }
+  }
+
   // Verification gate, only when the patch CHANGES the frame or the colour:
   // a card saved on a since-withdrawn frame (the picker's "legacy pin")
   // must stay editable as long as its frame/colour are left alone.
   {
     const existingTemplate =
       (existing.frame_style as { template?: string } | null)?.template;
-    const nextTemplate = data.frame_style?.template;
+    // (…or the frame the text moved it onto, above.)
+    const nextTemplate = data.frame_style?.template ?? followedTemplate;
     const templateChanged =
       nextTemplate !== undefined && nextTemplate !== existingTemplate;
     const colorChanged =
@@ -939,20 +978,29 @@ export async function updateCardAction(
 
     // Kind gate on the card as it will be saved (the patch over the stored
     // row); a card that already broke it and keeps its frame stays editable.
+    const nextFace = cardFieldsFace({
+      card_type: data.card_type !== undefined ? data.card_type : existing.card_type,
+      supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+      subtypes: data.subtypes !== undefined ? data.subtypes : existing.subtypes,
+      title: data.title !== undefined ? data.title : existing.title,
+      rules_text: data.rules_text !== undefined ? data.rules_text : existing.rules_text,
+    });
     const kindError = frameKindUpdateGateError({
       existingTemplate,
       nextTemplate,
       existing: cardFieldsFace(existing),
-      next: cardFieldsFace({
-        card_type: data.card_type !== undefined ? data.card_type : existing.card_type,
-        supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
-        subtypes: data.subtypes !== undefined ? data.subtypes : existing.subtypes,
-        title: data.title !== undefined ? data.title : existing.title,
-        rules_text: data.rules_text !== undefined ? data.rules_text : existing.rules_text,
-      }),
+      next: nextFace,
     });
     if (kindError) {
-      return { ok: false, fieldErrors: { frame_style: kindError } };
+      // A full-art Wastes renamed (the name is what makes it basic): the
+      // frame is locked on an edit, so "pick another frame" is no answer —
+      // the title field says why, and what to do.
+      const titleError = renamedBasicLandTitleError({
+        template: nextTemplate ?? existingTemplate,
+        existing: cardFieldsFace(existing),
+        next: nextFace,
+      });
+      return { ok: false, fieldErrors: titleError ? { title: titleError } : { frame_style: kindError } };
     }
   }
 
@@ -1021,6 +1069,14 @@ export async function updateCardAction(
       savedCardType,
       data.color_identity ?? existing.color_identity ?? [],
     );
+  } else if (followedTemplate) {
+    // The frame the text moved it onto (above): the template alone — every
+    // other key of the stored frame_style stays as stored (the heights of
+    // one design draw the same pieces).
+    update.frame_style = {
+      ...((existing.frame_style ?? {}) as Record<string, unknown>),
+      template: followedTemplate,
+    } as CardUpdate["frame_style"];
   }
   // An edit's switch flip (frame_anatomy — edits never send frame_style):
   // merged over the stored frame_style, which otherwise stays exactly as
@@ -1220,7 +1276,29 @@ export async function updateCardAction(
   // Structured face content + watermark: null clears, omitted leaves alone.
   if (data.face_content !== undefined)
     update.face_content = data.face_content ?? null;
-  if (data.watermark !== undefined) update.watermark = data.watermark ?? null;
+  // Free accounts: a creature / spell carries the PipGlyph Rose — the rule
+  // createCardAction applies (owner decision 2026-09-17) holds for what an
+  // edit CHANGES: a watermark the row doesn't hold (none, another mark), or
+  // a card type the row doesn't hold (card_type is locked in the editor, so
+  // a crafted payload — a land turned creature, in one edit or two), on a
+  // card the edit leaves a creature / spell, is stored as the Rose. The
+  // creator resends the stored watermark on every edit (its control is a
+  // subscriber's) and never sends the type: a card stored as it is keeps its
+  // watermark — an edit never changes what its maker did not touch, and no
+  // stored card is rewritten by an edit of something else.
+  {
+    const watermarkChanged = data.watermark !== undefined && !sameWatermark(data.watermark ?? null, existing.watermark);
+    const typeChanged = data.card_type !== undefined && (data.card_type ?? null) !== (existing.card_type ?? null);
+    if (
+      (watermarkChanged || typeChanged) &&
+      usesDefaultWatermark(savedCardType) &&
+      !(await getEntitlements()).removeWatermark
+    ) {
+      update.watermark = PIPGLYPH_ROSE_WATERMARK;
+    } else if (data.watermark !== undefined) {
+      update.watermark = data.watermark ?? null;
+    }
+  }
   // Footer mark: subscribers only — a free account's edit never touches it.
   if (data.footer_text !== undefined) {
     const entitlements = await getEntitlements();

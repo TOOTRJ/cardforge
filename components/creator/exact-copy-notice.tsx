@@ -127,6 +127,9 @@ function AddToCollectionButton({ realCardName, scryfallId }: { realCardName: str
 
 type LoadState = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; decks: PickerDeck[] };
 
+/** The list's read never answered. */
+const DECKS_UNREADABLE = "Your decks couldn't be loaded. Close this and try again.";
+
 function AddPrintingToDeckDialog({
   open,
   onOpenChange,
@@ -147,26 +150,39 @@ function AddPrintingToDeckDialog({
     if (!open) return;
     const run = ++seq.current;
     // Read again on every open: a deck made elsewhere shows up.
-    void getDeckPickerDataAction([]).then((result) => {
-      if (run !== seq.current) return;
-      setLoad(result.ok ? { state: "ready", decks: result.decks } : { state: "error", message: result.error });
-    });
+    getDeckPickerDataAction([])
+      .then((result) => {
+        if (run !== seq.current) return;
+        setLoad(result.ok ? { state: "ready", decks: result.decks } : { state: "error", message: result.error });
+      })
+      .catch(() => {
+        // A request that never answered (offline, a stale action after a
+        // deploy): said, never "Loading your decks…" for good.
+        if (run !== seq.current) return;
+        setLoad({ state: "error", message: DECKS_UNREADABLE });
+      });
   }, [open]);
 
   async function add(deck: PickerDeck) {
     setAdding(deck.id);
-    const result = await addToDeckAction({
-      deckId: deck.id,
-      board: "main",
-      pick: { kind: "printing", scryfallId, name: realCardName },
-    });
-    setAdding(null);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
+    try {
+      const result = await addToDeckAction({
+        deckId: deck.id,
+        board: "main",
+        pick: { kind: "printing", scryfallId, name: realCardName },
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setAdded((prev) => new Set(prev).add(deck.id));
+      toast.success(`Added ${realCardName} to ${deck.title}.`);
+    } catch {
+      // (The buttons come back either way: `finally`.)
+      toast.error(`${realCardName} couldn't be added to ${deck.title}. Try again.`);
+    } finally {
+      setAdding(null);
     }
-    setAdded((prev) => new Set(prev).add(deck.id));
-    toast.success(`Added ${realCardName} to ${deck.title}.`);
   }
 
   const decks = load.state === "ready" ? load.decks : [];

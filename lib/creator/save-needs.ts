@@ -9,7 +9,10 @@
 //   * anything other people can see (not a draft) needs artwork — and a
 //     double-faced card its back face's artwork too (TODO 5.2, D13);
 //   * a second part (back face, half, adventure spell) needs a name unless
-//     the card is a private draft (lib/cards/second-face-name.ts).
+//     the card is a private draft (lib/cards/second-face-name.ts);
+//   * a save the form's own rules make private whatever the Publish step
+//     says (strong language, the moderation lock) is a draft's too — the
+//     server asks it for neither (the 2026-11 save audit).
 // Pure: no React, no form state.
 // ---------------------------------------------------------------------------
 
@@ -34,7 +37,7 @@ export function listPhrase(parts: readonly string[]): string {
     : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
-export function saveNeedsOf(input: {
+type SaveNeedsInput = {
   title: string;
   artUrl: string;
   hasBackFace: boolean;
@@ -46,18 +49,36 @@ export function saveNeedsOf(input: {
   doubleFaced: boolean;
   /** The words for this card's second part (lib/creator/second-part.ts). */
   words: SecondPartWords;
-}): SaveNeed[] {
+  /** Whether the save goes PRIVATE whatever the Publish step says — strong
+   *  language in the text it writes, the moderation lock (the form's own
+   *  rule, runSubmit's). Such a save is a draft's: the server asks it for
+   *  neither artwork nor a second part's name (lib/cards/actions.ts), and
+   *  neither does this list. Asked only when something but the title is
+   *  missing (it reads the card's text). */
+  forcedPrivate?: () => boolean;
+};
+
+export function saveNeedsOf(input: SaveNeedsInput): SaveNeed[] {
+  const needs = needsAt(input, input.savesAsDraft);
+  if (!input.savesAsDraft && input.forcedPrivate && needs.some((need) => need.id !== "title") && input.forcedPrivate()) {
+    return needsAt(input, true);
+  }
+  return needs;
+}
+
+/** The list for a save that is a draft's (`savesAsDraft`) or not. */
+function needsAt(input: SaveNeedsInput, savesAsDraft: boolean): SaveNeed[] {
   const needs: SaveNeed[] = [];
   if (!input.title.trim()) needs.push({ id: "title", label: "a title", field: "title" });
-  if (!input.savesAsDraft && !input.artUrl.trim()) {
+  if (!savesAsDraft && !input.artUrl.trim()) {
     needs.push({ id: "art", label: "artwork", field: "art_url" });
   }
-  if (!input.savesAsDraft && input.doubleFaced && !(input.backFace.art_url ?? "").trim()) {
+  if (!savesAsDraft && input.doubleFaced && !(input.backFace.art_url ?? "").trim()) {
     needs.push({ id: "second-art", label: `${input.words.phrase}'s artwork`, field: "back_face.art_url" });
   }
   if (
     input.hasBackFace &&
-    missingSecondFaceName(input.backFace, input.savesAsDraft ? "private" : input.visibility)
+    missingSecondFaceName(input.backFace, savesAsDraft ? "private" : input.visibility)
   ) {
     needs.push({ id: "second-name", label: `${input.words.phrase}'s name`, field: "back_face.title" });
   }

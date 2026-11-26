@@ -14,6 +14,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
+import { editFrameFollow } from "@/lib/creator/edit-frame-follow";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
 import { chipOff } from "../helpers/chip";
@@ -758,6 +759,34 @@ describe("3b.5 the second face's name", () => {
     expect(payload.visibility).toBe("private");
     expect(payload.back_face.title).toBe("");
     expect(payload.back_face.card_type).toBeTruthy();
+  });
+
+  // The save-correctness audit (2026-11): a save the strong-language rule
+  // makes private is a draft's — the server asks it for neither artwork nor
+  // the second part's name — and the form judged both at the visibility
+  // picked: Save stayed off for a name the save never needed.
+  it("a card its strong language keeps private needs only a title — no artwork, no second name", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: true, cardId: "44444444-4444-4444-8444-444444444444", slug: "fire" });
+    const STRONG = "fuvg".replace(/[a-z]/g, (c) => String.fromCharCode(((c.charCodeAt(0) - 97 + 13) % 26) + 97));
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext(); // Identity
+    await typeTitle(`${STRONG} Fire`);
+    // Public is still the pick: nothing but the title is asked for.
+    expect(saveHint()).toBeNull();
+    expect(saveButton().disabled).toBe(false);
+    await clickSave();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0];
+    expect(payload.visibility).toBe("private");
+    expect(payload.back_face.title).toBe("");
+    // The words removed, the publishing needs are back.
+    cleanup();
+    renderForm({ mode: "create" });
+    await pickKind(/^Split/);
+    await clickNext();
+    await typeTitle("Fire");
+    expect(saveHint()).toBe("Still needed to save: Left half — artwork · Right half — a name.");
   });
 
   it("the missing second-part name is in plain view on its own tab — no fold holds it (Face tabs, part 2)", async () => {
@@ -1827,11 +1856,157 @@ describe("4.49 (b) the token text box follows the text", () => {
     expect(preview().template).toBe("m15token");
   });
 
+  // The save-correctness audit (2026-11, owner decision 2026-11-22): the
+  // edit's preview moved, the row stayed — an edit never sends its template.
+  // The SERVER moves it now (lib/creator/edit-frame-follow.ts), and the
+  // preview asks the server's own function: the payload stays main's.
+  const SOLDIER = {
+    title: "Soldier",
+    card_type: "token",
+    supertype: "Creature",
+    subtypes: ["Soldier"],
+    power: "1",
+    toughness: "1",
+    cost: null,
+    rules_text: null,
+    flavor_text: null,
+    color_identity: ["white"],
+    frame_style: { finish: "regular", template: "m15token" },
+  };
+
+  it("an edit's save names no frame — the server moves it to the one the preview shows", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "soldier" });
+    const card = savedCard(SOLDIER);
+    renderForm({ mode: "edit", verifiedFrameKeys: WITH_TEXT_BOX, card });
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15tokentext");
+    await clickSave();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    const sent = actions.updateCardAction.mock.calls[0][1] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("frame_style");
+    // (No switch changed: the anatomy patch is empty, as on main.)
+    expect(sent.frame_anatomy).toBeUndefined();
+    expect(sent.flavor_text).toBe("Hold the line.");
+    // What the server makes of that payload is what the preview drew.
+    expect(
+      editFrameFollow({
+        storedTemplate: "m15token",
+        stored: card,
+        next: { ...card, ...(sent as object) } as never,
+        colorIdentity: card.color_identity,
+        verifiedKeys: new Set(WITH_TEXT_BOX),
+      }).template,
+    ).toBe("m15tokentext");
+  });
+
+  it("an edit whose text box isn't verified in the card's colour keeps its frame, and says so once", async () => {
+    // m15tokentext is verified in red only.
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: [...VERIFIED, frameComboKey("m15tokentext", "r")],
+      card: savedCard(SOLDIER),
+    });
+    await goToText();
+    await typeFlavour("Hold");
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15token");
+    expect(toast.info).toHaveBeenCalledTimes(1);
+    expect(String(toast.info.mock.calls[0][0])).toMatch(
+      /text box isn't verified in white yet — keeping M15 \(2015\) Token \(2014–2019\)\./,
+    );
+    // Its text removed again: still the textless frame, nothing more said.
+    await typeFlavour("");
+    expect(preview().template).toBe("m15token");
+    expect(toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it("an admin's `?previewFrames=` edit follows the REAL verified set, as the server does — never the previewed combos", async () => {
+    // The picker's set holds the previewed text box; the real set doesn't.
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_TEXT_BOX,
+      framePreview: { param: "all", publishedKeys: VERIFIED, walkthrough: null },
+      card: savedCard(SOLDIER),
+    });
+    await goToText();
+    await typeFlavour("Hold the line.");
+    expect(preview().template).toBe("m15token");
+    expect(String(toast.info.mock.calls[0]?.[0])).toMatch(/text box isn't verified in white yet/);
+  });
+
   async function goToText() {
     await act(async () => {
       fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
     });
   }
+});
+
+// The borderless walker's tall box on an EDIT (frames plan 4.33; the
+// save-correctness audit 2026-11): it follows the rows the SAVE writes, by
+// the server's own rule — and a walker whose stored box disagrees with its
+// stored rows (an import pinned to its printing) keeps it.
+describe("4.33 an edit's borderless walker follows its rows (the server's rule)", () => {
+  const BORDERLESS = ["m15borderlesspw", "m15borderlesspwtall"].flatMap((t) => EVERY_COLOUR.map((k) => frameComboKey(t, k)));
+  const THREE = "+1: Draw a card.\n−2: Tap target creature.\n−7: You get an emblem.";
+  const walker = (rules: string, template = "m15borderlesspw") =>
+    savedCard({
+      title: "Tamsin, Tide-Reader",
+      card_type: "planeswalker",
+      supertype: "Legendary",
+      subtypes: ["Tamsin"],
+      cost: "{2}{U}{U}",
+      color_identity: ["blue"],
+      power: null,
+      toughness: null,
+      loyalty: "4",
+      rules_text: rules,
+      frame_style: { finish: "regular", template },
+    });
+  const typeRow = async (index: number, value: string) => {
+    const el = document.querySelector(`[data-field="loyalty_abilities.${index}.text"]`);
+    if (!el) throw new Error(`no row ${index}`);
+    await act(async () => {
+      el.textContent = value;
+      fireEvent.input(el);
+    });
+  };
+  const addRow = async () => {
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: /Add ability/ })[0]);
+    });
+  };
+  const goToText = async () => {
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle("Go to Text & stats")[0]);
+    });
+  };
+
+  it("a fourth row moves it to the tall box, and the save names no frame", async () => {
+    actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "tamsin" });
+    renderForm({ mode: "edit", verifiedFrameKeys: [...VERIFIED, ...BORDERLESS], card: walker(THREE) });
+    expect(preview().template).toBe("m15borderlesspw");
+    await goToText();
+    await addRow();
+    await typeRow(3, "Scry 4.");
+    expect(preview().template).toBe("m15borderlesspwtall");
+    await clickSave();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    const sent = actions.updateCardAction.mock.calls[0][1] as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("frame_style");
+    expect((sent.face_content as { loyalty: { abilities: unknown[] } }).loyalty.abilities).toHaveLength(4);
+  });
+
+  it("a walker on the box its stored rows don't pick keeps it", async () => {
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: [...VERIFIED, ...BORDERLESS],
+      card: walker(`${THREE}\n−9: Win the game.`, "m15borderlesspw"),
+    });
+    await goToText();
+    await typeRow(3, "Win the game, twice.");
+    expect(preview().template).toBe("m15borderlesspw");
+  });
 });
 
 // ---------------------------------------------------------------------------

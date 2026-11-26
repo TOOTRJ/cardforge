@@ -12,7 +12,9 @@ import {
   languageForcesPrivateByVisibility,
   type ProfanityField,
 } from "@/lib/moderation/profanity";
+import { kindFromCard } from "@/lib/creator/card-kinds";
 import type { FormValues } from "@/lib/creator/form-types";
+import { submittedRulesOf, type SubmittedRulesOptions } from "@/lib/creator/structured-rules";
 import type { Card, Visibility } from "@/types/card";
 
 export type CreatorLanguageContext = {
@@ -24,21 +26,32 @@ export type CreatorLanguageContext = {
    *  card, an edit whose footer changed) — the field otherwise shows the
    *  profile default and is not what the row will hold. */
   footerStored: boolean;
+  /** How the save writes the rules text and the rows: `submittedRulesOf`'s
+   *  options as the form's save passes them (an edit's opened values and
+   *  stored rows, the station and saga creature frames). Absent: a new
+   *  card's. */
+  rules?: SubmittedRulesOptions;
 };
 
-/** The form's text, as the detector reads it (the second face only while
- *  the card has one). */
-function scanOf(values: FormValues, footerStored: boolean) {
+/** The form's text as the save WRITES it, as the detector reads it (the
+ *  second face only while the card has one). The rules are what the save
+ *  sends (submittedRulesOf: a walker's or a saga's rows serialized into the
+ *  rules text and `face_content`, the saga creature's "Creature abilities"
+ *  after the chapters) — the text the server judges. Never the form's
+ *  `rules_text` beside the rows: for a walker or a saga it is a hidden copy
+ *  the row editors never update (an edit's stored text, the text before a
+ *  kind switch), so a word taken out of a row stayed in it, and the saga
+ *  creature's box was read nowhere. */
+function scanOf(values: FormValues, context: CreatorLanguageContext) {
+  const rules = submittedRulesOf(kindFromCard(values.card_type, values.frame_style?.template), values, context.rules ?? {});
   return {
     title: values.title,
     nickname: values.nickname,
     supertype: values.supertype,
     printed_types: values.printed_types,
     subtypes_text: values.subtypes_text,
-    rules_text: values.rules_text,
-    loyalty_abilities: values.loyalty_abilities,
-    saga_intro: values.saga_intro,
-    saga_chapters: values.saga_chapters,
+    rules_text: rules.rulesText,
+    face_content: rules.faceContent,
     flavor_text: values.flavor_text,
     artist_credit: values.artist_credit,
     // The printed stats and the collector line.
@@ -50,7 +63,7 @@ function scanOf(values: FormValues, footerStored: boolean) {
     set_code: values.set_code,
     collector_number: values.collector_number,
     tags_text: values.tags_text,
-    footer_text: footerStored ? values.footer_text : undefined,
+    footer_text: context.footerStored ? values.footer_text : undefined,
     back_face: values.has_back_face ? values.back_face : null,
   };
 }
@@ -65,7 +78,7 @@ export function creatorLanguageFields(
   visibility: Visibility,
   context: CreatorLanguageContext,
 ): ProfanityField[] {
-  return languageForcesPrivate({ saved: scanOf(values, context.footerStored), visibility, stored: storedOf(context) });
+  return languageForcesPrivate({ saved: scanOf(values, context), visibility, stored: storedOf(context) });
 }
 
 /** Which of the Publish step's two choices the text rules out, and the
@@ -78,7 +91,7 @@ export type StrongLanguageChoices = {
 /** Both choices from ONE read of the form's text — what
  *  `creatorLanguageFields` says for "public" and for "unlisted". */
 export function strongLanguageChoices(values: FormValues, context: CreatorLanguageContext): StrongLanguageChoices {
-  return languageForcesPrivateByVisibility({ saved: scanOf(values, context.footerStored), stored: storedOf(context) });
+  return languageForcesPrivateByVisibility({ saved: scanOf(values, context), stored: storedOf(context) });
 }
 
 const NOTHING_RULED_OUT: ProfanityField[] = [];

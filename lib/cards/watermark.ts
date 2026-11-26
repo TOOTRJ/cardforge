@@ -85,6 +85,26 @@ export function defaultWatermarkFor(
   return usesDefaultWatermark(cardType) && !paid ? PIPGLYPH_ROSE_WATERMARK : null;
 }
 
+/** Whether two watermarks draw the same mark: the same kind and key (or
+ *  picture), size and opacity — an absent size is "normal", an absent
+ *  opacity the default — and null / undefined are "none". What an edit
+ *  sends back as stored (the creator resends every revisable field) is the
+ *  same watermark, whatever order its keys come in. */
+export function sameWatermark(
+  a: CardWatermark | null | undefined,
+  b: CardWatermark | null | undefined,
+): boolean {
+  if (!a || !b) return !a && !b;
+  const shape = (wm: CardWatermark) => [
+    wm.kind,
+    "key" in wm ? wm.key : null,
+    wm.kind === "custom" ? wm.url : null,
+    wm.size ?? "normal",
+    wm.opacity ?? null,
+  ];
+  return JSON.stringify(shape(a)) === JSON.stringify(shape(b));
+}
+
 export function isWatermarkPresetKey(key: string): boolean {
   return (WATERMARK_PRESET_KEYS as string[]).includes(key);
 }
