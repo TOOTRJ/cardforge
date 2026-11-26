@@ -3860,9 +3860,14 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   // base's later ones (FrameMatch.gaps).
   // A gap the frame it lands on draws (the crown, a two-colour dress —
   // gapDrawnBy) is no gap there.
+  // A gap rule's OWN gap — first in its lists, the `+<gap>` of its key —
+  // holds whenever the rule matched; every other gap, and every gap of a
+  // rule that is no gap rule (`ub/extendedart`'s gapsOnceVerified, TODO
+  // 4.25), holds only where the printing matches it.
+  const ownGap = (gap: GapKey, index: number) => index === 0 && rule.key.endsWith(`+${gap}`);
   const holding = (list: readonly GapKey[] | undefined, on: FrameTemplate) =>
     list
-      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on, ctx.border))
+      ? list.filter((gap, index) => (ownGap(gap, index) || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on, ctx.border))
       : [];
   const gaps = holding(rule.gaps, template);
 
