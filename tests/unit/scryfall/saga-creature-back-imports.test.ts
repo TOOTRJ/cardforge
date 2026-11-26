@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { finalizeImportMatch, remixFrameFor } from "@/lib/creator/frame-resolve";
+import { frameRequestFromImport, signatureBlockedBy } from "@/lib/frames/frame-requests";
 import { dfcImportOf, mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import printingsData from "./fixtures/saga-dfc-printings.json";
@@ -61,7 +62,17 @@ function landingOf(card: ScryfallCard, verified: ReadonlySet<string>) {
   const remix = remixFrameFor(mapScryfallToFormPatch(card, { artPreviewUrl: null }) as never, verified);
   return {
     patch: JSON.parse(JSON.stringify(patch)) as Record<string, unknown>,
-    match: frameMatch as { status: string; template: string; landOn?: string; signature: string; gaps?: string[] },
+    match: frameMatch as {
+      status: string;
+      template: string;
+      landOn?: string;
+      signature: string;
+      gaps?: string[];
+      reason: string | null;
+      unverified?: true;
+      blockedBy?: string;
+    },
+    finalized,
     remix: remix.ok ? remix.template : remix.error,
   };
 }
@@ -103,6 +114,34 @@ describe("FIN's saga creature backs (TODO 4.5d, part B)", () => {
     }
   });
 
+  it("before the back body is ticked, the match names THAT body: not yet verified, 4.5d — never the Universes Beyond dress", () => {
+    const colourWord: Record<string, string> = { "13": "white", "16": "white", "58": "blue", "104": "black", "133": "red", "185": "green" };
+    for (const verified of [PROD, FRONT]) {
+      for (const key of [...PLAIN, ...TWO_COLOUR]) {
+        const { patch, match, finalized } = landingOf(printings[key], verified);
+        expect([match.signature, match.status, match.unverified, match.blockedBy, match.landOn], key).toEqual([
+          "saga/creature/dfc/2015",
+          "nearest",
+          true,
+          "4.5d",
+          patch.frame_template,
+        ]);
+        expect(match.gaps, key).toBeUndefined();
+        const number = key.replace(/^p?fin-/, "").replace(/s$/, "");
+        expect(match.reason, key).toBe(
+          `the back face's saga creature frame isn't verified in ${TWO_COLOUR.includes(key) ? "multicolor" : colourWord[number]} yet`,
+        );
+        // The request log files it under "Not yet verified", on this body's item.
+        const row = frameRequestFromImport(finalized as never, { artImported: true, source: "import", verifiedKeys: verified });
+        expect([row?.signature, row?.cause, signatureBlockedBy(row!.signature, row!.template)], key).toEqual([
+          "saga/creature/dfc/2015",
+          "unverified",
+          "4.5d",
+        ]);
+      }
+    }
+  });
+
   it("a tick in another colour moves nothing", () => {
     const other = new Set([...FRONT, frameComboKey(BODY as never, "c")]);
     for (const [key, card] of Object.entries(printings)) {
@@ -127,15 +166,21 @@ describe("FIN's saga creature backs (TODO 4.5d, part B)", () => {
       expect(back.card_type, key).toBe("creature");
       expect(back.supertype, key).toMatch(/Enchantment$/);
       expect(back.power, key).toBeTruthy();
-      // The registry: the transform rule, NEAREST for one piece alone — the
+      // The registry: the saga creature back's own rule, NEAREST for the
       // Universes Beyond dress every FIN printing wears (4.25: no
-      // double-faced body draws it) — the borderless ones nearest on the
-      // bordered bodies (5.7); never the `dfc` gap or the Nyx starfield (the
-      // back's textured saga is the body's own masters).
+      // double-faced body draws it) — and, on the two-colour summons, the
+      // two colours (the back wears gold) — the borderless ones nearest on
+      // the bordered bodies (5.7); never the `dfc` gap or the Nyx starfield
+      // (the back's textured saga is the body's own masters).
       if (BORDERLESS.includes(key)) {
         expect(match.signature, key).toMatch(/^borderless\/dfc\b/);
       } else {
-        expect([match.signature, match.status, match.gaps], key).toEqual(["transform/2015+universes-beyond", "nearest", ["universes-beyond"]]);
+        expect([match.signature, match.status, match.gaps, match.unverified], key).toEqual([
+          "saga/creature/dfc/2015+universes-beyond",
+          "nearest",
+          TWO_COLOUR.includes(key) ? ["universes-beyond", "two-colour"] : ["universes-beyond"],
+          undefined,
+        ]);
       }
       expect(match.status, key).toBe("nearest");
       expect(match.gaps ?? [], key).not.toContain("dfc");

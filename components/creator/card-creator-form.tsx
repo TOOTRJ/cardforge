@@ -115,7 +115,7 @@ import {
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { useTypesFieldSync } from "@/components/creator/types-field";
 import { BorrowedWordSeedsProvider, useBorrowedWordSeedsOwner } from "@/components/creator/borrowed-words";
-import { BackIsOwnFaceContext } from "@/components/creator/panels/legendary-variation";
+import { BackIsOwnFaceContext, DerivedBackBodyContext } from "@/components/creator/panels/legendary-variation";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
@@ -6226,6 +6226,7 @@ export function CardCreatorForm({
         <GuestGateProvider value={guestGate}>
         <BorrowedWordSeedsProvider value={borrowedSeeds}>
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
+        <DerivedBackBodyContext.Provider value={dfcBackBody}>
         <form
           noValidate
           onSubmit={onFormSubmit}
@@ -6278,6 +6279,7 @@ export function CardCreatorForm({
             {actionBar}
           </SurfaceCard>
         </form>
+        </DerivedBackBodyContext.Provider>
         </BackIsOwnFaceContext.Provider>
         </BorrowedWordSeedsProvider>
         </GuestGateProvider>
@@ -6294,6 +6296,7 @@ export function CardCreatorForm({
       <GuestGateProvider value={guestGate}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
+      <DerivedBackBodyContext.Provider value={dfcBackBody}>
       <form
         noValidate
         onSubmit={onFormSubmit}
@@ -6429,6 +6432,7 @@ export function CardCreatorForm({
         </aside>
         )}
       </form>
+      </DerivedBackBodyContext.Provider>
       </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
       </GuestGateProvider>

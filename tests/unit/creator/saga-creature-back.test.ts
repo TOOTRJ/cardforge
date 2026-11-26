@@ -122,6 +122,11 @@ describe("which back wears it (sagaCreatureBackBodyFor, backBodyFor)", () => {
     expect(sagaCreatureBackBodyFor("transform", { cardType: "enchantment", supertype: null, subtypes: ["Saga"] })).toBeNull();
     expect(sagaCreatureBackBodyFor("transform", { cardType: "creature", supertype: "Legendary", subtypes: ["Dragon"] })).toBeNull();
     expect(sagaCreatureBackBodyFor("transform", { cardType: "enchantment", supertype: "Creatures", subtypes: ["Saga"] })).toBeNull();
+    // Never a LAND back (a "Land Creature — Saga" keeps main's land back,
+    // m15dfclandback), nor an emblem.
+    expect(sagaCreatureBackBodyFor("transform", { cardType: "land", supertype: "Creature", subtypes: ["Saga"] })).toBeNull();
+    expect(backBodyFor("transform", { cardType: "land", supertype: "Creature", subtypes: ["Saga"] }, "arrows")).toBe("m15dfclandback");
+    expect(sagaCreatureBackBodyFor("transform", { cardType: "emblem", supertype: "Creature", subtypes: ["Saga"] })).toBeNull();
     // Only on the transform ▼ back and the bordered look.
     expect(sagaCreatureBackBodyFor("modal", { cardType: "creature", subtypes: ["Saga"] })).toBeNull();
     for (const family of ["sunmoon", "moon", "compass", "fan"] as const) {

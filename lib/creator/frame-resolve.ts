@@ -13,7 +13,7 @@ import {
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameGateColors, partColourVerdict } from "@/lib/cards/part-color";
-import { dfcBodyOf } from "@/lib/cards/dfc";
+import { SAGA_CREATURE_BACK_BODY, SAGA_CREATURE_BACK_SIGNATURE, dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -777,6 +777,29 @@ export function finalizeImportMatch<
             unverified: true as const,
           },
         } as P;
+      }
+      // The saga creature back (TODO 4.5d part B: FIN's summons) waiting
+      // for its tick: the match names THAT body — its own signature, "Not
+      // yet verified", 4.5d — whatever the registry's answer once both faces
+      // land would say (every FIN printing also wears the Universes Beyond
+      // dress, the first gap there; a gap of a body nothing draws yet is no
+      // reason). The import lands where it did before the body existed.
+      if (
+        landing.reason === "back-unverified" &&
+        landing.template === SAGA_CREATURE_BACK_BODY &&
+        (match.signature === SAGA_CREATURE_BACK_SIGNATURE || match.signature.startsWith(`${SAGA_CREATURE_BACK_SIGNATURE}+`))
+      ) {
+        const pending: FrameMatch = {
+          ...match,
+          signature: SAGA_CREATURE_BACK_SIGNATURE,
+          status: "nearest",
+          ...(fallback.frame_template ? { landOn: fallback.frame_template } : {}),
+          reason: `the back face's saga creature frame isn't verified in ${colorWord(landing.colorKey ?? "c")} yet`,
+          unverified: true as const,
+          blockedBy: "4.5d",
+        };
+        delete pending.gaps;
+        return { ...fallback, frame_match: pending } as P;
       }
       const downgraded: FrameMatch = {
         ...match,

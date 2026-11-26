@@ -55,6 +55,13 @@ export type LegendaryVariationInput = {
   dfcIcon?: unknown;
   backCardType?: string | null;
   backSupertype?: string | null;
+  /** The body the FORM derives for the back — creatorBackBodyFor, the
+   *  body the live preview draws and the save stores (a Saga back on the
+   *  saga back, a saga creature back on its own body, TODO 5.5 (b) / 4.5d
+   *  part B, where verified). Absent — and on a battle, whose back is the
+   *  ▼ back whenever it is a face of its own (hasBackFace) — the body the
+   *  back's type and the family derive (bodyFor). */
+  backBody?: FrameTemplate | string | null;
   /** The form holds a back face (`has_back_face`). A BATTLE's back is
    *  optional (TODO 5.5): without one there is no face to crown. Unset
    *  reads as true — every other double-faced card always has its back. */
@@ -121,21 +128,25 @@ export function legendaryVariationOf(input: LegendaryVariationInput): LegendaryV
     ) !== null;
 
   // The back of a double-faced card wears the same switch by its own
-  // supertype, on the body its type and the family derive (bodyFor — the
-  // form's live preview's derivation); a back body that draws none (the ▼
-  // land back, the modal land pair) never counts.
+  // supertype, on the body the form derives for it (`backBody`:
+  // creatorBackBodyFor, the live preview's and the save's — a Saga back's
+  // saga body draws no crown, a saga creature back's does), else the body
+  // its type and the family derive (bodyFor); a back body that draws none
+  // (the ▼ land back, the modal land pair, the saga back) never counts.
   // A battle (TODO 5.5) wears the crown on its back alone — once it has
   // one — and no family (its back is the ▼ back).
   const front = dfcBodyOf(input.template ?? undefined);
   const backBody =
     front?.role === "front" && !(front.battle && input.hasBackFace === false)
-      ? bodyFor(
-          front.layout,
-          "back",
-          input.backCardType || null,
-          !front.battle && isDfcIconFamily(input.dfcIcon) ? input.dfcIcon : DEFAULT_DFC_ICON,
-          dfcLookOf(input.template ?? undefined),
-        )
+      ? input.backBody !== undefined && !front.battle
+        ? input.backBody
+        : bodyFor(
+            front.layout,
+            "back",
+            input.backCardType || null,
+            !front.battle && isDfcIconFamily(input.dfcIcon) ? input.dfcIcon : DEFAULT_DFC_ICON,
+            dfcLookOf(input.template ?? undefined),
+          )
       : null;
   const backType = (input.backCardType || null) as CardType | null;
   const backCanDraw =

@@ -92,6 +92,43 @@ describe("the gate (resolveDfcBackFace, dfcFrontTypeError, dfcBackArtMissing)", 
     expect(gate({ title: "Skyclave", card_type: "land", frame_style: { template: "m15dfclandback" }, color_identity: ["colorless"] })).toMatchObject({ ok: true });
   });
 
+  it("a Saga back — an enchantment Saga or a saga creature — is the ▼ back too, with every saga body verified: the body the creator derives", () => {
+    // A transform card's Saga back wears a saga body (backBodyFor: the saga
+    // back, TODO 5.5 (b); the saga creature back, 4.5d part B); a battle's
+    // never — its back is the ▼ back (bodyFor), the one the creator
+    // (battleBackBodyFor) and the remix derive, so the save agrees with them.
+    const everyBody = verified("battle", "m15dfcback", "m15dfclandback", "sagadfcback", "sagacreaturedfcback");
+    const summon: DfcBackFacePayload = {
+      title: "Ifrit, Warden of Inferno",
+      card_type: "creature",
+      supertype: "Enchantment",
+      subtypes: "Saga Demon",
+      power: "9",
+      toughness: "9",
+      rules_text: "I — Lesser Devour\nII — Hellfire",
+      frame_style: { template: "m15dfcback" },
+    };
+    const chapters: DfcBackFacePayload = { title: "The Long Siege", card_type: "enchantment", subtypes: "Saga", rules_text: "I — Draw a card.", frame_style: { template: "m15dfcback" } };
+    for (const back of [summon, chapters]) {
+      const saved = gate(back, { verifiedKeys: everyBody });
+      expect(saved, String(back.title)).toEqual({ ok: true, layout: "transform", back: { ...back, color_identity: ["white"] } });
+      const asCreator = battleBackBodyFor({
+        mode: "create",
+        backType: back.card_type,
+        backColorIdentity: [],
+        frontColorIdentity: ["white"],
+        verifiedKeys: everyBody,
+      });
+      expect(asCreator, String(back.title)).toBe("m15dfcback");
+      // A saga body named for a battle's back is refused (the ▼ back is its one body).
+      expect(gate({ ...back, frame_style: { template: back === summon ? "sagacreaturedfcback" : "sagadfcback" } }, { verifiedKeys: everyBody }), String(back.title)).toEqual({
+        ok: false,
+        field: "back_face.frame_style",
+        message: DFC_BACK_BODY_MISMATCH,
+      });
+    }
+  });
+
   it("the back's body is verified in its colour, as every double-faced back", () => {
     const refused = gate({ ...SERRA, frame_style: { template: "m15dfcback" } }, { verifiedKeys: verified("battle") });
     expect(refused).toMatchObject({ ok: false, field: "back_face.color_identity", code: "unverified" });

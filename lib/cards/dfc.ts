@@ -370,6 +370,11 @@ export function sagaBackBodyFor(
  *  bars. */
 export const SAGA_CREATURE_BACK_BODY: FrameTemplate = "sagacreaturedfcback";
 
+/** The frame signature of a transform printing whose back lands on it
+ *  (lib/scryfall/frame-signatures.ts, the rule's base key) — what
+ *  finalizeImportMatch names while that back body waits for its tick. */
+export const SAGA_CREATURE_BACK_SIGNATURE = "saga/creature/dfc/2015";
+
 /** True when a face's type words say `word` — its card type or a word of
  *  its supertype (never `printed_types`), as the creator's typeLineHasWord
  *  reads them. */
@@ -395,7 +400,10 @@ export function sagaCreatureBackBodyFor(
   look: DfcLook = DEFAULT_DFC_LOOK,
 ): FrameTemplate | null {
   if (layout !== "transform" || family !== "arrows" || look !== "bordered") return null;
-  if (face.cardType === "emblem" || !namesSagaSubtype(face.subtypes) || !faceSaysWord(face, "Creature")) return null;
+  // (A LAND back keeps the land back whatever its other words say — the
+  // body bodyFor keys on the land card type.)
+  if (face.cardType === "emblem" || face.cardType === "land") return null;
+  if (!namesSagaSubtype(face.subtypes) || !faceSaysWord(face, "Creature")) return null;
   return SAGA_CREATURE_BACK_BODY;
 }
 

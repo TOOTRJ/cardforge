@@ -299,9 +299,9 @@ const isTemplate = (value: string | null | undefined): value is FrameTemplate =>
  * `era/2015+dfc` on the standard frame before the double-faced bodies, and
  * the last live cause — FIN's transform cards whose back is a Saga creature,
  * which land on the transform front and the saga creature back since 4.5d
- * part B (`transform/2015`) — logged the very same signature and frame,
- * with nothing in the row to tell them apart. They stay open (and leave the
- * windows).
+ * part B (`saga/creature/dfc/2015`, its own rows from then on) — logged the
+ * very same signature and frame before it, with nothing in the row to tell
+ * them apart. They stay open (and leave the windows).
  */
 export function signatureAnsweredOnceVerified(
   signature: string,
