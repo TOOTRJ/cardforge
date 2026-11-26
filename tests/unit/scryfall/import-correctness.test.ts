@@ -424,26 +424,27 @@ describe("where an import lands in the creator (production's verified frames)", 
     expect(landing(mapScryfallToFormPatch(printing("tkld-7"))).template).toBe("m15tokenartifact");
     expect(landing(mapScryfallToFormPatch(printing("dsc-273"))).template).toBe("m15land");
     expect(landing(mapScryfallToFormPatch(printing("eoc-176"))).template).toBe("m15land");
-    expect(landing(mapScryfallToFormPatch(printing("neo-141"))).template).toBe("saga");
+    // The double-faced saga front and back are ticked on production (5.5 (b);
+    // the seed mirror of 2026-11-22): a transforming Saga lands on its front.
+    expect(landing(mapScryfallToFormPatch(printing("neo-141"))).template).toBe("sagadfcfront");
     // A Room is no longer a split card.
     expect(landing(mapScryfallToFormPatch(printing("dsk-43"))).template).toBe("m15");
     // KHM snow lands land on the verified snow land frame.
     expect(landing(mapScryfallToFormPatch(printing("khm-278")))).toEqual({ template: "m15snowland", colorKey: "u", status: "exact" });
     expect(landing(mapScryfallToFormPatch(printing("khm-249")))).toEqual({ template: "m15snowland", colorKey: "m", status: "exact" });
     // Bident of Thassa is an enchantment: it asks for Nyx (the signature
-    // registry), which isn't verified in blue, so it falls forward to M15 —
+    // registry); where that isn't verified in blue it falls forward to M15 —
     // never the artifact frame — and the creator's toast names the switch.
     const bident = resolveImportFrame({
       patch: mapScryfallToFormPatch(printing("ths-42")),
       kind: "enchantment",
       current: { template: DEFAULT_FRAME_TEMPLATE, cardType: "enchantment", colors: [] },
-      verifiedKeys: PROD_VERIFIED,
+      verifiedKeys: new Set([...PROD_VERIFIED].filter((key) => key !== frameComboKey("nyx", "u"))),
     });
     expect(bident.resolution).toEqual({ status: "frame-switched", template: "m15", colorKey: "u", fromTemplate: "nyx" });
-    // Once nyx/u is verified, Bident lands on it.
-    expect(
-      landing(mapScryfallToFormPatch(printing("ths-42")), new Set([...PROD_VERIFIED, frameComboKey("nyx", "u")])),
-    ).toEqual({ template: "nyx", colorKey: "u", status: "exact" });
+    // nyx/u is verified on production (the seed mirror of 2026-11-22):
+    // Bident lands on it.
+    expect(landing(mapScryfallToFormPatch(printing("ths-42")))).toEqual({ template: "nyx", colorKey: "u", status: "exact" });
   });
 });
 
@@ -681,14 +682,15 @@ describe("the signature registry's landings (TODO 1.4)", () => {
   it("a Theros constellation god asks for Nyx, which an Enchantment Creature borrows (A3)", () => {
     const heliod = signature("thb-259");
     expect(heliod.supertype).toBe("Legendary Enchantment");
-    // nyx/w isn't verified on production: M15, and the creator's toast
-    // names the switch.
-    expect(landing(heliod)).toEqual({ template: "m15", colorKey: "w", status: "frame-switched" });
-    // Once it is, the god lands on Nyx — and the route calls it exact.
-    const withNyx = new Set([...PROD_VERIFIED, frameComboKey("nyx", "w")]);
-    expect(landing(heliod, withNyx)).toEqual({ template: "nyx", colorKey: "w", status: "exact" });
-    expect(finalizeImportMatch(heliod, withNyx).frame_match?.status).toBe("exact");
-    expect(finalizeImportMatch(heliod, PROD_VERIFIED).frame_match?.status).toBe("nearest");
+    // Without nyx/w: M15, and the creator's toast names the switch.
+    const withoutNyx = new Set([...PROD_VERIFIED].filter((key) => key !== frameComboKey("nyx", "w")));
+    expect(landing(heliod, withoutNyx)).toEqual({ template: "m15", colorKey: "w", status: "frame-switched" });
+    expect(finalizeImportMatch(heliod, withoutNyx).frame_match?.status).toBe("nearest");
+    // Production ticked it (2026-10-29; the seed mirror of 2026-11-22): the
+    // god lands on Nyx — and the route calls it exact.
+    expect(PROD_VERIFIED.has(frameComboKey("nyx", "w"))).toBe(true);
+    expect(landing(heliod)).toEqual({ template: "nyx", colorKey: "w", status: "exact" });
+    expect(finalizeImportMatch(heliod, PROD_VERIFIED).frame_match?.status).toBe("exact");
   });
 
   it("a 2003-frame textless promo lands on the 2003 frame until the textless frame is verified (A9)", () => {

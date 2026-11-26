@@ -112,7 +112,9 @@ describe("a THB constellation printing's import, today and after the frame is ti
     }
     return out;
   }
-  const PROD = productionVerifiedKeys();
+  /** Production ticked nyx on 2026-10-29 (the seed mirror of 2026-11-22):
+   *  "today" below is its list without those ticks, as the case was written. */
+  const PROD = new Set([...productionVerifiedKeys()].filter((key) => !key.startsWith("nyx/")));
   const TICKED = new Set([...PROD, ...FRAME_COLOR_KEYS.map((c) => frameComboKey("nyx", c))]);
   const heliod = (signaturePrintings as unknown as Record<string, ScryfallCard>)["thb-259"];
   const patch = mapScryfallToFormPatch(heliod);
@@ -139,7 +141,8 @@ describe("a THB constellation printing's import, today and after the frame is ti
     expect(finalizeImportMatch(patch, PROD).frame_match).toMatchObject({ status: "nearest", unverified: true });
   });
 
-  it("once nyx is ticked it lands on the frame, exact, crown on", () => {
+  it("once nyx is ticked it lands on the frame, exact, crown on — production's list today", () => {
+    expect(FRAME_COLOR_KEYS.filter((c) => c !== "c").every((c) => productionVerifiedKeys().has(frameComboKey("nyx", c)))).toBe(true);
     const ticked = savedOn(TICKED);
     expect(ticked.template).toBe("nyx");
     expect(ticked.saved).toMatchObject({ template: "nyx", crown: true });

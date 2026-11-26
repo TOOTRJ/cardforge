@@ -4,6 +4,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { originalSymbolPath } from "@/lib/cards/symbol-style";
 import { getManaCodepoint } from "@/lib/render/card-fonts";
 import { frameAssetPathsFor, renderCardImage, type RenderPreset } from "@/lib/render/card-image";
+import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { bucketKeysOf, haveBucketMasters, serveBucketMasters, type ServedBucketMasters } from "@/tests/stubs/bucket-masters";
 import { ORIGINAL_SYMBOL_STAND_INS, serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
 
@@ -302,6 +303,41 @@ describe("the 1993 frame — text on the prints' rows, at the prints' sizes", ()
     frames.fetched.length = 0;
     await bake(card({ cost: "{R}", rulesText: "Add {G}." }), "default");
     // (Cached after the first fetch: at least the green one is new here.)
+    expect(frames.fetched).toContain("manaoriginal/g.png");
+  }, 60_000);
+
+  it("warms a colour symbol the card's NAME brings into the rules through ~, and a cold bake draws it", async () => {
+    // The renderer draws `~` as the printed name (withSelfNames) before it
+    // reads a pip, so the preload reads the same self-named text: before,
+    // it read the stored "~ attacks…" and a cold instance threw
+    // FrameAssetUnavailableError for manaoriginal/g.png.
+    const wurm = card({ title: "{G} Wurm", cost: "{3}", rulesText: "~ attacks each combat." });
+    expect(frameAssetPathsFor(wurm).filter((p) => p.includes("manaoriginal"))).toEqual([originalSymbolPath("g")]);
+    expect(
+      frameAssetPathsFor({ ...wurm, frameStyle: { template: "alphaland", finish: "regular" } } as CardPreviewData).filter((p) =>
+        p.includes("manaoriginal"),
+      ),
+    ).toEqual([originalSymbolPath("g")]);
+    // CARDNAME is the same token; a card 0142 flagged prints `~` as typed —
+    // no name, no pip, nothing to warm.
+    expect(frameAssetPathsFor(card({ title: "{G} Wurm", cost: "{3}", rulesText: "CARDNAME attacks." })).filter((p) => p.includes("manaoriginal"))).toEqual([
+      originalSymbolPath("g"),
+    ]);
+    expect(
+      frameAssetPathsFor({ ...wurm, frameStyle: { template: "agclassic", finish: "regular", selfName: "literal" } } as CardPreviewData).filter((p) =>
+        p.includes("manaoriginal"),
+      ),
+    ).toEqual([]);
+    // A back face's `~` is ITS own name.
+    expect(
+      frameAssetPathsFor(card({ cost: "{3}", rulesText: "Draw a card.", backFace: { title: "{U} Back", rules_text: "~ flies." } } as never)).filter((p) =>
+        p.includes("manaoriginal"),
+      ),
+    ).toEqual([originalSymbolPath("u")]);
+    // Cold: nothing cached — the bake fetches the symbol before it draws.
+    resetFrameAssetCacheForTests();
+    frames.fetched.length = 0;
+    await expect(bake(wurm, "default")).resolves.toBeTruthy();
     expect(frames.fetched).toContain("manaoriginal/g.png");
   }, 60_000);
 

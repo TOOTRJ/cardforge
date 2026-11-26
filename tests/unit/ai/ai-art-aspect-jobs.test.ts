@@ -183,10 +183,14 @@ beforeEach(() => {
 
 describe("the single-card job paints for plan.frame_template", () => {
   it.each(["m15", "m15pw", "m15borderless", "saga", "m20token", null])("%s", async (frame) => {
-    job("card", { card: designed(), style: null, frame_template: frame, deck_id: null }, "card:0");
+    // The full-art token dresses tokens alone (the kind gate, since the
+    // rendering-safety fix): a creature planned onto it is refused unpainted.
+    const token = frame === "m20token";
+    const card = token ? designed({ card_type: "token", supertype: "Creature", cost: "", rarity: "common" }) : designed();
+    job("card", { card, style: null, frame_template: frame, deck_id: null }, "card:0");
     await run();
     expect(s.shapes).toHaveLength(1);
-    expect(size(s.shapes[0])).toBe(sizeOf(frame));
+    expect(size(s.shapes[0])).toBe(token ? sizeOf(frame, ["red"], "token") : sizeOf(frame));
     // Paint first (#722): the card is created WITH its picture.
     expect(s.order).toEqual(["image", "create"]);
   });

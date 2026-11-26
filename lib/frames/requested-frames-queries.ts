@@ -33,19 +33,24 @@ export type RequestedFramesResult = {
 export const getRequestedFrames = cache(async (): Promise<RequestedFramesResult> => {
   if (!isSupabaseConfigured()) return { frames: [], error: "offline" };
   try {
-    const [{ data, error }, verifiedKeys] = await Promise.all([
-      createPublicClient().rpc("requested_frame_counts", {
-        p_signatures: publicSignatures(),
-        p_answered: answeredSignaturePairs(),
-      }),
-      getVerifiedFrameKeysPublic(),
-    ]);
+    // The verified combos first: they decide each frame's status AND which
+    // rows logged on a stand-in are answered (answeredSignaturePairs — an
+    // unreadable list is [] there, which answers only what is drawn today).
+    // TODO: once #827 (fix/rendering-safety) lands, read its honest result
+    // (readVerifiedFrameKeysPublic → { keys, unavailable }) and answer the
+    // page "unavailable" on a failed read — today a failure reads as an
+    // empty list, every built frame "Being checked".
+    const verifiedKeys = new Set(await getVerifiedFrameKeysPublic());
+    const { data, error } = await createPublicClient().rpc("requested_frame_counts", {
+      p_signatures: publicSignatures(),
+      p_answered: answeredSignaturePairs(verifiedKeys),
+    });
     if (error) {
       console.warn("getRequestedFrames: rpc error", error.message);
       return { frames: [], error: "unavailable" };
     }
     return {
-      frames: mapRequestedFrames((data ?? []) as RequestedFrameCountRow[], new Set(verifiedKeys)),
+      frames: mapRequestedFrames((data ?? []) as RequestedFrameCountRow[], verifiedKeys),
       error: null,
     };
   } catch (error) {

@@ -174,8 +174,12 @@ describe("LTC #411–490 are LTR's scroll showcase", () => {
       expect(frameMatchFromScryfall(P[key]), key).toMatchObject({ signature: "showcase/ltr/scroll", status: "exact", template: "lotrscroll" });
       expect(frameMatchFromScryfall(P[key]).blockedBy, key).toBeUndefined();
       expect(imported(key).frame_template, key).toBe("lotrscroll");
-      // Exact on a frame no colour of which is ticked yet: the row says so.
-      expect(requestRow(key), key).toMatchObject({ signature: "showcase/ltr/scroll", cause: "unverified", template: "lotrscroll" });
+      // Exact on a frame no colour of which is ticked: the row says so…
+      const unticked = new Set([...PROD].filter((combo) => !combo.startsWith("lotrscroll/")));
+      expect(requestRow(key, unticked), key).toMatchObject({ signature: "showcase/ltr/scroll", cause: "unverified", template: "lotrscroll" });
+      // …and production ticked every colour (the seed mirror of 2026-11-22):
+      // no row.
+      expect(requestRow(key), key).toBeNull();
     }
     // The saga lands on the saga frame (ltr-602's landing).
     expect(frameMatchFromScryfall(P["ltc-465"])).toMatchObject({ signature: "showcase/ltr/scroll", template: "lotrscroll", landOn: "saga" });
@@ -204,9 +208,13 @@ describe("MUL's Theros demigods are the constellation showcase", () => {
   });
 
   it("is `not yet verified` while nyx isn't ticked, exact once it is", () => {
+    // Production ticked nyx (2026-10-29; the seed mirror of 2026-11-22): the
+    // unticked side is that list without it.
+    const unticked = new Set([...PROD].filter((combo) => !combo.startsWith("nyx/")));
     for (const key of THEROS) {
-      expect(PROD.has(frameComboKey("nyx", "w"))).toBe(false);
-      expect(requestRow(key), key).toMatchObject({ signature: "showcase/thb/constellation", cause: "unverified" });
+      expect(PROD.has(frameComboKey("nyx", "w"))).toBe(true);
+      expect(requestRow(key, unticked), key).toMatchObject({ signature: "showcase/thb/constellation", cause: "unverified" });
+      expect(requestRow(key), key).toBeNull();
       expect(imported(key, NYX_VERIFIED).frame_match, key).toMatchObject({ status: "exact", template: "nyx" });
       expect(requestRow(key, NYX_VERIFIED), key).toBeNull();
     }

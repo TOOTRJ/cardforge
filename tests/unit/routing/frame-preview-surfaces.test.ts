@@ -18,7 +18,10 @@ describe("admin frame preview surfaces", () => {
     const guest = read("app/(marketing)/create-guest/page.tsx");
     expect(guest).not.toMatch(/searchParams/);
     expect(guest).not.toMatch(/previewFrames|resolveFramePreviewMode/);
-    expect(guest).toMatch(/getVerifiedFrameKeysPublic\(\)/);
+    // (The static page's read — readVerifiedFrameKeysForStaticPage, which
+    // throws at run time and says so during the build — is the same
+    // cookie-free public read.)
+    expect(guest).toMatch(/(getVerifiedFrameKeysPublic|readVerifiedFrameKeysPublic|readVerifiedFrameKeysForStaticPage)\(\)/);
     expect(guest).toMatch(/export const revalidate = \d+/);
   });
 

@@ -38,6 +38,53 @@ export const BREAKER_NEW_FAILURES = 10;
 export const BREAKER_ERROR_RUNS = 3;
 /** Invocations in a row that died holding the lease that trip the breaker. */
 export const BREAKER_CRASHED_RUNS = 2;
+
+/** The error a frame asset the site CDN or the frames bucket couldn't serve
+ *  reports — a batch's infrastructure stop (runRebakeBatch's
+ *  `assetsUnavailable`; no card struck), which the "batch failing
+ *  BREAKER_ERROR_RUNS runs in a row" breaker names to the admins, and the
+ *  strike of a card it stopped on its own (`assetStops`). */
+export function frameAssetsUnavailableMessage(paths: readonly string[]): string {
+  return `Frame assets unavailable (the site CDN or the frames bucket): ${paths.join(", ")}`;
+}
+
+/** Invocations in a row in which a frames-bucket object stopped the SAME
+ *  card while the other cards rendered (runRebakeBatch's `assetStops`) —
+ *  whichever objects: a card missing two can name either, its preload being
+ *  one Promise.all — before the card is struck; each later one strikes it
+ *  again, so it is poisoned the normal way and the sweep stops retrying it.
+ *  One blip strikes nothing. */
+export const ASSET_STOP_RUNS = 3;
+
+/** The cards a run summary remembers in `assetStops`, the longest streaks
+ *  first — so no card's streak is held back by the cap. */
+export const ASSET_STOPS_KEPT = 50;
+
+/** What the pause reason adds when an infrastructure stop held on the same
+ *  frame assets run after run: Resume alone can't get past it. */
+export const ASSET_STOP_RESUME_NOTE =
+  "every card that draws it stops there, so Resume won't help until it loads again (a frames-bucket object that is missing or doesn't match the manifest stays that way until it is published again)";
+
+/** Two lists of asset paths name the same assets. */
+export function sameAssetPaths(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((path) => set.has(path));
+}
+
+/** This run's count for a card a frames-bucket object stopped on its own:
+ *  the previous run's for the same card (whichever objects it named) plus
+ *  one, else 1. */
+export function assetStopRunsAfter(last: AutoRebakeRunSummary | null, stop: { id: string }): number {
+  const previous = last?.assetStops?.find((entry) => entry.id === stop.id);
+  return previous ? previous.runs + 1 : 1;
+}
+
+/** A summary's `assetStops`: the longest streaks first, at most
+ *  ASSET_STOPS_KEPT. */
+export function keptAssetStops<T extends { runs: number }>(stops: readonly T[]): T[] {
+  return [...stops].sort((a, b) => b.runs - a.runs).slice(0, ASSET_STOPS_KEPT);
+}
 /** The strike a dead run's in-flight batch gets. */
 export const CRASHED_BATCH_ERROR =
   "The automatic run died while re-baking this card's batch (killed at the 300 s limit or out of memory).";
@@ -104,6 +151,12 @@ export type AutoRebakeRunSummary = {
   errorStreak?: number;
   /** The cards of a batch that hung or whose run died — the suspects. */
   suspects?: string[];
+  /** Cards a frame asset stopped on their own this run (runRebakeBatch's
+   *  `assetStops`), with the runs in a row it did (ASSET_STOP_RUNS). */
+  assetStops?: Array<{ id: string; paths: string[]; runs: number }>;
+  /** The frame assets an infrastructure stop ended this run on
+   *  (`assetsUnavailable`) — the next run's breaker compares them. */
+  assetPaths?: string[];
 };
 
 /** "Nothing actionable" fingerprint: the pending count a full scan found
@@ -198,6 +251,17 @@ export function parseRunSummary(value: unknown): AutoRebakeRunSummary | null {
   if (crashes != null) summary.crashes = crashes;
   const errorStreak = num(value.errorStreak);
   if (errorStreak != null) summary.errorStreak = errorStreak;
+  if (Array.isArray(value.assetStops)) {
+    summary.assetStops = value.assetStops.flatMap((entry) => {
+      if (!isRecord(entry)) return [];
+      const id = str(entry.id);
+      const paths = idList(entry.paths);
+      const runs = num(entry.runs);
+      return id && paths && paths.length > 0 && runs != null && runs >= 1 ? [{ id, paths, runs }] : [];
+    });
+  }
+  const assetPaths = idList(value.assetPaths);
+  if (assetPaths && assetPaths.length > 0) summary.assetPaths = assetPaths;
   return summary;
 }
 

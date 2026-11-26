@@ -6,6 +6,7 @@ import { checkAiRateLimit } from "@/lib/ai/rate-limit";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { batchCardLimit } from "@/lib/ai/generation-limits";
 import { estimateDeckRemix } from "@/lib/ai/remix-estimate";
+import { FRAME_LIST_UNAVAILABLE_MESSAGE, isVerifiedFramesUnavailable } from "@/lib/cards/frame-list-unavailable";
 import { DECK_AI_PAUSED_STATUS, deckAiPausedBody, isDeckAiPaused } from "@/lib/ai/deck-ai-pause";
 
 // ---------------------------------------------------------------------------
@@ -49,7 +50,14 @@ export async function GET(request: NextRequest) {
   if (!rate.ok) return rateLimitedResponse(rate);
 
   const limit = await batchCardLimit();
-  const estimate = await estimateDeckRemix(deckId, limit);
+  let estimate: Awaited<ReturnType<typeof estimateDeckRemix>>;
+  try {
+    estimate = await estimateDeckRemix(deckId, limit);
+  } catch (err) {
+    // An unread frame list prices nothing (lib/cards/frame-list-unavailable.ts).
+    if (!isVerifiedFramesUnavailable(err)) throw err;
+    return NextResponse.json({ ok: false, error: FRAME_LIST_UNAVAILABLE_MESSAGE }, { status: 503, headers: NO_STORE });
+  }
   return NextResponse.json(
     {
       ok: true,

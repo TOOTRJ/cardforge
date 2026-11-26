@@ -7,6 +7,7 @@ import { dfcImportOf, dfcPrintedLookOf, frameMatchFromScryfall, mapScryfallToFor
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import printingsData from "./fixtures/dfc-borderless-printings.json";
 import mainLandings from "./fixtures/dfc-borderless-main-landings.json";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 5.7 — every borderless transform / modal printing on Scryfall
@@ -29,8 +30,9 @@ const printings = Object.fromEntries(
 const BORDERLESS_BODIES = ["m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"];
 const KEYS = ["w", "u", "b", "r", "g", "c", "m"];
 
-/** Production's verified combos (supabase/seed.sql's frame_reviews block),
- *  WITHOUT any borderless body — the list as it stood before 5.7. */
+/** Production's verified combos (supabase/seed.sql's frame_reviews block,
+ *  as the recording was made: before the 2026-11-22 refresh), WITHOUT any
+ *  borderless body — the list as it stood before 5.7. */
 function productionKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
   const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "") ?? "";
@@ -39,7 +41,7 @@ function productionKeys(): Set<string> {
   for (const [, template] of everyColour.matchAll(/'([^']+)'/g)) for (const k of KEYS) out.add(frameComboKey(template as never, k));
   for (const [, template, colour] of block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)) out.add(frameComboKey(template as never, colour));
   for (const key of [...out]) if (BORDERLESS_BODIES.some((t) => key.startsWith(`${t}/`) || key.startsWith(`${t}:`))) out.delete(key);
-  return out;
+  return asBeforeSeedRefresh(out);
 }
 const PROD = productionKeys();
 const TICKED = new Set([...PROD, ...BORDERLESS_BODIES.flatMap((t) => KEYS.map((k) => frameComboKey(t as never, k)))]);
@@ -118,7 +120,9 @@ describe("borderless double-faced imports (TODO 5.7)", () => {
         signature: "showcase/tla/avatar+dfc",
         status: "nearest",
         template: "avatar",
-        blockedBy: "5.5",
+        // The showcase's own double-faced look (4.11), not the standard
+        // frame's dfc item (frames audit 2026-11-22: 5.5 is built).
+        blockedBy: "4.11",
       });
       expect(frameMatchFromScryfall(printings[key]).reason, key).toMatch(/double-faced marks/);
     }

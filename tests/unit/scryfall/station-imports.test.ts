@@ -9,6 +9,7 @@ import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resol
 import { frameRequestFromImport, frameRequestSchema, signatureBlockedBy } from "@/lib/frames/frame-requests";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+import { asBeforeSeedRefresh } from "../helpers/seed-refresh-2026-11-22";
 
 // ---------------------------------------------------------------------------
 // TODO 4.27a, step 0 — the station frame (Edge of Eternities' Spacecraft and
@@ -49,12 +50,16 @@ function productionVerifiedKeys(): Set<string> {
   return keys;
 }
 const PROD = productionVerifiedKeys();
+/** Production's list as these cases were written against it (2026-10-14:
+ *  the bordered pair ticked, no dress) — the 2026-11-22 refresh added the
+ *  dresses, the Planet frame's c / m and extended art. */
+const PROD_RECORDED = asBeforeSeedRefresh(PROD);
 /**
  * The unverified side of these cases: production's list WITHOUT its station
  * ticks. Production verified `m15station` in every colour and
  * `m15stationland` in w/u/b/r/g on 2026-10-14 (the seed mirror of that date).
  */
-const PROD_BEFORE_STATION = new Set([...PROD].filter((key) => !key.startsWith("m15station/") && !key.startsWith("m15stationland/")));
+const PROD_BEFORE_STATION = new Set([...PROD_RECORDED].filter((key) => !key.startsWith("m15station/") && !key.startsWith("m15stationland/")));
 
 describe("a bordered station printing is the artifact / land frame's nearest (station/2015)", () => {
   const spacecraft: Key[] = ["eoe-25", "eoe-208", "eoe-219", "eoe-238", "eoe-241", "peoe-25s", "plst-eoe-101", "trk-273"];
@@ -162,13 +167,13 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
       const standIn = withVerification(found, colour, withStation);
       expect(standIn, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
       expect(standIn.reason, key).toMatch(/extended art/);
-      // Production's own list (2026-10-14: the bordered pair ticked) is that state.
-      expect(land(withVerification(found, colour, PROD)), key).toBe("m15station");
+      // Production's own list of 2026-10-14 (the bordered pair ticked) is that state.
+      expect(land(withVerification(found, colour, PROD_RECORDED)), key).toBe("m15station");
       // The plain extended-art frame ticked in the colour too (owner Round
       // 66): STILL the bordered station frame — extended art would print the
       // tiers as plain lines, so it is never kept as a stand-in.
       const ext = (keys: ReadonlySet<string>) => new Set([...keys, frameComboKey("extendedart", colour)]);
-      const overPlain = withVerification(found, colour, ext(PROD));
+      const overPlain = withVerification(found, colour, ext(PROD_RECORDED));
       expect(overPlain, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
       expect(land(withVerification(found, colour, ext(withStation))), key).toBe("m15station");
       // …and every main template ticked (extendedart included), the dress not.
@@ -177,8 +182,9 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
       // The extended-art frame ticked and the bordered station frame NOT: no
       // landing to take — the import stays where it was, not yet verified.
       expect(land(withVerification(found, colour, ext(PROD_BEFORE_STATION))), key).toBe("extendedart");
-      // Its own frame ticked: exact on it, whatever else is.
-      for (const keys of [withDresses, EVERY]) {
+      // Its own frame ticked: exact on it, whatever else is — production's
+      // list today among them (the seed mirror of 2026-11-22).
+      for (const keys of [withDresses, EVERY, PROD]) {
         const own = withVerification(found, colour, keys);
         expect(own, key).toMatchObject({ status: "exact", template: "extendedartstation", reason: null });
         expect(own.landOn, key).toBeUndefined();
@@ -193,14 +199,22 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
       signature: "borderless/standard+station",
       template: "m15borderlessartifact",
       landOn: "m15artifact",
-      reason: STATION_REASON,
-      blockedBy: "4.27a",
+      // Nothing left to build (frames audit 2026-11-22): the words say where
+      // it lands and that the borderless frame is a pick; the item is 1.18's
+      // landing rule.
+      reason:
+        "a borderless Spacecraft lands on the bordered Station frame once that is verified in its colour; the borderless Station frame can be picked in the creator",
+      blockedBy: "1.18",
       landOnOnceVerified: { template: "m15station" },
     });
     expect(found.onceVerified).toBeUndefined();
     expect(found.gaps?.[0]).toBe("station");
     expect(land(withVerification(found, "m", PROD_BEFORE_STATION))).toBe("m15artifact");
-    expect(land(withVerification(found, "m", withStation))).toBe("m15station");
+    const onStation = withVerification(found, "m", withStation);
+    expect(land(onStation)).toBe("m15station");
+    expect(onStation.reason).toBe(
+      "this printing is borderless, and it lands on the bordered Station frame; the borderless Station frame can be picked in the creator",
+    );
     expect(land(withVerification(found, "m", EVERY))).toBe("m15station");
   });
 
