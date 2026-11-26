@@ -627,6 +627,15 @@ export const FRAME_TEMPLATE_VALUES = [
   // Prepare kind's variation (TEMPLATE_SKIN_VARIANTS.prepare), never a
   // default.
   "extendedartprepare",
+  // The Universes Beyond extended-art frames (TODO 4.25, Card Conjurer
+  // 'Universes Beyond (Extended art)', frames bucket): the streaked
+  // Universes Beyond dress on the extended frame — the art to the side
+  // edges, the black type bar — that WHO, PIP, FIN, FIC, LTR, LTC and ACR
+  // print (1,120 printings, 2023–25). The spell frame and its land dress,
+  // as extendedart / extendedartland. A card wears one only by its maker's
+  // pick or an import; no new card starts on them.
+  "extendedartub",
+  "extendedartubland",
   // Full-art basic lands, Card Conjurer 'Fullart Basics (2022)' (frames plan
   // 4.39): the black-bordered frame of ONE / MOM / … (2023+) and the same
   // frame without its border (fullartland, borderless — owner decision
@@ -790,6 +799,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   breakingnews: "Breaking News",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
+  extendedartub: "Extended Art Universes Beyond",
+  extendedartubland: "Extended Art Universes Beyond Land",
   // Set-relative like the other showcase labels: the picker prints
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
@@ -965,6 +976,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   breakingnews: "thunderjunction",
   extendedart: "extended",
   extendedartland: "extended",
+  extendedartub: "extended",
+  extendedartubland: "extended",
   fullart: "zendikarrising",
   dndsourcebook: "dnd",
   m15fullartland: "fullartset",

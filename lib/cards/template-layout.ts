@@ -5773,6 +5773,34 @@ const EXTENDEDARTLAND: FrameProfile = {
   artifactMasterKeys: undefined,
 };
 
+// The Universes Beyond extended-art frames (TODO 4.25, owner 2026-11-25):
+// Card Conjurer's 'Universes Beyond (Extended art)' (frames bucket, 1500 px
+// native) — the streaked Universes Beyond dress on the extended frame that
+// WHO, PIP, FIN, FIC, LTR, LTC and ACR print (1,120 printings, 2023–25). The
+// pack is drawn on the regular M15 pack's geometry, and its bars, box and
+// rims register on the prints within ±3 px — within that of the accurate
+// extended frame's — so each is its extended twin's profile, slot for slot
+// (EXTENDEDART / EXTENDEDARTLAND), with:
+//   • the Universes Beyond plates — the pack draws m15ub's own (`m15/ub/pt`),
+//     so the profiles read /frames/m15ub/pt (no objects of their own);
+//   • the colourless master = the pack's ARTIFACT frame (it lists no
+//     colourless frame): no see-through `c`, no art under the frame, no
+//     type-dressed master (the three colourless non-artifact printings,
+//     FIN #421 and WHO #923 / #332, print a see-through frame — not built).
+// Their crown band and triangle notch are declared on their PROFILES entries.
+const EXTENDEDARTUB: FrameProfile = {
+  ...EXTENDEDART,
+  label: "Extended Art Universes Beyond",
+  underFrameArt: undefined,
+  artifactMasterKeys: undefined,
+  pt: { ...EXTENDEDART.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
+};
+const EXTENDEDARTUBLAND: FrameProfile = {
+  ...EXTENDEDARTLAND,
+  label: "Extended Art Universes Beyond Land",
+  pt: { ...EXTENDEDARTLAND.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
+};
+
 // The extended-art PREPARE dress (TODO 4.27b): 29 printings (SOS #309–342,
 // SOC #63–98, FRA #425–430) print the extended-art frame — the art to the
 // side edges between the title bar and the BLACK type bar — over the Prepare
@@ -6566,6 +6594,26 @@ export const EXTENDED_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The Universes Beyond extended-art crown (TODO 4.25): EXTENDED_CROWN's
+ * recipe and slot over the Universes Beyond FLOATING crowns
+ * (`extendedartubcrown/<key>.png`, 1500 × 260; scripts/lib/cc-frames.mjs
+ * UB_EXTENDED_CROWN_BAND) — closer than the M15 floating crown on all 35
+ * crowned prints measured (2026-11-25). Keys: w u b r g, m, a (the artifact
+ * silver a colourless legendary ARTIFACT prints — the spell frame, whose
+ * colourless master is the artifact frame, maps c → a), l (the land frame
+ * maps c → l), c and the ten pairs. Set on the two Universes Beyond
+ * extended-art PROFILES entries only.
+ */
+export const EXTENDED_ART_UB_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: EXTENDED_CROWN.rect,
+  assetPathTemplate: "/frames/extendedartubcrown/{key}.png",
+  // UB_EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test
+  // holds them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
+/**
  * The double-faced bodies' legendary crown (TODO 5.1d; the 4.6f note of the
  * 5.0 design): the m15crown band CUT round the icon well or the housing —
  * `m15dfccrown/<key>` for the faces whose well is at the LEFT (the
@@ -6784,6 +6832,30 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   rect: { leftPct: (638 / 1500) * 100, topPct: (1891 / 2100) * 100, widthPct: (223 / 1500) * 100, heightPct: (102 / 2100) * 100 },
   assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The Universes Beyond EXTENDED-ART triangle stamp's notch (TODO 4.25): the
+ * pack's own piece (the older Universes Beyond pack's `m15/ub/regular/stamp`,
+ * 224 × 102 at 638, 1891 px, 1:1 at HD) — its foot the extended masters'
+ * pinline (rows 1939–1947), where M15UB_HOLO_STAMP's is the accurate pack's
+ * (to 1949) — the rim tinted to OUR master's bar, the triangle (the
+ * hologram capture) cut clear (scripts/lib/cc-frames.mjs
+ * HOLO_STAMP_NOTCHES.extendedartubholostamp). The same hole, triangle art,
+ * tones and rules keep-out as M15UB_HOLO_STAMP (the piece's bevel tops out
+ * at 1898 px, inside its keep-out from 1897); "auto" stamps every rarity, as
+ * on every triangle frame. Keys: w u b r g, m, c (the spell frame's
+ * artifact-frame master), l (the land frame maps c → l) and the ten pairs.
+ * Set on the two Universes Beyond extended-art PROFILES entries only.
+ */
+export const EXTENDED_ART_UB_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // UB_EXTENDED_NOTCH_BOX in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  rect: { leftPct: (638 / 1500) * 100, topPct: (1891 / 2100) * 100, widthPct: (224 / 1500) * 100, heightPct: (102 / 2100) * 100 },
+  assetPathTemplate: "/frames/extendedartubholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
 };
 
@@ -8876,6 +8948,24 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // #101–108, FRC #102, STX #360 / #365, EOC #43 — twoColorForLands, like
   // m15land), opt-in per card.
   extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN], twoColorMasters: ["split"], twoColorForLands: true },
+  // The Universes Beyond extended-art frames (TODO 4.25): their extended
+  // twin's anatomy in the Universes Beyond dress — the floating crown band
+  // (EXTENDED_ART_UB_CROWN), the triangle stamp's notch
+  // (EXTENDED_ART_UB_HOLO_STAMP: "auto" stamps every rarity, as print does)
+  // and the pair masters (print's gold-split dress: ACR #166, PIP #1007; the
+  // hybrid: PIP #1003; the land pairs: PIP #1049–1056, WHO #1118–1125).
+  // ADDITIONS: new templates no stored card sits on.
+  extendedartub: {
+    ...EXTENDEDARTUB,
+    overlays: [{ ...EXTENDED_ART_UB_CROWN, keyMap: { c: "a" } }, EXTENDED_ART_UB_HOLO_STAMP],
+    twoColorMasters: ["split", "hybrid"],
+  },
+  extendedartubland: {
+    ...EXTENDEDARTUBLAND,
+    overlays: [{ ...EXTENDED_ART_UB_CROWN, keyMap: { c: "l" } }, { ...EXTENDED_ART_UB_HOLO_STAMP, keyMap: { c: "l" } }],
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+  },
   // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): its own
   // crown band and stamp notch (both split off Card Conjurer's pack), and
   // the 2015-style collector line where M15 prints it (ZNR #293 / #313: the

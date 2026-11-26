@@ -586,6 +586,12 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // editable (frameKindUpdateGateError's legacy pin).
   extendedart: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
   extendedartland: ["land"],
+  // The Universes Beyond extended-art frames (TODO 4.25) are new — no
+  // stored card sits on them — and split by kind the same way: the land
+  // frame for the land kind, the spell frame for every other kind its body
+  // draws but the token (no Universes Beyond token prints extended art).
+  extendedartub: ["creature", "instant", "sorcery", "enchantment", "artifact"],
+  extendedartubland: ["land"],
   // The MKM dossier showcase (TODO 4.11 wave 2) is new — no stored card sits
   // on it. Print dresses creatures alone (MKM #336–389, #433), and the pack
   // draws no land frame: its pair masters are a SPELL frame's split, which a
@@ -694,6 +700,9 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
 export function extendedArtDressFor(kind: CardKind, template: FrameTemplate): FrameTemplate {
   if (template === "extendedart" && kind === "land") return "extendedartland";
   if (template === "extendedartland" && kind !== "land") return "extendedart";
+  // …and its Universes Beyond dress (TODO 4.25), split the same way.
+  if (template === "extendedartub" && kind === "land") return "extendedartubland";
+  if (template === "extendedartubland" && kind !== "land") return "extendedartub";
   return template;
 }
 

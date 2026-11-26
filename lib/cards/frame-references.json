@@ -5383,6 +5383,177 @@
       ]
     }
   },
+  "extendedartub": {
+    "note": "The Universes Beyond extended-art spell frame (TODO 4.25): plain black-bordered extended-art printings with the triangle stamp, LTR / ACR / PIP / WHO / FIC 2023–25 — the streaked frame with the art to the side edges and the black type bar. m: three colours (a two-colour card prints the split box and pinline over gold bars: the pair masters ride this tick). c: the pack's artifact frame — a colourless ARTIFACT prints it (the three colourless non-artifact printings, FIN #421 and WHO #923 / #332, print a see-through frame PipGlyph doesn't draw here).",
+    "colors": {
+      "w": [
+        {
+          "name": "Eagle of Deliverance",
+          "set": "ltr",
+          "scryfallId": "588f720a-c3c1-49de-a377-94fa47d253eb"
+        },
+        {
+          "name": "Single Combat",
+          "set": "pip",
+          "scryfallId": "a4b88918-d819-4dc9-ac6c-48c3b1f67092"
+        },
+        {
+          "name": "Ultimate Magic: Holy",
+          "set": "fic",
+          "scryfallId": "6c85ce70-7080-430e-8560-81bc09ca329e"
+        }
+      ],
+      "u": [
+        {
+          "name": "Temporal Trespass",
+          "set": "acr",
+          "scryfallId": "6edb50b3-27dd-4d1b-b811-8a2ea5bead1f"
+        },
+        {
+          "name": "Inspiring Refrain",
+          "set": "who",
+          "scryfallId": "49c678c4-7b36-42a9-88d3-1b4c5dadae36"
+        },
+        {
+          "name": "Minas Tirith Garrison",
+          "set": "ltr",
+          "scryfallId": "f7ca9123-a463-44ee-aab8-52ddd925e2b4"
+        }
+      ],
+      "b": [
+        {
+          "name": "Royal Assassin",
+          "set": "acr",
+          "scryfallId": "ae86188f-dcee-4d19-b5b0-e0d18df4f081"
+        },
+        {
+          "name": "Lethal Scheme",
+          "set": "pip",
+          "scryfallId": "d31e4679-e594-4907-8bef-acff38b856a3"
+        },
+        {
+          "name": "Warg Rider",
+          "set": "ltr",
+          "scryfallId": "ec73bc43-aae6-499f-bb48-b88c375f0ce3"
+        }
+      ],
+      "r": [
+        {
+          "name": "Riders of the Mark",
+          "set": "ltr",
+          "scryfallId": "e4b35111-2c74-4dda-b156-d1bf9f3c2947"
+        },
+        {
+          "name": "Stolen Strategy",
+          "set": "pip",
+          "scryfallId": "8d5bdc07-7221-4681-a84c-f4fe3e85d120"
+        },
+        {
+          "name": "Ultimate Magic: Meteor",
+          "set": "fic",
+          "scryfallId": "809276a9-4804-422f-abb0-ba302f329e6e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Yuna's Whistle",
+          "set": "fic",
+          "scryfallId": "76c0645f-d44c-4ad3-9e90-9d6187e44eb4"
+        },
+        {
+          "name": "Heroic Intervention",
+          "set": "who",
+          "scryfallId": "b77ce389-1610-4122-b1a5-bbbfa7b80a74"
+        },
+        {
+          "name": "Mirkwood Channeler",
+          "set": "ltr",
+          "scryfallId": "d116a123-3903-429a-8151-a3070c22f260"
+        }
+      ],
+      "c": [
+        {
+          "name": "Herald's Horn",
+          "set": "fic",
+          "scryfallId": "48a8abd6-8b5f-45b6-9f82-f2ce17d86222"
+        },
+        {
+          "name": "Solemn Simulacrum",
+          "set": "who",
+          "scryfallId": "464305af-870c-46b0-9962-b69b6cd5b12d"
+        },
+        {
+          "name": "Relic of Sauron",
+          "set": "ltc",
+          "scryfallId": "15c5d6cd-8af6-4852-8043-e6b1ef771ce6"
+        }
+      ],
+      "m": [
+        {
+          "name": "Ruinous Ultimatum",
+          "set": "pip",
+          "scryfallId": "8b39e94a-07b0-4a87-bd03-0cc369790c01"
+        },
+        {
+          "name": "Fervent Charge",
+          "set": "pip",
+          "scryfallId": "ca785ef8-f893-4c48-83c1-6886b0dc43c4"
+        }
+      ]
+    }
+  },
+  "extendedartubland": {
+    "note": "The Universes Beyond extended-art land frame (TODO 4.25): the pack's land frames — c the grey land frame (lands that make no colour), w u b the tinted ones (the only mono-colour lands in print: Windbrisk Heights, Trenzalore Clocktower and The Black Gate, the last two legendary), m the any-colour gold land. No red or green land prints it (Junktown, a red-identity land that makes {C}, prints the grey frame). The 180 two-colour lands print the grey frame with the split box (the pair masters ride the colours' ticks).",
+    "colors": {
+      "w": [
+        {
+          "name": "Windbrisk Heights",
+          "set": "pip",
+          "scryfallId": "0a70d498-1fe2-4136-94bc-18fc163cbc7b"
+        }
+      ],
+      "u": [
+        {
+          "name": "Trenzalore Clocktower",
+          "set": "who",
+          "scryfallId": "7f517d29-aa30-4890-ba4e-b572ac873bb4"
+        }
+      ],
+      "b": [
+        {
+          "name": "The Black Gate",
+          "set": "ltc",
+          "scryfallId": "d6f6dca3-c618-4916-b93c-17c83ac3af0b"
+        }
+      ],
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "War Room",
+          "set": "who",
+          "scryfallId": "bb05a447-fe4f-4eec-81ef-2dcd171ef3c1"
+        },
+        {
+          "name": "Scavenger Grounds",
+          "set": "pip",
+          "scryfallId": "2e5c2062-b105-4e87-8cbc-be6e274f393a"
+        }
+      ],
+      "m": [
+        {
+          "name": "Exotic Orchard",
+          "set": "who",
+          "scryfallId": "ad795109-0aaf-452c-80b4-243e8501572d"
+        },
+        {
+          "name": "Spire of Industry",
+          "set": "pip",
+          "scryfallId": "0cab6984-8d22-4bed-a42e-0f4604798787"
+        }
+      ]
+    }
+  },
   "fullart": {
     "note": "ZNR showcase (hedron) frame — confirm the thumbnail shows the hedron treatment.",
     "confirm": true,

@@ -48,7 +48,7 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
   },
   {
     brief: "A wide composition that runs to both side edges of the card, the subject centred.",
-    templates: ["extendedart", "extendedartland"],
+    templates: ["extendedart", "extendedartland", "extendedartub", "extendedartubland"],
   },
   {
     brief: BASIC_LANDSCAPE,

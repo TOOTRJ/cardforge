@@ -199,6 +199,9 @@ type CardSetupPanelProps = {
 const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
   extendedart: "Art to the side edges",
   extendedartland: "Art to the side edges",
+  // The Universes Beyond extended-art frames (TODO 4.25).
+  extendedartub: "Art to the side edges, Universes Beyond dress",
+  extendedartubland: "Art to the side edges, Universes Beyond dress",
   m15textless: "Name and art only: no type line or text box",
   m15textlessland: "Name and art only: no type line or text box",
   nyx: "Theros Beyond Death showcase",

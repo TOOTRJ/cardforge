@@ -647,10 +647,14 @@ type Match = {
   dfcKinds?: readonly NonNullable<DfcImportFacts["kind"]>[];
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
+  /** None of these holds (TODO 4.25: the Universes Beyond extended-art
+   *  printings the frame doesn't draw — a Vehicle, a coloured artifact, a
+   *  see-through colourless card). */
+  noneOf?: readonly Match[];
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "ubextended" | "m20" | "dfc" | "station" | "tokentall";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -859,6 +863,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   }
   if (match.allOf && !match.allOf.every((m) => matches(m, ctx))) return false;
   if (match.anyOf && !match.anyOf.some((m) => matches(m, ctx))) return false;
+  if (match.noneOf && match.noneOf.some((m) => matches(m, ctx))) return false;
   return true;
 }
 
@@ -1061,6 +1066,13 @@ const FAMILIES: Record<
   extended: {
     produces: ["extendedartland", "extendedartprepare", "extendedart"],
     pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : facts.kind === "prepare" ? "extendedartprepare" : "extendedart"),
+  },
+  // The Universes Beyond extended-art frames (TODO 4.25): the land frame for
+  // a land, the spell frame for the rest — named only by the rule whose
+  // match keeps to the printings they draw (`ub/extendedart`).
+  ubextended: {
+    produces: ["extendedartubland", "extendedartub"],
+    pick: ({ facts }) => (facts.kind === "land" ? "extendedartubland" : "extendedartub"),
   },
   // The full-art token design, M20 → today (TODO 4.48 / 4.50).
   m20: {
@@ -1647,6 +1659,40 @@ function withGaps(
     base,
   ];
 }
+
+/**
+ * The Universes Beyond extended-art printings the two Universes Beyond
+ * extended-art frames draw (TODO 4.25; Scryfall 2026-11-25: 1,120 printings
+ * carry `frame:extendedart stamp:triangle` — WHO, PIP, FIN, FIC, LTR, LTC,
+ * ACR, 2023–25): a plain black-bordered spell, artifact or land in the dress
+ * (UB_DRESS), but none the frames don't draw —
+ *   • a Vehicle (its brown plate: the Universes Beyond Vehicle frame is a
+ *     follow-up — 14 printings) or a Station printing (its tiers);
+ *   • a coloured ARTIFACT, which prints the artifact frame's silver field
+ *     with its colour's bars and box (PIP #921, WHO #1065 — the spell frame
+ *     paints the colour's frame);
+ *   • a colourless card that is neither an artifact nor a land, which prints
+ *     a see-through frame (FIN #421, WHO #923 / #332 — the spell frame's
+ *     colourless master is the artifact frame);
+ *   • the Nyx starfield (the `enchantment` effect: FIC's 13 enchantments),
+ *     a foil-etched or inverted dress, a layout or a double-faced card.
+ * Those keep the extended-art rule and its `universes-beyond` gap.
+ */
+const UB_EXTENDED_DRAWS: Match = {
+  frames: ["2015"],
+  borders: ["black"],
+  effectsAny: ["extendedart"],
+  effectsNone: ["etched", "inverted", "enchantment"],
+  kinds: ["land", "artifact", ...UB_SPELL_KINDS],
+  layouts: ["normal"],
+  allOf: [UB_DRESS],
+  noneOf: [
+    GAPS.vehicle.match,
+    GAPS.station.match,
+    { typeWordsAny: ["artifact"], colorCount: { min: 1 } },
+    { colorCount: { max: 0 }, notKinds: ["land"], noneOf: [{ typeWordsAny: ["artifact"] }] },
+  ],
+};
 
 // Most visible first: the first gap that holds names the reason.
 const M15_ERA_GAPS: readonly GapKey[] = [
@@ -3082,6 +3128,30 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.15",
     },
   },
+  // A Universes Beyond extended-art printing (TODO 4.25; UB_EXTENDED_DRAWS:
+  // the plain spells, colourless artifacts and lands of WHO, PIP, FIN, FIC,
+  // LTR, LTC and ACR, 2023–25) prints the streaked Universes Beyond dress on
+  // the extended frame. Until its template is verified in the card's colour
+  // the extended-art frame is the nearest — where the import always landed;
+  // once it is, this rule names it (`onceVerified`) and is exact
+  // (`exactOnceVerified`): the crown, both pair dresses and the triangle
+  // stamp are drawn there. Every other Universes Beyond extended-art
+  // printing keeps the extended-art rule below and its `universes-beyond`
+  // gap.
+  {
+    key: "ub/extendedart",
+    exactLabel: "Universes Beyond extended-art frame (2023–25)",
+    match: UB_EXTENDED_DRAWS,
+    outcome: {
+      status: "nearest",
+      template: { family: "extended" },
+      onceVerified: { family: "ubextended" },
+      exactOnceVerified: true,
+      reason: "PipGlyph's Universes Beyond extended-art frame isn't verified yet",
+      blockedBy: "4.25",
+    },
+    gapsOnceVerified: ["crown", "two-colour", "two-colour-hybrid"],
+  },
   // An extended-art Vehicle (49 printings, Scryfall 2026-10-12) prints the
   // brown plate too, and the extended-art frame has none (the `vehicle`
   // gap): while that frame isn't verified in the card's colour the import
@@ -3095,8 +3165,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // (stationDress) — the oracle text is already the tiers' grammar; until
   // then the bordered station frame is its landing once THAT is verified,
   // the extended-art frame before (still nearest either way).
-  // …and a Universes Beyond extended-art printing (1,124) the streaked
-  // dress the extended-art frame has no twin for (TODO 4.25).
+  // …and a Universes Beyond extended-art printing the `ub/extendedart` rule
+  // above leaves out (a Vehicle, a coloured artifact, a see-through
+  // colourless card, the Nyx starfield, a layout or a double-faced card)
+  // the streaked dress the extended-art frame doesn't draw (TODO 4.25).
   ...stationDress(
     withGaps(
       {
@@ -3892,7 +3964,7 @@ const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
  *  crown, 4.6a, and the pairs, 4.6b; the borderless, extended-art and snow
  *  frames theirs, 4.6f) — or, for the gold-split gap, where the frame's
  *  two-colour printings are its plain gold master (GOLD_PAIR_TEMPLATES). */
-const UB_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15ub", "m15ubartifact", "m15ubland"]);
+const UB_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15ub", "m15ubartifact", "m15ubland", "extendedartub", "extendedartubland"]);
 
 function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): boolean {
   switch (gap) {
@@ -3935,7 +4007,8 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The token's Nyx dress (TODO 4.51): the starfield pill templates.
     case "nyx-dress":
       return isM20NyxTokenTemplate(template);
-    // The Universes Beyond dress (TODO 4.25): its three frames draw it.
+    // The Universes Beyond dress (TODO 4.25): its three frames draw it, and
+    // its two extended-art frames.
     case "universes-beyond":
       return UB_TEMPLATES.has(template);
     // The arch token's tall box (TODO 4.55): its two templates draw it.
