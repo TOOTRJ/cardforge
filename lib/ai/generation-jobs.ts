@@ -2506,6 +2506,9 @@ async function generatedCardSaveRefusal(userId: string, payload: Record<string, 
       colors,
     ),
     verifiedKeys,
+    // (The save's own type rule: an artifact on a frame that dresses its
+    // colour as the artifact master, TODO 5.9.)
+    { cardType: payload.card_type as string | undefined, supertype: payload.supertype as string | undefined },
   );
   if (gateError) return gateError;
   if (drawsPartColor(template) && frameStyle?.partColor !== false) {

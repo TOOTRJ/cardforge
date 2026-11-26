@@ -12,6 +12,7 @@ import {
   type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
 import { importFrameColorKey, withVerification } from "@/lib/creator/frame-resolve";
+import { verifiedKeysForType } from "@/lib/cards/frame-availability";
 import { CARD_KIND_VALUES, templateSupportsKind, type CardKind } from "@/lib/creator/card-kinds";
 import { FRAME_COLOR_KEYS, frameComboKey, frameReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
@@ -119,7 +120,8 @@ type PatchForRequest = Pick<
   | "printing_treatment"
   | "printing_detail"
   | "source_scryfall_id"
->;
+> &
+  Partial<Pick<ScryfallImportPatch, "card_type" | "supertype">>;
 
 /**
  * What the imported art is, for the request row (TODO 1.18). Null without
@@ -170,8 +172,15 @@ export function frameRequestFromImport(
   if (!raw) return null;
   // Verified in the key the card paints on its landing (a two-colour
   // Expedition's plain land master `c`, TODO 4.11), as the import is.
+  // (…read for the card's type, as the import's landing: an artifact on a
+  // frame that dresses its colour as the artifact master is verified there
+  // only with that master's review too, TODO 5.9.)
   const match = options.verifiedKeys
-    ? withVerification(raw, importFrameColorKey(raw.landOn ?? raw.template, patch), options.verifiedKeys)
+    ? withVerification(
+        raw,
+        importFrameColorKey(raw.landOn ?? raw.template, patch),
+        verifiedKeysForType(options.verifiedKeys, { cardType: patch.card_type, supertype: patch.supertype }),
+      )
     : raw;
   if (match.status === "exact") return null;
 

@@ -545,3 +545,41 @@ describe("CardSetupPanel — the borderless M15 frame and the black-bordered ful
     expect(chip().textContent).toContain("Full-art basic frames are for basic lands");
   });
 });
+
+// TODO 5.9: the Double Feature frame paints EVERY artifact on its artifact
+// master, whatever its colour; a colour's tick was made against that
+// colour's non-artifacts. A white ARTIFACT is offered the frame only once the
+// colourless row (the one whose references show the master) is ticked too —
+// the save's own rule (verifiedKeysForType).
+describe("CardSetupPanel — Double Feature's artifact master (TODO 5.9)", () => {
+  const variations = () => screen.getByRole("radiogroup", { name: /Frame variations/ });
+  const chip = () => within(variations()).getByRole("radio", { name: /Double Feature/ }) as HTMLButtonElement;
+  const whiteOnly = [frameComboKey("m15", "w"), frameComboKey("m15artifact", "w"), frameComboKey("doublefeature", "w")];
+
+  it("offers it to a white creature on the white tick alone", () => {
+    render(<Harness verified={whiteOnly} onColor={vi.fn()} initialColor="white" />);
+    expect(chipOff(chip())).toBe(false);
+  });
+
+  it("holds it back from a white artifact — and an Artifact Creature — until `c` is ticked too", () => {
+    render(<Harness verified={whiteOnly} onColor={vi.fn()} initialColor="white" cardType="artifact" initialTemplate="m15artifact" />);
+    expect(chipOff(chip())).toBe(true);
+    cleanup();
+    render(<Harness verified={whiteOnly} onColor={vi.fn()} initialColor="white" supertype="Artifact" />);
+    expect(chipOff(chip())).toBe(true);
+    cleanup();
+    render(
+      <Harness
+        verified={[...whiteOnly, frameComboKey("doublefeature", "c")]}
+        onColor={vi.fn()}
+        initialColor="white"
+        cardType="artifact"
+        initialTemplate="m15artifact"
+      />,
+    );
+    expect(chipOff(chip())).toBe(false);
+    fireEvent.click(chip());
+    expect(screen.getByTestId("template").textContent).toBe("doublefeature");
+    expect(screen.getByTestId("color").textContent).toBe("white");
+  });
+});

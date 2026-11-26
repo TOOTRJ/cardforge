@@ -184,7 +184,10 @@ function frameRefusal(
   verifiedKeys: ReadonlySet<string>,
 ): string | null {
   return (
-    frameGateError(template, frameGateColors(template, style, colors), verifiedKeys) ??
+    frameGateError(template, frameGateColors(template, style, colors), verifiedKeys, {
+      cardType: face.card_type,
+      supertype: face.supertype,
+    }) ??
     frameKindGateError(template, cardFieldsFace(face))
   );
 }

@@ -402,6 +402,9 @@ async function createCard(
         data.color_identity,
       ),
       await verifiedKeysOf(),
+      // (An artifact on a frame that dresses its colour as the artifact
+      // master — Double Feature, TODO 5.9 — needs that master's review too.)
+      { cardType: data.card_type, supertype: data.supertype },
     );
     if (gateError) {
       return { ok: false, fieldErrors: { frame_style: gateError } };
@@ -946,8 +949,19 @@ async function updateCard(
       data.frame_anatomy?.partColor !== undefined &&
       data.frame_anatomy.partColor !== (storedStyle.partColor === true) &&
       JSON.stringify([...(gateColorsAfter ?? [])].sort()) !== JSON.stringify([...(gateColorsBefore ?? [])].sort());
-    if (templateChanged || colorChanged || partSwitchMovesFrame) {
-      const gateError = frameGateError(nextTemplate ?? existingTemplate, gateColorsAfter, await verifiedKeysOf());
+    // …and an edit that makes the card an ARTIFACT (a crafted payload: the
+    // type is locked in the editor) on a frame that dresses its colour as
+    // the artifact master (Double Feature, TODO 5.9): it paints a master
+    // the colour's own review never showed (artifactMasterReviewKey).
+    const typeAfter = {
+      cardType: data.card_type !== undefined ? data.card_type : existing.card_type,
+      supertype: data.supertype !== undefined ? data.supertype : existing.supertype,
+    };
+    const becomesArtifact =
+      isArtifactFrameType(typeAfter) &&
+      !isArtifactFrameType({ cardType: existing.card_type, supertype: existing.supertype });
+    if (templateChanged || colorChanged || partSwitchMovesFrame || becomesArtifact) {
+      const gateError = frameGateError(nextTemplate ?? existingTemplate, gateColorsAfter, await verifiedKeysOf(), typeAfter);
       if (gateError) {
         if (!(await previewAllowed())) {
           return { ok: false, fieldErrors: { frame_style: gateError } };

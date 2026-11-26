@@ -90,7 +90,7 @@ import {
 // The emblem (TODO 6.23): a choice inside the token kind, not a kind chip.
 import { KIND_PICKER_KINDS, kindPickerChip } from "@/lib/creator/card-kinds";
 import { EmblemChoice } from "@/components/creator/panels/emblem-choice";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isFrameComboAvailable, verifiedKeysForType } from "@/lib/cards/frame-availability";
 import {
   COMING_SOON_ERAS,
   DEFAULT_FRAME_TEMPLATE,
@@ -232,15 +232,6 @@ export function CardSetupPanel({
   const { errors } = useFormState({ control, name: "frame_style" });
   const frameError =
     errors.frame_style?.message ?? errors.frame_style?.template?.message;
-  const verifiedKeys = useMemo(
-    () => new Set(verifiedFrameKeys),
-    [verifiedFrameKeys],
-  );
-  const choices = useMemo(
-    () => framesForKind(kind, verifiedKeys),
-    [kind, verifiedKeys],
-  );
-  const colorKey = pickFrameColorKey(colorIdentity);
   // Basic-only frames (the full-art basic land) can't draw a nonbasic's
   // rules, so their chips are disabled unless the card IS one basic land —
   // the same rule the renderers and the server gate read.
@@ -248,6 +239,19 @@ export function CardSetupPanel({
     control,
     name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon", "frame_style.plainLandMaster", "printed_types"],
   });
+  // The published combos as they read for THIS card's type: an artifact
+  // sees a frame that dresses its colour as the artifact master (Double
+  // Feature, TODO 5.9) only once that master's review is ticked too — the
+  // save's gate (verifiedKeysForType).
+  const verifiedKeys = useMemo(
+    () => verifiedKeysForType(new Set(verifiedFrameKeys), { cardType, supertype }),
+    [verifiedFrameKeys, cardType, supertype],
+  );
+  const choices = useMemo(
+    () => framesForKind(kind, verifiedKeys),
+    [kind, verifiedKeys],
+  );
+  const colorKey = pickFrameColorKey(colorIdentity);
   const cardSubtypes = parseSubtypes(subtypesText ?? "");
   const isBasicLand = isSingleBasicLand({
     cardType,

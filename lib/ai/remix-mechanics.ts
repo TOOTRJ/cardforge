@@ -366,7 +366,9 @@ function keptOwnFrame(
   if (PREMIUM_FRAME_TEMPLATES.has(template)) return {};
   // (A two-colour Expedition keeps its plain land master `c`, TODO 4.11:
   // gated there, as the save gates it.)
-  if (frameGateError(template, partFrameColors ?? frameGateColors(template, { plainLandMaster: storedAnatomyOf(source.frame_style).plainLandMaster }, colours), verifiedKeys) !== null) return {};
+  // (…and an artifact's artifact master on a frame that dresses its colour
+  // so, TODO 5.9 — the save's own type rule.)
+  if (frameGateError(template, partFrameColors ?? frameGateColors(template, { plainLandMaster: storedAnatomyOf(source.frame_style).plainLandMaster }, colours), verifiedKeys, { cardType: source.card_type, supertype: source.supertype }) !== null) return {};
   if (frameKindGateError(template, cardFieldsFace(source)) !== null) return {};
 
   const back = (source.back_face ?? null) as CardBackFace | null;
@@ -453,7 +455,7 @@ export function ownCardTextStandIn(
   const colours = source.color_identity ?? [];
   const face = cardFieldsFace(source);
   const passes = (template: FrameTemplate | undefined) =>
-    frameGateError(template, colours, verifiedKeys) === null &&
+    frameGateError(template, colours, verifiedKeys, { cardType: source.card_type, supertype: source.supertype }) === null &&
     frameKindGateError(template, face) === null;
   if (source.card_type === "token") {
     const arch = typeWordFrameFor("token", "m15token", source.supertype);

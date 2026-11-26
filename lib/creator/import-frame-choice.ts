@@ -5,7 +5,7 @@ import {
   type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isFrameComboAvailable, verifiedKeysForType } from "@/lib/cards/frame-availability";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { parseSubtypes } from "@/lib/creator/card-fields";
@@ -161,7 +161,10 @@ export function frameFitsImport(
   template: FrameTemplate,
   input: { kind: CardKind; verifiedKeys: ReadonlySet<string>; patch: ImportChooserPatch },
 ): boolean {
-  const { kind, verifiedKeys, patch } = input;
+  const { kind, patch } = input;
+  // (An artifact on a frame that dresses its colour as the artifact master
+  // needs that master's review too, TODO 5.9 — the save's gate.)
+  const verifiedKeys = verifiedKeysForType(input.verifiedKeys, { cardType: patch.card_type, supertype: patch.supertype });
   if (!isFrameComboAvailable(template, importFrameColorKey(template, patch), verifiedKeys)) return false;
   if (!framesForKind(kind, verifiedKeys).some((choice) => choice.template === template)) {
     return false;
@@ -234,9 +237,12 @@ function importIsSingleBasic(patch: ImportChooserPatch): boolean {
  */
 export function importFramePlan(
   patch: ImportChooserPatch,
-  verifiedKeys: ReadonlySet<string>,
+  allVerifiedKeys: ReadonlySet<string>,
   currentTemplate?: string | null,
 ): ImportFramePlan {
+  // (An artifact on a frame that dresses its colour as the artifact master
+  // needs that master's review too, TODO 5.9 — the save's gate.)
+  const verifiedKeys = verifiedKeysForType(allVerifiedKeys, { cardType: patch.card_type, supertype: patch.supertype });
   const match = patch.frame_match;
   if (!match) return { mode: "none" };
   if (match.reject) {

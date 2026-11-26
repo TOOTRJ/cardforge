@@ -11,7 +11,7 @@ import {
   type ColorIdentity,
   type FrameTemplate,
 } from "@/types/card";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isFrameComboAvailable, verifiedKeysForType } from "@/lib/cards/frame-availability";
 import { frameGateColors, partColourVerdict } from "@/lib/cards/part-color";
 import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
@@ -473,7 +473,9 @@ export function resolveImportFrame(input: {
     }),
     colorKey,
     colorKeyFor,
-    verifiedKeys: input.verifiedKeys,
+    // (An artifact reads the frames that dress its colour as the artifact
+    // master as unverified until that master's review is ticked, TODO 5.9.)
+    verifiedKeys: verifiedKeysForType(input.verifiedKeys, { cardType, supertype: patch.supertype }),
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
@@ -635,8 +637,12 @@ export function finalizeImportMatch<
   } & Partial<
     Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon" | "printed_first_part_color" | "printed_part_color" | "printed_plain_land_master">
   >,
->(given: P, verifiedKeys: ReadonlySet<string>): P {
+>(given: P, allVerifiedKeys: ReadonlySet<string>): P {
   if (!given.frame_match) return given;
+  // An artifact reads a frame that dresses its colour as the artifact
+  // master (Double Feature, TODO 5.9) as verified only once that master's
+  // review (`c`) is ticked too — the save's gate (artifactMasterReviewKey).
+  const verifiedKeys = verifiedKeysForType(allVerifiedKeys, { cardType: given.card_type, supertype: given.supertype });
   // Each part in its own colour (TODO 4.26, M1): where the frame draws it,
   // both parts' colours must be verified there — a split half's master, a
   // Prepare page's colour — or the card lands with the look OFF (its whole
@@ -872,6 +878,9 @@ export function remixFrameFor(
   // remixed Smuggler's Copter kept the silver artifact frame after all
   // seven colours of the Vehicle frame were ticked. A patch without a
   // match (an older caller, a test fixture) passes through untouched.
+  // (An artifact on a frame that dresses its colour as the artifact master
+  // needs that master's review too, TODO 5.9 — the save's gate.)
+  verifiedKeys = verifiedKeysForType(verifiedKeys, { cardType: patch.card_type, supertype: patch.supertype });
   patch = finalizeImportMatch(patch, verifiedKeys);
   // A printing with no modelled card type (the mapper found neither) keeps
   // none; its frame resolves as a creature's, which is the default frame.
