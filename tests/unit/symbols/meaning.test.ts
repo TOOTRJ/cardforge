@@ -188,7 +188,7 @@ describe("the creator's field error", () => {
 
   it("is wired: the create and edit pages read the owner's meanings, the form hands them to its schema and the cost panel", () => {
     const form = readFileSync(join(process.cwd(), "components/creator/card-creator-form.tsx"), "utf8");
-    expect(form).toMatch(/cardFormSchemaFor\(\s*[\s\S]*?formBackBody,\s*formSymbols,\s*\)/);
+    expect(form).toMatch(/cardFormSchemaFor\(\s*[\s\S]*?formBackBody,\s*formSymbols,[\s\S]*?\)/);
     expect(form).toContain("symbolMeanings={symbolMeanings}");
     for (const page of ["app/(app)/create/page.tsx", "app/(app)/card/[username]/edit/page.tsx"]) {
       const source = readFileSync(join(process.cwd(), page), "utf8");
