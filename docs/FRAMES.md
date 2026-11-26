@@ -4906,7 +4906,7 @@ slot.
 (packUBExtendedArt.js, `m15/ub/extended/`): 1500 × 2100 NATIVE (no
 resample), drawn on the REGULAR M15 pack's geometry — its masks are
 `m15/regular/m15Mask*.png` (the Pinline its 'Super' one), its plates the
-Universes Beyond pack's `m15/ub/pt` (m15ub's own objects), its stamp pieces
+Universes Beyond pack's `m15/ub/pt` (the same files as m15ub's), its stamp pieces
 the older Universes Beyond pack's (`m15/ub/regular/stamp`), its crowns the
 FLOATING Universes Beyond crowns (`m15/ub/crowns/floating`). Files: w u b r
 g m, `a`, `l`, `v`, and the land tints named letter FIRST (`wl` … `gl`, `ml`
@@ -4949,6 +4949,29 @@ the any-colour gold land). No `c.png`.
   artifact prints it; no see-through master, no art under the frame, no
   `artifactMasterKeys`). The land frame: c = the grey `l.png`, w u b r g =
   `<k>l.png`, m = `ml.png`.
+- **Colourless means artifact on the spell frame.** Its `c` IS the artifact
+  frame, and print never puts a colourless creature, instant, sorcery or
+  enchantment there (FIN #421, WHO #923 / #332 print a see-through frame —
+  not built). So a colourless card wears `extendedartub` only when its type
+  words say Artifact (`colorlessFrameFits` / `colorlessFrameReason` in
+  `lib/creator/card-kinds.ts`, `COLORLESS_ARTIFACT_FRAMES`): the server's
+  kind gate (`frameKindGateError`, read with the colours `cardFieldsFace`
+  carries — every save, the AI jobs, the own-card remix, the bulk planner),
+  the creator's frame chip and `c` colour chip (disabled with the reason),
+  and `resolveGeneratedFrame`'s pool. Such a card falls back as it does on
+  any frame it can't wear; the import rule leaves those printings out.
+- **The plates.** The land frame draws m15ub's (`/frames/m15ub/pt`; its grey
+  `c` the colourless land's). The spell frame has its own set,
+  `extendedartub/pt/<k>`: the pack's seven (`m15/ub/pt/<k>.png`, m15ub's
+  bytes) and its silver 'Artifact' plate under **`a`** (m15ubartifact's
+  `c`, byte for byte) — the plate a colourless card paints there
+  (`FrameProfile.colorlessPlateKey: "a"`, read by `plateKeyFor` in both
+  renderers, the finish masks and the bake's preload; `"a"` joined
+  `FRAME_PLATE_KEYS`), while the grey `c` stays the hybrid dress's (PIP
+  #1003). WHO #1071 Solemn Simulacrum's plate face reads 197,209,216 /
+  205,215,221 (the median of its light pixels left / right of the digits,
+  at HD); a bake on the artifact plate 191,207,220 / 201,214,222, on the
+  grey one 216,209,201 / 232,227,221.
 - **Pairs:** 4.6b's recipe over the pack's own files and masks
   (`ubExtendedPairLayers`, `UB_EXTENDED_MASK`): the spell frame's
   gold-split `<pair>` (`m.png` whole, the box 45→57 and the pinline 40→60
@@ -4999,9 +5022,10 @@ pixels, best of ±4 px): 1.0–16.7 (median 6.3) against the M15 floating
 crown's 9.0–31.3 (median 17.7) — closer on all 35. Keys: w u b r g, m, `a`
 (a colourless legendary ARTIFACT wears the silver A crown: 1.7–2.7 against
 the grey C's 2.0–3.7 on FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 —
-so the spell frame maps c → a), `l` (the land frame maps c → l), `c`, and
-the ten pairs (the two crowns across 40→60 %W: PIP #955, LTR #779, WHO
-#997, FIN #501). A legendary land wears its colour's crown (WHO #1054
+so the spell frame maps c → a), `l` (the land frame maps c → l) and the
+ten pairs (the two crowns across 40→60 %W: PIP #955, LTR #779, WHO #997,
+FIN #501) — never the pack's grey `c` crown, which neither frame draws (the
+build makes none). A legendary land wears its colour's crown (WHO #1054
 blue, LTC #160 black, WHO #1053 / ACR #171 gold).
 `CROWN_REFERENCES.extendedartub` / `.extendedartubland` name a crowned
 print per key where one exists.
