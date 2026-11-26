@@ -190,7 +190,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 74 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the Theros constellation showcase (4.17f, a correction, layout v73): nyx —
@@ -277,6 +277,14 @@ into `.frames-build/` — 72 templates today (`CC_TEMPLATES` in
   recipes over its files with the pair masters, its own plates, its crown
   band (`m15ubcrown`) and the triangle stamp's notch (`m15ubholostamp`)
   ([The Universes Beyond frames](#the-universes-beyond-frames-425));
+- the Universes Beyond extended-art frames (4.25, an addition):
+  extendedartub and extendedartubland — the 'Universes Beyond (Extended
+  art)' pack (`m15/ub/extended/`, 1500 px native, the regular M15 pack's
+  masks) whole, `c` its artifact frame, the pair masters, the bordered
+  family's tones plus the blue title bar, the pack's seams sealed; the
+  floating crown band (`extendedartubcrown`) and the triangle notch on the
+  pack's own piece (`extendedartubholostamp`) ([The Universes Beyond
+  extended-art frames](#the-universes-beyond-extended-art-frames-425-2026-11-25));
 - the Lord of the Rings scroll showcase (4.11, layout v62): lotrscroll —
   the 'Scroll' pack's eight frames whole (`c` its land frame, `a` its
   artifact frame), its plates, its crown band (`lotrscrollcrown`) and its
@@ -4880,8 +4888,187 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 619 lands).
 
 **Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
-(the pack's `v.png`), extended art, full
-art, the saga and spree dresses, the floating crowns, borderless.
+(the pack's `v.png`), full art, the saga and spree dresses, borderless.
+Extended art is built since (below).
+
+#### The Universes Beyond extended-art frames (4.25, 2026-11-25)
+
+Owner approval 2026-11-25 (item 2 of the easy Card Conjurer batch).
+`extendedartub` (spell) and `extendedartubland` are the streaked Universes
+Beyond dress on the extended frame — the art to the card's side edges from
+the title bar to the BLACK type bar — that WHO, PIP, FIN, FIC, LTR, LTC and
+ACR print: 1,120 printings carry `frame:extendedart stamp:triangle`
+(Scryfall 2026-11-25; WHO 406, PIP 334, FIN 98, FIC 94, LTR 94, LTC 76,
+ACR 18). The extended twins of `extendedart` / `extendedartland`, slot for
+slot.
+
+**The source.** Card Conjurer's 'Universes Beyond (Extended art)'
+(packUBExtendedArt.js, `m15/ub/extended/`): 1500 × 2100 NATIVE (no
+resample), drawn on the REGULAR M15 pack's geometry — its masks are
+`m15/regular/m15Mask*.png` (the Pinline its 'Super' one), its plates the
+Universes Beyond pack's `m15/ub/pt` (m15ub's own objects), its stamp pieces
+the older Universes Beyond pack's (`m15/ub/regular/stamp`), its crowns the
+FLOATING Universes Beyond crowns (`m15/ub/crowns/floating`). Files: w u b r
+g m, `a`, `l`, `v`, and the land tints named letter FIRST (`wl` … `gl`, `ml`
+the any-colour gold land). No `c.png`.
+
+**Measured first** (Scryfall PNGs at 1500 × 2100, 2026-11-25):
+
+- **Geometry.** The pack's bars, box and rims register on the prints within
+  ±3 px (the best offset per region on 10 prints of w, b, g and the artifact
+  frame: title bar 0…+4, the box's top and bottom −1, its side rims −2…+3,
+  the bar's caps −2…+2) — at least as close as `extendedart`'s accurate
+  geometry, whose box is 2–3 px wider each side and whose bottom pinline
+  ends at row 1949 where the pack's and the prints' end at 1947. Within
+  that, the text layout is the extended frame's: both profiles keep
+  EXTENDEDART's slots.
+- **Masters against the prints** (median |ΔRGB| over the master's opaque,
+  non-black pixels, best of ±4 px): w 10.7–12.3 against `extendedart/w`'s
+  17.0–18.7, u 5.0–7.3 (15.7–18.0), b 6.7–16.7 (35.7–47.0), r 5.7–6.7
+  (13.7–15.3), g 4.7–7.0 (9.7–13.7), gold 5.3–7.0 (14.0–17.0), the
+  colourless artifact 5.3–6.3 (`extendedart/a` 14.7–16.3), the grey land
+  7.3–7.7 (`extendedartland/c` 23.3–23.7), the gold land 4.7–5.3
+  (12.7–14.3), the R|W, B|G and G|U-hybrid pairs and a two-colour land
+  6.0–9.7 (10.7–32.0): ours closer on every print (6 a key).
+- **What the two frames do NOT draw** (their imports keep their landing,
+  below): a coloured ARTIFACT prints the artifact frame's silver field with
+  its colour's bars and box (PIP #921 / #918, WHO #1065 / #474, ACR #155 —
+  the spell frame paints the colour's master, as `extendedart` does); the
+  three colourless NON-artifact printings (FIN #421 Ultima, WHO #923 / #332
+  Clara Oswald) print a see-through frame (the art through the box); the 13
+  FIC enchantments with the `enchantment` effect print the Nyx starfield in
+  the side strips; 14 Vehicles the brown plate (the pack's `v.png`, the
+  Vehicle follow-up); 20 transform, 3 adventure and 2 meld printings their
+  own bodies.
+
+**The masters** (`scripts/lib/cc-frames.mjs`, `CC_TEMPLATES.extendedartub`
+/ `.extendedartubland`):
+
+- w u b r g m = the pack's colour files whole; **c = the pack's artifact
+  frame** (`a.png`: the pack draws no colourless frame — a colourless
+  artifact prints it; no see-through master, no art under the frame, no
+  `artifactMasterKeys`). The land frame: c = the grey `l.png`, w u b r g =
+  `<k>l.png`, m = `ml.png`.
+- **Pairs:** 4.6b's recipe over the pack's own files and masks
+  (`ubExtendedPairLayers`, `UB_EXTENDED_MASK`): the spell frame's
+  gold-split `<pair>` (`m.png` whole, the box 45→57 and the pinline 40→60
+  split — ACR #166, PIP #1007) and hybrid `<pair>-h` (the two frames over
+  the grey `l.png` bars — PIP #1003 / #475); the land frame's `<pair>` (the
+  grey frame, the box and pinline in the two land tints — 180 of the pack's
+  214 land printings are two-colour lands).
+- **Tones** (`UB_EXTENDED_PRINT_TONES` through `UB_EXTENDED_SOURCE_TONES`,
+  the tone pass's method and its rule — a region ≥ 9 levels off is toned):
+  the pack's PAINT is the accurate Universes Beyond pack's value for value
+  (g.png's title bar 173,211,165, m.png's 241,227,157 / 249,242,213,
+  l.png's 214,210,194 / 220,214,195 — UB_PRINT_TONES' `from`), and the
+  extended prints agree with that pass's targets: green title 186,211,177
+  (24 prints), gold title 237,220,135 / box 243,234,199 (16 three-colour,
+  24 two-colour, 9 any-colour lands), land grey 197,186,177 / 231,227,220
+  (12 lands) — so the green title bar, the gold title bar and box, and the
+  land-grey title bar and box take UB_PRINT_TONES' entries; and the BLUE
+  title bar, 14 lighter in red on these prints (180,210,238 against the
+  file's 166,208,239; FIN / FIC 165–173, PIP / LTR / LTC / WHO / ACR
+  176–189), gets a tone of its own. The tinted land files carry their
+  colour's bars (gl.png's title is g.png's, ul.png's u.png's, ml.png's
+  title and box m.png's byte for byte), so they take the same tones. Within
+  8 and left alone: white (box +8 / +6 / +6), black, red, the artifact
+  silver; the white land's box read +16 in blue on ONE card (Windbrisk
+  Heights, two printings) and is left alone. No type-bar tone: the type bar
+  is black. The blue's offset is the extended printings' own: 12 BORDERED
+  blue printings of the same sets (FIN, ACR, PIP, LTR, WHO, LTC; two a set)
+  read 162–179 in red, median 171 — within 5 of the file — so `m15ub/u`
+  stays as it is.
+- **The seams** (`sealUbExtendedSeams`, the recipe's `masterPass`): every
+  file is opaque outside the art window but for ~790 hairline pixels at
+  α 98–254 where its layers don't quite meet (the title bar's caps, x 78 /
+  89–92 / 1407–1410 / 1421, and the text box's side rims, rows 1700–1899 —
+  the same pixels on every file). Over the card they let the root's
+  #101015 through as dark hairlines no print shows, and the caps' run into
+  the window's shade above the art slot (7.6). Outside the art slot's rows
+  (176–1318) every pixel is made opaque, its colour kept.
+- **Edges** (`UB_EXTENDED_ART_EDGES`): the art at the side edges from 11.3
+  to 56.95 %H — this geometry's type bar shades the art from row 1197 at
+  the edge, where the accurate extended frame's starts at 1243.
+
+**The crown** (`extendedartubcrown/<key>`, `EXTENDED_ART_UB_CROWN`):
+extendedcrown's recipe and slot (the black cover strip drawn, the crown,
+the M15 floating outline on top, 1:1, rows 0–259) over the Universes
+Beyond floating crowns. Measured on 35 crowned prints (the band over the
+pack's master of the print's colour, the median |ΔRGB| over the crown's
+pixels, best of ±4 px): 1.0–16.7 (median 6.3) against the M15 floating
+crown's 9.0–31.3 (median 17.7) — closer on all 35. Keys: w u b r g, m, `a`
+(a colourless legendary ARTIFACT wears the silver A crown: 1.7–2.7 against
+the grey C's 2.0–3.7 on FIC #193, ACR #170, PIP #960, LTR #793, WHO #1070 —
+so the spell frame maps c → a), `l` (the land frame maps c → l), `c`, and
+the ten pairs (the two crowns across 40→60 %W: PIP #955, LTR #779, WHO
+#997, FIN #501). A legendary land wears its colour's crown (WHO #1054
+blue, LTC #160 black, WHO #1053 / ACR #171 gold).
+`CROWN_REFERENCES.extendedartub` / `.extendedartubland` name a crowned
+print per key where one exists.
+
+**The triangle stamp** (`extendedartubholostamp/<key>`,
+`EXTENDED_ART_UB_HOLO_STAMP`): m15ubholostamp's recipe over the pack's own
+piece — the older Universes Beyond pack's U stamp (`m15/ub/regular/stamp/
+u.png`, 224 × 102 at 638, 1891 px, 1:1): its foot is these masters'
+pinline (rows 1939–1947, black from 1948). `m15ubholostamp` over them
+stood 2 px proud at both feet (its foot runs to 1949) in the accurate
+pack's rim colours (gold 233,212,125 against this pack's 246,210,98). The
+rim tinted to our master's bar at x 750, rows 1939–1947; the pairs per
+column (one piece serves the gold-split, hybrid and land pair masters,
+checked column by column); `UB_STAMP_HOLE` plus 2 px cut clear (the
+piece's hologram capture lies inside it); keys w u b r g m, c (the
+artifact silver), l (the land grey) and the pairs. The same hole, art,
+tones and rules keep-out as M15UB_HOLO_STAMP: "auto" stamps every rarity,
+matte below a rare, as on every triangle frame.
+
+**No collector line and no nickname plate**: `extendedart` draws neither
+yet (the extended frame's follow-ups); these frames follow it.
+
+**Who gets it.** An addition: no stored card moves, no bump, no sweep, no
+badge. A NEW card never starts on one (no era standard, no skin): they sit
+in the extended-art treatments beside `extendedart` (`FRAME_TEMPLATE_SET`
+"extended"), offered where verified in the card's colour — the spell frame
+to a creature, instant, sorcery, enchantment or artifact (no token), the
+land frame to a land (`TREATMENT_KINDS`; `extendedArtDressFor` maps a land
+asked onto the spell frame to the land frame and back). An import: the
+registry's `ub/extendedart` rule (`UB_EXTENDED_DRAWS`: a plain
+black-bordered 2015-frame extended-art spell, colourless artifact or land
+in the dress — no Vehicle or Station printing, no coloured artifact, no
+colourless non-artifact card, no Nyx starfield, no etched or inverted run,
+layout `normal`) is `nearest` on the extended-art frame — where the import
+always landed; the answer says "not yet verified" — until the frame is
+verified in the card's colour, then names it and is `exact` (the crown,
+both pair dresses and the stamp are drawn there; `gapsOnceVerified`).
+Every other Universes Beyond extended-art printing keeps the
+`extendedart+universes-beyond` gap (or its earlier gap: a layout, a
+double-faced body, a Vehicle) and its landing, ticked or not. The AI deck
+remix follows (`remixFrameFor` finalizes the same match).
+`gapDrawnBy("universes-beyond")` counts the two frames (UB_TEMPLATES).
+`Match.noneOf` is new for the rule: none of the listed matches holds.
+
+*Reference printings*: `lib/cards/frame-references.json` — w LTR #829,
+PIP #986, FIC #110; u ACR #160, WHO #1061, LTR #830; b ACR #164, PIP #992,
+LTR #831; r LTR #832, PIP #995, FIC #121; g FIC #126, WHO #1067, LTR #833;
+m PIP #1006, #1005; c (the artifact frame) FIC #228, WHO #1071, LTC #159.
+The land frame: w PIP #1055, u WHO #1054, b LTC #160, c WHO #1124, PIP
+#1034, m WHO #1084, PIP #1039; no red or green land prints it (Junktown, a
+red-identity land that makes {C}, prints the grey frame).
+
+*Tests*: `tests/unit/frames/ub-extended-art.test.ts` (the recipe, the
+tones, the seams, the crown band, the notch, the edges, provenance, the
+published objects' pixels), `tests/unit/creator/ub-extended-art-frame.test.ts`
+(the templates, the profiles, the kind gate, the import and the remix),
+the visual matrix's new cases (the crown in every key, the pairs, the
+hybrid dress, the stamp on a common, a crowned pair, a full box, the
+artifact frame, the land at HD, a foil) and parity
+`extendedartub/wu/creature-long@stamp-pair-crown` and
+`extendedartubland/c/land-long@crown`.
+
+*Not built* (follow-ups, in 4.25): the coloured-artifact dress (the
+artifact frame's silver field with the colour's bars and box, ~80
+printings — an `extendedartubartifact` like `m15ubartifact`), the
+see-through colourless frame (3 printings), the Vehicle frame (the pack's
+`v.png`, 14 printings), the Nyx starfield (13 FIC printings).
 
 ### The Expeditions (4.11 wave 1, layout v64)
 
@@ -11677,12 +11864,12 @@ of your own card copies nothing.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 92 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 94 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames and their two extended-art dresses, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.27b's extended-art Prepare dress, 4.11's 2015 Expeditions, and 4.11 wave 2's D&D Sourcebook, New Capenna Art Deco, MKM dossier, Enchanting Tales, Dominaria United Stained Glass, Strixhaven Mystical Archive, Doctor Who TARDIS and OTJ Breaking News, and 4.5d's saga creature, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

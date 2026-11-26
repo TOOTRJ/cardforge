@@ -1184,7 +1184,19 @@ Rules and gotchas:
   black-bordered spell, artifact or land — never a Vehicle, a layout, a
   colourless non-artifact spell or the etched run, which keep their frame
   with the `universes-beyond` gap). `docs/FRAMES.md` "The Universes Beyond
-  frames".
+  frames". Their EXTENDED-ART dress (`extendedartub`, `extendedartubland`;
+  4.25, 2026-11-25) is extendedart / extendedartland's slots over Card
+  Conjurer's 1500-native UB extended pack (the REGULAR M15 masks,
+  `UB_EXTENDED_MASK`; `c` = its artifact frame, no see-through), m15ub's
+  plates, its own floating crown band (`extendedartubcrown`, c → a on the
+  spell frame) and triangle notch on the pack's own piece
+  (`extendedartubholostamp` — never m15ubholostamp: its foot is 2 px
+  lower), the bordered family's tones plus the blue title
+  (`UB_EXTENDED_PRINT_TONES`) and the pack's seams sealed outside the art
+  slot (`sealUbExtendedSeams`). An import takes it only through
+  `ub/extendedart` (`UB_EXTENDED_DRAWS`: no coloured artifact, colourless
+  non-artifact, Vehicle, Nyx or layout printing), once verified;
+  `docs/FRAMES.md` "The Universes Beyond extended-art frames".
 - The older full-art basics (`m15fullartlandzen`, `m15fullartlandsnc`,
   `m15fullartlandthb`; TODO 4.40 / 4.41): STORED templates of their own in
   the Full Art set, basic lands only (`BASIC_ONLY_TEMPLATES`), from Card

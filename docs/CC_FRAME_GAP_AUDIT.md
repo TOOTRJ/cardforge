@@ -91,7 +91,7 @@ Conjurer packs draw it.
 | --- | --- | --- | --- | --- |
 | 1 | "The List" stamp | `TheList` | 5,741 (`set:plst`) | 4.15 |
 | 2 | Gold border (World Championship decks, CE / IE) | `M15Borders` (gold) | 1,373 (`border:gold`) | **4.69** |
-| 3 | Universes Beyond extended art | `UBExtendedArt` | 1,124 (TODO 4.25's count, before 2025-09) | 4.25 |
+| 3 | Universes Beyond extended art — built 2026-11-25 (`extendedartub`, `extendedartubland`) | `UBExtendedArt` | 1,124 (TODO 4.25's count, before 2025-09; 1,120 on 2026-11-25) | 4.25 |
 | 4 | Playtest cards | `Playtest` | 952 (`is:playtest`) | 4.15 |
 | 5 | Borderless flavour-name ("Godzilla") | `M15Nickname`, `PromoNickname` | about 550 (TODO 6.3a) | 6.3a |
 | 6 | Double Feature (DBL) | `DoubleFeature`, `DoubleFeatureTransform` | 535 (`set:dbl`) | 5.9 |
@@ -447,9 +447,9 @@ a new layout end to end; ? = not sized until 4.70 maps it.
 | Legend Crowns (Universes Beyond) | `packUBLegendCrownsNew.js` | `m15ubcrown` | built |  |  | 4.25 |
 | Universes Beyond | `packUB.js` | as above | built (twin pack) | the older drawing |  | 4.25 |
 | Legend Crowns (Universes Beyond) | `packUBLegendCrowns.js` | as above | built (twin pack) | the older drawing |  | 4.25 |
-| Universes Beyond (Extended art) | `packUBExtendedArt.js` | — | not built | UB extended art: 1,124 | S–M | 4.25 |
+| Universes Beyond (Extended art) | `packUBExtendedArt.js` | `extendedartub`, `extendedartubland`, `extendedartubholostamp` | built (2026-11-25; the coloured-artifact dress, the see-through colourless frame, the Vehicle and the Nyx starfield not built) | UB extended art: 1,120 |  | 4.25 |
 | Universes Beyond (Full art) | `packUBFull.js` | — | not built | UB full art | S–M | 4.25 |
-| Floating Legend Crowns (Universes Beyond) | `packUBLegendCrownsFloating.js` | — | not built | the crowns of those two looks | S | 4.25 |
+| Floating Legend Crowns (Universes Beyond) | `packUBLegendCrownsFloating.js` | `extendedartubcrown` | built for extended art (2026-11-25); full art not built | the crowns of those two looks |  | 4.25 |
 | Sagas (Universes Beyond) / Universes Beyond Frames | `packSagaUB.js` | — | not built | UB sagas: 254 | S | 4.5d, 4.25 |
 | Spree (Universes Beyond) | `packSpreeUB.js` | — | not built | UB spree: 3 | S | 4.7, 4.25 |
 
