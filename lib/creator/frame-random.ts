@@ -42,6 +42,7 @@ import { printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display
 import { resolveSagaChapters } from "@/lib/cards/face-content";
 import { defaultTokenFrameIn, tokenFrameText } from "@/lib/creator/token-frame-auto";
 import { archTallStandIn, isM20TokenTemplate } from "@/lib/cards/token-height";
+import { tokenDesignOf } from "@/lib/cards/token-faces";
 import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
@@ -123,7 +124,9 @@ export function designHasPublishedFrame(
  *     an Artifact Creature on the artifact frame, an Enchantment Creature on
  *     Nyx); otherwise falls back like "random".
  *   - "random" → a uniformly random published frame whose available colors
- *     include the generated card's color key.
+ *     include the generated card's color key — for a token, one of the
+ *     token designs only (owner 2026-11-25: never extended art or a
+ *     showcase, which it wears only when asked for by name).
  *   - undefined → null (caller keeps the creator's era default).
  *
  * Returns null when nothing qualifies — the caller falls back to the
@@ -219,10 +222,19 @@ export function resolveGeneratedFrame(input: {
       walkerRowsFrameFits(kind, choice.template, rows),
   );
   const has = (template: FrameTemplate) => typed.some((choice) => choice.template === template);
+  // A token's RANDOM frame — a random request, or the fallback of a request
+  // that can't dress it — is one of the token's own designs (owner
+  // 2026-11-25): the 2014–19 arch or the full-art design, its Nyx dress
+  // included (tokenDesignOf). Extended art and the showcases dress a token
+  // only when asked for by name (`typed`, below); with them in the draw a
+  // token landed on one about 9 times in 10. The token rules below (the
+  // Artifact word, the box and height, the Nyx follow) pick among these; a
+  // colour with none of them published falls back as before.
+  const drawable = kind === "token" ? typed.filter((choice) => tokenDesignOf(choice.template) !== null) : typed;
   // …the frame the token's rules pick, or — for the arch's tall box (TODO
   // 4.55) while it isn't published — its regular text box standing in
   // (archTallStandIn), never the textless arch's scrim.
-  const boxed = typed.filter((choice) => {
+  const boxed = drawable.filter((choice) => {
     if (tokenFrameFits(kind, choice.template, tokenFace)) return true;
     const picked = tokenFrameFor(kind, choice.template, tokenFace);
     return !has(picked) && archTallStandIn(picked) === choice.template;
@@ -233,7 +245,7 @@ export function resolveGeneratedFrame(input: {
   // plain or creature — owner decision 1, Round 56). An enchantment that
   // prints on a body of its own (a Class, a Case…) follows nothing: the Nyx
   // frame is its maker's pick, never a random one.
-  const dressed = (boxed.length > 0 ? boxed : typed).filter((choice) => {
+  const dressed = (boxed.length > 0 ? boxed : drawable).filter((choice) => {
     // A pick-only dress (the Spacecraft's extended-art and borderless ones,
     // TODO 4.27a step 2) is never drawn at random: asked for by name only.
     if (isPickOnlyDress(choice.template)) return false;
