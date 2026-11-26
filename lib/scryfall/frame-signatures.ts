@@ -3563,6 +3563,18 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
   return later ? [...of(rule.outcome.template), ...of(later)] : of(rule.outcome.template);
 }
 
+/** The BACK bodies a rule's printings land on (`Match.dfcBackBodies`, its
+ *  own match and its `allOf` parts — never an `anyOf` branch): the saga
+ *  creature back of `saga/creature/dfc/2015` (TODO 4.5d part B). The
+ *  outcome names the FRONT body only; an import of such a printing is exact
+ *  only once the back body is verified too (finalizeImportMatch), so a
+ *  reader of "where does this frame stand" counts these with
+ *  templatesOfRule (lib/frames/requested-frames.ts exactFramesOfSignature). */
+export function dfcBackBodiesOfRule(rule: Rule): readonly FrameTemplate[] {
+  const of = (match: Match): FrameTemplate[] => [...(match.dfcBackBodies ?? []), ...(match.allOf ?? []).flatMap(of)];
+  return [...new Set(of(rule.match))];
+}
+
 const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
 
 /** The frames a signature's own rule NAMES — the template its printing is

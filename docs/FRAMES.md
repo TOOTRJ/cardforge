@@ -10237,7 +10237,11 @@ summon back saved before it keeps the ▼ back, or its legacy back).
   which no double-faced body draws: 4.25) and, on the two-colour summons
   (#229, #245 and their twins), the `two-colour` gap too: the front body
   draws its pairs but this back wears gold (`Rule.undrawnGaps`, which the
-  answered-row check honours as well). The borderless printings keep
+  answered-row check honours as well). /frames/requested reads the rule
+  "Being checked" until this body is verified in every printed colour
+  (w u b r g), "Built" only after: a rule's back bodies count among its
+  exact frames (`dfcBackBodiesOfRule`, `exactFramesOfSignature`) — the
+  outcome names the front body alone. The borderless printings keep
   `borderless/dfc` (nearest on the bordered bodies, 5.7). The `nyx` gap is
   not named where the printing lands on this body (`notDfcBackBodies`: its
   starfield is the body's own masters). The EXTENDED-ART printings keep
