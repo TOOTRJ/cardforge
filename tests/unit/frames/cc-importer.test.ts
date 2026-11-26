@@ -2156,6 +2156,13 @@ describe("provenance and hygiene", () => {
         // textured saga and the published m15nyx masters; its own test:
         // tests/unit/frames/saga-creature-recipe.test.ts.
         "sagacreature",
+        // …and its double-faced back with its crown and plates (TODO 4.5d,
+        // part B): PipGlyph's composite (scripts/build-saga-creature-back-
+        // frames.mjs) of the published sagacreature, m15dfcback and
+        // m15nyxcrown masters; its own test: tests/unit/frames/saga-creature-
+        // back-recipe.test.ts.
+        "sagacreaturedfcback",
+        "m15nyxdfccrownright",
         // …and its extended-art dress and holofoil stamp notch (TODO 4.27b):
         // PipGlyph's merge of the published extendedart and prepare masters
         // (scripts/build-prepare-frames.mjs --only extended) and the prepare

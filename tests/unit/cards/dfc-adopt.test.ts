@@ -402,4 +402,41 @@ describe("adoptDfcBodiesAction — a Saga back", () => {
     expect(result).toMatchObject({ ok: true, frontBody: "m15dfcfront", backBody: "sagadfcback" });
     expect(writtenBack(stub)).toMatchObject({ frame_style: { template: "sagadfcback" }, color_identity: ["white"] });
   });
+
+  // TODO 4.5d, part B: an imported legacy FIN summon (a saga CREATURE back,
+  // as the import reads "Legendary Enchantment Creature — Saga Dragon") moves
+  // onto the saga creature back once it is verified in the back's colour —
+  // the ▼ back before, never the saga back (no P/T plate there).
+  describe("a saga creature back (TODO 4.5d, part B)", () => {
+    beforeEach(() => {
+      state.existing = {
+        ...sagaCard(),
+        back_face: {
+          title: "Bahamut, Warden of Light",
+          card_type: "creature",
+          supertype: "Legendary Enchantment",
+          subtypes: ["Saga", "Dragon"],
+          rules_text: "(As this Saga enters and after your draw step, add a lore counter.)\nI, II — Put a +1/+1 counter on each other creature you control.\nIII — Destroy target permanent.\nFlying",
+          power: "5",
+          toughness: "5",
+        },
+      };
+    });
+
+    it("onto the ▼ back while the body isn't verified — the saga back ticked or not", async () => {
+      state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfcback", "w"), frameComboKey("sagadfcback", "w")];
+      const stub = db();
+      const result = await adoptDfcBodiesAction(CARD, "transform");
+      expect(result).toMatchObject({ ok: true, frontBody: "m15dfcfront", backBody: "m15dfcback" });
+      expect(writtenBack(stub)).toMatchObject({ frame_style: { template: "m15dfcback" }, power: "5", toughness: "5" });
+    });
+
+    it("onto the saga creature back once it is verified in the back's colour", async () => {
+      state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfcback", "w"), frameComboKey("sagacreaturedfcback", "w")];
+      const stub = db();
+      const result = await adoptDfcBodiesAction(CARD, "transform");
+      expect(result).toMatchObject({ ok: true, frontBody: "m15dfcfront", backBody: "sagacreaturedfcback" });
+      expect(writtenBack(stub)).toMatchObject({ frame_style: { template: "sagacreaturedfcback" }, color_identity: ["white"], power: "5", toughness: "5" });
+    });
+  });
 });

@@ -106,7 +106,8 @@ describe("one M15-era display size (layout v32)", () => {
     // TARDIS and the OTJ Breaking News (new templates: no bump).
     // …and TODO 4.5d's saga creature (a new template: no bump).
     // …and TODO 4.27b's extended-art Prepare dress (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(92);
+    // …and TODO 4.5d part B's saga creature back (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(93);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -215,6 +216,8 @@ describe("one M15-era display size (layout v32)", () => {
         // …and the saga creature (TODO 4.5d), a new template on the saga's
         // bars: the saga's CC M15 row.
         t === "sagacreature" ||
+        // …and its double-faced back (part B): the same row (no cost drawn).
+        t === "sagacreaturedfcback" ||
         // …and the Prepare frame's extended-art dress (TODO 4.27b), a new
         // template on the Prepare frame's (CC M15) row.
         t === "extendedartprepare" ||
@@ -247,6 +250,8 @@ describe("one M15-era display size (layout v32)", () => {
       sagadfcback: SET_SYMBOL_BOX_PCT_THIN_BAR,
       // …and the saga creature (TODO 4.5d): the saga's box, raised.
       sagacreature: SET_SYMBOL_BOX_PCT_THIN_BAR,
+      // …and its double-faced back (part B): the same box.
+      sagacreaturedfcback: SET_SYMBOL_BOX_PCT_THIN_BAR,
     };
     expect(SET_SYMBOL_BOX_PCT_THIN_BAR).toBe(0.0533);
     for (const t of M15_FAMILY_TEMPLATES) {
@@ -517,6 +522,8 @@ describe("baselines (TextSlot.dy)", () => {
     // raised 173 px with its line (the rect moves, the baseline offset is the
     // saga's).
     ["sagacreature", mse.title, (mse.type ?? 0) + 9.3 / 1500],
+    // …and its double-faced back (TODO 4.5d, part B): the same bars.
+    ["sagacreaturedfcback", mse.title, (mse.type ?? 0) + 9.3 / 1500],
     // Flip (layout v38, TODO 4.21a): packFlip.js's bars, the name and type
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).

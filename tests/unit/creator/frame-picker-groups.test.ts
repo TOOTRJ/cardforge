@@ -180,6 +180,10 @@ const STATION_DRESSES: readonly string[] = [
   // tests/unit/creator/saga-creature-kind.test.ts and
   // tests/unit/scryfall/saga-creature-imports.test.ts.
   "sagacreature",
+  // …and its double-faced back (TODO 4.5d, part B): a back body — pinned in
+  // tests/unit/creator/saga-creature-back.test.ts and
+  // tests/unit/scryfall/saga-creature-back-imports.test.ts.
+  "sagacreaturedfcback",
   // …and its extended-art dress (TODO 4.27b): a new template, the Prepare
   // kind's alone — pinned in tests/unit/creator/prepare-kind.test.ts and
   // tests/unit/scryfall/prepare-imports.test.ts.

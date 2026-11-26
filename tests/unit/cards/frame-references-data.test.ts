@@ -174,6 +174,9 @@ const DOCUMENTED_NULLS = new Set([
   "sagadfcfront/c",
   // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
   "sagadfcback/c",
+  // The saga creature's back (TODO 4.5d, part B): no colourless or gold
+  // summon back — the two two-colour ones print the pair dress.
+  "sagacreaturedfcback/c", "sagacreaturedfcback/m",
   // Its borderless Spacecraft dress (step 2): two printings, both
   // three-colour commanders (EOC #1 / #2) — gold only.
   "m15borderlessstation/w", "m15borderlessstation/u", "m15borderlessstation/b", "m15borderlessstation/r", "m15borderlessstation/g", "m15borderlessstation/c",

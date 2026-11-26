@@ -203,6 +203,9 @@ describe("frame reference registry", () => {
       "sagadfcback/c",
       // The saga creature (TODO 4.5d): no multicolour one-faced summon.
       "sagacreature/m",
+      // …and its back (part B): no colourless or gold summon back.
+      "sagacreaturedfcback/c",
+      "sagacreaturedfcback/m",
       // The arch's tall box (TODO 4.55): white, black and red tokens and the
       // colourless Clues (the artifact dress) are all that printed it.
       ...["u", "g", "c", "m"].map((k) => `m15tokentall/${k}`),
@@ -230,7 +233,8 @@ describe("frame reference registry", () => {
     // + 4.27's Prepare frame.
     // + 4.5d's saga creature.
     // + 4.27b's extended-art Prepare dress.
-    expect(m15Templates.length).toBe(73);
+    // + 4.5d part B's saga creature back.
+    expect(m15Templates.length).toBe(74);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

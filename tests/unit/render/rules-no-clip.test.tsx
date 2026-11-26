@@ -425,8 +425,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // lines (FIN prints ONE: an ability or its flavour). An ability with its
   // flavour, 200 characters or a two-line flavour fit; the long texts and
   // the four- and five-paragraph ones clip at the floor, as on any short box.
+  // …and its double-faced back (TODO 4.5d, part B): the same box.
   [
-    ["sagacreature/creature box"],
+    ["sagacreature/creature box", "sagacreaturedfcback/creature box"],
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets", "pips + reminder", "typed, as printed"],
   ],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
@@ -799,8 +800,9 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 // rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX), and on its BACK
 // (5.5 (b) PR 2: the saga's rail, read from a back face's plain text).
 // …and on the saga CREATURE (TODO 4.5d): the reminder in its band across
-// the card, the rail 173 px shorter, ending at the raised type bar.
-for (const template of ["saga", "sagadfcfront", "sagadfcback", "sagacreature"] as const)
+// the card, the rail 173 px shorter, ending at the raised type bar — and on
+// its double-faced back (part B), the same rail.
+for (const template of ["saga", "sagadfcfront", "sagadfcback", "sagacreature", "sagacreaturedfcback"] as const)
 describe(`the saga rail on ${template} — its reminder block and every chapter row (TODO 4.21c, 5.5 (b))`, () => {
   const SLOT = getFrameProfile(template).chapters!;
   const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";

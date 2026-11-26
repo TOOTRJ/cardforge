@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import printingsData from "./fixtures/crown-reference-printings.json";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { CROWN_REFERENCES, crownReferenceFor, type CrownReference } from "@/lib/cards/crown";
-import { dfcBodyOf, dfcIconFamilyFromEffects, faceUnderTest, transformBackBodyFor } from "@/lib/cards/dfc";
+import { backBodyFor, dfcBodyOf, dfcIconFamilyFromEffects, faceUnderTest, transformBackBodyFor } from "@/lib/cards/dfc";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
@@ -75,13 +75,14 @@ function printedKey(face: Face, rowKey: string): string {
 describe("the double-faced crown references vs their printings (TODO 5.1d / 5.0d)", () => {
   it("covers every double-faced body that draws a crown, with a captured printing per row", () => {
     expect([...new Set(rows.map((row) => row.template))].sort()).toEqual(
-      ["m15dfcback", "m15dfcbackleft", "m15dfcfront", "m15dfclandfront", "m15mdfcback", "m15mdfcfront"],
+      // (…and the saga creature's back, TODO 4.5d part B: FIN's legendary summons.)
+      ["m15dfcback", "m15dfcbackleft", "m15dfcfront", "m15dfclandfront", "m15mdfcback", "m15mdfcfront", "sagacreaturedfcback"],
     );
     for (const row of rows) {
       expect(frameAnatomyOf(row.template).crown, row.combo).toBe(true);
       expect(printings[row.ref.scryfallId], row.combo).toBeDefined();
     }
-    expect(rows.length).toBe(49);
+    expect(rows.length).toBe(53);
   });
 
   it.each(rows)("$combo $ref.name ($ref.set #$ref.collectorNumber) is a crowned print of its own row", (row) => {
@@ -106,11 +107,15 @@ describe("the double-faced crown references vs their printings (TODO 5.1d / 5.0d
     const card = scryfallCardSchema.parse(printing);
     expect(validateReferenceForCombo(card, row.template, pinColour(row.key)).errors, row.combo).toEqual([]);
 
-    // A transform back wears the body its icon family and type derive.
+    // A transform back wears the body its icon family and type derive (a
+    // saga creature back, its type words and subtypes: TODO 4.5d part B).
     const body = dfcBodyOf(row.template)!;
     if (body.layout === "transform" && body.role === "back") {
-      const backType = parseTypeLine(printing.card_faces?.[1]?.type_line).card_type;
-      expect(transformBackBodyFor(dfcIconFamilyFromEffects(printing.frame_effects), backType), row.combo).toBe(row.template);
+      const back = parseTypeLine(printing.card_faces?.[1]?.type_line);
+      expect(
+        backBodyFor("transform", { cardType: back.card_type, supertype: back.supertype, subtypes: back.subtypes_text }, dfcIconFamilyFromEffects(printing.frame_effects)),
+        row.combo,
+      ).toBe(row.template);
     }
   });
 
