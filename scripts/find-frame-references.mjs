@@ -426,6 +426,25 @@ const TEMPLATES = {
     confirm: "OTP Breaking News — confirm the thumbnail is the 'Prosperity Post' newspaper page (not the textured-foil reprint, OTP #66–80).",
     q: (k) => `set:otp cn<=65 -t:planeswalker -is:split ${spellColor(k)}`,
   },
+  // The Innistrad: Double Feature frame (TODO 5.9, one-faced): DBL's
+  // one-faced spells (every artifact, any colour, prints the artifact
+  // master: `c` is the colourless artifacts'); its land dress the lands
+  // (no mono-colour land printed: the duals ride `m`, and so does #534
+  // Voldaren Estate — colourless identity, but it taps for any colour and
+  // prints the gold land: the mapper reads produced_mana, and so does this).
+  doublefeature: {
+    confirm: "DBL — confirm the thumbnail is the black-and-white frame, a one-faced printing (not a transform card, not a walker, not #427 Honeymoon Hearse).",
+    q: (k) => `set:dbl -is:dfc -t:land -t:planeswalker -t:vehicle ${k === "c" ? "t:artifact c:c" : spellColor(k)}`,
+  },
+  doublefeatureland: {
+    confirm: "DBL lands — the grey stone frame (c), the duals' split pinline and the gold land (m).",
+    q: (k) =>
+      k === "c"
+        ? "set:dbl t:land id=c -produces:w -produces:u -produces:b -produces:r -produces:g"
+        : k === "m"
+          ? "set:dbl t:land (id>=2 or produces>=2)"
+          : null,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

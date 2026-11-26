@@ -102,6 +102,12 @@ const FAMILIES: readonly { brief: string; templates: readonly FrameTemplate[] }[
     brief: "A classic tabletop-roleplaying sourcebook illustration: detailed pen and ink with watercolor washes.",
     templates: ["dndsourcebook"],
   },
+  // Innistrad: Double Feature (TODO 5.9): every printing's art is in black
+  // and white — the frame's "silver screen".
+  {
+    brief: "A still from an old black-and-white horror film: high-contrast monochrome, deep shadows and stark light, no color at all.",
+    templates: ["doublefeature", "doublefeatureland"],
+  },
   {
     brief: "An old parchment scroll's illustration: warm sepia, hand-inked detail.",
     templates: ["lotrscroll"],

@@ -75,6 +75,9 @@ describe("where the pieces are declared", () => {
       "stainedglass",
       // …and the OTJ Breaking News (TODO 4.11 wave 2): the pack's notched rule, its pairs lerped.
       "breakingnews",
+      // …and the Innistrad: Double Feature (TODO 5.9): the pack's crown, the
+      // card's whole top (its land dress none: the pack's land crown 404s).
+      "doublefeature",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",

@@ -7437,5 +7437,178 @@
         }
       ]
     }
+  },
+  "doublefeature": {
+    "note": "The Innistrad: Double Feature frame (TODO 5.9, one-faced): DBL's black-and-white 'silver screen' printings (2022) — one-faced, not a walker, not #427 Honeymoon Hearse (the one Vehicle, its field red over the artifact pattern). One printing per colour key and a legendary one where printed (the crown); 'm' a two-colour card (every one prints the gold frame: #216 Dawnhart Wardens; #223 Florian, legendary). Every artifact of the run, any colour, prints the artifact master `a` (FrameProfile.artifactMasterKeys), so 'c' is the colourless artifacts' (#252 The Celestus, legendary; #253 Crossroads Candleguide) and its tick publishes `a` for EVERY colour: an artifact on w, b, r, g or m needs that colour's tick AND c's (artifactMasterReviewKey, lib/cards/frame-availability.ts). The coloured artifacts are alternates on their colour's row, so a reviewer sees `a` in context: w #23 Hedgewitch's Mask, #271 Bride's Gown; b #111 Mask of Griselbrand (legendary: the `a` crown), #362 Blood Fountain; r #142 Geistflame Reservoir, #444 Sanguine Statuette; g #171 / #455 Bramble Armor, #487 Spiked Ripsaw. DBL prints no blue or two-colour artifact.",
+    "colors": {
+      "w": [
+        {
+          "name": "Adeline, Resplendent Cathar",
+          "set": "dbl",
+          "scryfallId": "9c5743e9-7fae-483a-b591-496afdd905f2"
+        },
+        {
+          "name": "Candlegrove Witch",
+          "set": "dbl",
+          "scryfallId": "70c217b1-c005-4718-bfdb-368b30684439"
+        },
+        {
+          "name": "Hedgewitch's Mask",
+          "set": "dbl",
+          "scryfallId": "a4ff1482-a838-4955-b95e-7f06d8b738c5"
+        },
+        {
+          "name": "Bride's Gown",
+          "set": "dbl",
+          "scryfallId": "e84bfec6-4c68-4928-89f1-17876ab2d424"
+        }
+      ],
+      "u": [
+        {
+          "name": "Component Collector",
+          "set": "dbl",
+          "scryfallId": "74e98f83-065e-43d9-9ba2-2c68b6f48407"
+        },
+        {
+          "name": "Patrician Geist",
+          "set": "dbl",
+          "scryfallId": "06d63512-eab5-4968-846b-1cd94d677108"
+        }
+      ],
+      "b": [
+        {
+          "name": "Arrogant Outlaw",
+          "set": "dbl",
+          "scryfallId": "284147c7-4709-44e3-a24a-79100eb4df85"
+        },
+        {
+          "name": "Gisa, Glorious Resurrector",
+          "set": "dbl",
+          "scryfallId": "ed32d175-2120-42b3-85f8-d8869f37efd4"
+        },
+        {
+          "name": "Mask of Griselbrand",
+          "set": "dbl",
+          "scryfallId": "fefa072d-3803-42cf-a853-b005b7270172"
+        },
+        {
+          "name": "Blood Fountain",
+          "set": "dbl",
+          "scryfallId": "3499687b-5dd3-4a0c-96a3-7db227abcaf2"
+        }
+      ],
+      "r": [
+        {
+          "name": "Ardent Elementalist",
+          "set": "dbl",
+          "scryfallId": "b00e61dc-0e8d-4015-b343-d487e6a7a95c"
+        },
+        {
+          "name": "Falkenrath Pit Fighter",
+          "set": "dbl",
+          "scryfallId": "da9d87ed-a1c2-48a7-995e-b462a87dad6a"
+        },
+        {
+          "name": "Geistflame Reservoir",
+          "set": "dbl",
+          "scryfallId": "b64dd7f5-9152-4230-82a9-e0906abf9ede"
+        },
+        {
+          "name": "Sanguine Statuette",
+          "set": "dbl",
+          "scryfallId": "b40a143a-afa0-4fe2-802b-abcf09d7b145"
+        }
+      ],
+      "g": [
+        {
+          "name": "Bounding Wolf",
+          "set": "dbl",
+          "scryfallId": "11b30ab5-3101-485d-9851-35cbc42d9a15"
+        },
+        {
+          "name": "Augur of Autumn",
+          "set": "dbl",
+          "scryfallId": "ebf451c9-3773-4563-9c44-45a1b3e9b31a"
+        },
+        {
+          "name": "Bramble Armor",
+          "set": "dbl",
+          "scryfallId": "9261b8a3-96f3-4c19-89a4-c7f28a74cdaa"
+        },
+        {
+          "name": "Bramble Armor",
+          "set": "dbl",
+          "scryfallId": "5ad0667a-c704-4934-8a85-5a2f0530f723"
+        },
+        {
+          "name": "Spiked Ripsaw",
+          "set": "dbl",
+          "scryfallId": "0e764995-9590-4e81-8e25-d8ca120d5d8b"
+        }
+      ],
+      "c": [
+        {
+          "name": "The Celestus",
+          "set": "dbl",
+          "scryfallId": "217bd102-c71d-4457-a282-6a5028473993"
+        },
+        {
+          "name": "Crossroads Candleguide",
+          "set": "dbl",
+          "scryfallId": "2d7cbc98-917e-4cea-858d-1c4083a2eaee"
+        }
+      ],
+      "m": [
+        {
+          "name": "Dawnhart Wardens",
+          "set": "dbl",
+          "scryfallId": "4c9c6c75-a3ab-4251-a8a6-8dc3081aed58"
+        },
+        {
+          "name": "Florian, Voldaren Scion",
+          "set": "dbl",
+          "scryfallId": "37fd06c9-0656-43b3-93ab-ca378f3065a7"
+        }
+      ]
+    }
+  },
+  "doublefeatureland": {
+    "note": "The Innistrad: Double Feature land frame (TODO 5.9, one-faced): DBL's lands. 'c' the grey stone frame of the colourless lands (#261 Evolving Wilds, #262 Field of Ruin); 'm' the duals, whose pinline the pair masters split from the first colour into the second (#260 Deserted Beach W/U, #266 Rockfall Vale R/G), and the gold land (#534 Voldaren Estate: it taps for any colour, Scryfall's produced_mana, and prints the gold land frame). No mono-colour land is printed in DBL (w u b r g: none).",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Evolving Wilds",
+          "set": "dbl",
+          "scryfallId": "795c44ad-761b-414d-ab6a-01db4c41933a"
+        },
+        {
+          "name": "Field of Ruin",
+          "set": "dbl",
+          "scryfallId": "5365243b-5991-4f34-8f0b-69a9a3c52e32"
+        }
+      ],
+      "m": [
+        {
+          "name": "Deserted Beach",
+          "set": "dbl",
+          "scryfallId": "cd4ae6af-22c3-4fa3-a7c1-5174382cda2f"
+        },
+        {
+          "name": "Rockfall Vale",
+          "set": "dbl",
+          "scryfallId": "a77ede1d-e9b0-4828-a161-04b787be0c81"
+        },
+        {
+          "name": "Voldaren Estate",
+          "set": "dbl",
+          "scryfallId": "1dd9238b-0de6-4552-980b-44d4f5911cec"
+        }
+      ]
+    }
   }
 }

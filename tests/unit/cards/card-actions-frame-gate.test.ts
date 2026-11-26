@@ -238,6 +238,60 @@ describe("updateCardAction — verification gate", () => {
   });
 });
 
+// TODO 5.9: Innistrad: Double Feature dresses EVERY colour of artifact as its
+// one artifact master; a white tick was made against white non-artifacts and
+// never saw it. A white artifact there saves only once `c` (the colourless
+// artifacts' row, which shows the master) is ticked too.
+describe("the artifact master on Double Feature", () => {
+  const ARTIFACT_REFUSAL = {
+    ok: false,
+    fieldErrors: {
+      frame_style: "That frame's artifact version isn't available yet — pick another frame, or a type that isn't an artifact.",
+    },
+  };
+  const mask = (overrides: Record<string, unknown> = {}) =>
+    payload({
+      title: "Hedgewitch's Mask",
+      card_type: "artifact",
+      subtypes: ["Equipment"],
+      power: undefined,
+      toughness: undefined,
+      frame_style: { template: "doublefeature" },
+      ...overrides,
+    });
+
+  beforeEach(() => {
+    state.verified = ["doublefeature/w", "m15/w"];
+  });
+
+  it("refuses a white artifact on the white tick alone, and saves it once `c` is ticked", async () => {
+    const stub = db();
+    expect(await createCardAction(mask())).toEqual(ARTIFACT_REFUSAL);
+    expect(await createCardAction(mask({ card_type: "creature", supertype: "Artifact", subtypes: ["Golem"], power: "2", toughness: "2" }))).toEqual(
+      ARTIFACT_REFUSAL,
+    );
+    expect(cardWrites(stub)).toHaveLength(0);
+    state.verified = ["doublefeature/w", "doublefeature/c", "m15/w"];
+    expect(await createCardAction(mask())).toMatchObject({ ok: true });
+  });
+
+  it("saves a white non-artifact on the white tick alone", async () => {
+    db();
+    expect(await createCardAction(payload({ frame_style: { template: "doublefeature" } }))).toMatchObject({ ok: true });
+  });
+
+  it("refuses an edit that moves a white artifact onto it, or makes a card on it an artifact", async () => {
+    const stub = db();
+    state.existing = storedRow({ card_type: "artifact", subtypes: ["Equipment"], power: null, toughness: null, color_identity: ["white"], frame_style: { template: "m15" } });
+    expect(await updateCardAction(CARD, { frame_style: { template: "doublefeature" } })).toEqual(ARTIFACT_REFUSAL);
+    state.existing = storedRow({ color_identity: ["white"], frame_style: { template: "doublefeature" } });
+    expect(await updateCardAction(CARD, { supertype: "Artifact" })).toEqual(ARTIFACT_REFUSAL);
+    expect(cardWrites(stub)).toHaveLength(0);
+    // A card already on it, its type left alone, stays editable.
+    expect(await updateCardAction(CARD, { title: "Renamed" })).toMatchObject({ ok: true });
+  });
+});
+
 // A failed read of the frame list (the 2026-11-10 pooler incident) is never
 // "nothing is verified": the save is refused in words that say try again,
 // never "That frame isn't available in <colour> yet", and nothing is written.

@@ -103,6 +103,7 @@ import {
   columnTintGap,
   describeColumnTint,
   describeNotch,
+  describeNotchPiece,
   footRunsSolid,
   notchFindings,
   pieceNotchFindings,
@@ -180,6 +181,7 @@ import {
   shiftRows,
   sourceFilesFor,
   sourceTonesOf,
+  rowsClipShare,
   nearRegionPlane,
   diffRegionPlane,
   nearestRegionPlane,
@@ -370,6 +372,12 @@ async function toneLoaded(src, data, w, h) {
     if (c.belowOutline) {
       const b = belowOutlinePlane(data, w, h, c.belowOutline);
       for (let p = 0; p < w * h; p += 1) keep[p] *= b[p] / 255;
+    }
+    // …and/or above or below a band of rows, ramping across it (TODO 5.9:
+    // the Double Feature field's two tones, above and below the type bar).
+    if (c.rows) {
+      const share = rowsClipShare(c.rows, h);
+      for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) keep[y * w + x] *= share[y];
     }
     for (let p = 0; p < w * h; p += 1) plane[p] = Math.round(plane[p] * keep[p]);
   }
@@ -1299,7 +1307,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     const { width: CW, height: CH } = def.compositeSize;
     const box = { x: Math.round((def.shape.bounds.leftPct / 100) * OUT_W), y: Math.round((def.shape.bounds.topPct / 100) * OUT_H), ...def.shape.size };
     // Placed at the bounds on the pack's card, downscaled with it, cut to the box.
-    const placeAndCut = async (src) => {
+    const placeOnPackCard = async (src) => {
       const file = await fetchCached(src);
       const meta = await sharp(file).metadata();
       // A piece the pack draws at bounds other than its own size (TODO 4.11
@@ -1313,7 +1321,16 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const loaded = def.nativeSize
         ? await rgba(file, def.placeAt.width, def.placeAt.height)
         : await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height);
-      const canvas = placeOnCanvas(loaded, def.placeAt, CW, CH);
+      return placeOnCanvas(loaded, def.placeAt, CW, CH);
+    };
+    const placeAndCut = async (src) => {
+      // A pair's piece (TODO 5.9: a Double Feature dual's arch, from its
+      // first colour into its second): the two pieces placed on the pack's
+      // card and lerped across the ramp there, before the one downscale.
+      const canvas =
+        typeof src === "string"
+          ? await placeOnPackCard(src)
+          : blendPair(await placeOnPackCard(src.src), await placeOnPackCard(src.right), CW, CH, src.ramp);
       // (A pack drawn at HD — the ring, 4.11 — passes through unchanged: a
       // same-size Lanczos resize is the identity.)
       const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
@@ -1336,7 +1353,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     for (const key of def.keys) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
-        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${def.nativeSize ? `resampled once from ${def.nativeSize.width}×${def.nativeSize.height} (Lanczos)` : CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        `${describeNotchPiece(def.pieces[key])} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${def.nativeSize ? `resampled once from ${def.nativeSize.width}×${def.nativeSize.height} (Lanczos)` : CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        ...(def.clearAlphaBelow !== undefined ? [`every pixel under α ${def.clearAlphaBelow} cleared (the pack's soft glow above the arch)`] : []),
         ...(def.clearAboveY !== undefined ? [`the rows above card row ${def.clearAboveY} cleared (the master's own page shows there)`] : []),
         ...(def.clearOutside !== undefined ? [`cleared outside card x ${def.clearOutside.x0}–${def.clearOutside.x1}, rows to ${def.clearOutside.y1} (the master's own flat ground shows there)`] : []),
         ...(def.blackoutCapturePx !== undefined
@@ -1352,6 +1370,12 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // the hole's ring (TODO 4.11: the ring's triangle sits 8–10 px higher
       // than the printed stamp) — then the hole cut and its ring blacked.
       const placedPiece = await placeAndCut(def.pieces[key]);
+      // A piece with a soft glow round its drawing (TODO 5.9: the Double
+      // Feature arch's white halo, α ≤ 45, where print draws the box dark)
+      // drops every pixel under `clearAlphaBelow`.
+      if (def.clearAlphaBelow !== undefined) {
+        for (let o = 0; o < placedPiece.length; o += 4) if (placedPiece[o + 3] < def.clearAlphaBelow) placedPiece.fill(0, o, o + 4);
+      }
       // A piece whose top rows are the master's own page (TODO 4.11 wave 2:
       // the MKM dossier's parchment above its arch, within 3 levels of the
       // masters') drops them, card rows above `clearAboveY`: the

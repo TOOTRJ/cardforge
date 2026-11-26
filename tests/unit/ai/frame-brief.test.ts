@@ -72,6 +72,31 @@ describe("the dialog's kinds and frames", () => {
     );
   });
 
+  it("offers Double Feature to an ARTIFACT only in the colours the plan will keep it in — a coloured one with `c` ticked too (TODO 5.9)", () => {
+    // Every DBL artifact prints the one artifact master; a colour's tick saw
+    // only that colour's non-artifacts (artifactMasterReviewKey). The
+    // dialog must never offer what frameFitOf / resolveGeneratedFrame refuse.
+    const noC = new Set([...only(["m15artifact"]), ...only(["doublefeature"], ["w", "u", "b", "r", "g", "m"])]);
+    const withC = new Set([...noC, frameComboKey("doublefeature", "c")]);
+    const dbl = (kind: "artifact" | "creature", verified: ReadonlySet<string>, colour: "w" | null) =>
+      aiFrameOptions(kind, verified, colour).find((option) => option.template === "doublefeature");
+    expect(dbl("artifact", noC, null)).toBeUndefined();
+    expect(dbl("artifact", noC, "w")).toBeUndefined();
+    expect(dbl("artifact", withC, "w")?.offReason).toBeNull();
+    expect([...(dbl("artifact", withC, "w")?.colorKeys ?? [])].sort()).toEqual([...COLOURS].sort());
+    // A creature needs its colour alone.
+    expect(dbl("creature", noC, "w")).toMatchObject({ offReason: null });
+    // …and the artifact kind is off where DBL was its only frame and `c` isn't ticked.
+    expect(aiKindOffReason("artifact", only(["doublefeature"], ["w"]))).toBe("No frame published yet");
+    expect(aiKindOffReason("artifact", only(["doublefeature"], ["w", "c"]))).toBeNull();
+    expect(aiKindOffReason("creature", only(["doublefeature"], ["w"]))).toBeNull();
+    // What the dialog offers, the plan keeps: the frame by name for a white artifact.
+    const fit = (verified: ReadonlySet<string>) =>
+      frameFitOf({ template: "doublefeature", cardType: "artifact", colorIdentity: ["white"], verifiedKeys: verified, face: { cardType: "artifact" } });
+    expect(fit(noC).frame).not.toBe("doublefeature");
+    expect(fit(withC)).toMatchObject({ frame: "doublefeature", exact: true });
+  });
+
   it("names the colours a frame has, or any colour", () => {
     expect(frameColorWords(["w", "u", "r"])).toBe("white, blue or red");
     expect(frameColorWords(["g"])).toBe("green");
@@ -237,6 +262,12 @@ describe("art direction per frame", () => {
     expect(frameArtBrief("m15token")).toContain("single subject");
     expect(frameArtBrief("m20tokentext")).toContain("single subject");
     expect(frameArtBrief("m20tokentext")).toContain("WHOLE card");
+    // Innistrad: Double Feature prints every picture in black and white
+    // (TODO 5.9): an AI picture on it is monochrome too, the land dress's.
+    for (const template of ["doublefeature", "doublefeatureland"] as const) {
+      expect(frameArtBrief(template), template).toContain("black-and-white horror film");
+      expect(frameArtBrief(template), template).toContain("no color at all");
+    }
     for (const template of ["m15", "m15land", "m15artifact", "m15pw", null, undefined, "not-a-frame"]) {
       expect(frameArtBrief(template), String(template)).toBe("");
     }

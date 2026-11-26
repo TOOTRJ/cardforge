@@ -650,7 +650,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall" | "doublefeature";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -934,6 +934,16 @@ const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
+  // The Innistrad: Double Feature frame (TODO 5.9, one-faced): the land frame
+  // for a land, the spell frame for every other kind the
+  // `double-feature/one-faced` rule keeps to (an artifact of any colour
+  // paints the frame's artifact master there — FrameProfile.
+  // artifactMasterKeys — verified for a coloured one only with `c` too:
+  // artifactMasterReviewKey, applied by finalizeImportMatch).
+  doublefeature: {
+    produces: ["doublefeatureland", "doublefeature"],
+    pick: ({ facts }) => (facts.kind === "land" ? "doublefeatureland" : "doublefeature"),
+  },
   // The 2014–19 arch's tall text box (TODO 4.55): its artifact dress for an
   // Artifact (a Clue), the plain one otherwise.
   tokentall: {
@@ -3006,6 +3016,40 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   //     the black-and-white "silver screen" frame.
   //   • Signature Spellbook (SS1 2018, SS2 2019, SS3 2020; 24 printings):
   //     the Spellbook frame — the art behind a translucent text box.
+  // Since TODO 5.9's one-faced part PipGlyph draws the DBL frame
+  // (`doublefeature`, its land dress `doublefeatureland`): a one-faced
+  // printing of a kind it dresses — the creatures, instants, sorceries,
+  // enchantments and artifacts (any colour: the frame's artifact master) and
+  // the lands, 431 of the 437 — names it once it is verified in the card's
+  // colour (`onceVerified`, exact: the crown, the stamp and the duals' split
+  // pinline are drawn there) and, until then, lands where it always did,
+  // nearest — under a key and a label of its OWN
+  // (`double-feature/one-faced`): the frame_requests rows logged before it
+  // under `double-feature` are the walkers', the transform cards' and the
+  // Hearse's as much as these, and must not read as answered once this
+  // frame is verified. The rest keep the old rule below, under its old key
+  // (`double-feature`): the 98 transform cards (5.9's double-faced part),
+  // the walkers (5.13: no walker body in the frame) and #427 Honeymoon
+  // Hearse, the one Vehicle, whose field prints red over the artifact
+  // pattern (no such master in the pack; 5.9 too).
+  {
+    key: "double-feature/one-faced",
+    exactLabel: "Innistrad: Double Feature black-and-white frame (one-faced)",
+    match: {
+      sets: ["dbl"],
+      layouts: ["normal"],
+      kinds: ["creature", "instant", "sorcery", "enchantment", "artifact", "land"],
+      notCollectorIds: { dbl: ["427"] },
+    },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      onceVerified: { family: "doublefeature" },
+      exactOnceVerified: true,
+      reason: "PipGlyph's Double Feature frame isn't verified yet",
+      blockedBy: "5.9",
+    },
+  },
   {
     key: "double-feature",
     exactLabel: "Innistrad: Double Feature black-and-white frame",
@@ -3014,7 +3058,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "m15" },
       reason: "PipGlyph doesn't have Double Feature's black-and-white frame yet",
-      blockedBy: "4.11",
+      // Per landing: a walker (it lands on a walker frame) waits for 5.13's
+      // walker body; the transform cards and the Hearse for 5.9's other
+      // part (the transform pack, the Vehicle's red field).
+      blockedBy: (template) => (template !== null && getFrameProfile(template).loyaltyRows ? "5.13" : "5.9"),
       // The M15 frame here is a stand-in itself: a verified artifact frame
       // is never kept over the Vehicle frame (Honeymoon Hearse DBL #427).
       landOnOnceVerified: { ...vehicleStandIn("in Double Feature's black-and-white frame"), overOwnFrame: true },

@@ -797,6 +797,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // colour, `c` (the gold crown: no colourless print), a pair's gold crown
   // with its dome split (its pair master is "@pair-crown") and gold.
   ["stainedglass", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // TODO 5.9: the Innistrad: Double Feature crown (the card's whole top, in
+  // the field's colour) — each colour, `c` (the artifact's: the master is the
+  // artifact frame) and gold (a pair prints gold: no pair masters).
+  ["doublefeature", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1465,6 +1469,15 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // #550 Cyberman Patrol).
   ["tardis", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["tardis", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Cyberman"], power: "2", toughness: "2" }],
+  // TODO 5.9: the Innistrad: Double Feature plate at its widest, and a
+  // COLOURED artifact on the frame's artifact master (every artifact of the
+  // run prints it: DBL #23 Hedgewitch's Mask, white) — and a coloured
+  // artifact creature on it too (none printed: the master is the type's).
+  ["doublefeature", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["doublefeature", "artifact", "w", "@artifact", { subtypes: ["Equipment"] }],
+  ["doublefeature", "creature", "b", "@artifact", { supertype: "Artifact", subtypes: ["Construct"], power: "3", toughness: "3" }],
+  // …and a land creature on its land dress (the spell frame's plate).
+  ["doublefeatureland", "land", "g", "@creature", { supertype: "Creature", subtypes: ["Forest", "Dryad"], power: "1", toughness: "1" }],
   [
     "m15artifact",
     "artifact",
@@ -1684,6 +1697,11 @@ export function visualCases(): VisualCase[] {
   add("nyx", "creature", "u", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   // The ZNR hedron crown at the stored bake's size (TODO 4.11).
   add("fullart", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // TODO 5.9: the Double Feature crown at the stored bake's size and on a
+  // COLOURED artifact (the artifact's crown over the artifact master: DBL
+  // #111 Mask of Griselbrand, black).
+  add("doublefeature", "creature", "w", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  add("doublefeature", "artifact", "b", "long", { crown: true, suffix: "@crown-artifact" });
   // TODO 4.48's last pieces: the full-art token's floating crown round its
   // name pill (m20tokencrown/<key>), opt-in per card — NEW cases, no stored
   // token names the switch. A Legendary token on each height, the artifact
@@ -2214,6 +2232,15 @@ export function visualCases(): VisualCase[] {
   add("tardis", "creature", "b", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("tardis", "auto", { rarity: "uncommon" }) });
   add("tardis", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("tardis", "auto", { rarity: "mythic" }) });
   add("tardis", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tardis", "auto", { rarity: "rare" }) });
+  // TODO 5.9: the Innistrad: Double Feature OVAL notches — an uncommon (no
+  // stamp, as DBL prints it), a rare on the gold frame, the grey land's
+  // (the land's duals — the arch split from the first colour into the
+  // second, DBL #266 Rockfall Vale — are the "@stamp-pair-split" cases) and
+  // the HD bake.
+  add("doublefeature", "creature", "g", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("doublefeature", "auto", { rarity: "uncommon" }) });
+  add("doublefeature", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("doublefeature", "auto", { rarity: "rare" }) });
+  add("doublefeature", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("doublefeature", "auto", { rarity: "mythic" }) });
+  add("doublefeatureland", "land", "c", "short", { suffix: "@stamp-c", row: stampRow("doublefeatureland", "auto", { rarity: "rare" }) });
   // TODO 4.11 wave 2: the OTJ Breaking News' OVAL tab — none on an uncommon
   // (OTP prints it on a rare or mythic only), a gold card's (OTP #40 Cruel
   // Ultimatum: the gold key's piece), the land's (OTP #65 Dust Bowl: `l`),
@@ -2714,6 +2741,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "tardis",
   // …and the OTJ Breaking News' oval (TODO 4.11 wave 2: the pack's one tab).
   "breakingnews",
+  // …and the Innistrad: Double Feature's ovals (TODO 5.9: the pack's pieces,
+  // the land's per colour).
+  "doublefeature", "doublefeatureland",
   // …and the saga creature's triangle (TODO 4.5d: the Universes Beyond piece
   // over its M15 bar).
   "sagacreature",
@@ -2744,6 +2774,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the OTJ Breaking News — its pair masters under the
   // pack's one notch tab.
   "breakingnews",
+  // TODO 5.9: the Innistrad: Double Feature land's duals (the two colours'
+  // pieces lerped across the pinline's ramp).
+  "doublefeatureland",
   // TODO 4.27b: the Prepare pairs (a piece per pair master, either dress)
   // and the extended-art dress's.
   "prepare", "extendedartprepare",
@@ -3215,6 +3248,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The OTJ Breaking News (TODO 4.11 wave 2): the same across print's
   // split, and its crown's pairs.
   "breakingnews",
+  // The Innistrad: Double Feature land (TODO 5.9): the stone with the
+  // pinline split between the two land tints.
+  "doublefeatureland",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

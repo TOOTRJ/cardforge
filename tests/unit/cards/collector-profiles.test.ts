@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { parseFrameProfileOverride, resolveFrameProfile } from "@/lib/cards/profile-override";
-import { BREAKING_NEWS_COLLECTOR, DNDSOURCEBOOK_COLLECTOR, DOSSIER_COLLECTOR, ENCHANTINGTALES_COLLECTOR, STAINEDGLASS_COLLECTOR, TARDIS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15PW_COLLECTOR, M15_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
+import { BREAKING_NEWS_COLLECTOR, DOUBLEFEATURE_COLLECTOR, DNDSOURCEBOOK_COLLECTOR, DOSSIER_COLLECTOR, ENCHANTINGTALES_COLLECTOR, STAINEDGLASS_COLLECTOR, TARDIS_COLLECTOR, EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15PW_COLLECTOR, M15_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ describe("the collector slot", () => {
     // MUL #1 / #60 / #131 / #190 set both lines.)
     // (…and the D&D Sourcebook's, TODO 4.11 wave 2: its run's rows, 4 px
     // below M15's; and the MKM dossier's, its run's rows 4–5 px above.)
-    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, dossier: DOSSIER_COLLECTOR, enchantingtales: ENCHANTINGTALES_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR, tardis: TARDIS_COLLECTOR, breakingnews: BREAKING_NEWS_COLLECTOR };
+    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR, dndsourcebook: DNDSOURCEBOOK_COLLECTOR, dossier: DOSSIER_COLLECTOR, enchantingtales: ENCHANTINGTALES_COLLECTOR, stainedglass: STAINEDGLASS_COLLECTOR, tardis: TARDIS_COLLECTOR, breakingnews: BREAKING_NEWS_COLLECTOR, doublefeature: DOUBLEFEATURE_COLLECTOR, doublefeatureland: DOUBLEFEATURE_COLLECTOR };
     // below M15's.)
     // (…and the Enchanting Tales', TODO 4.11 wave 2: its run's rows, 3–4 px
     // above M15's.)
@@ -53,7 +53,7 @@ describe("the collector slot", () => {
     // inside the PROFILES literal.
     const profiles = source.indexOf("const PROFILES: Record<FrameTemplate, FrameProfile> = {");
     expect(profiles).toBeGreaterThan(0);
-    const SLOT = /collector: (?:M15(?:PW)?|EXPEDITION_(?:ZNR|BFZ)|DNDSOURCEBOOK|DOSSIER|ENCHANTINGTALES|STAINEDGLASS|TARDIS|BREAKING_NEWS)_COLLECTOR/g;
+    const SLOT = /collector: (?:M15(?:PW)?|EXPEDITION_(?:ZNR|BFZ)|DNDSOURCEBOOK|DOSSIER|ENCHANTINGTALES|STAINEDGLASS|TARDIS|BREAKING_NEWS|DOUBLEFEATURE)_COLLECTOR/g;
     for (const m of source.matchAll(SLOT)) expect(m.index, "a slot outside PROFILES").toBeGreaterThan(profiles);
     expect(source.match(SLOT)).toHaveLength(COLLECTOR_TEMPLATES.length);
     expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(3);
@@ -106,6 +106,13 @@ describe("the collector slot", () => {
     expect({ ...bn, line1BaselinePct: 0, line2BaselinePct: 0 }).toEqual({ ...M15_COLLECTOR, line1BaselinePct: 0, line2BaselinePct: 0 });
     expect((bn.line1BaselinePct / 100) * 2100).toBeCloseTo(1985.33, 1);
     expect((bn.line2BaselinePct / 100) * 2100).toBeCloseTo(2024.34, 1);
+    // The Innistrad: Double Feature pair (TODO 5.9): M15's slot, its second
+    // row 4 px higher (print's 2027).
+    expect(source.match(/collector: DOUBLEFEATURE_COLLECTOR/g)).toHaveLength(2);
+    expect(getFrameProfile("doublefeature").collector).toEqual({
+      ...M15_COLLECTOR,
+      line2BaselinePct: M15_COLLECTOR.line2BaselinePct - (4 / 2100) * 100,
+    });
     expect(getFrameProfile("expeditionland").collector).toEqual({
       ...M15_COLLECTOR,
       line1BaselinePct: (1995.5 / 2100) * 100,

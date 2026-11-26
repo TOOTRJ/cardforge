@@ -114,6 +114,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // the torn paper box fills the image but for its shadow on the left and
   // the top.
   "/frames/breakingnews/pt/{color}.png": { left: 0.0837, top: 0.105, right: 1, bottom: 1 },
+  // The Innistrad: Double Feature P/T box (TODO 5.9): Card Conjurer's DBL
+  // 'Power/Toughness' per key (353 × 179), drawn at the pack's bounds — the
+  // dark face in its coloured rim fills the image to its anti-aliased edge.
+  "/frames/doublefeature/pt/{color}.png": { left: 0.0028, top: 0.0055, right: 0.9972, bottom: 0.9945 },
   // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/avatar/pt/{color}.png": { left: 0.0037, top: 0.007, right: 0.9963, bottom: 0.993 },
   "/frames/bloomburrow/pt/{color}.png": { left: 0.0022, top: 0.0076, right: 0.9978, bottom: 0.9924 },

@@ -144,6 +144,9 @@ describe("declared and published", () => {
       "tardis",
       // …and the OTJ Breaking News since 4.11 wave 2 (the same).
       "breakingnews",
+      // …and the Innistrad: Double Feature land since TODO 5.9 (the stone,
+      // its pinline split between two land tints).
+      "doublefeatureland",
       // …and the extended-art frame and its land dress since the TODO 4.7 follow-up (owner Round 63).
       "extendedart", "extendedartland",
       // …and the Prepare frame's extended-art dress since 4.27b (the same lower half).

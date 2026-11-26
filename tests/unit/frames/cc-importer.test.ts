@@ -167,6 +167,10 @@ describe("Card Conjurer recipe", () => {
       "dndsourcebook",
       // The MKM dossier showcase (TODO 4.11 wave 2; tests/unit/frames/mkm-dossier-importer.test.ts).
       "dossier",
+      // The Innistrad: Double Feature frame and its land dress (TODO 5.9,
+      // one-faced; tests/unit/frames/dbl-double-feature-importer.test.ts).
+      "doublefeature",
+      "doublefeatureland",
       "emblem",
       // The Enchanting Tales showcase (TODO 4.11 wave 2; tests/unit/frames/enchanting-tales-importer.test.ts).
       "enchantingtales",

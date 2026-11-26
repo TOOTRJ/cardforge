@@ -82,11 +82,24 @@ describe("frameMasterKey — the one master rule", () => {
     // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): its `c` the
     // pack's land frame, a colourless ARTIFACT paints its silver `a`.
     const DRESSED = new Set(["agclassic", "extendedart", "lotrscroll", "lotr", "mysticalarchive", "breakingnews", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
+    // …and Innistrad: Double Feature (TODO 5.9): EVERY artifact of the run
+    // prints the pack's one artifact frame, whatever its colour — the one
+    // profile that dresses a COLOURED key by type (a coloured artifact is
+    // verified there only with `c` too: artifactMasterReviewKey).
+    const EVERY_COLOUR = new Set(["doublefeature"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
-      expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));
+      expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t) || EVERY_COLOUR.has(t));
       if (DRESSED.has(t)) {
         expect(profile.artifactMasterKeys, t).toEqual({ c: "a" });
+        continue;
+      }
+      if (EVERY_COLOUR.has(t)) {
+        expect(profile.artifactMasterKeys, t).toEqual({ w: "a", u: "a", b: "a", r: "a", g: "a", m: "a", c: "a" });
+        for (const colors of identities) {
+          expect(frameColorKeysFor(profile, colors, { cardType: "artifact" }), `${t} ${colors}`).toEqual(["a"]);
+          expect(frameColorKeysFor(profile, colors, { cardType: "creature", supertype: "Artifact" }), `${t} ${colors}`).toEqual(["a"]);
+        }
         continue;
       }
       for (const colors of identities) {

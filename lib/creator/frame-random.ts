@@ -46,15 +46,19 @@ import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
 import type { BasicLandFace } from "@/lib/cards/watermark";
+import { verifiedKeysForType } from "@/lib/cards/frame-availability";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
 
-/** Frames that can dress this card type at all (any color published). */
+/** Frames that can dress this card type at all (any color published) — for
+ *  an artifact, a frame that dresses its colour as the artifact master
+ *  (Double Feature, TODO 5.9) only in the colours whose artifact master is
+ *  reviewed too (verifiedKeysForType). */
 export function frameChoicesForType(
   cardType: CardType,
   verifiedKeys: ReadonlySet<string>,
 ): FrameChoice[] {
-  return framesForKind(kindFromCard(cardType, undefined), verifiedKeys);
+  return framesForKind(kindFromCard(cardType, undefined), verifiedKeysForType(verifiedKeys, { cardType }));
 }
 
 /** The card types a FREE AI design may land on — those the AI may pick by
@@ -150,8 +154,12 @@ export function resolveGeneratedFrame(input: {
    *  showcase lands in a deck. */
   fallback?: "random" | "none";
 }): FrameTemplate | null {
-  const { cardType, colorIdentity, verifiedKeys, face } = input;
+  const { cardType, colorIdentity, face } = input;
   if (!input.requested) return null;
+  // An artifact reads a frame that dresses its colour as the artifact
+  // master (Double Feature, TODO 5.9) as published only once that master's
+  // review is ticked too — the save's gate (artifactMasterReviewKey).
+  const verifiedKeys = verifiedKeysForType(input.verifiedKeys, { cardType, supertype: face?.supertype });
   // A land asked onto the extended-art frame means its land dress, as the
   // picker and the import put it there (TODO 4.7, owner Round 63).
   const requested: FrameTemplate | "random" =

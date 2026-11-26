@@ -612,6 +612,14 @@ export const FRAME_TEMPLATE_VALUES = [
   // newspaper page, a colour wash per key. An addition: no stored card sits
   // on it.
   "breakingnews",
+  // The Innistrad: Double Feature frame (TODO 5.9, its one-faced part; Card
+  // Conjurer's 'Double Feature (DBL)' pack, frames bucket): the
+  // black-and-white "silver screen" dress of DBL 2022 (437 one-faced
+  // printings) — dark bars and box, white ink, a thin field in the card's
+  // colour — and its land dress (the grey stone, the pinline in the land's
+  // colours). Additions: no stored card sits on either.
+  "doublefeature",
+  "doublefeatureland",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
@@ -788,6 +796,9 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tardis: "TARDIS",
   // Set-relative: the picker prints "Outlaws of Thunder Junction — Breaking News".
   breakingnews: "Breaking News",
+  // Set-relative: the picker prints "Innistrad: Double Feature — Double Feature".
+  doublefeature: "Double Feature",
+  doublefeatureland: "Double Feature Land",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
@@ -839,6 +850,7 @@ export const FRAME_SET_VALUES = [
   "karlov",
   "doctorwho",
   "thunderjunction",
+  "doublefeatureset",
   "extended",
   "fullartset",
   "expeditions",
@@ -875,6 +887,8 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   doctorwho: "Doctor Who",
   // Outlaws of Thunder Junction (OTJ 2024): its Breaking News bonus sheet (OTP).
   thunderjunction: "Outlaws of Thunder Junction",
+  // Innistrad: Double Feature (DBL 2022): every card in the black-and-white frame.
+  doublefeatureset: "Innistrad: Double Feature",
   extended: "Extended Art",
   fullartset: "Full Art",
   expeditions: "Expeditions",
@@ -963,6 +977,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   dossier: "karlov",
   tardis: "doctorwho",
   breakingnews: "thunderjunction",
+  doublefeature: "doublefeatureset",
+  doublefeatureland: "doublefeatureset",
   extendedart: "extended",
   extendedartland: "extended",
   fullart: "zendikarrising",
@@ -1063,6 +1079,9 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   doctorwho: "showcase",
   // The Breaking News showcase (OTP #1–65, OTJ's bonus sheet).
   thunderjunction: "showcase",
+  // The Double Feature frame (DBL 2022: one product in its own dress, as a
+  // showcase is — Scryfall flags it `inverted`, not `showcase`).
+  doublefeatureset: "showcase",
   // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
   // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall

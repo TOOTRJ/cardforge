@@ -16,7 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
-import { UB_STAMP_HOLE, roundTriangleDistance } from "../../lib/cards/holo-stamp.ts";
+import { M15_HOLO_STAMP_OVAL, UB_STAMP_HOLE, roundTriangleDistance } from "../../lib/cards/holo-stamp.ts";
 import { GOLD_2003_NARROW_PAIRS, PAIR_RAMPS, TWO_COLOR_PAIRS, pairSides, rampName, rampShare } from "./pair-ramp.mjs";
 import { describeRegionTones, regionGain, stretchRange } from "./print-cut.mjs";
 import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
@@ -613,6 +613,9 @@ export function sourceTonesOf(src) {
   // …the Doctor Who TARDIS's stripes, wedges and plate (TODO 4.11 wave 2,
   // TARDIS_SOURCE_TONES)…
   if (Object.hasOwn(TARDIS_SOURCE_TONES, src)) return TARDIS_SOURCE_TONES[src];
+  // …the Innistrad: Double Feature fields, stone, pinlines, rims, crowns and
+  // land stamps (TODO 5.9, DBL_SOURCE_TONES)…
+  if (Object.hasOwn(DBL_SOURCE_TONES, src)) return DBL_SOURCE_TONES[src];
   // …and the MUL Tarkir dragon wings (TODO 4.11, TARKIR_SOURCE_TONES).
   if (Object.hasOwn(TARKIR_SOURCE_TONES, src)) return TARKIR_SOURCE_TONES[src];
   // …and the New Capenna Art Deco gold (TODO 4.11 wave 2, SNC_DECO_SOURCE_TONES).
@@ -655,6 +658,7 @@ export function describeFileTones(files) {
         c.notDiff ? `, where the file is the same as ${c.notDiff.file} (max channel ≤ ${c.notDiff.none}; none from ${c.notDiff.full})` : "",
         c.nearestIs ? `, where the nearest of ${c.nearestIs.among.map((x) => x.join(",")).join(" / ")} is ${c.nearestIs.among[c.nearestIs.index].join(",")}` : "",
         c.belowOutline ? `, in columns ${c.belowOutline.cols[0]}–${c.belowOutline.cols[1]} below the outline (per column, the last pixel of luma < ${c.belowOutline.dark} in rows ${c.belowOutline.rows[0]}–${c.belowOutline.rows[1] - 1})` : "",
+        c.rows ? `, ${c.rows.keep} ${c.rows.fromPct.toFixed(2)}–${c.rows.toPct.toFixed(2)} %H (ramping across it)` : "",
       ].join("");
     };
     const whereBase = (region) => {
@@ -5096,6 +5100,406 @@ export const BREAKING_NEWS_NOTCH = Object.freeze({
 });
 
 // ---------------------------------------------------------------------------
+// TODO 5.9 (its one-faced part; owner 2026-11-25, the easy Card Conjurer
+// batch, item 3): the Innistrad: DOUBLE FEATURE frame (`doublefeature`,
+// `doublefeatureland`) — the black-and-white "silver screen" dress every
+// DBL printing wears (2022; 535 printings, `frame_effects: inverted`: 437
+// one-faced — 423 spells, artifacts and creatures and 14 lands — and 98
+// transform cards, which stay 5.9's and are not built here) — from Card
+// Conjurer's 'Double Feature (DBL)' pack (packDoubleFeature.js,
+// `img/frames/doubleFeature/`, 2010 × 2814; groupDFC.js). An ADDITION: two
+// new templates, no stored card sits on either. Self-contained: the
+// templates, their crown band and their stamp notches read only the
+// constants below.
+//   • geometry: the REGULAR M15 frame's — the pack draws through the regular
+//     M15 masks (m15/regular/m15Mask*.png) and its window, bars, box and
+//     plate sit where the accurate M15 masters' do (window 116–1383 ×
+//     238–1164 px on every key, M15's own; the title bar from 104, the type
+//     bar from 1172) — so nothing is re-cut; the masters are the pack's
+//     files whole, downscaled ONCE to 1500 × 2100 (Lanczos), as m15ub's and
+//     m15nyx's are.
+//   • masters (doublefeature): w u b r g, m (gold — every two-colour DBL
+//     card prints gold: #209, #216, #223 …; no pair dress), `a` = the pack's
+//     'Artifact Frame' (the blue-grey patterned field), which EVERY artifact
+//     of the run prints whatever its colour (#23 Hedgewitch's Mask white,
+//     #111 Mask of Griselbrand black, #142 Geistflame Reservoir red, #171
+//     Bramble Armor green; the profile's artifactMasterKeys maps every key
+//     there), and `c` the same file: the pack draws no colourless frame and
+//     the run prints no colourless non-artifact spell.
+//   • masters (doublefeatureland): `c` = the pack's grey stone 'Land Frame'
+//     (#261 / #530 Evolving Wilds, #262 Field of Ruin, #534 Voldaren
+//     Estate), w u b r g = its land tints (<k>l.png: the stone with the
+//     pinline in the colour), m = ml.png (the gold land: #534 Voldaren
+//     Estate, an any-colour land, prints it); and the ten
+//     two-colour PAIRS every dual of the run prints (#260 Deserted Beach …
+//     #533 Sundown Pass): 4.6b's land recipe over the pack's own files and
+//     masks — l.png whole, the pinline (and the box, the same pixels in every
+//     tint) lerped between the two land tints, the first colour on the left.
+//     The tints differ from l.png ONLY inside the Pinline mask (194,038 of
+//     194,708 differing pixels; the rest the mask's anti-aliased edge).
+//   • plates: the pack's 'Power/Toughness' per key (pt/<k>.png, 353 × 179 at
+//     its bounds 1555 / 2492 of 2010 × 2814 — a dark face in a rim of the
+//     card's colour), `c` the artifact's; the land frame has none of its own
+//     (pt/l.png 404s): a land creature draws the spell frame's.
+//   • tones (the ring's one rule: raw scan medians, a region toned only where
+//     ≥ 9 levels off — DBL_PRINT_TONES): Card Conjurer drew the colours far
+//     brighter and more saturated than print (the blue field 49,164,238
+//     against print's 44,89,172) — every coloured region is toned: the frame
+//     field, the land stone and pinlines, the plates' rims, the crowns and
+//     the land stamps' arches; the bars, the box and the plate faces are
+//     within 8–10 levels of the scans' (whose own black reads 22,19,14 — the
+//     scanner's black point, not print's), as drawn.
+// ---------------------------------------------------------------------------
+export const DBL = "img/frames/doubleFeature";
+const DBL_PACK = "packDoubleFeature.js 'Double Feature (DBL)' (groupDFC.js)";
+/** A recipe letter → the pack's file: w u b r g m, `a` (the artifact frame),
+ *  `l` (the land frame) and the land tints, named colour first (`wl.png` —
+ *  where the accurate M15 pack names them `lw.png`). */
+export const dblFrameFile = (letter) => `${DBL}/${letter}.png`;
+/** The pack's masks: the REGULAR M15 pack's six (packDoubleFeature.js's
+ *  `masks`), resized to the pack's card like every mask. */
+const DBL_MASK_DIR = "img/frames/m15/regular";
+export const DBL_MASK = Object.freeze({
+  border: `${DBL_MASK_DIR}/m15MaskBorder.png`,
+  frame: `${DBL_MASK_DIR}/m15MaskFrame.png`,
+  rules: `${DBL_MASK_DIR}/m15MaskRules.png`,
+  title: `${DBL_MASK_DIR}/m15MaskTitle.png`,
+  type: `${DBL_MASK_DIR}/m15MaskType.png`,
+  pinline: `${DBL_MASK_DIR}/m15MaskPinline.png`,
+});
+/**
+ * The pack's colours onto print by the ring's one rule (raw scan medians, a
+ * region ≥ 9 levels off on a channel is toned). Measured 2026-11-25 on the
+ * run's one-faced printings (Scryfall PNGs, 745 × 1040, read at 1500 ×
+ * 2100), each registered on the pack's master by the bars' edges and the
+ * window's sides; the pack read at the SCANS' resolution (downscaled to
+ * 745 px and back up), so a thin region is blurred alike on both:
+ *   • the frame FIELD (the pixels where the colour's frame differs from the
+ *     white one — the blue one for the white — in the side strips beside the
+ *     window, eroded 2 px; over the regular M15 Frame mask as the file
+ *     loads): w 189,189,189 → 196,196,200 (11 prints), u 49,164,238 →
+ *     44,89,172 (12), b 172,36,177 → 71,29,100 (14), r 213,33,24 → 147,27,18
+ *     (10), g 58,193,67 → 67,116,54 (11), gold 176,140,38 → 173,129,48 (23),
+ *     the artifact's 133,149,151 → 98,109,106 (18) — TONED, every key;
+ *     and, BELOW the type bar (rows 1340–1900; the pack's field turns
+ *     another hue there, the green toward yellow, the blue toward cyan, which
+ *     print does less), a second tone, the two meeting across the type bar's
+ *     rows (DBL_FIELD_SPLIT): w 223,223,223 → 182,184,185, u 86,196,215 →
+ *     84,138,142, b 172,81,152 → 98,43,104, r 207,71,48 → 148,46,29, g
+ *     138,195,68 → 95,134,65, gold 191,169,64 → 158,138,63 — TONED; the
+ *     artifact's pattern keeps one tone (its lower field reads as its
+ *     upper);
+ *   • the land STONE (the land frame's field, the same pixels in every tint):
+ *     49,49,49 → 60,54,50 (all 14 lands) — TONED;
+ *   • the land PINLINE (its core: the most saturated pixel of each row of
+ *     the line beside the window and the box — the white's the brightest —
+ *     each side read with its colour, a dual's left with its first): w
+ *     248,250,250 → 229,230,239, u 14,195,238 → 60,150,191, b 180,40,152 →
+ *     96,44,117, r 255,48,30 → 184,42,16, g 147,215,62 → 105,154,63 (4 duals
+ *     each), gold 255,222,19 → 212,166,57 (#534 Voldaren Estate, both
+ *     sides) — TONED, every one by its luminance (a thin flat line: a
+ *     per-channel gain lifts the near-zero channel of its anti-aliased edge
+ *     into a fringe — the blue's red × 4.3 drew it pink); the grey land's
+ *     pinline is dark (37,34,33 against 36,38,28), as drawn;
+ *   • the plate's RIM (the plate's pixels that differ from another key's
+ *     plate, eroded 2 px; each plate registered on its own): w 227,226,227
+ *     → 202,198,200 (8), u 0,194,223 → 75,156,179 (10; a 0 channel, toned
+ *     by its luminance), b 186,52,151 → 122,46,121 (9), r 236,41,34 →
+ *     182,36,25 (5), g 160,211,63 → 118,169,80 (9), gold 252,209,32 →
+ *     217,187,81 (20), the artifact's 203,220,219 → 162,180,176 (2) —
+ *     TONED; the face (38,35,36 against 34–37,34–38,26–31) as drawn;
+ *   • the CROWN (the crown's pixels that differ from another key's crown,
+ *     above row 110, eroded 2 px; each crown registered on its own): w
+ *     155,158,161 → 112,117,118 (2), u 0,74,116 → 11,30,69 (2; by its
+ *     luminance), b 69,22,105 → 27,16,62 (4), g 17,99,37 → 23,55,22 (1),
+ *     gold 102,75,1 → 63,40,14 (14; by its luminance), the artifact's
+ *     69,96,104 → 40,62,66 (2) — TONED; red unprinted (the run has no
+ *     mono-red legend, one-faced or transform), as drawn;
+ *   • the land STAMP's arch (the coloured pinline lifted over the oval):
+ *     toned onto the pinline's print colour from the piece's own (w 255 —
+ *     by its luminance —, u 104,218,230, b 176,48,142, r 255,63,37, g
+ *     146,198,57; gold 255,223,33), by its luminance like the pinline.
+ *   The plates' rims are flat colours too: toned by their luminance.
+ * Through toneSourceRegions: a per-channel gain at the region's tone, fading
+ * to the neutral (luma) gain toward white — or, for a tone `mode: "luma"`,
+ * the tone's colour at each pixel's own luminance (at most × 1.25).
+ */
+export const DBL_PRINT_TONES = Object.freeze({
+  field: Object.freeze({
+    w: Object.freeze({ from: [189, 189, 189], to: [196, 196, 200] }),
+    u: Object.freeze({ from: [49, 164, 238], to: [44, 89, 172] }),
+    b: Object.freeze({ from: [172, 36, 177], to: [71, 29, 100] }),
+    r: Object.freeze({ from: [213, 33, 24], to: [147, 27, 18] }),
+    g: Object.freeze({ from: [58, 193, 67], to: [67, 116, 54] }),
+    m: Object.freeze({ from: [176, 140, 38], to: [173, 129, 48] }),
+    a: Object.freeze({ from: [133, 149, 151], to: [98, 109, 106] }),
+  }),
+  fieldLow: Object.freeze({
+    w: Object.freeze({ from: [223, 223, 223], to: [182, 184, 185] }),
+    u: Object.freeze({ from: [86, 196, 215], to: [84, 138, 142] }),
+    b: Object.freeze({ from: [172, 81, 152], to: [98, 43, 104] }),
+    r: Object.freeze({ from: [207, 71, 48], to: [148, 46, 29] }),
+    g: Object.freeze({ from: [138, 195, 68], to: [95, 134, 65] }),
+    m: Object.freeze({ from: [191, 169, 64], to: [158, 138, 63] }),
+  }),
+  landField: Object.freeze({ from: [49, 49, 49], to: [60, 54, 50] }),
+  pinline: Object.freeze({
+    w: Object.freeze({ from: [248, 250, 250], to: [229, 230, 239], mode: "luma" }),
+    u: Object.freeze({ from: [14, 195, 238], to: [60, 150, 191], mode: "luma" }),
+    b: Object.freeze({ from: [180, 40, 152], to: [96, 44, 117], mode: "luma" }),
+    r: Object.freeze({ from: [255, 48, 30], to: [184, 42, 16], mode: "luma" }),
+    g: Object.freeze({ from: [147, 215, 62], to: [105, 154, 63], mode: "luma" }),
+    m: Object.freeze({ from: [255, 222, 19], to: [212, 166, 57], mode: "luma" }),
+  }),
+  rim: Object.freeze({
+    w: Object.freeze({ from: [227, 226, 227], to: [202, 198, 200], mode: "luma" }),
+    u: Object.freeze({ from: [0, 194, 223], to: [75, 156, 179], mode: "luma" }),
+    b: Object.freeze({ from: [186, 52, 151], to: [122, 46, 121], mode: "luma" }),
+    r: Object.freeze({ from: [236, 41, 34], to: [182, 36, 25], mode: "luma" }),
+    g: Object.freeze({ from: [160, 211, 63], to: [118, 169, 80], mode: "luma" }),
+    m: Object.freeze({ from: [252, 209, 32], to: [217, 187, 81], mode: "luma" }),
+    a: Object.freeze({ from: [203, 220, 219], to: [162, 180, 176], mode: "luma" }),
+  }),
+  crown: Object.freeze({
+    w: Object.freeze({ from: [155, 158, 161], to: [112, 117, 118] }),
+    u: Object.freeze({ from: [0, 74, 116], to: [11, 30, 69], mode: "luma" }),
+    b: Object.freeze({ from: [69, 22, 105], to: [27, 16, 62] }),
+    g: Object.freeze({ from: [17, 99, 37], to: [23, 55, 22] }),
+    m: Object.freeze({ from: [102, 75, 1], to: [63, 40, 14], mode: "luma" }),
+    a: Object.freeze({ from: [69, 96, 104], to: [40, 62, 66] }),
+  }),
+  stamp: Object.freeze({
+    w: Object.freeze({ from: [255, 255, 255], to: [229, 230, 239], mode: "luma" }),
+    u: Object.freeze({ from: [104, 218, 230], to: [60, 150, 191], mode: "luma" }),
+    b: Object.freeze({ from: [176, 48, 142], to: [96, 44, 117], mode: "luma" }),
+    r: Object.freeze({ from: [255, 63, 37], to: [184, 42, 16], mode: "luma" }),
+    g: Object.freeze({ from: [146, 198, 57], to: [105, 154, 63], mode: "luma" }),
+    m: Object.freeze({ from: [255, 223, 33], to: [212, 166, 57], mode: "luma" }),
+  }),
+});
+/**
+ * A region's share by row for a `rows` clip (TODO 5.9): `keep: "above"` is
+ * 1 above `fromPct` (of the height), 0 below `toPct`, linear between (a row's
+ * centre); `"below"` the complement — the two sides of one band sum to 1.
+ * Pure.
+ */
+export function rowsClipShare({ fromPct, toPct, keep }, height) {
+  if (!(toPct > fromPct) || (keep !== "above" && keep !== "below")) throw new Error(`rowsClipShare: bad rows ${JSON.stringify({ fromPct, toPct, keep })}`);
+  const share = new Float64Array(height);
+  for (let y = 0; y < height; y += 1) {
+    const pct = ((y + 0.5) / height) * 100;
+    const below = Math.min(1, Math.max(0, (pct - fromPct) / (toPct - fromPct)));
+    share[y] = keep === "below" ? below : 1 - below;
+  }
+  return share;
+}
+/** The Double Feature field's two tones meet across the type bar (its rows
+ *  1150–1330 at HD — the field there runs behind the bar's ends): the upper
+ *  tone above, the lower below. */
+export const DBL_FIELD_SPLIT = Object.freeze({ fromPct: (1150 / 2100) * 100, toPct: (1330 / 2100) * 100 });
+/** A plate's rim, a crown's colour and a land stamp's arch: the pixels where
+ *  the file differs from another key's of the same kind by ≥ `full` levels
+ *  (max channel), none at ≤ `none` — the dark faces, outlines and black the
+ *  two share are left alone. */
+export const DBL_ACCENT_DIFF = Object.freeze({ full: 40, none: 16 });
+/** The file a key's accent is read against: the white one's (the blue one,
+ *  for the white and the artifact's, whose pale rim the white one's is
+ *  within 40 levels of). */
+const dblAccentRef = (dir, key) => `${DBL}/${dir}${key === "w" || key === "a" ? "u" : "w"}.png`;
+const dblAccentTone = (dir, key, region, tone, table) =>
+  Object.freeze({
+    diff: Object.freeze({ [region]: Object.freeze({ file: dblAccentRef(dir, key), ...DBL_ACCENT_DIFF }) }),
+    tones: Object.freeze({ [region]: tone }),
+    table,
+  });
+/** The Double Feature pack's toned files (DBL_PRINT_TONES): every frame file
+ *  (its field through the Frame mask), every land file (its stone, and a
+ *  tint's pinline through the Pinline mask), every plate and crown but the
+ *  red crown (unprinted), and the coloured land stamps. */
+export const DBL_SOURCE_TONES = Object.freeze(
+  Object.fromEntries([
+    ...Object.entries(DBL_PRINT_TONES.field).map(([k, tone]) => {
+      const low = DBL_PRINT_TONES.fieldLow[k];
+      // The field in two tones where the pack's gradient turns another hue
+      // below the type bar (DBL_FIELD_SPLIT); the artifact's in one.
+      if (!low) return [dblFrameFile(k), Object.freeze({ masks: Object.freeze({ field: DBL_MASK.frame }), tones: Object.freeze({ field: tone }), table: `DBL_PRINT_TONES.field.${k}` })];
+      return [
+        dblFrameFile(k),
+        Object.freeze({
+          masks: Object.freeze({ field: DBL_MASK.frame, fieldLow: DBL_MASK.frame }),
+          clip: Object.freeze({ field: Object.freeze({ rows: Object.freeze({ ...DBL_FIELD_SPLIT, keep: "above" }) }), fieldLow: Object.freeze({ rows: Object.freeze({ ...DBL_FIELD_SPLIT, keep: "below" }) }) }),
+          tones: Object.freeze({ field: tone, fieldLow: low }),
+          table: `DBL_PRINT_TONES.field.${k} + DBL_PRINT_TONES.fieldLow.${k}`,
+        }),
+      ];
+    }),
+    [dblFrameFile("l"), Object.freeze({ masks: Object.freeze({ field: DBL_MASK.frame }), tones: Object.freeze({ field: DBL_PRINT_TONES.landField }), table: "DBL_PRINT_TONES.landField" })],
+    ...Object.entries(DBL_PRINT_TONES.pinline).map(([k, tone]) => [
+      dblFrameFile(`${k}l`),
+      Object.freeze({
+        masks: Object.freeze({ field: DBL_MASK.frame, pinline: DBL_MASK.pinline }),
+        tones: Object.freeze({ field: DBL_PRINT_TONES.landField, pinline: tone }),
+        table: `DBL_PRINT_TONES.landField + DBL_PRINT_TONES.pinline.${k}`,
+      }),
+    ]),
+    ...Object.entries(DBL_PRINT_TONES.rim).map(([k, tone]) => [`${DBL}/pt/${k}.png`, dblAccentTone("pt/", k, "rim", tone, `DBL_PRINT_TONES.rim.${k}`)]),
+    ...Object.entries(DBL_PRINT_TONES.crown).map(([k, tone]) => [`${DBL}/crowns/${k}.png`, dblAccentTone("crowns/", k, "crown", tone, `DBL_PRINT_TONES.crown.${k}`)]),
+    ...Object.entries(DBL_PRINT_TONES.stamp).map(([k, tone]) => [
+      `${DBL}/stamps/${k}.png`,
+      Object.freeze({
+        diff: Object.freeze({ arch: Object.freeze({ file: `${DBL}/stamps/stamp.png`, ...DBL_ACCENT_DIFF }) }),
+        tones: Object.freeze({ arch: tone }),
+        table: `DBL_PRINT_TONES.stamp.${k}`,
+      }),
+    ]),
+  ]),
+);
+/** The spell frame's plates: the pack's per key; the colourless key the
+ *  artifact's (its master is the artifact frame). */
+const DBL_PT = Object.freeze(perColor((k) => `${DBL}/pt/${k === "c" ? "a" : k}.png`));
+const DBL_NOTES = [
+  "w u b r g m = the pack's colour frames whole (doubleFeature/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as every DBL printing draws them (Innistrad: Double Feature, 2022: the black-and-white 'silver screen' frame, Scryfall `inverted`); the pack's window, bars, box and plate are the regular M15 frame's, so nothing is re-cut",
+  "m = gold: every two-colour DBL card prints the gold frame (#209 Angelfire Ignition, #216 Dawnhart Wardens, #223 Florian …) — no pair dress",
+  "a = the pack's 'Artifact Frame' (doubleFeature/a.png, the blue-grey patterned field): EVERY artifact of the run prints it, whatever its colour (#23 Hedgewitch's Mask white, #111 Mask of Griselbrand black, #142 Geistflame Reservoir red, #171 Bramble Armor green, #252 The Celestus colourless) — FrameProfile.artifactMasterKeys maps every colour key to it",
+  "c = the same artifact frame: the pack draws no colourless frame and the run prints no colourless non-artifact spell",
+  "plates = the pack's 'Power/Toughness' per key (doubleFeature/pt/<k>.png, 353x179 at its bounds 1555/2492 of 2010x2814 — a dark face in a rim of the card's colour, white digits on print); c = the artifact's",
+  "toned onto the prints (DBL_PRINT_TONES through DBL_SOURCE_TONES, recorded under sourceTones) as each FILE loads: the frame field through the regular M15 Frame mask (every key: Card Conjurer drew the colours far brighter and more saturated than print — the blue 49,164,238 against 44,89,172) and the plates' rims; the bars, the box and the plate faces within 8–10 levels of the scans, as drawn",
+];
+const DBL_LAND_NOTES = [
+  "c = the pack's grey stone 'Land Frame' (doubleFeature/l.png) whole, downscaled once to 1500x2100 (Lanczos): the run's colourless lands print it (#261 / #530 Evolving Wilds, #262 Field of Ruin — not #534 Voldaren Estate, an any-colour land on the gold m)",
+  "w u b r g = the pack's land tints (doubleFeature/<k>l.png: the stone with the pinline in the colour); m = ml.png (gold: #534 Voldaren Estate, an any-colour land, prints it)",
+  "the ten two-colour PAIRS (the 'split' dress — every dual of the run: #260 Deserted Beach, #263 Haunted Ridge, #265 Overgrown Farmland, #266 Rockfall Vale, #267 Shipwreck Marsh, #528 Deathcap Glade, #529 Dreamroot Cascade, #531 Shattered Sanctum, #532 Stormcarved Coast, #533 Sundown Pass) = 4.6b's land recipe (twoColorRecipe kind 'land') over the pack's own files and masks (the regular M15 masks): l.png whole, the pinline (40→60 %W) and the box (45→57 %W, the same pixels in every tint) lerped between the two land tints, first canonical colour on the left — the tints differ from l.png only inside the Pinline mask",
+  "toned onto the prints (DBL_PRINT_TONES): the stone (49,49,49 → 60,54,50) and each tint's pinline (the white 248,250,250 → 229,230,239, the red 255,48,30 → 184,42,16 …) as the file loads, so every master and pair drawn from it carries the same pixels; the gold pinline 255,222,19 → 212,166,57 (#534); the grey land's dark pinline as drawn. The pack's pinline is drawn ~2x as wide as print's (10 px against 6–7 at HD): a drawing difference, kept (no flat zone to re-cut it through)",
+  "no plates of its own (the pack's pt/l.png 404s): a land creature draws the spell frame's plates (the profile's plateAssetPathTemplate)",
+];
+/**
+ * The Double Feature legendary crown (TODO 5.9): the pack's 'Legend Crown'
+ * (`doubleFeature/crowns/<k>.png`, 2010 × 341 at crownBounds 0 / 0 of the
+ * 2010 × 2814 card) — the whole top of the card: the black border, the
+ * crown's arch over the title bar in the card's colour and the bar's frame,
+ * the bar itself left clear — which every legendary DBL print carries (#1
+ * Adeline, #59 Lier, #103 Gisa, #223 Florian, #252 The Celestus …; plain:
+ * #8, #43). A generic band: the crown placed at its bounds on a clear
+ * 2010 × 2814 canvas, downscaled once, the card corner cut, cropped to rows
+ * 0–257 of the HD card (the crown ends at 254.5). Keys: w u b r g, m (gold),
+ * a (the artifact's — every artifact, any colour: the profile's
+ * artifactKeyMap, and the colourless key, keyMap c → a). The pack's land
+ * crown 404s: no crown on the land frame.
+ */
+export const DBL_CROWN_BAND = Object.freeze({
+  source: `${DBL}/crowns`,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a"]),
+  crown: Object.freeze({ leftPct: 0, topPct: 0, widthPct: 100, heightPct: (341 / 2814) * 100 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  rows: 258,
+});
+/** The Double Feature crown band's one layer for a key. */
+export function dblCrownLayers(key) {
+  if (!DBL_CROWN_BAND.keys.includes(key)) throw new Error(`dblCrownLayers: no crown for key ${key}`);
+  return [placed(`${DBL_CROWN_BAND.source}/${key}.png`, DBL_CROWN_BAND.crown)];
+}
+/**
+ * What the importer checks on the full 1500 × 2100 Double Feature crown
+ * composite (pure): nothing at or below the band's last row; the crown
+ * opaque across the card's top (α ≥ 250 at (750, 20), the border's black, and
+ * at (40, 150), the side border beside the bar — the pack draws the whole
+ * top); and the title bar's interior clear (α 0 at (750, 160): the master's
+ * own bar shows there).
+ */
+export function dblCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  const alphaAt = (x, y) => buf[(y * width + x) * 4 + 3];
+  const top = alphaAt(750, 20);
+  const side = alphaAt(40, 150);
+  const bar = alphaAt(750, 160);
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (top < 250) failures.push(`the crown's top is α ${top} at (750, 20), the pack draws it opaque`);
+  if (side < 250) failures.push(`the crown's side is α ${side} at (40, 150), the pack draws it opaque`);
+  if (bar > 0) failures.push(`α ${bar} inside the title bar at (750, 160), the pack leaves it clear`);
+  return { lastAlphaRow, peakRow: 0, failures, summary: `top α ${top}, side α ${side}, bar α ${bar}` };
+}
+/**
+ * The Double Feature OVAL stamp notches (TODO 5.9): the pack's 'Holo Stamp'
+ * pieces (`doubleFeature/stamps/*.png`, 264 × 130 at its stampBounds 873 /
+ * 2539 of 2010 × 2814 — the text box's foot arched up round the hologram:
+ * the spell piece's arch the box's dark rim, each land piece's the pinline
+ * in its colour) composited on the whole card and downscaled with it, then
+ * cut to DBL_NOTCH_BOX (1 px round the piece and 3 px past its foot, so the
+ * oval's cut fits) and drawn 1:1 there. Two things are dropped from each
+ * piece: its soft white glow above the arch (α ≤ 45 — print draws the box
+ * dark to the arch) and the pack's capture of WotC's hologram in the well
+ * (686–814 × 1928–1989 px once placed: painted opaque black first, grown
+ * 2 px); then the prints' oval — M15's (lib/cards/holo-stamp.ts
+ * M15_HOLO_STAMP_OVAL, 683–817 × 1926–1993: the 49 stamped DBL prints read
+ * lit from 683–698 to 801–813 across and from 1924–1945 down to 1985–1992,
+ * the physical hologram where the bordered frame sets it) plus 2 px is cut
+ * clear and the 2 px round it painted black. Our own oval art covers the cut
+ * (lib/cards/holo-stamp-art.ts).
+ *   • spells (doublefeatureholostamp): the pack's one 'Holo Stamp' under
+ *     every key;
+ *   • lands (doublefeaturelandholostamp): a tint's own piece (stamps/<k>.png,
+ *     its arch toned with the pinline — DBL_PRINT_TONES.stamp), the grey land
+ *     the spell piece (its pinline is dark), and the ten pairs the two
+ *     colours' pieces lerped across the pinline's ramp (40→60 %W — the
+ *     notch's 650–850 px sit inside it), as #266 Rockfall Vale prints the arch
+ *     from red into green.
+ */
+export const DBL_NOTCH_BOX = Object.freeze({ x: 650, y: 1893, width: 200, height: 103 });
+const dblNotchShape = Object.freeze({
+  size: Object.freeze({ width: DBL_NOTCH_BOX.width, height: DBL_NOTCH_BOX.height }),
+  bounds: Object.freeze({
+    leftPct: (DBL_NOTCH_BOX.x / 1500) * 100,
+    topPct: (DBL_NOTCH_BOX.y / 2100) * 100,
+    widthPct: (DBL_NOTCH_BOX.width / 1500) * 100,
+    heightPct: (DBL_NOTCH_BOX.height / 2100) * 100,
+  }),
+});
+const DBL_NOTCH_BASE = Object.freeze({
+  placeAt: Object.freeze({ x: 873, y: 2539, width: 264, height: 130 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  shape: dblNotchShape,
+  oval: M15_HOLO_STAMP_OVAL,
+  /** The capture's pixels in the notch box: the well's lit pixels (luma >
+   *  60) inside the ellipse inscribed in box x 33–167, rows 34–99 — the
+   *  capture (686–814 × 1928–1989 px) and 3 px round it; the arch (its
+   *  lowest row 1921 at the centre) and its feet lie outside it. */
+  capture: Object.freeze({ x0: 33, x1: 167, y0: 34, y1: 99, minLuma: 60, oval: true }),
+  /** The pieces' soft glow above the arch (α ≤ 45 at the pack's size, ≤ 47
+   *  once downscaled): pixels under this alpha are cleared. */
+  clearAlphaBelow: 50,
+});
+const DBL_SPELL_NOTCH_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "a", "c"]);
+export const DBL_NOTCH = Object.freeze({
+  ...DBL_NOTCH_BASE,
+  keys: DBL_SPELL_NOTCH_KEYS,
+  pieces: Object.freeze(Object.fromEntries(DBL_SPELL_NOTCH_KEYS.map((k) => [k, `${DBL}/stamps/stamp.png`]))),
+});
+const DBL_LAND_NOTCH_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]);
+const dblLandStamp = (k) => `${DBL}/stamps/${k === "c" ? "stamp" : k}.png`;
+export const DBL_LAND_NOTCH = Object.freeze({
+  ...DBL_NOTCH_BASE,
+  keys: DBL_LAND_NOTCH_KEYS,
+  pieces: Object.freeze(
+    Object.fromEntries(
+      DBL_LAND_NOTCH_KEYS.map((k) => {
+        if (!TWO_COLOR_PAIRS.includes(k)) return [k, dblLandStamp(k)];
+        const [a, b] = pairSides(k);
+        return [k, Object.freeze({ src: dblLandStamp(a), right: dblLandStamp(b), ramp: Object.freeze([...PAIR_RAMPS.pinline]) })];
+      }),
+    ),
+  ),
+});
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings RING showcase
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
@@ -6883,6 +7287,27 @@ export const CC_TEMPLATES = {
     plates: TARDIS_PT,
     pack: TARDIS_PACK,
     notes: TARDIS_NOTES,
+  },
+  // TODO 5.9 (one-faced): the Innistrad: Double Feature frame (see DBL
+  // above) — the pack's colour frames whole, `a` and `c` its artifact frame.
+  doublefeature: {
+    colors: {
+      ...perColor((k) => [layer(dblFrameFile(k === "c" ? "a" : k))]),
+      a: [layer(dblFrameFile("a"))],
+    },
+    plates: DBL_PT,
+    pack: DBL_PACK,
+    notes: DBL_NOTES,
+  },
+  // …and its land frame: the grey stone, the tints, and the ten duals
+  // through the pack's own masks.
+  doublefeatureland: {
+    colors: {
+      ...perColor((k) => [layer(dblFrameFile(k === "c" ? "l" : `${k}l`))]),
+      ...pairMasters("land", ["split"], (pair, dress, kind) => pairMasterLayers(pair, dress, kind, dblFrameFile, DBL_MASK)),
+    },
+    pack: DBL_PACK,
+    notes: DBL_LAND_NOTES,
   },
   // TODO 4.11 wave 2: the Wilds of Eldraine Enchanting Tales showcase (see
   // ETALES above) — the pack's six frames, `c` the white one.
@@ -9716,6 +10141,20 @@ export const CC_OVERLAY_BANDS = {
       "the green and blue crowns toned onto print as the file loads (DOSSIER_PRINT_TONES: the pack draws them 11–12 levels off the frame's own accents, which print uses for the crown too)",
     ],
   },
+  // TODO 5.9: the Double Feature crown — a generic band, the pack's crown
+  // (the card's whole top) at its own bounds (DBL_CROWN_BAND).
+  doublefeaturecrown: {
+    pack: DBL_PACK,
+    band: DBL_CROWN_BAND,
+    keys: DBL_CROWN_BAND.keys,
+    layers: dblCrownLayers,
+    findings: dblCrownFindings,
+    notes: [
+      "the Double Feature legendary crown (TODO 5.9): the pack's 'Legend Crown' (doubleFeature/crowns/<k>.png, 2010x341 at crownBounds 0/0 of the 2010x2814 card) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos), the card corner cut, cropped to rows 0–257 — the whole top of the card (the black border, the crown's arch over the title bar in the card's colour, the bar's frame; the bar itself left clear) that every legendary DBL print carries (#1 Adeline, #59 Lier, #103 Gisa, #223 Florian, #252 The Celestus; plain: #8, #43)",
+      "keys = the pack's seven crowns: w u b r g, m (gold), a (the artifact's — every artifact of the run, any colour, prints the artifact frame: the profile's artifactKeyMap, and keyMap c → a); the pack's land crown 404s, so the land frame draws none",
+      "toned onto the prints as the file loads (DBL_PRINT_TONES.crown: the crowns' colour where it differs from another key's crown): Card Conjurer drew them far brighter than print; the red crown, which no DBL print shows, as drawn",
+    ],
+  },
   // TODO 4.11 wave 2: the Breaking News crown — a generic band, the pack's
   // crown at its own bounds, the pairs lerped (BREAKING_NEWS_CROWN_BAND).
   breakingnewscrown: {
@@ -10273,6 +10712,47 @@ export const HOLO_STAMP_NOTCHES = {
       `the hologram: the pack paints a capture of WotC's oval in the well (${TARKIR_CAPTURE_PX.x}–${TARKIR_CAPTURE_PX.x + TARKIR_CAPTURE_PX.width} × ${TARKIR_CAPTURE_PX.y}–${TARKIR_CAPTURE_PX.y + TARKIR_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${TARKIR_STAMP_OVAL_PX.width} × ${TARKIR_STAMP_OVAL_PX.height} at ${TARKIR_STAMP_OVAL_PX.x}, ${TARKIR_STAMP_OVAL_PX.y} — MUL #1 / #60 / #131 / #190, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
+  // TODO 5.9: the Double Feature OVAL notches — the pack's pieces placed
+  // and downscaled with the card, their glow and capture dropped, the
+  // prints' oval cut (DBL_NOTCH, DBL_LAND_NOTCH).
+  doublefeatureholostamp: {
+    pack: DBL_PACK,
+    pieces: DBL_NOTCH.pieces,
+    keys: DBL_NOTCH.keys,
+    shape: DBL_NOTCH.shape,
+    placeAt: DBL_NOTCH.placeAt,
+    compositeSize: DBL_NOTCH.compositeSize,
+    oval: DBL_NOTCH.oval,
+    capture: DBL_NOTCH.capture,
+    clearAlphaBelow: DBL_NOTCH.clearAlphaBelow,
+    blackoutCapturePx: 2,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the Double Feature oval stamp notch (TODO 5.9): the pack's 'Holo Stamp' (doubleFeature/stamps/stamp.png, 264x130 — the text box's dark foot arched up round the hologram) placed at its stampBounds (873/2010, 2539/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box ${DBL_NOTCH_BOX.width}x${DBL_NOTCH_BOX.height} at ${DBL_NOTCH_BOX.x},${DBL_NOTCH_BOX.y} px of the 1500x2100 card, drawn 1:1 from there`,
+      "keys = the masters' w u b r g m, a and c, every one the same piece (every master is the same dark box under the arch)",
+      `the piece's soft white glow above the arch (α ≤ 45 — print draws the box dark to the arch) is cleared (α < ${DBL_NOTCH.clearAlphaBelow} once downscaled); the pack's capture of WotC's oval in the well (686–814 × 1928–1989 px once placed) is painted opaque black (grown 2 px), then the prints' oval — M15's (M15_HOLO_STAMP_OVAL: the physical hologram sits where the bordered frame sets it, 49 stamped DBL prints) — plus 2 px is cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+    ],
+  },
+  doublefeaturelandholostamp: {
+    pack: DBL_PACK,
+    pieces: DBL_LAND_NOTCH.pieces,
+    keys: DBL_LAND_NOTCH.keys,
+    shape: DBL_LAND_NOTCH.shape,
+    placeAt: DBL_LAND_NOTCH.placeAt,
+    compositeSize: DBL_LAND_NOTCH.compositeSize,
+    oval: DBL_LAND_NOTCH.oval,
+    capture: DBL_LAND_NOTCH.capture,
+    clearAlphaBelow: DBL_LAND_NOTCH.clearAlphaBelow,
+    blackoutCapturePx: 2,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    notes: [
+      `the Double Feature land's oval stamp notch (TODO 5.9): the pack's 'Land Holo Stamp' per colour (doubleFeature/stamps/<k>.png, 264x130 — the pinline in the colour arched up round the hologram) at its stampBounds, placed and downscaled with the card and cut to the spell notch's box (${DBL_NOTCH_BOX.width}x${DBL_NOTCH_BOX.height} at ${DBL_NOTCH_BOX.x},${DBL_NOTCH_BOX.y} px)`,
+      "keys = w u b r g, m (gold: #534 Voldaren Estate), c (the grey land, whose pinline is dark: the spell piece) and the ten pairs — the two colours' pieces lerped (premultiplied) across the pinline's ramp (40→60 %W, the notch inside it) on the pack's card before the downscale, as the duals print the arch from their first colour into their second (#266 Rockfall Vale, #260 Deserted Beach)",
+      "each tint's arch toned onto its pinline's print colour as the file loads (DBL_PRINT_TONES.stamp: the pixels where the piece differs from the spell piece); the glow, the capture and the cut as the spell notch's",
+    ],
+  },
   // TODO 4.11 wave 2: the Doctor Who TARDIS's triangle notch — the pack's
   // one piece, 1:1, its capture blacked out, the Universes Beyond hole cut
   // (TARDIS_NOTCH).
@@ -10658,7 +11138,8 @@ export const NOTCH_FOOT = Object.freeze({
 export function notchSourceFiles(def) {
   // A notch made of the pack's own piece per key (TODO 4.11: the scroll).
   if (def.pieces) {
-    const pieces = Object.values(def.pieces);
+    // (A pair's piece, TODO 5.9: its two pieces lerped — notchPieceFiles.)
+    const pieces = [...new Set(Object.values(def.pieces).flatMap(notchPieceFiles))];
     // …and a toned piece's mask (the LOTR ring's Rules mask, TODO 4.11).
     const masks = pieces.flatMap((src) => [...Object.values(sourceTonesOf(src)?.masks ?? {}), ...[...Object.values(sourceTonesOf(src)?.diff ?? {}), ...Object.values(sourceTonesOf(src)?.box ?? {})].map((d) => d.file).filter(Boolean)]);
     return [...new Set([...pieces, ...masks, ...(def.stampShape ? [def.stampShape] : [])])].sort();
@@ -10678,6 +11159,16 @@ export function describeColumnTint(def, tint) {
 /** How provenance prints one notch key's recipe: a flat tint names its
  *  colour and sample column; a per-column tint (a pair) names the bar's
  *  ramp across the piece and the masters that share it. */
+/** The pack files one notch piece is made of: a file, or (TODO 5.9: a Double
+ *  Feature dual's) the two pieces lerped `{ src, right, ramp }`. */
+export function notchPieceFiles(piece) {
+  return typeof piece === "string" ? [piece] : [piece.src, piece.right];
+}
+/** How provenance names one notch piece. */
+export function describeNotchPiece(piece) {
+  return typeof piece === "string" ? piece : `${piece.src} ⟷ ${piece.right} lerped (premultiplied) across ${rampName(piece.ramp)}`;
+}
+
 export function describeNotch(def, key, tint) {
   const origin = rectPx(def.shape.bounds, OUT_W, OUT_H);
   const rows = `rows ${def.barSample.rows[0]}–${def.barSample.rows[1]}`;

@@ -332,6 +332,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // rule, and its pair masters (the colour frames lerped across print's
       // split) with the crown's pairs.
       "breakingnews",
+      // …and the Innistrad: Double Feature (TODO 5.9): the pack's crown, the
+      // card's whole top (its land dress none: the pack's land crown 404s).
+      "doublefeature",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -370,6 +373,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Doctor Who TARDIS (4.11 wave 2): its pair masters, and no crown
       // (its brace is on every print, in the masters).
       t === "tardis" ||
+      // The Innistrad: Double Feature land (TODO 5.9): its duals, and no
+      // crown (the pack's land crown 404s).
+      t === "doublefeatureland" ||
       OLD_FRAME_PAIRED.includes(t) ||
       // The Strixhaven Mystical Archive (TODO 4.11 wave 2): its pair masters
       // and no crown (no legend prints on it).
@@ -385,7 +391,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
       // way; nor the MUL Tarkir dragon wings, which split the frame itself,
       // twoColorSplit.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "bloomburrow" && t !== "bloomanime" && t !== "sncartdeco" && t !== "battle" && t !== "sagadfcfront" && t !== "doublefeature" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -465,6 +471,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       tardis: ["split"],
       // The OTJ Breaking News (4.11 wave 2): the same, across print's split.
       breakingnews: ["split"],
+      // The Innistrad: Double Feature land (TODO 5.9): the duals' split
+      // pinline (every two-colour DBL spell prints gold: no pairs there).
+      doublefeatureland: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -554,7 +563,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Doctor Who TARDIS (4.11 wave 2): the pack's one trapezoid, the Universes Beyond hole.
     "tardis",
     // …and the OTJ Breaking News (4.11 wave 2): the pack's one oval tab.
-    "breakingnews"];
+    "breakingnews",
+    // …and the Innistrad: Double Feature's (TODO 5.9): the pack's arch, the
+    // land's per colour.
+    "doublefeature", "doublefeatureland"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -832,7 +844,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "mysticalarchive", "breakingnews", "extendedartland", "retroland", "modernland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "mysticalarchive", "breakingnews", "doublefeatureland", "extendedartland", "retroland", "modernland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

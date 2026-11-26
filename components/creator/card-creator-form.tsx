@@ -226,7 +226,7 @@ import {
   showsPowerToughness,
 } from "@/lib/cards/card-display";
 import { cardCornersClass, isLandscapeFrame } from "@/lib/cards/card-orientation";
-import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isFrameComboAvailable, verifiedKeysForType } from "@/lib/cards/frame-availability";
 import {
   colorIdentityForKey,
   colorWord,
@@ -2374,7 +2374,13 @@ export function CardCreatorForm({
       kind: kindFromCard(patch.card_type, patch.template),
       candidates: [patch.template],
       colorKey: currentColorKey,
-      verifiedKeys: new Set(verifiedFrameKeys),
+      // (Read for the card's new type, as the save's gate will: an artifact
+      // reads a frame that dresses its colour as the artifact master —
+      // Double Feature, TODO 5.9 — as published only with `c` ticked too.)
+      verifiedKeys: verifiedKeysForType(new Set(verifiedFrameKeys), {
+        cardType: patch.card_type,
+        supertype: getValues("supertype"),
+      }),
       prefer: "frame",
     });
     return { currentColorKey, resolution };
@@ -3057,7 +3063,13 @@ export function CardCreatorForm({
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
     };
-    const verifiedKeys = new Set(verifiedFrameKeys);
+    // (Read for the printing's type: an artifact sees a frame that dresses
+    // its colour as the artifact master — Double Feature, TODO 5.9 — only
+    // once that master's review is ticked too, as the save's gate.)
+    const verifiedKeys = verifiedKeysForType(new Set(verifiedFrameKeys), {
+      cardType: patch.card_type,
+      supertype: patch.supertype,
+    });
     // "Keep my current frame" means the frame BEFORE the import's kind change.
     const templateBefore = getValues("frame_style.template") ?? null;
 
@@ -3734,7 +3746,12 @@ export function CardCreatorForm({
             ? [skinBeforeFill, fill.frame_template as FrameTemplate]
             : [fill.frame_template as FrameTemplate],
           colorKey,
-          verifiedKeys: new Set(verifiedFrameKeys),
+          // (For the type the fill writes, as the save's gate reads it: an
+          // artifact needs a frame's artifact-master review too, TODO 5.9.)
+          verifiedKeys: verifiedKeysForType(new Set(verifiedFrameKeys), {
+            cardType: fill.card_type,
+            supertype: fill.supertype ?? "",
+          }),
           prefer: "frame",
         });
         if (

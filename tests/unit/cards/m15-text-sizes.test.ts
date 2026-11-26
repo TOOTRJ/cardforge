@@ -106,7 +106,9 @@ describe("one M15-era display size (layout v32)", () => {
     // TARDIS and the OTJ Breaking News (new templates: no bump).
     // …and TODO 4.5d's saga creature (a new template: no bump).
     // …and TODO 4.27b's extended-art Prepare dress (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(92);
+    // …and TODO 5.9's Innistrad: Double Feature frame and its land dress
+    // (new templates: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(94);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -200,6 +202,10 @@ describe("one M15-era display size (layout v32)", () => {
         t === "enchantingtales" ||
         t === "tardis" ||
         t === "breakingnews" ||
+        // …and the Innistrad: Double Feature pair (TODO 5.9), new templates,
+        // the CC M15 row on the run's prints.
+        t === "doublefeature" ||
+        t === "doublefeatureland" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -498,6 +504,12 @@ describe("baselines (TextSlot.dy)", () => {
     // name centred under the masthead, print's capitals on 298 px; the type
     // line on print's 1324).
     ["breakingnews", base.title, cc],
+    // The Innistrad: Double Feature frame and its land dress (TODO 5.9, new
+    // templates): the CC M15 slots — the name 2 px up (print's baseline 186,
+    // 22 of 25 printings), the type line 5 px under the CC baseline (print's
+    // 1264: DBL is a pre-2023 print).
+    ["doublefeature", base.title - 2 / 1500, cc + 5 / 1500],
+    ["doublefeatureland", base.title - 2 / 1500, cc + 5 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

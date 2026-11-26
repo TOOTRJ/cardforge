@@ -134,6 +134,10 @@ describe("the switch values", () => {
       "tardis",
       // …and the OTJ Breaking News (TODO 4.11 wave 2): its run's rows in the strip.
       "breakingnews",
+      // …and the Innistrad: Double Feature pair (TODO 5.9): M15's rows, the
+      // second 4 px higher.
+      "doublefeature",
+      "doublefeatureland",
     ]);
   });
 });

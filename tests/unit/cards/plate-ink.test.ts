@@ -57,6 +57,7 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/dossier/pt/{color}.png": { w: "8c9ea69bb5df", u: "8c9ea69bb5df", b: "8c9ea69bb5df", r: "8c9ea69bb5df", g: "8c9ea69bb5df", c: "8c9ea69bb5df", m: "8c9ea69bb5df" },
   "/frames/tardis/pt/{color}.png": { w: "63ecae34b84a", u: "63ecae34b84a", b: "63ecae34b84a", r: "63ecae34b84a", g: "63ecae34b84a", c: "63ecae34b84a", m: "63ecae34b84a" },
   "/frames/breakingnews/pt/{color}.png": { w: "704c31e043df", u: "60c2387eaedd", b: "0160148b8c29", r: "47dc439f730a", g: "320ce931734d", c: "1f264195ffde", m: "f838f35a8afe" },
+  "/frames/doublefeature/pt/{color}.png": { w: "23e38cc8b163", u: "5e8a219a74c3", b: "9d02389bed67", r: "25109e5175ed", g: "2345300f9cb7", c: "e3003443a312", m: "9aaccda25eb8" },
   "/frames/enchantingtales/pt/{color}.png": { w: "2c961d4b54c9", u: "12e32a5d7361", b: "c42ea1b5197b", r: "c1440201173b", g: "eed2b3699d5c", c: "2c961d4b54c9", m: "30ab59fe1985" },
   "/frames/lotr/pt/{color}.png": { w: "caa4db7dc77d", u: "50e582ea8089", b: "ae34f219042a", r: "3e5c61ae9f6a", g: "25fa07910ca3", c: "e577c1bacc6e", m: "3be4849e81cb" },
 };

@@ -5378,6 +5378,78 @@ const TARDIS: FrameProfile = {
   },
 };
 
+// The Innistrad: DOUBLE FEATURE frame (TODO 5.9, its one-faced part) — Card
+// Conjurer's 'Double Feature (DBL)' pack (packDoubleFeature.js, 2010 × 2814,
+// downscaled once; scripts/lib/cc-frames.mjs DBL), the black-and-white
+// "silver screen" dress of DBL 2022: dark bars and a dark text box, a thin
+// field in the card's colour, white ink everywhere. An ADDITION: two new
+// templates, no stored card. The pack's window, bars, box and plate are the
+// regular M15 frame's (the window 116–1383 × 238–1164 px on every key, M15's
+// own), so the text layout is the Card Conjurer M15 frames' — the cost row
+// (CC_M15_COST), the type line's baseline (CC_M15_TYPE_DY) and the art
+// window (CC_M15_ART_SLOT) — with white ink, measured on the run's printings
+// against our bakes of the same cards (DOUBLEFEATURE_* below). Print sets the
+// name and the type line in Beleren and the rules in MPlantin, as PipGlyph
+// does; no font is added.
+const DOUBLEFEATURE_INK = { colorHex: SHOWCASE_WHITE_INK } as const;
+/** The pack's P/T box at its bounds (1555 / 2492, 353 × 179 of the 2010 ×
+ *  2814 card → 1160.4 / 1859.6, 263.4 × 133.6 px): a dark face in a rim of
+ *  the card's colour, no drop shadow. */
+const DOUBLEFEATURE_PLATE_RECT: Rect = { leftPct: (1555 / 2010) * 100, topPct: (2492 / 2814) * 100, widthPct: (353 / 2010) * 100, heightPct: (179 / 2814) * 100 };
+/** The plate's dark face on the digits' row: 1183–1399 px (the pack's x
+ *  30–321 of 353). */
+const DOUBLEFEATURE_PT_INK_SPAN = { leftPct: (1183 / 1500) * 100, rightPct: (1399 / 1500) * 100 };
+/** Every artifact of the run prints the pack's artifact frame, whatever its
+ *  colour (DBL #23 Hedgewitch's Mask white, #111 Mask of Griselbrand black,
+ *  #142 Geistflame Reservoir red, #171 Bramble Armor green, #252 The
+ *  Celestus colourless): every colour key's ARTIFACT paints `a`. */
+const DOUBLEFEATURE_ARTIFACT_MASTERS = { w: "a", u: "a", b: "a", r: "a", g: "a", m: "a", c: "a" } as const;
+// The measured nudges, HD px — 25 one-faced printings (DBL #1 … #305, every
+// colour, gold, artifacts; Scryfall PNGs at 1500 × 2100) against our bakes of
+// the same names, types, costs and P/T, each print registered on the bake by
+// the bars' edges and ends with a scale and a shift per axis (the scans run
+// 0.5 % larger than the card: a tighter crop):
+/** The name's baseline 2 px above M15's: print's 186 on 22 of 25 printings
+ *  (184–187), ours sat on 188. Its pen within 1 px of print's, kept. */
+const DOUBLEFEATURE_TITLE_DY = -2;
+/** The type line 5 px under the CC M15 baseline: print sets it on 1264 (24
+ *  of 25 within 1263–1265), ours on 1259 — DBL (2022) is a pre-2023 print,
+ *  which sets its type line lower than the 2023+ prints CC_M15_TYPE_DY is
+ *  measured on. Its pen 2 px left of ours, kept. */
+const DOUBLEFEATURE_TYPE_DY = 5;
+// Kept as M15's: the cost row (print's discs 1.4 px lower, −2.8 … +4.2, the
+// row's right end on ours), the P/T digits (0, −1 … +1) and the collector
+// line's first row (0 on all 25); its second row is DOUBLEFEATURE_COLLECTOR's.
+const DOUBLEFEATURE_PT = {
+  ...M15.pt!,
+  ...DOUBLEFEATURE_INK,
+  inkSpanPct: DOUBLEFEATURE_PT_INK_SPAN,
+  plateRect: DOUBLEFEATURE_PLATE_RECT,
+  plateAssetPathTemplate: "/frames/doublefeature/pt/{color}.png",
+} satisfies FrameProfile["pt"];
+const DOUBLEFEATURE: FrameProfile = {
+  ...M15,
+  label: "Double Feature",
+  ...CC_M15_COST,
+  artSlot: CC_M15_ART_SLOT,
+  artifactMasterKeys: DOUBLEFEATURE_ARTIFACT_MASTERS,
+  title: { ...M15.title, dy: M15.title.dy! + DOUBLEFEATURE_TITLE_DY / 1500, ...DOUBLEFEATURE_INK },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY + DOUBLEFEATURE_TYPE_DY / 1500, ...DOUBLEFEATURE_INK },
+  rules: { ...M15.rules, ...DOUBLEFEATURE_INK },
+  pt: DOUBLEFEATURE_PT,
+};
+/** Its land dress: M15LAND's slots (no cost) with the same ink and nudges;
+ *  a land creature draws the spell frame's plates (the pack has no land
+ *  plate). */
+const DOUBLEFEATURELAND: FrameProfile = {
+  ...M15LAND,
+  label: "Double Feature Land",
+  title: { ...M15LAND.title, dy: M15LAND.title.dy! + DOUBLEFEATURE_TITLE_DY / 1500, ...DOUBLEFEATURE_INK },
+  type: { ...M15LAND.type, dy: M15LAND.type.dy! + DOUBLEFEATURE_TYPE_DY / 1500, ...DOUBLEFEATURE_INK },
+  rules: { ...M15LAND.rules, ...DOUBLEFEATURE_INK },
+  pt: DOUBLEFEATURE_PT,
+};
+
 // The Wilds of Eldraine ENCHANTING TALES showcase (TODO 4.11 wave 2) — Card
 // Conjurer's 'Enchanting Tales' pack (packEnchantingTales.js, 2010 × 2814,
 // downscaled once; scripts/lib/cc-frames.mjs ETALES), the swirled storybook
@@ -7018,6 +7090,82 @@ export const TARDIS_COLLECTOR: CollectorSlot = {
   ...M15_COLLECTOR,
   line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (TARDIS_COLL1_DY / 2100) * 100,
   line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (TARDIS_COLL2_DY / 2100) * 100,
+};
+
+/**
+ * The Double Feature legendary crown (TODO 5.9): `doublefeaturecrown/<key>.png`,
+ * Card Conjurer's DBL 'Legend Crown' — the whole top of the card (the black
+ * border, the crown's arch over the title bar in the card's colour, the
+ * bar's frame; the bar itself clear) that every legendary DBL print carries
+ * (#1 Adeline, #59 Lier, #223 Florian, #252 The Celestus) — at the pack's
+ * bounds, 1500 × 258 (rows 0–257; the crown ends at 254.5), toned onto print
+ * (scripts/lib/cc-frames.mjs DBL_CROWN_BAND / DBL_PRINT_TONES.crown). Keys:
+ * w u b r g, m (gold — a two-colour legend prints it, #223, #230), a (the
+ * artifact's: every ARTIFACT, any colour — #111 Mask of Griselbrand, black,
+ * wears it: `artifactKeyMap`; and the colourless key, whose master is the
+ * artifact frame: keyMap c → a). Set on the doublefeature entry only; the
+ * pack's land crown 404s. Opt-in per card like every crown.
+ */
+const DBL_ARTIFACT_KEYS = { w: "a", u: "a", b: "a", r: "a", g: "a", m: "a", c: "a" } as const;
+/**
+ * The collector line on the Double Feature frame (TODO 5.9): M15's slot (the
+ * pen x, the brush column, the sizes, the © slot's right end) with its
+ * second row 4 px higher — measured on 25 one-faced printings at 1500 × 2100
+ * against our bakes of the same cards (each line's baseline: the last row
+ * holding ≥ 35 % of the line's peak ink): line 1 on M15's row (0 on all 25),
+ * line 2 on 2027 where M15's bakes 2031 (−3 … −5).
+ */
+export const DOUBLEFEATURE_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (-4 / 2100) * 100,
+};
+export const DOUBLEFEATURE_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (258 / 2100) * 100 },
+  assetPathTemplate: "/frames/doublefeaturecrown/{key}.png",
+  // DBL_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds them
+  // together).
+  keys: ["w", "u", "b", "r", "g", "m", "a"],
+  keyMap: { c: "a" },
+  artifactKeyMap: DBL_ARTIFACT_KEYS,
+};
+/** The rules box keeps out of the arch: its top (1903 px at the centre) to
+ *  the box's foot, over the arch's 655–845 px. */
+export const DOUBLEFEATURE_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (655 / 1500) * 100, topPct: (1903 / 2100) * 100, widthPct: (190 / 1500) * 100, heightPct: (22 / 2100) * 100 };
+/** The notch's box: DBL_NOTCH_BOX in scripts/lib/cc-frames.mjs (650, 1893,
+ *  200 × 103 px — 1 px round the pack's piece and 3 px past its foot). */
+const DOUBLEFEATURE_HOLO_STAMP_RECT: Rect = { leftPct: (650 / 1500) * 100, topPct: (1893 / 2100) * 100, widthPct: (200 / 1500) * 100, heightPct: (103 / 2100) * 100 };
+/**
+ * The Double Feature OVAL stamp notch (TODO 5.9): the pack's 'Holo Stamp' —
+ * the box's dark foot arched up round the hologram — placed and downscaled
+ * with the card (DBL_NOTCH in scripts/lib/cc-frames.mjs), its soft glow and
+ * the pack's capture dropped, the prints' oval (M15's: the physical hologram
+ * sits where the bordered frame sets it) cut clear for our oval art. The
+ * rares and mythics of the run print it (`security_stamp: oval`, 137 of
+ * 437), the commons and uncommons don't: "auto" = a rare or mythic, as on
+ * M15. One piece under every key. Set on the doublefeature entry only.
+ */
+export const DOUBLEFEATURE_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: DOUBLEFEATURE_HOLO_STAMP_RECT,
+  assetPathTemplate: "/frames/doublefeatureholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "c"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: DOUBLEFEATURE_HOLO_STAMP_KEEP_OUT },
+};
+/**
+ * …and the land's (TODO 5.9): the pack's 'Land Holo Stamp' per colour — the
+ * pinline in the land's colour arched up round the hologram, toned with the
+ * pinline (DBL_PRINT_TONES.stamp) — the grey land the spell piece (its
+ * pinline is dark), and the ten duals the two colours' pieces lerped across
+ * the pinline's ramp, as #266 Rockfall Vale prints the arch from red into
+ * green. Set on the doublefeatureland entry only.
+ */
+export const DOUBLEFEATURELAND_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: DOUBLEFEATURE_HOLO_STAMP_RECT,
+  assetPathTemplate: "/frames/doublefeaturelandholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: DOUBLEFEATURE_HOLO_STAMP_KEEP_OUT },
 };
 
 /**
@@ -8833,6 +8981,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorForLands: true,
     masthead: BREAKING_NEWS_MASTHEAD,
   },
+  // The Innistrad: Double Feature frame (TODO 5.9, one-faced): the crown,
+  // the oval stamp and the collector line, opt-in per card. No two-colour
+  // dress: every two-colour DBL card prints the gold frame. Every artifact
+  // wears the artifact frame (artifactMasterKeys) and its crown.
+  doublefeature: { ...DOUBLEFEATURE, overlays: [DOUBLEFEATURE_CROWN, DOUBLEFEATURE_HOLO_STAMP], collector: DOUBLEFEATURE_COLLECTOR },
+  // …and its land dress: the stamp and the collector line, opt-in per card,
+  // and the ten duals (the pinline split, as every dual of the run prints
+  // it). No crown (the pack's land crown 404s; no legendary land printed).
+  doublefeatureland: { ...DOUBLEFEATURELAND, overlays: [DOUBLEFEATURELAND_HOLO_STAMP], collector: DOUBLEFEATURE_COLLECTOR, twoColorMasters: ["split"], twoColorForLands: true },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).
