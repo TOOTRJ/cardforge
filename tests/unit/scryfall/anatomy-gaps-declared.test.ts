@@ -49,8 +49,10 @@ describe("gaps the landing frame draws drop out", () => {
       template: "m15artifact",
       signature: "era/2015+two-colour-hybrid",
     });
-    // The layout frames draw no crown and no pair until 4.6f.
+    // The adventure draws no crown and no pair until its 4.6f family…
     expect(match("woe-220")).toMatchObject({ status: "nearest", signature: "layout/2015+crown" });
-    expect(match("khm-201")).toMatchObject({ status: "nearest", signature: "layout/2015+two-colour" });
+    // …while the saga draws its crown and gold-split pairs since its own.
+    expect(match("khm-201")).toMatchObject({ status: "exact", template: "saga", signature: "layout/2015" });
+    expect(match("dsk-75")).toMatchObject({ status: "exact", template: "saga", signature: "layout/2015" });
   });
 });

@@ -247,6 +247,10 @@ describe("window helpers", () => {
       // The borderless Spacecraft lands on the bordered Station frame by
       // design (its own frame is a creator pick): nothing left to build.
       ["borderless/standard+station", "m15station"],
+      // TODO 4.6f (owner 2026-11-25): the saga frame draws its crown (DSK
+      // #75) and its gold-split pairs (KHM #201).
+      ["layout/2015+crown", "saga"],
+      ["layout/2015+two-colour", "saga"],
     ]) {
       expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
     }
@@ -261,8 +265,8 @@ describe("window helpers", () => {
       // A borderless land logged on its bordered landing: the borderless
       // land frame draws no crown (no crowned twin of its masters).
       ["borderless/land+crown", "m15land"],
-      // A saga's two-colour dress is 4.6f's, frame by frame.
-      ["layout/2015+two-colour", "saga"],
+      // The saga draws the gold-split dress only (no hybrid saga was printed).
+      ["layout/2015+two-colour-hybrid", "saga"],
       ["token/m20+crown", "m15token"], // 4.48's pill crown
       // A showcase station printing on the bordered Spacecraft frame (TRK
       // #557): the tiers are drawn there, but the row is still nearest — the

@@ -123,12 +123,22 @@ describe("a stored card (no switch key)", () => {
     expect(colors()).toBe("multicolor");
   });
 
-  it.each(["m15devoid", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
+  it.each(["m15devoid"])("%s draws neither: no switch, no row, no hint", (template) => {
     render(<Harness stored template={template} colors={["multicolor"]} />);
     expect(screen.queryByTestId("anatomy-panel")).toBeNull();
     expect(twoColorSwitch()).toBeNull();
     expect(crownSwitch()).toBeNull();
     expect(screen.queryByText(/New: the printed/)).toBeNull();
+  });
+
+  it("saga draws both since TODO 4.6f: a stored legendary multicolour saga with no key keeps its look — both switches OFF with their hints", () => {
+    render(<Harness stored template="saga" cardType="enchantment" colors={["multicolor"]} />);
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("anatomy-hint-twoColor").textContent).toBe(ANATOMY_HINTS.twoColor);
+    expect(crownSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("anatomy-hint-crown").textContent).toBe(ANATOMY_HINTS.crown);
+    expect(colors()).toBe("multicolor");
+    expect(JSON.parse(screen.getByTestId("style").textContent ?? "{}")).toEqual({ template: "saga" });
   });
 
   it("m15borderlessland draws the pair since 4.56: a stored two-colour land with no key keeps its gold look — the two-colour switch OFF with its hint, no crown switch — and switching it on stores the switch alone", () => {

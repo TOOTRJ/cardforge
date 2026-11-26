@@ -18481,6 +18481,86 @@
       ],
       "m": [
         "img/frames/saga/regular/sagaFrameM.png"
+      ],
+      "wu": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameW.png | img/frames/saga/regular/sagaFrameU.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameW.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameU.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameW.png | img/frames/saga/regular/sagaFrameU.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "wb": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameW.png | img/frames/saga/regular/sagaFrameB.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameW.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameB.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameW.png | img/frames/saga/regular/sagaFrameB.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "ub": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameU.png | img/frames/saga/regular/sagaFrameB.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameU.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameB.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameU.png | img/frames/saga/regular/sagaFrameB.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "ur": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameU.png | img/frames/saga/regular/sagaFrameR.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameU.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameR.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameU.png | img/frames/saga/regular/sagaFrameR.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "br": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameB.png | img/frames/saga/regular/sagaFrameR.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameB.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameR.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameB.png | img/frames/saga/regular/sagaFrameR.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "bg": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameB.png | img/frames/saga/regular/sagaFrameG.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameB.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameG.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameB.png | img/frames/saga/regular/sagaFrameG.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "rg": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameR.png | img/frames/saga/regular/sagaFrameG.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameR.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameG.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameR.png | img/frames/saga/regular/sagaFrameG.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "rw": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameR.png | img/frames/saga/regular/sagaFrameW.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameR.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameW.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameR.png | img/frames/saga/regular/sagaFrameW.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "gw": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameG.png | img/frames/saga/regular/sagaFrameW.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameG.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameW.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameG.png | img/frames/saga/regular/sagaFrameW.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
+      ],
+      "gu": [
+        "img/frames/saga/regular/sagaFrameM.png",
+        "(img/frames/saga/regular/sagaFrameG.png | img/frames/saga/regular/sagaFrameU.png across procedural:ramp(15→43 %W)) through img/frames/saga/sagaMaskText.png",
+        "img/frames/saga/regular/sagaFrameG.png through img/frames/saga/sagaMaskBanner.png",
+        "img/frames/saga/regular/sagaFrameU.png through img/frames/saga/sagaMaskBannerRight.png",
+        "img/frames/saga/sagaMidStripe.png at 7.27/30.58/0.87×47.62 %",
+        "(img/frames/saga/regular/sagaFrameG.png | img/frames/saga/regular/sagaFrameU.png across procedural:ramp(40→60 %W)) through img/frames/saga/sagaMaskPinline.png"
       ]
     },
     "pieces": {
@@ -18518,14 +18598,17 @@
       "img/frames/saga/sagaMaskPinline.png",
       "img/frames/saga/sagaMaskText.png",
       "img/frames/saga/sagaMaskTextRight.png",
-      "img/frames/saga/sagaMaskType.png"
+      "img/frames/saga/sagaMaskType.png",
+      "img/frames/saga/sagaMidStripe.png"
     ],
     "notes": [
       "source: CC 'Regular Frames' saga pack (packSagaRegular.js): the M15 title bar, the chapter rail with the reminder block and the RIBBON the chapter badges sit on, the art column on the right, the type bar — replaces the 375 px MSE cut (magic-m15-saga.mse-style, import-mse-profiles.mjs), which had no ribbon and whose window started 26 px left of the prints'",
       "colourless = CC's 'Land Frame' (saga/regular/l.png), the land saga (owner decision 2026-09-29): the only printed colourless saga is MH2 #259 Urza's Saga, an Enchantment Land; a colourless non-land saga wears it too (none was printed)",
       "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
       "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
-      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
+      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs, recorded as maskInputs and never published — the two-colour pair masters (TODO 4.6f, below) draw through Pinline, Text, Banner and Banner (Right), and the pinstripe addon 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) on their ribbon's seam; its 'Holo Stamp' addon is not drawn (4.9d)",
+      "two-colour pair masters (TODO 4.6f, owner 2026-11-25): Card Conjurer has no two-colour saga recipe, so 4.6b's (twoColorRecipe) carried onto the pack's own masks (sagaPairLayers) — gold-split <pair> = sagaFrameM.png whole, the text box's paper split across 15→43 %W (SAGA_PAIR_TEXT_RAMP, measured on 17 KHM / WOE / CMM / CLB / LCC prints), the ribbon's first colour through Banner and its second through Banner (Right) with the pack's pinstripe (sagaMidStripe.png at its bounds) on the seam, and the pinline across 40→60 %W; no hybrid dress (none printed)",
+      "the legendary crown (TODO 4.6f): the sagacrown overlay — our m15crown band with its arms' last rows faded (scripts/build-saga-crown.mjs), the pack's title bar on M15's rows (its Title mask is m15MaskTitle) while its pinline is the regular pack's other tone (r 239,56,39, the adventure pack's) on w, b, r, g and m (u's is the band's; the land frame's, which the colourless key wears with the land crown l, within 9 levels)"
     ]
   },
   "sagacreature": {
@@ -18648,6 +18731,112 @@
     "notes": [
       "TODO 4.5d: the saga creature — FIN / FIC / PFIN's \"Summon:\" cards (2025); no Card Conjurer or MSE pack draws it",
       "c = the textured saga pack's artifact silver over m15nyx/c (FIN #1 Summon: Bahamut's frame); the prints' see-through rail and box are not drawn"
+    ]
+  },
+  "sagacrown": {
+    "source": "pipglyph",
+    "converter": "scripts/build-saga-crown.mjs",
+    "kind": "overlay",
+    "derivedFrom": "the published m15crown/<key> bands of the frames bucket (themselves Card Conjurer imports: see \"m15crown\")",
+    "output": "1500x410 overlay band: rows 0–409 of a 1500x2100 card, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "fade": "alpha × (1 − t) on rows 372–408 (t 0 → 1), 0 below; colours untouched",
+      "arms": "nothing but the two arms is painted from row 372 down: x 60–125 and 1375–1440"
+    },
+    "colors": {
+      "w": [
+        "m15crown/w.png (published, sha256 9310ceac2b5c)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "u": [
+        "m15crown/u.png (published, sha256 00b5e90d266a)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "b": [
+        "m15crown/b.png (published, sha256 441795575262)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "r": [
+        "m15crown/r.png (published, sha256 d9a3215c1931)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "g": [
+        "m15crown/g.png (published, sha256 992548e92722)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "m": [
+        "m15crown/m.png (published, sha256 c7f61a87305b)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "l": [
+        "m15crown/l.png (published, sha256 d2e6fb2701c0)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "wu": [
+        "m15crown/wu.png (published, sha256 1e1f383c8ddb)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "wb": [
+        "m15crown/wb.png (published, sha256 0c940c2fc910)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "ub": [
+        "m15crown/ub.png (published, sha256 fec83248575f)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "ur": [
+        "m15crown/ur.png (published, sha256 e4dabca3be24)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "br": [
+        "m15crown/br.png (published, sha256 9c8e9b5b9df9)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "bg": [
+        "m15crown/bg.png (published, sha256 1823142c4572)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "rg": [
+        "m15crown/rg.png (published, sha256 2d07afc8e9a7)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "rw": [
+        "m15crown/rw.png (published, sha256 bf066b5e4f2d)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "gw": [
+        "m15crown/gw.png (published, sha256 07fa16429183)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "gu": [
+        "m15crown/gu.png (published, sha256 d848e185b795)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ]
+    },
+    "sourceFiles": [
+      "m15crown/b.png",
+      "m15crown/bg.png",
+      "m15crown/br.png",
+      "m15crown/g.png",
+      "m15crown/gu.png",
+      "m15crown/gw.png",
+      "m15crown/l.png",
+      "m15crown/m.png",
+      "m15crown/r.png",
+      "m15crown/rg.png",
+      "m15crown/rw.png",
+      "m15crown/u.png",
+      "m15crown/ub.png",
+      "m15crown/ur.png",
+      "m15crown/w.png",
+      "m15crown/wb.png",
+      "m15crown/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own cut (TODO 4.6f, owner 2026-11-25): the saga frame's legendary printings (DSK #75 The Tale of Tamiyo, blue; PH18 #4 The Legend of Arena, gold) wear the standard 2015 legendary crown in the card's colour — the band m15, m15artifact and m15land draw, registered on the saga's title bar (its Title mask is M15's). Nothing is drawn or synthesised: every painted pixel is the parent band's.",
+      "The one cut, the Nyx Constellation crown's (scripts/lib/nyx-crown.mjs, owner Round 59; the adventure frame's crown takes the same): the saga masters are Card Conjurer's 'Regular Frames' saga pack, on the M15 title bar but with that pack's other pinline tone on w, b, r, g and gold (and, on every key, the right arm's inner face at x 1390–1403 where the master's pinline runs 1385–1399), so the arms fade out over their last rows instead of ending in a tone step and a jog. The masters are not re-toned.",
+      "The numbers are scripts/lib/saga-crown.mjs; no scan is read by the build.",
+      "Keys: the masters' letters, the land crown `l` (the template's colourless master is the pack's 'Land Frame': the profile maps c → l, as m15land does) and the ten pairs, drawn over the saga's pair masters (none printed crowned; a legendary two-colour saga wears its pair's crown, as m15 does)."
     ]
   },
   "sagadfcback": {

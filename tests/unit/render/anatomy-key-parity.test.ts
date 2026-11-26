@@ -87,7 +87,8 @@ describe("bake path = preview path", () => {
     // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
     // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
     // …and the extended-art Prepare dress's 20 (4.27b: the Prepare pairs' lower half).
-    expect(pairKeys).toBe(480);
+    // …and the saga's 10 (4.6f: the gold-split, the ribbon in its two colours).
+    expect(pairKeys).toBe(490);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -254,6 +255,9 @@ describe("bake path = preview path", () => {
                                 : template === "breakingnews"
                                   ? // …and the OTJ Breaking News' notched rule (4.11 wave 2).
                                     "breakingnewscrown"
+                                : template === "saga"
+                                  ? // …and the saga's (4.6f): the m15crown band, its arms faded.
+                                    "sagacrown"
                                   : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);

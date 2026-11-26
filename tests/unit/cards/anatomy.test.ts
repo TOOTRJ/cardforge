@@ -24,7 +24,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
-import { M15_CROWN, getFrameProfile, profileOffersRulesAlign, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
+import { M15_CROWN, SAGA_CROWN, getFrameProfile, profileOffersRulesAlign, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 
@@ -339,6 +339,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // own, but the switch is the CARD's — its back draws it (TLA #117
       // Fire Lord Sozin's legendary back), as the battle's.
       "sagadfcfront",
+      // The saga frame (TODO 4.6f, owner 2026-11-25): M15's band with its
+      // arms faded onto the masters' pinline (sagacrown), and its gold-split
+      // pairs (no hybrid saga was printed).
+      "saga",
       // The Prepare frame (TODO 4.27): M15's crown band over its M15 title
       // bar (SOS #170 Abigale), no pairs.
       "prepare",
@@ -465,6 +469,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       tardis: ["split"],
       // The OTJ Breaking News (4.11 wave 2): the same, across print's split.
       breakingnews: ["split"],
+      // The saga (4.6f): the gold-split, the ribbon in its two colours; no
+      // hybrid saga was printed.
+      saga: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -499,12 +506,13 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    for (const t of ["adventure", "saga"]) {
-      // (The adventure's one piece is the spell's page in its own colour,
-      // TODO 4.26: the `partPage` slot.)
-      const part = t === "adventure" ? { partColor: true } : {};
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false, ...part });
-    }
+    // The adventure draws none yet (4.6f's own family): its one piece is the
+    // spell's page in its own colour (TODO 4.26: the `partPage` slot). The
+    // saga (4.6f, owner 2026-11-25) draws its own crown band and the
+    // gold-split pairs.
+    expect(frameAnatomyOf("adventure")).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile("adventure")), border: false, partColor: true });
+    expect(frameAnatomyOf("saga")).toEqual({ crown: true, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile("saga")), border: false });
+    expect(getFrameProfile("saga").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([SAGA_CROWN]);
     // The Expeditions (TODO 4.11 wave 1) print the collector line, nothing
     // else a card switches on.
     for (const t of ["expeditionland", "expeditionlandbfz"]) {

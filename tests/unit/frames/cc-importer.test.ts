@@ -1036,7 +1036,10 @@ describe("the saga (4.21c)", () => {
   const provenance = () => JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8")).saga;
 
   it("copies w u b r g m 1:1 from the pack's sagaFrame<K> and builds the colourless key from its Land Frame", () => {
-    expect(Object.keys(saga.colors).sort()).toEqual([...COLORS].sort());
+    // (The ten gold-split pair masters beside them since TODO 4.6f —
+    // tests/unit/frames/saga-crown-pairs.test.ts.)
+    expect(Object.keys(saga.colors).filter((key) => (COLORS as readonly string[]).includes(key)).sort()).toEqual([...COLORS].sort());
+    expect(Object.keys(saga.colors).length).toBe(COLORS.length + 10);
     for (const key of COLORS) {
       // One layer, the pack's own file: no mask, no blend, no re-cut.
       expect(saga.colors[key], key).toHaveLength(1);
@@ -1122,10 +1125,10 @@ describe("the saga (4.21c)", () => {
     expect(p.pieces).toMatchObject(SAGA_CHAPTER_PIECES);
     expect(p.colors.c).toEqual(["img/frames/saga/regular/l.png"]);
     expect(p.commit).toBe(CC_COMMIT);
-    // …and no saga object but the seven masters and the two pieces exists:
-    // no mask, no pair master (those are TODO 4.6f's).
+    // …and no saga object but the seven masters, the two pieces and (TODO
+    // 4.6f) the ten gold-split pair masters exists: no mask, no hybrid.
     const published = Object.keys(files).filter((k) => k.startsWith("saga/")).sort();
-    const want = [...COLORS.map((k) => `saga/${k}`), "saga/chapter/badge", "saga/chapter/divider"].flatMap((k) => [`${k}.png`, `${k}.webp`]).sort();
+    const want = [...COLORS.map((k) => `saga/${k}`), ...TWO_COLOR_PAIRS.map((pair) => `saga/${pair}`), "saga/chapter/badge", "saga/chapter/divider"].flatMap((k) => [`${k}.png`, `${k}.webp`]).sort();
     expect(published).toEqual(want);
     expect(published.some((k) => /mask/i.test(k))).toBe(false);
     // No other template records masks this way.
@@ -2086,6 +2089,10 @@ describe("provenance and hygiene", () => {
         expect(provenance[template].colors[key][0], `${template}/${key}`).toMatch(new RegExp(`^${parent}/${key}\\.png \\(published, sha256 [0-9a-f]{12}\\)$`));
       }
     }
+    // …and the saga frame's crown (TODO 4.6f): the Nyx Constellation cut of
+    // the published m15crown bands (scripts/build-saga-crown.mjs; its own
+    // test: tests/unit/frames/saga-crown-pairs.test.ts).
+    PIPGLYPH_DERIVED_BANDS.sagacrown = "m15crown";
     // …and the Spacecraft's two dresses (TODO 4.27a step 2), the same
     // builder's: extended art cut from the published extendedart masters (a
     // colourless one from the silver artifact `a`), borderless the published

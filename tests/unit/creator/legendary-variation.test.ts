@@ -62,10 +62,11 @@ describe("offered where the frame declares a crown — from the PROFILES data", 
   it("the crowned templates are the ones this entry was specified for (and no crownless one sneaks in)", () => {
     // Named by the item's text: m15, m15artifact, m15land, the wave-2
     // treatments of 4.6f and the DFC bodies of 5.1d.
-    for (const named of ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "extendedart", "m15snow", "m15snowland", "m15dfcfront", "m15dfclandfront", "m15mdfcfront", "m20token", "m20tokenartifacttext"]) {
+    // (…and the saga frame since its own 4.6f family, 2026-11-25.)
+    for (const named of ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "extendedart", "m15snow", "m15snowland", "m15dfcfront", "m15dfclandfront", "m15mdfcfront", "m20token", "m20tokenartifacttext", "saga"]) {
       expect(crowned, named).toContain(named);
     }
-    for (const named of ["m15pw", "saga", "m15token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "split", "m15mdfclandfront"]) {
+    for (const named of ["m15pw", "m15token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "split", "m15mdfclandfront"]) {
       if (!(FRAME_TEMPLATE_VALUES as readonly string[]).includes(named)) continue;
       expect(crownless, named).toContain(named);
     }
@@ -213,7 +214,8 @@ describe("an edit or a remix: the type line is locked", () => {
   });
 
   it("a frame with no crown keeps its own reason", () => {
-    expect(legendaryVariationOf(input({ template: "saga", cardType: "enchantment", typeLineLocked: true })).reason).toBe(NO_CROWN_REASON);
+    // (The saga drew none until TODO 4.6f; the aftermath draws none.)
+    expect(legendaryVariationOf(input({ template: "aftermath", cardType: "sorcery", typeLineLocked: true })).reason).toBe(NO_CROWN_REASON);
   });
 });
 

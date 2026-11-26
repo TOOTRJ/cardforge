@@ -231,6 +231,13 @@ const PICKS: readonly Pick[] = [
   // --- the other bodies ----------------------------------------------------
   { from: "m15pw/g/planeswalker-long", why: "walker: loyalty rows, badges, the shield" },
   { from: "saga/g/saga-long", why: "saga: the rail, chapter badges, the reminder block" },
+  // TODO 4.6f (owner 2026-11-25): the saga's legendary crown (the m15crown
+  // band with its arms faded onto the masters' pinline — DSK #75) and its
+  // gold-split pair master (the ribbon in its two colours with the
+  // pinstripe on the seam, the paper and the pinline split — KHM #201).
+  { from: "saga/u/saga-long@crown", why: "saga crown (4.6f): the faded crown band over a mono master, the title above the band's bar" },
+  { from: "saga/wu/saga-long@pair-crown", why: "saga pair (4.6f): the gold-split pair master (the ribbon split, the paper split), the split crown band" },
+  { from: "saga/wu/saga-short@pair", why: "saga pair (4.6f): the gold-split master under three one-line chapters, the badges on the split ribbon" },
   // The saga creature (TODO 4.5d): the reminder as a band, the rail and the
   // type bar raised, and its second box — one line centred on print's row,
   // a longer text beside the plate (a float) — with the triangle stamp.

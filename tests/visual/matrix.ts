@@ -1678,6 +1678,18 @@ export function visualCases(): VisualCase[] {
   add("m15textless", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The snow band at the stored bake's size (4.6f, wave 2c).
   add("m15snow", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // TODO 4.6f (owner 2026-11-25): the saga frame's crown — the m15crown band
+  // with its arms faded onto the masters' pinline (sagacrown), in every
+  // colour that picks a different band: w u b r g, c (the land crown: the
+  // frame maps c → l), wu (gold: a pair with its two-colour switch off; the
+  // split crown is "@pair-crown") and wub; at the stored bake's size and on
+  // foil. The saga's rows print no supertype (its stored cases), so these
+  // name the word.
+  for (const colour of ["w", "u", "b", "r", "g", "c", "wu", "wub"] as const) {
+    add("saga", "saga", colour, "long", { crown: true, suffix: "@crown", row: { supertype: "Legendary" } });
+  }
+  add("saga", "saga", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd", row: { supertype: "Legendary" } });
+  add("saga", "saga", "g", "long", { crown: true, finish: "foil", suffix: "@crown-foil", row: { supertype: "Legendary" } });
   // The constellation band at the stored bake's size and on foil (the
   // faded arms inside the finish mask).
   add("nyx", "creature", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
@@ -1777,7 +1789,9 @@ export function visualCases(): VisualCase[] {
     // crown at all (the borderless land draws its pairs and none: 4.56).
     // (The token's long row is a Treasure: an Artifact, made Legendary here —
     // the full-art token's crown, 4.48.)
-    const legend = template.startsWith("m20token") ? { supertype: "Legendary Artifact" } : {};
+    // (The saga's rows print no supertype — its stored cases — so its pair
+    // crown names the word here, TODO 4.6f.)
+    const legend = template.startsWith("m20token") ? { supertype: "Legendary Artifact" } : template === "saga" ? { supertype: "Legendary" } : {};
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
@@ -1785,6 +1799,14 @@ export function visualCases(): VisualCase[] {
   // as STA #59–63 print it (the long row: a Keyrune set symbol, its rules
   // and flavour).
   add("mysticalarchive", "instant", "wu", "long", { suffix: "@pair", row: pairStyle("mysticalarchive") });
+  // TODO 4.6f (owner 2026-11-25): the saga's gold-split pair (KHM #201–234:
+  // the gold frame, the pinline and the paper split, the ribbon in its two
+  // colours with the pinstripe on the seam) at the stored bake's size and on
+  // foil, and an all-hybrid cost, which draws the same master (no hybrid
+  // saga was printed).
+  add("saga", "saga", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("saga") });
+  add("saga", "saga", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("saga", "foil") });
+  add("saga", "saga", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("saga"), cost: "{1}{W/U}{W/U}" } });
   // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
   // per card — no stored card has the switch, so these are NEW cases, no
   // bump): the second part's colour on back_face.color_identity, its cost
@@ -3215,6 +3237,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The OTJ Breaking News (TODO 4.11 wave 2): the same across print's
   // split, and its crown's pairs.
   "breakingnews",
+  // The saga frame (TODO 4.6f): the gold-split dress (the ribbon in its two
+  // colours, the paper and the pinline split).
+  "saga",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

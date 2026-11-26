@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { scryfallCardSchema, type ScryfallCard } from "@/lib/scryfall/client";
 import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
 import { FRAME_SIGNATURE_KEYS } from "@/lib/scryfall/frame-signatures";
+import { signatureBlockedBy } from "@/lib/frames/frame-requests";
 import printings from "./fixtures/anatomy-printings.json";
 import referencePrintings from "../cards/fixtures/reference-printings.json";
 
@@ -48,12 +49,18 @@ describe("the layout frames' new gaps", () => {
     });
   });
 
-  it("a two-colour saga is nearest, blocked by the two-colour frame's wave 2", () => {
+  it("a two-colour saga and a crowned saga are exact since the saga frame draws its pairs and crown (TODO 4.6f; KHM #201 was nearest, blocked by the two-colour frame's wave 2)", () => {
     expect(match("khm-201")).toMatchObject({
-      status: "nearest",
+      status: "exact",
       template: "saga",
-      signature: "layout/2015+two-colour",
-      blockedBy: "4.6f",
+      signature: "layout/2015",
+    });
+    expect(match("khm-201").gaps).toBeUndefined();
+    // DSK #75 The Tale of Tamiyo: the blue crown over the saga's title bar.
+    expect(match("dsk-75")).toMatchObject({
+      status: "exact",
+      template: "saga",
+      signature: "layout/2015",
     });
   });
 
@@ -68,8 +75,9 @@ describe("the layout frames' new gaps", () => {
       template: "aftermath",
       signature: "layout/2015",
     });
-    // The gap stays 4.6f's on the layout frames whose dress IS the pair.
-    expect(match("khm-201").blockedBy).toBe("4.6f");
+    // The gap stays 4.6f's on the layout frames whose dress IS the pair
+    // (the saga draws it since its 4.6f family: KHM #201 exact above).
+    expect(signatureBlockedBy("layout/2015+two-colour", "saga")).toBe("4.6f");
   });
 });
 

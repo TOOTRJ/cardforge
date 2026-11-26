@@ -6439,6 +6439,34 @@ export const M15_NYX_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The saga frame's legendary crown (TODO 4.6f; owner 2026-11-25):
+ * `sagacrown/<key>.png`. The crowned 2015-frame sagas — DSK #75 The Tale of
+ * Tamiyo (blue) and PH18 #4 The Legend of Arena (gold) — wear the STANDARD
+ * crown in the card's colour, the m15crown band, which registers on the
+ * saga's title bar as on m15's (Card Conjurer's saga pack draws M15's title
+ * bar through m15MaskTitle; the prints' crown edges lie within 0–3 px of the
+ * band's). The bands here are that band with ONE cut, the Nyx Constellation
+ * crown's (scripts/lib/saga-crown.mjs, scripts/build-saga-crown.mjs): the
+ * arms' last rows fade out, because the masters' pinline beside the window
+ * and down the rail is the pack's other tone on five keys and the arms'
+ * inner face is not the masters' pinline column — the crown would end in a
+ * step and a jog; it hands over to the master's pinline instead. Keys
+ * (SAGA_CROWN_RECIPE.keys; a unit test holds them together): the masters'
+ * letters — w u b r g, m — the land crown `l`, which the entry maps its
+ * colourless key to (`saga/c` is the pack's 'Land Frame', as m15land maps
+ * its own), and the ten pairs (the pair masters: none printed crowned; a
+ * legendary two-colour saga wears its pair's crown, as m15 does). Set on the
+ * saga entry only; opt-in per card like every crown (FrameStyle.crown) —
+ * declaring it changes no stored card.
+ */
+export const SAGA_CROWN: FrameOverlaySlot = {
+  ...M15_CROWN,
+  assetPathTemplate: "/frames/sagacrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "l" },
+};
+
+/**
  * The Nyx Constellation frame's legendary crown (template `nyx`; owner
  * 2026-10-13): `nyxcrown/<key>.png`. The eleven Theros Beyond Death
  * constellation showcase prints (THB #258–268, every one legendary) wear
@@ -8717,7 +8745,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     dfc: { layout: "transform", role: "front", well: "left", battle: true },
     reversePt: BATTLE_REVERSE_PT,
   },
-  saga: SAGA,
+  // TODO 4.6f (owner 2026-11-25): the legendary crown (SAGA_CROWN: the
+  // m15crown band with its arms faded onto the masters' pinline — DSK #75,
+  // PH18 #4) and the two-colour pair masters, gold-split only (the gold
+  // frame and bars, the pinline and the text box's paper split, the ribbon
+  // in its two colours with the pack's dark pinstripe on the seam — KHM
+  // #201–234, WOE #200; no hybrid saga was printed) — each opt-in per card,
+  // so no stored card changes by them.
+  saga: { ...SAGA, twoColorMasters: ["split"], overlays: [SAGA_CROWN] },
   // The double-faced saga's front (TODO 5.5 (b)): see SAGADFCFRONT.
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.

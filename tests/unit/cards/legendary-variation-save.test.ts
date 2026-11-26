@@ -161,6 +161,8 @@ describe("createCardAction — a new card with the entry picked", () => {
     ["m15snow", "creature", "Snow"],
     ["m15borderless", "creature", ""],
     ["extendedart", "creature", ""],
+    // The saga frame draws its crown since TODO 4.6f (DSK #75).
+    ["saga", "enchantment", ""],
   ] as const)("%s: stored with crown === true, the word first, the template as picked", async (template, cardType, supertype) => {
     const stub = db();
     const over: Record<string, unknown> = { card_type: cardType, ...picked(template, supertype, cardType) };
@@ -181,7 +183,6 @@ describe("createCardAction — a new card with the entry picked", () => {
   });
 
   it.each([
-    ["saga", "enchantment"],
     ["m15pw", "planeswalker"],
     ["retro", "creature"],
     ["m15devoid", "creature"],
@@ -190,7 +191,6 @@ describe("createCardAction — a new card with the entry picked", () => {
     const stub = db();
     const over: Record<string, unknown> = { card_type: cardType, supertype: "Legendary", frame_style: { template, crown: true } };
     if (cardType === "planeswalker") Object.assign(over, { power: undefined, toughness: undefined, loyalty: "4" });
-    if (cardType === "enchantment") Object.assign(over, { power: undefined, toughness: undefined });
     const result = await createCardAction(payload(over));
     expect(result.ok, `${template}: ${JSON.stringify(result)}`).toBe(true);
     expect("crown" in styleOf(stub, "insert")!, template).toBe(false);

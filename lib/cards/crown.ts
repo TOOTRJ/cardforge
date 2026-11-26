@@ -196,6 +196,16 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   m15snowland: {
     c: ref("Dark Depths", "dmr", "244", "3a8b11ad-d077-40b6-988c-0462e118fe3d"),
   },
+  // The saga frame (TODO 4.6f, owner 2026-11-25): the only crowned plain
+  // sagas (Scryfall `layout:saga frame:legendary`, 2026-11-25: four
+  // printings) — DSK #75 The Tale of Tamiyo, blue (its prerelease and
+  // promo-pack stamps aside), and PH18 #4 The Legend of Arena, a
+  // three-colour saga on the gold frame. No other colour, no pair and no
+  // colourless saga was printed crowned, so those keys have none.
+  saga: {
+    u: ref("The Tale of Tamiyo", "dsk", "75", "aaeba193-05d3-4c2d-a304-bbe7114c2eef"),
+    m: ref("The Legend of Arena", "ph18", "4", "9acbbb54-f08d-4926-acdb-db376d4b46cd"),
+  },
   // The Nyx Constellation frame (owner 2026-10-13): the Theros Beyond Death
   // showcase's five gods — every printing of the frame is legendary — and
   // its one two-colour card for the gold key (#268 prints red | green over a
