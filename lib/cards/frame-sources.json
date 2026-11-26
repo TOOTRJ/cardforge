@@ -28,6 +28,146 @@
       ],
       "m": [
         "img/frames/adventure/regular/m.png"
+      ],
+      "wu": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "wb": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "ub": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "ur": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "br": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "bg": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "rg": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "rw": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "gw": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "gu": [
+        "img/frames/adventure/regular/m.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(20→36 %W)) through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "wu-h": [
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "wb-h": [
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/w.png | img/frames/adventure/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "ub-h": [
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/b.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "ur-h": [
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/u.png | img/frames/adventure/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "br-h": [
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/r.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "bg-h": [
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/b.png | img/frames/adventure/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "rg-h": [
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/g.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "rw-h": [
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/r.png | img/frames/adventure/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "gw-h": [
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/w.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
+      ],
+      "gu-h": [
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(44→57 %W))",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskTitle.png",
+        "img/frames/adventure/regular/l.png through img/frames/m15/regular/m15MaskType.png",
+        "img/frames/adventure/regular/l.png through img/frames/adventure/regular/bookLeft.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(66→82 %W)) through img/frames/adventure/regular/bookRight.png",
+        "(img/frames/adventure/regular/g.png | img/frames/adventure/regular/u.png across procedural:ramp(40→60 %W)) through img/frames/adventure/regular/pinline.svg"
       ]
     },
     "sourceTones": {
@@ -38,6 +178,10 @@
       "img/frames/adventure/regular/g.png": {
         "table": "ADVENTURE_PAPER_TONES.g",
         "paper": "through img/frames/adventure/regular/bookLeft.png, in columns 97–748 below the outline (per column, the last pixel of luma < 90 in rows 1470–1539): × 1.315 / 1.294 / 1.358 (146, 153, 148 → 192, 198, 201), fading to × 1.303 on every channel at white"
+      },
+      "img/frames/adventure/regular/l.png": {
+        "table": "ADVENTURE_HYBRID_PAPER_TONE",
+        "paper": "through img/frames/adventure/regular/bookLeft.png, in columns 97–748 below the outline (per column, the last pixel of luma < 90 in rows 1470–1539): × 1.220 / 1.207 / 1.225 (177, 174, 173 → 216, 210, 212), fading to × 1.211 on every channel at white"
       },
       "img/frames/adventure/regular/m.png": {
         "table": "ADVENTURE_PAPER_TONES.m",
@@ -60,17 +204,24 @@
       "img/frames/adventure/regular/a.png",
       "img/frames/adventure/regular/b.png",
       "img/frames/adventure/regular/bookLeft.png",
+      "img/frames/adventure/regular/bookRight.png",
       "img/frames/adventure/regular/g.png",
+      "img/frames/adventure/regular/l.png",
       "img/frames/adventure/regular/m.png",
+      "img/frames/adventure/regular/pinline.svg",
       "img/frames/adventure/regular/r.png",
       "img/frames/adventure/regular/u.png",
-      "img/frames/adventure/regular/w.png"
+      "img/frames/adventure/regular/w.png",
+      "img/frames/m15/regular/m15MaskTitle.png",
+      "img/frames/m15/regular/m15MaskType.png"
     ],
     "notes": [
       "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
       "colourless = CC's 'Artifact Frame' (adventure/a.png; the pack has no other colourless frame): colourless adventures ARE printed — the artifacts HOB #170 / #174 / #176 and FIN's Towns #283–293 — and `adventure/c` is verified on production (supabase/seed.sql lists adventure in all seven keys; corrected 2026-10-22, 4.26 — the 4.21a note said no colourless adventure was printed and the key would never be ticked); a colourless creature with a coloured spell draws the spell's page over it (HOB #170: `page/w` over `adventure/c`, TODO 4.26)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
-      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints"
+      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookLeft and bookRight split the two pages of the pair masters (TODO 4.6f, below)",
+      "two-colour pair masters (TODO 4.6f, owner 2026-11-22): Card Conjurer has no two-colour adventure recipe, so 4.6b's (twoColorRecipe) carried onto the pack's own masks (adventurePairLayers) — gold-split <pair> = m.png whole with each storybook PAGE split about its own centre (bookLeft 300→540 px, bookRight 990→1230 px: ADVENTURE_PAIR_PAGE_RAMPS, measured on MKM #212 / MH3 #196 / HOB #166) and the pinline (pinline.svg) across 40→60 %W; hybrid <pair>-h = the two colours' frames across the frame ramp (44→57 %W) under the pack's grey 'Land Frame' bars (l.png through the regular M15 Title and Type masks) and grey LEFT page (l.png through bookLeft, its paper toned onto ELD #212 / HOB #166: ADVENTURE_HYBRID_PAPER_TONE), the right page and the pinline split as the gold-split's (the grey plate pt/c)",
+      "the legendary crown (TODO 4.6f): the adventurecrown overlay — our m15crown band with its arms' last rows faded (scripts/build-adventure-crown.mjs), the pack's title bar sitting on M15's rows (the bar's top outline rows 100–103 on both, its bottom 1 px higher here) while its pinline is the regular pack's other tone on w, b, r, g, m and c"
     ],
     "page": {
       "mask": "img/frames/adventure/regular/bookLeft.png",
@@ -121,6 +272,112 @@
         ]
       }
     }
+  },
+  "adventurecrown": {
+    "source": "pipglyph",
+    "converter": "scripts/build-adventure-crown.mjs",
+    "kind": "overlay",
+    "derivedFrom": "the published m15crown/<key> bands of the frames bucket (themselves Card Conjurer imports: see \"m15crown\")",
+    "output": "1500x410 overlay band: rows 0–409 of a 1500x2100 card, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "fade": "alpha × (1 − t) on rows 372–408 (t 0 → 1), 0 below; colours untouched",
+      "arms": "nothing but the two arms is painted from row 372 down: x 60–125 and 1375–1440"
+    },
+    "colors": {
+      "w": [
+        "m15crown/w.png (published, sha256 9310ceac2b5c)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "u": [
+        "m15crown/u.png (published, sha256 00b5e90d266a)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "b": [
+        "m15crown/b.png (published, sha256 441795575262)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "r": [
+        "m15crown/r.png (published, sha256 d9a3215c1931)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "g": [
+        "m15crown/g.png (published, sha256 992548e92722)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "m": [
+        "m15crown/m.png (published, sha256 c7f61a87305b)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "a": [
+        "m15crown/a.png (published, sha256 a4062886c598)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "wu": [
+        "m15crown/wu.png (published, sha256 1e1f383c8ddb)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "wb": [
+        "m15crown/wb.png (published, sha256 0c940c2fc910)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "ub": [
+        "m15crown/ub.png (published, sha256 fec83248575f)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "ur": [
+        "m15crown/ur.png (published, sha256 e4dabca3be24)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "br": [
+        "m15crown/br.png (published, sha256 9c8e9b5b9df9)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "bg": [
+        "m15crown/bg.png (published, sha256 1823142c4572)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "rg": [
+        "m15crown/rg.png (published, sha256 2d07afc8e9a7)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "rw": [
+        "m15crown/rw.png (published, sha256 bf066b5e4f2d)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "gw": [
+        "m15crown/gw.png (published, sha256 07fa16429183)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "gu": [
+        "m15crown/gu.png (published, sha256 d848e185b795)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ]
+    },
+    "sourceFiles": [
+      "m15crown/a.png",
+      "m15crown/b.png",
+      "m15crown/bg.png",
+      "m15crown/br.png",
+      "m15crown/g.png",
+      "m15crown/gu.png",
+      "m15crown/gw.png",
+      "m15crown/m.png",
+      "m15crown/r.png",
+      "m15crown/rg.png",
+      "m15crown/rw.png",
+      "m15crown/u.png",
+      "m15crown/ub.png",
+      "m15crown/ur.png",
+      "m15crown/w.png",
+      "m15crown/wb.png",
+      "m15crown/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own cut (TODO 4.6f, owner 2026-11-22): the adventure frame's legendary printings (LCI #231, HOB #34 / #71 / #118 / #170, WOE #220 / #230, MKM #212, HOB #166 …) wear the standard 2015 legendary crown in the card's colour — the band m15, m15artifact and m15land draw. Nothing is drawn or synthesised: every painted pixel is the parent band's.",
+      "The one cut, the Nyx Constellation crown's (scripts/lib/nyx-crown.mjs, owner Round 59): the adventure masters are Card Conjurer's 'Adventure' pack, on the regular M15 pack's geometry (the title bar's top outline on M15's rows) but with that pack's other pinline tone on w, b, r, g, gold and the artifact silver, so the arms fade out over their last rows instead of ending in a tone step and a jog. The masters are not re-toned.",
+      "The numbers are scripts/lib/adventure-crown.mjs; no scan is read by the build.",
+      "Keys: the masters' letters, the artifact silver `a` (the template's colourless master is the pack's artifact frame: the profile maps c → a) and the ten pairs, drawn over the adventure's pair masters (MKM #212 prints G|U over the gold-split frame, HOB #166 over the hybrid)."
+    ]
   },
   "aftermath": {
     "source": "cardconjurer",

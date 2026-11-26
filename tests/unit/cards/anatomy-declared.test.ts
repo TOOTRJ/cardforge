@@ -88,6 +88,9 @@ describe("where the pieces are declared", () => {
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.
       "extendedartprepare",
+      // The adventure frame (TODO 4.6f, owner 2026-11-22): M15's band with
+      // its arms faded onto the masters' pinline (adventurecrown).
+      "adventure",
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -120,6 +123,11 @@ describe("where the pieces are declared", () => {
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
+    // The adventure frame (TODO 4.6f): the crown band and both dresses, beside
+    // 4.26's page in the spell's colour; no stamp, no collector line.
+    expect(frameAnatomyOf("adventure")).toEqual({ crown: true, twoColor: ["split", "hybrid"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false, partColor: true });
+    expect(anatomyDefaults("adventure")).toEqual({ crown: true, twoColor: true, partColor: true });
+    expect(getFrameProfile("adventure").overlays?.map((slot) => slot.anatomy)).toEqual(["crown", "partPage"]);
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });

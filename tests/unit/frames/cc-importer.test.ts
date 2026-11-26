@@ -889,7 +889,10 @@ describe("the portrait layouts (4.21a)", () => {
   it("copies each colour 1:1 from its own pack (flip's lower half re-cut since v39); the packs' missing colourless keys are named stand-ins", () => {
     for (const template of TRIO) {
       const def = templates[template];
-      expect(Object.keys(def.colors).sort(), template).toEqual([...COLORS].sort());
+      // (The adventure builds its twenty pair masters beside them since TODO
+      // 4.6f — tests/unit/frames/adventure-crown-pairs.test.ts.)
+      expect(Object.keys(def.colors).filter((key) => (COLORS as readonly string[]).includes(key)).sort(), template).toEqual([...COLORS].sort());
+      expect(Object.keys(def.colors).length, template).toBe(COLORS.length + (template === "adventure" ? 20 : 0));
       for (const key of COLORS) {
         // One layer, the pack's own file: no mask, no blend, no band re-cut.
         expect(def.colors[key], `${template}/${key}`).toHaveLength(1);
@@ -2072,7 +2075,10 @@ describe("provenance and hygiene", () => {
     // PipGlyph's own cut of the published m15nyxcrown bands
     // (scripts/build-nyx-crown.mjs; its own test:
     // tests/unit/frames/nyx-constellation-crown.test.ts).
-    const PIPGLYPH_DERIVED_BANDS: Record<string, string> = { nyxcrown: "m15nyxcrown" };
+    // …and the adventure frame's (TODO 4.6f): the same cut of the published
+    // m15crown bands (scripts/build-adventure-crown.mjs; its own test:
+    // tests/unit/frames/adventure-crown-pairs.test.ts).
+    const PIPGLYPH_DERIVED_BANDS: Record<string, string> = { nyxcrown: "m15nyxcrown", adventurecrown: "m15crown" };
     // …and the arch token's tall box (TODO 4.55): PipGlyph's own cut of the
     // published text-box masters (scripts/build-token-tall-frames.mjs; the
     // cut's own test: tests/unit/frames/token-tall-recut.test.ts).

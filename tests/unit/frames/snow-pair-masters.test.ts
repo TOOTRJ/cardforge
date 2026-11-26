@@ -132,6 +132,8 @@ describe("declared and published", () => {
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
       // …and the borderless double-faced bodies since 5.7 (m15borderless's split).
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // …and the adventure since 4.6f (each storybook page split, both dresses).
+      "adventure",
       // …and the Prepare frame since 4.26 (m15's two dresses with the page).
       "prepare",
       // …and the Strixhaven Mystical Archive since 4.11 wave 2 (the gold frame with the two colours' lines).

@@ -839,6 +839,12 @@ export function resolveFrameOverlays(
       const mapped = slot.keyMap?.[pageKey] ?? pageKey;
       const look = resolveTwoColor(profile, style, facts);
       if (mapped === (look ? look.masterKey : facts.colorKey)) continue;
+      // A slot with no page of its own for a pair (the adventure's maps it to
+      // gold) draws nothing over that pair's own master (TODO 4.6f): the
+      // adventure's pair masters paint the pair's pages themselves — MKM
+      // #212's G|U spell sits on its G|U creature's split pages — whatever
+      // the spell's dress. (Prepare publishes its pair pages: unchanged.)
+      if (look && slot.keyMap?.[pageKey] !== undefined && twoColorPairOf(facts.part?.colors) === look.pair) continue;
       key = mapped;
     } else if (slot.anatomy === "mdfcStrip") {
       const other = facts.dfc?.stripKey;

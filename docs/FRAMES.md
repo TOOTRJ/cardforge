@@ -4465,8 +4465,10 @@ page.
   card's colour is the creature's (Scryfall's card `colors`), never a first
   part's. The `part-colour` gap now matches adventure printings too, and the
   adventure frame draws it: WOE #221–241 stay exact, as on main. The
-  crowned (WOE #220, LCI #231, HOB), two-colour (MKM #212, MH3 #196, ELD
-  #212) and Omen (TDM) printings keep their gaps. A colourless creature
+  Omen (TDM) printings keep their gap; the crowned (WOE #220, LCI #231,
+  HOB) and two-colour (MKM #212, MH3 #196, ELD #212) ones are exact since
+  4.6f drew the crown and the pairs ([The adventure's crown and
+  pairs](#the-adventures-crown-and-pairs-46f)). A colourless creature
   with a coloured spell (HOB #170 The Arkenstone // Seek the Heart: a white
   page over the artifact frame) draws that colour's page over
   `adventure/c` where the look is on. TDM's Omens (layout `adventure`, the
@@ -7189,7 +7191,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
     are — where the section shows at all: it shows only when it has
     something to pick (a land mode, a frame chip, or the offered chip —
     owner 2026-10-12), so a kind whose section would hold only the dead
-    chip (emblem, saga, adventure, aftermath, flip) has none, as before;
+    chip (emblem, saga, aftermath, flip — not the adventure, whose crown
+    is drawn since 4.6f) has none, as before;
   - **selected** only while the switch is exactly `true` AND a face has the
     word "Legendary" — the crown is drawn. A new card that is not legendary
     holds the new-card default (`crown: true`) and still reads unselected;
@@ -7277,7 +7280,10 @@ default.
 — and, since 4.6f wave 2c, the m15snow and m15snowland entries, whose
 masters share the M15 pack's geometry ([Devoid and
 snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
-adventure, saga, the tokens or a showcase (4.6f and the token items; the
+saga, the tokens or a showcase (4.6f and the token items; the adventure
+draws the same band with its arms faded onto its masters' pinline, its own
+folder — [The adventure's crown and
+pairs](#the-adventures-crown-and-pairs-46f); the
 one showcase that prints it, the Theros constellation frame, draws the Nyx
 crown band with faded arms — [The constellation
 crown](#the-constellation-crown); the
@@ -7356,11 +7362,11 @@ m15land (the land frame and bars, the split in the two land tints; MKM
 - **Which dress:** print's for the cost (`twoColorDressOf`). m15artifact has
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
-  (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
-  extended art (its crown band draws no pairs: wave 2b) — keeps the
+  (`two-colour-hybrid`). What no frame draws yet — sagas — keeps the
   `two-colour` gaps, now pointing at 4.6f (the borderless frames draw theirs
   since wave 2a, the snow frames since wave 2c, the borderless land since
-  4.56, below; devoid's two-colour printings ARE its gold frame, so the gap
+  4.56, below, extended art since the 4.7 follow-up, the adventure since its
+  own 4.6f family; devoid's two-colour printings ARE its gold frame, so the gap
   is no gap there); an M20 token's gaps point at 4.48 (its own central rim
   split and pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
@@ -7978,6 +7984,100 @@ stored "multicolor" card whose pair the switch pre-fills from its cost).
   `two-colour-preview`, `frame-signatures` (KHM #224 / #249, J22 #12, DMR
   #244 and OGW #150 exact; MH3 #253 nearest), the matrix's `m15snow*`
   `@crown` / `@pair` cases.
+
+#### The adventure's crown and pairs (4.6f)
+
+TODO 4.6f's adventure family (owner 2026-11-22; the saga is the next PR,
+one family per PR). Two pieces on the `adventure` entry, each opt-in per
+card through the switches m15 has (`frame_style.crown`, `twoColor`): an
+ADDITION — no bump, no sweep, no badge. A stored adventure names neither
+switch (every save before this dropped them: the template drew neither),
+so it bakes as it did; a new adventure starts with both on
+(`anatomyDefaults`: crown, twoColor and 4.26's partColor); an import
+follows its printing (`printed_crown` for the `legendary` effect,
+`printed_two_color` for a two-colour 2015-frame printing).
+
+What print does (Scryfall 2026-11-22, `layout:adventure frame:2015`, the
+black-bordered plain printings; read at 1500 × 2100, nothing kept): of the
+58 crowned printings (`frame:legendary`), the plain ones — LCI #231 w, HOB
+#34 u, HOB #71 b, WOE #230 r, HOB #118 g, WOE #220 gold, HOB #170 a
+colourless artifact (`CROWN_REFERENCES.adventure`) and their kin — wear the
+STANDARD 2015 crown in the card's colour; the two-colour ones are MKM #212
+Kellan, Inquisitive Prodigy G|U and MH3 #196 Ondu Knotmaster W|B (gold
+costs) and ELD #212 Oakhame Ranger G|W and HOB #166 Thranduil, Sindarin
+Liege G|U (hybrid), MKM #212 and HOB #166 crowned with the split crown.
+
+- **The crown is m15's band, its arms faded** (`ADVENTURE_CROWN`,
+  `adventurecrown/<key>`): Card Conjurer's 'Adventure' pack is drawn on the
+  regular M15 pack's geometry — the title bar's top outline on rows
+  100–103 as m15's masters, its bottom outline one row higher (218–221
+  against 219–222) — so the m15crown band registers as it does on m15.
+  But the masters' pinline beside the art is that pack's other tone on six
+  keys (r 239,56,39 against the band's 209,77,53; g 0,123,67 against
+  42,108,69; b 39,38,36 against 58,56,50; gold 246,210,98 against
+  233,212,125; w 252,254,255 against 244,243,236; the artifact silver
+  246,247,245 against 223,225,225), and the band's arms repaint that
+  pinline down to row 408: drawn as published they end in a tone step and
+  a 1–2 px jog. So the bands take the Nyx Constellation crown's one cut
+  ([The constellation crown](#the-constellation-crown), owner Round 59):
+  alpha × (1 − t) over rows 372 → 408, the crown handing over to the
+  master's own pinline (`scripts/lib/adventure-crown.mjs`,
+  `scripts/build-adventure-crown.mjs`; PipGlyph's own cut of the published
+  bands, no Card Conjurer file read). Keys: w u b r g, m, the artifact
+  silver `a` (the template's colourless master is the pack's artifact
+  frame: `keyMap: { c: "a" }`, HOB #170's silver crown) and the ten pairs.
+  The masters are not re-toned (their pinline is a correction, another
+  step). 17 bands, PNG + WebP.
+- **The pairs carry 4.6b's recipe onto the pack's own masks**
+  (`adventurePairLayers`, `scripts/lib/cc-frames.mjs`; Card Conjurer has
+  no two-colour adventure recipe — its `cardFrameProperties` knows none of
+  the pack's masks): `twoColorMasters: ["split", "hybrid"]`.
+  - gold-split `adventure/<pair>`: `m.png` whole (the gold body and bars,
+    as MKM #212 / MH3 #196 print), the pinline (`pinline.svg`: the art
+    ring, the type bar's ring and the book's foot) across 4.6b's 40→60 %W,
+    and EACH STORYBOOK PAGE split about its own centre — not the card's:
+    the left page (`bookLeft.png`, its bars, paper and curled edge) across
+    x 300 → 540, the right page (`bookRight.png`) across 990 → 1230
+    (`ADVENTURE_PAIR_PAGE_RAMPS`). Measured on the prints, each column's
+    median de-shaded against our two one-colour masters: the left page's
+    bars and paper cross 50 % at x ≈ 390–450 (MKM #212's name bar ~430 and
+    type bar ~400, MH3 #196's ~390 and ~450, its paper ~420; the page runs
+    73–752), the right page's paper at x ≈ 1090–1130 (MKM ~1105, MH3 ~1120,
+    HOB #166 ~1110; the page runs 752–1410), each over about 240 px;
+  - hybrid `adventure/<pair>-h`: the two colours' whole files across the
+    hybrid frame ramp (44→57 %W), the pack's grey 'Land Frame' bars (l.png
+    through the regular M15 Title and Type masks) and a GREY spell page
+    (l.png through `bookLeft`: ELD #212 and HOB #166 print the left page's
+    bars and paper grey), the right page and the pinline split as the
+    gold-split's, the grey plate `pt/c` (`plateKeyFor`). l.png's left
+    paper is toned onto those two prints by 4.26a's house rule
+    (`ADVENTURE_HYBRID_PAPER_TONE`: 177,174,173 → 216,210,212, the median of
+    HOB #166's 210,206,205 and ELD #212's 221,213,218), as the colours'
+    pages are (`ADVENTURE_SOURCE_TONES`); no one-colour master reads l.png.
+  The same run rebuilds the seven one-colour masters and the six page
+  pieces byte for byte. The crown on a pair is the pair's band (the two
+  crowns across 45→55, m15's) over either dress.
+- **With 4.26's page in the spell's colour:** a pair master paints its own
+  pair's pages, so a spell of the creature's own pair (MKM #212's G|U spell
+  on its G|U creature) draws no page over it, whatever the spell's dress
+  (`resolveFrameOverlays`: a `partPage` slot with no page of its own for a
+  pair — the adventure's maps a pair to gold — skips the pair the look
+  draws; Prepare, which publishes its pair pages, is untouched). A mono
+  spell still draws its colour's page over the pair master (the right page
+  stays the master's), a spell of another pair the gold page (no print).
+- **Verification (V-A):** the pairs ride the template's `m` tick, the crown
+  the colour ticks (adventure is verified in all seven keys); the owner
+  signs a contact sheet off in the PR.
+- **Registry:** the `crown`, `two-colour` and `two-colour-hybrid` gaps drop
+  on the adventure by themselves (`gapDrawnBy`): WOE #220, LCI #231, HOB
+  #170, MKM #212, MH3 #196 and ELD #212 import `exact`. The saga keeps its
+  gaps.
+- **Tests:** `tests/unit/frames/adventure-crown-pairs.test.ts` (the recipes,
+  the published objects and provenance, the bands' and pair masters'
+  pixels), `tests/unit/render/adventure-crown-pairs-bake.test.tsx` (real
+  bakes: a stored card unchanged, the band inside its rows, the dresses and
+  plates, the page beside a pair master), the matrix's `adventure/*`
+  `@crown` / `@pair*` cases and three parity cases.
 
 #### The collector line (4.9b)
 

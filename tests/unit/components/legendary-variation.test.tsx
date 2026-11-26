@@ -174,7 +174,6 @@ describe("where it lives", () => {
   it.each([
     ["saga", "enchantment", "saga"],
     ["emblem", "emblem", "emblem"],
-    ["adventure", "creature", "adventure"],
     ["aftermath", "sorcery", "aftermath"],
     ["flip", "creature", "flip"],
   ] as const)("%s: only the dead chip would be there — no section, as before 3b.17", (template, cardType, kind) => {
@@ -186,6 +185,8 @@ describe("where it lives", () => {
   it.each([
     ["m15dfcfront", "transform"],
     ["m15mdfcfront", "mdfc"],
+    // The adventure frame draws its crown since TODO 4.6f.
+    ["adventure", "adventure"],
   ] as const)("%s: no frame chips, but the entry is offered — the section shows for it", (template, kind) => {
     render(<Harness template={template} kind={kind} verified={[`${template}/w`]} backFace={{ card_type: "creature", supertype: "" }} />);
     const section = screen.getByTestId("variations-section");

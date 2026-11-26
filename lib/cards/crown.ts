@@ -208,6 +208,24 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     g: ref("Nylea, Keen-Eyed", "thb", "266", "2a022e36-5074-4875-ac30-aaa09b7ef421"),
     m: ref("Klothys, God of Destiny", "thb", "268", "4d747889-04db-4e7a-ad4c-7549514b5112"),
   },
+  // The adventure frame (TODO 4.6f, owner 2026-11-22): a crowned plain
+  // 2015-frame adventure per colour (Scryfall `layout:adventure frame:2015
+  // frame:legendary`, 2026-11-22: 58 printings, the showcase, borderless and
+  // extended-art ones aside), the gold WOE #220 Beluna, the colourless
+  // artifact HOB #170 (keyed `c`, the frame colour key: the crown drawn is
+  // the artifact silver `a`, the slot's keyMap) and the one crowned gold
+  // pair, MKM #212 (G|U over the gold-split pair master; HOB #166 prints the
+  // same crown over the hybrid one).
+  adventure: {
+    w: ref("Kellan, Daring Traveler", "lci", "231", "01739030-c280-492b-a5c9-b3e9f6debc6d"),
+    u: ref("Bilbo Baggins, Burglar", "hob", "34", "6a109b3e-9f5b-4625-abb7-6b992c10530b"),
+    b: ref("Gollum, Silent Slinker", "hob", "71", "6cfaa182-3fec-4907-8814-b4d29c33cec3"),
+    r: ref("Kellan, the Fae-Blooded", "woe", "230", "ec5e2680-8b42-4571-ab45-4936aec51901"),
+    g: ref("Beorn, Reluctant Host", "hob", "118", "804589b7-3ef9-473d-97cc-c61a2d41f70d"),
+    m: ref("Beluna Grandsquall", "woe", "220", "3f5acc0d-33a6-476f-95ca-a1ad788334dd"),
+    c: ref("The Arkenstone", "hob", "170", "a56a88ba-fcfa-4b56-bdae-a080b297b871"),
+    gu: ref("Kellan, Inquisitive Prodigy", "mkm", "212", "c49690c7-c282-4eb4-8da3-5e0c46a80fc4"),
+  },
   // The artifact dress: a crowned borderless artifact per colour where one
   // was printed; its colourless crown is CC's artifact crown (2XM #362).
   // The double-faced bodies (TODO 5.1d): a crowned printing per face per

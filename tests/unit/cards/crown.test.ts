@@ -85,6 +85,8 @@ describe("which card draws the crown", () => {
       "prepare",
       // …and its extended-art dress (TODO 4.27b): the extended-art band.
       "extendedartprepare",
+      // The adventure frame (TODO 4.6f): M15's band, its arms faded.
+      "adventure",
       // The full-art tokens' own floating crown (TODO 4.48).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       // …and their Nyx dress (TODO 4.51).
@@ -210,6 +212,11 @@ describe("the crowned prints the crown is judged against", () => {
     // The textless promos (4.35 follow-up): blue, red and gold crowned promos.
     expect(Object.keys(CROWN_REFERENCES.m15textless ?? {}).sort()).toEqual(["m", "r", "u"]);
     expect(crownReferenceFor("m15textless", "u")).toMatchObject({ set: "pspl", collectorNumber: "8" });
+    // The adventure frame (4.6f): a crowned plain printing per colour, gold,
+    // the colourless artifact (keyed by its frame key `c`) and the gold pair.
+    expect(Object.keys(CROWN_REFERENCES.adventure ?? {}).sort()).toEqual(["b", "c", "g", "gu", "m", "r", "u", "w"]);
+    expect(crownReferenceFor("adventure", "m")).toMatchObject({ set: "woe", collectorNumber: "220" });
+    expect(crownReferenceFor("adventure", "gu")).toMatchObject({ set: "mkm", collectorNumber: "212" });
     // Scryfall ids only (never a scan).
     for (const refs of Object.values(CROWN_REFERENCES)) {
       for (const ref of Object.values(refs ?? {})) expect(ref?.scryfallId).toMatch(/^[0-9a-f-]{36}$/);

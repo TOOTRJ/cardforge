@@ -232,6 +232,8 @@ describe("window helpers", () => {
       ["token/m20+crown", "m20tokenartifacttext"],
       ["token/m20+two-colour", "m20token"],
       ["token/m20+two-colour", "m20tokentall"],
+      // TODO 4.6f: the adventure frame draws its crown (WOE #220 Beluna).
+      ["layout/2015+crown", "adventure"],
       // A borderless printing logged on its BORDERED landing (1.18: an
       // import's picture is the window's) where its borderless twin draws
       // the piece now: the crown since 4.6f wave 2a (frames audit
@@ -257,7 +259,8 @@ describe("window helpers", () => {
       // A split-only frame that hosts creatures can't tell a hybrid row
       // from a gold one (like m15artifact below).
       ["era/2015+two-colour", "m15snow"],
-      ["layout/2015+crown", "adventure"],
+      // …and the saga's crown, still 4.6f's.
+      ["layout/2015+crown", "saga"],
       // A borderless land logged on its bordered landing: the borderless
       // land frame draws no crown (no crowned twin of its masters).
       ["borderless/land+crown", "m15land"],

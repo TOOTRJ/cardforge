@@ -235,10 +235,14 @@ describe("the layout frames' two-colour gap is answered frame by frame (its item
     expect(frameRequestAnswered(row("layout/2015+two-colour", "split"), NONE)).toBe(true);
   });
 
-  it("a saga's or an adventure's stays open on 4.6f, and the hybrid split stays open", () => {
+  it("a saga's stays open on 4.6f, an adventure's is answered (4.6f, #829), and the hybrid split stays open", () => {
     const pairs = answeredSignaturePairs(ALL_VERIFIED);
-    for (const pair of ["layout/2015+two-colour|saga", "layout/2015+two-colour|adventure", "layout/2015+two-colour-hybrid|split"]) {
+    for (const pair of ["layout/2015+two-colour|saga", "layout/2015+two-colour-hybrid|split"]) {
       expect(pairs, pair).not.toContain(pair);
+    }
+    // The adventure frame draws both dresses since 4.6f (#829).
+    for (const pair of ["layout/2015+two-colour|adventure", "layout/2015+two-colour-hybrid|adventure"]) {
+      expect(pairs, pair).toContain(pair);
     }
     expect(signatureBlockedBy("layout/2015+two-colour", "saga")).toBe("4.6f");
     expect(signatureBlockedBy("layout/2015+two-colour", "split")).toBe("4.26");
@@ -259,18 +263,33 @@ describe("a row logged on a fall-forward frame is never answered there (the inde
   const printing = (data: Record<string, unknown>, key: string) => frameMatchFromScryfall(scryfallCardSchema.parse(data[key]));
   const LAYOUT_ROWS: [string, Record<string, unknown>, string, string][] = [
     ["khm-201", anatomyPrintings, "layout/2015+two-colour", "saga"], // a two-colour saga
+  ];
+  // The adventure frame draws both two-colour dresses since 4.6f (#829):
+  // these printings import exact on it — and a row logged on a plain frame
+  // they fell forward to is still never answered THERE.
+  const ADVENTURE_ROWS: [string, Record<string, unknown>, string, string][] = [
     ["mh3-196", adventurePrintings.printings, "layout/2015+two-colour", "adventure"], // a two-colour adventure
     ["eld-212", adventurePrintings.printings, "layout/2015+two-colour-hybrid", "adventure"], // a hybrid adventure
   ];
+  const PLAIN_FRAMES = ["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15devoid"];
 
   it.each(LAYOUT_ROWS)("%s: open on its layout frame today, and its row on the plain frame stays open", (key, data, signature, frame) => {
     const match = printing(data, key);
     expect(match).toMatchObject({ signature, status: "nearest", template: frame });
-    for (const template of ["m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15devoid"]) {
+    for (const template of PLAIN_FRAMES) {
       expect(frameRequestAnswered(row(signature, template), ALL_VERIFIED), `${signature} on ${template}`).toBe(false);
       expect(answeredSignaturePairs(ALL_VERIFIED), `${signature} on ${template}`).not.toContain(`${signature}|${template}`);
     }
     expect(frameRequestAnswered(row(signature, frame), ALL_VERIFIED)).toBe(false);
+  });
+
+  it.each(ADVENTURE_ROWS)("%s: exact on the adventure frame now, its row there answered, its row on a plain frame still open", (key, data, signature, frame) => {
+    const match = printing(data, key);
+    expect(match).toMatchObject({ template: frame });
+    expect(frameRequestAnswered(row(signature, frame), ALL_VERIFIED)).toBe(true);
+    for (const template of PLAIN_FRAMES) {
+      expect(frameRequestAnswered(row(signature, template), ALL_VERIFIED), `${signature} on ${template}`).toBe(false);
+    }
   });
 
   it("a borderless walker's two-colour row on the plain frame or the bordered walker frame stays open", () => {
