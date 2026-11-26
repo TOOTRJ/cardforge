@@ -186,6 +186,17 @@ const MEANT_CHANGES: Record<string, (record: unknown) => unknown> = {
     (saved.back_face as Record<string, unknown>).color_identity = ["red"];
     return record;
   },
+  // fix(ai), a token's random frame (owner 2026-11-25): a RANDOM frame for
+  // an AI token is one of the token designs (resolveGeneratedFrame). The
+  // pool's first was one already (m15tokenartifacttext, the plan's frame,
+  // unchanged); its LAST was the showcase at the pool's end — reached only
+  // because every combo is ticked here — and is now the full-art design's
+  // text-box height in the Artifact dress. Nothing else moves (the plan
+  // record's step labels as every plan record's).
+  "card plan · token (Treasure)": (record) => {
+    (record as { lastFrame?: unknown }).lastFrame = "m20tokenartifacttext";
+    return labelsWaitForTheStep(record);
+  },
 };
 
 /** fix(ai), the job's text waits for its paid step (lib/ai/job-privacy.ts,
