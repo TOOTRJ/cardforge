@@ -2374,7 +2374,13 @@ export function CardCreatorForm({
       kind: kindFromCard(patch.card_type, patch.template),
       candidates: [patch.template],
       colorKey: currentColorKey,
-      verifiedKeys: new Set(verifiedFrameKeys),
+      // (Read for the card's new type, as the save's gate will: an artifact
+      // reads a frame that dresses its colour as the artifact master —
+      // Double Feature, TODO 5.9 — as published only with `c` ticked too.)
+      verifiedKeys: verifiedKeysForType(new Set(verifiedFrameKeys), {
+        cardType: patch.card_type,
+        supertype: getValues("supertype"),
+      }),
       prefer: "frame",
     });
     return { currentColorKey, resolution };
@@ -3740,7 +3746,12 @@ export function CardCreatorForm({
             ? [skinBeforeFill, fill.frame_template as FrameTemplate]
             : [fill.frame_template as FrameTemplate],
           colorKey,
-          verifiedKeys: new Set(verifiedFrameKeys),
+          // (For the type the fill writes, as the save's gate reads it: an
+          // artifact needs a frame's artifact-master review too, TODO 5.9.)
+          verifiedKeys: verifiedKeysForType(new Set(verifiedFrameKeys), {
+            cardType: fill.card_type,
+            supertype: fill.supertype ?? "",
+          }),
           prefer: "frame",
         });
         if (

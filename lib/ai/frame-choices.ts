@@ -29,6 +29,7 @@ import {
   kindHasAvailableFrame,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
+import { verifiedKeysForType } from "@/lib/cards/frame-availability";
 import { AI_LAYOUT_KINDS, LAYOUT_TEMPLATE, isAiLayoutKind, type AiLayoutKind } from "@/lib/ai/layout-design";
 import { AI_DFC_KINDS, dfcFrontChoices, dfcKindOffReason, isAiDfcKind, type AiDfcKind } from "@/lib/ai/dfc-design";
 import {
@@ -65,13 +66,24 @@ export const AI_DIALOG_KINDS: readonly AiDialogKind[] = [...AI_DESIGN_KINDS, ...
 
 /** Why a kind chip is off, or null when the kind can be generated. A layout
  *  kind is judged on its ONE frame (never the double-faced saga front). */
-export function aiKindOffReason(kind: AiDialogKind, verifiedKeys: ReadonlySet<string>): string | null {
+export function aiKindOffReason(kind: AiDialogKind, allVerifiedKeys: ReadonlySet<string>): string | null {
   // A double-faced kind: its front AND its default back published (PR 3).
-  if (isAiDfcKind(kind)) return dfcKindOffReason(kind, verifiedKeys);
+  if (isAiDfcKind(kind)) return dfcKindOffReason(kind, allVerifiedKeys);
+  const verifiedKeys = keysForKind(kind, allVerifiedKeys);
   const published = isAiLayoutKind(kind)
     ? aiFrameOptions(kind, verifiedKeys, null).length > 0
     : kindHasAvailableFrame(kind, verifiedKeys);
   return published ? null : "No frame published yet";
+}
+
+/** The published combos as the plan judges a card of this kind: an
+ *  ARTIFACT reads a frame that dresses its colour as the artifact master
+ *  (Double Feature, TODO 5.9) as published only once that master's review
+ *  (`c`) is ticked too — resolveGeneratedFrame's and frameFitOf's rule, so
+ *  the dialog never offers a frame the plan would refuse. Every other kind:
+ *  the set itself. */
+function keysForKind(kind: AiDialogKind, verifiedKeys: ReadonlySet<string>): ReadonlySet<string> {
+  return verifiedKeysForType(verifiedKeys, { cardType: kind });
 }
 
 export type AiFrameOption = {
@@ -98,7 +110,9 @@ export function aiFrameOptions(
 ): AiFrameOption[] {
   // A double-faced kind lists its FRONT frames (PR 3); the back's body is
   // derived from the back the AI designs.
-  const choices = isAiDfcKind(kind) ? dfcFrontChoices(kind, verifiedKeys) : framesForKind(kind, verifiedKeys);
+  const choices = isAiDfcKind(kind)
+    ? dfcFrontChoices(kind, verifiedKeys)
+    : framesForKind(kind, keysForKind(kind, verifiedKeys));
   return choices
     // A layout kind is made on its one frame (the double-faced saga front
     // is PR 3's).

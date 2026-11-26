@@ -6,7 +6,8 @@ import { FRAME_SIGNATURE_KEYS } from "@/lib/scryfall/frame-signatures";
 import { importedAnatomy, normalizeAnatomy } from "@/lib/cards/anatomy";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
-import { finalizeImportMatch, remixFrameFor } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, remixFrameFor, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
+import { verifiedKeysForType } from "@/lib/cards/frame-availability";
 import { frameChoicesForType, resolveGeneratedFrame } from "@/lib/creator/frame-random";
 import { frameFitsImport, importFramePlan, importedKindOf } from "@/lib/creator/import-frame-choice";
 import { templateRefusesKind } from "@/lib/creator/card-kinds";
@@ -235,6 +236,25 @@ describe("the Innistrad: Double Feature imports", () => {
     const offered = (verified: ReadonlySet<string>) => frameChoicesForType("artifact", verified).find((f) => f.template === "doublefeature")?.availableColorKeys ?? [];
     expect(offered(whiteOnly)).toEqual([]);
     expect([...offered(withC)].sort()).toEqual(["c", "w"]);
+  });
+
+  it("the creator's own frame moves (a kind change, an AI fill's frame) read it too: a white artifact leaves the frame without `c`", () => {
+    // What resolveKindPatchFrame and the AI fill's kind resolution in
+    // card-creator-form.tsx hand resolvePublishedFrame: the set read for the
+    // card's type.
+    const whiteOnly = new Set([...every("m15artifact"), frameComboKey("doublefeature", "w")]);
+    const move = (verified: ReadonlySet<string>, type: { cardType: "artifact" | "enchantment"; supertype?: string }) =>
+      resolvePublishedFrame({
+        kind: type.cardType,
+        candidates: ["doublefeature"],
+        colorKey: "w",
+        verifiedKeys: verifiedKeysForType(verified, type),
+        prefer: "frame",
+      });
+    expect(move(whiteOnly, { cardType: "artifact" })).toMatchObject({ status: "frame-switched", template: "m15artifact", fromTemplate: "doublefeature" });
+    expect(move(new Set([...whiteOnly, frameComboKey("doublefeature", "c")]), { cardType: "artifact" })).toMatchObject({ status: "exact", template: "doublefeature" });
+    // The colour alone, for a card the frame doesn't dress as an artifact.
+    expect(move(whiteOnly, { cardType: "enchantment" })).toMatchObject({ status: "exact", template: "doublefeature" });
   });
 
   it("the import chooser and the remix landing read the same rule", () => {
