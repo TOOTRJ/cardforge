@@ -148,6 +148,8 @@ describe("declared and published", () => {
       "extendedart", "extendedartland",
       // …and the Prepare frame's extended-art dress since 4.27b (the same lower half).
       "extendedartprepare",
+      // …and the Universes Beyond extended-art dress since 4.25 (the extended frames' dresses).
+      "extendedartub", "extendedartubland",
       // …and the old frames since 4.6h (the 2003 gold card, the 2003 and 1997 lands).
       "retroland", "modern", "modernland",
     ]);

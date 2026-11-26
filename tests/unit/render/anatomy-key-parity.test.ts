@@ -87,7 +87,9 @@ describe("bake path = preview path", () => {
     // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
     // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
     // …and the extended-art Prepare dress's 20 (4.27b: the Prepare pairs' lower half).
-    expect(pairKeys).toBe(480);
+    // …and the Universes Beyond extended-art dress's 30 (4.25: the spell
+    // frame's two dresses, the land's split).
+    expect(pairKeys).toBe(510);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -156,6 +158,9 @@ describe("bake path = preview path", () => {
                 ? "fullart/holostamp"
                 : template === "m15pw"
                 ? "m15pwholostamp"
+                : template === "extendedartub" || template === "extendedartubland"
+                ? // The Universes Beyond extended-art dress's own piece (4.25).
+                  "extendedartubholostamp"
                 : ub
                   ? "m15ubholostamp"
                   : // The borderless frames (4.9d): their own lifted arch,
@@ -219,6 +224,9 @@ describe("bake path = preview path", () => {
                   "fullartcrown"
                 : template === "extendedart" || template === "extendedartland" || template === "extendedartstation" || template === "extendedartprepare"
                 ? "extendedcrown"
+                : template === "extendedartub" || template === "extendedartubland"
+                ? // The Universes Beyond extended-art floating crown (4.25).
+                  "extendedartubcrown"
                 : ub
                   ? "m15ubcrown"
                 : template === "m15nyx"
@@ -316,7 +324,9 @@ describe("bake path = preview path", () => {
     // its 9 bar keys + 10 pairs.
     // …and the Prepare frame's lifted foot (4.27b): 7 keys + the 20 pair
     // masters (keyed by the master: both dresses), on both of its looks.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10) + (9 + 10) + (7 + 20) * 2);
+    // …and the Universes Beyond extended-art dress's own piece (4.25): 8 bar
+    // keys + 10 pairs on each of its two entries.
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10) + (9 + 10) + (7 + 20) * 2 + (8 + 10) * 2);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

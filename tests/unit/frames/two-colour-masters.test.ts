@@ -100,6 +100,9 @@ describe("the declared pair masters", () => {
       // …and its extended-art dress (TODO 4.27b): the same twenty, merged
       // under the extended-art top.
       extendedartprepare: 20,
+      // …and the Universes Beyond extended-art dress (TODO 4.25): the
+      // extended frames' dresses over the Universes Beyond extended pack.
+      extendedartub: 20, extendedartubland: 10,
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,

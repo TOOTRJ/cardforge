@@ -176,6 +176,9 @@ describe("Card Conjurer recipe", () => {
       // The extended-art frame (TODO 4.7, layout v58; tests/unit/frames/extended-art-importer.test.ts).
       "extendedart",
       "extendedartland",
+      // …and their Universes Beyond dress (TODO 4.25; tests/unit/frames/ub-extended-art.test.ts).
+      "extendedartub",
+      "extendedartubland",
       "flip",
       // The Zendikar Rising hedron showcase (TODO 4.11, layout v63; tests/unit/frames/zendikar-rising-frame.test.ts).
       "fullart",
