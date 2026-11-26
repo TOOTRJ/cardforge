@@ -2431,12 +2431,18 @@ TRK, MSH, TMT) keep their `universes-beyond` gap.
   The same run rebuilds the seven one-colour masters and the rail's two
   pieces byte for byte. An all-hybrid cost (none printed) draws the same
   gold-split master, as m15artifact's does (`resolveTwoColor`).
-- **The ribbon's fold** (the folded back above chapter I) is the first
-  colour's on a pair master, as each one-colour master paints its own
-  colour's fold. Print shows it tan to gold-brown on every saga, one-colour
-  ones too (DSK #75's blue saga a tan fold, DOM #21's white one gold-brown,
-  KHM #215's U|R one gold): a correction of every saga master, not this
-  addition — the owner's sheet shows it.
+- **The ribbon's fold** (the folded back above chapter I) is the GOLD
+  master's on a pair master: the pack's Banner mask covers the ribbon's
+  front only (its left edge sweeping in from x 65 at rows 350–480), so
+  `sagaFrameM.png`'s tan-brown fold (128,101,72) shows through there —
+  `saga/ur` equals `saga/m` at (80, 350), (85, 400) and (90, 450), where
+  `saga/u` is 0,92,149. Print shows the fold tan to gold-brown on every
+  saga, one-colour ones too (DSK #75's blue saga a tan fold, DOM #21's
+  white one gold-brown, KHM #215's U|R one gold), so the pairs match print
+  there; it is the ONE-colour masters that paint the fold in the card's
+  colour (Card Conjurer's) — correcting those is a correction of every
+  one-colour saga master (before / after + sweep), not this addition. The
+  owner's sheet shows a pair's fold beside a one-colour fold and print's.
 - **Verification (V-A):** the pairs ride the template's `m` tick, the crown
   the colour ticks (the saga is verified in all seven keys); the owner
   signs a contact sheet off in the PR.
@@ -2446,6 +2452,19 @@ TRK, MSH, TMT) keep their `universes-beyond` gap.
   `+crown` logged on the saga frame reads as answered (`signatureDrawnOn`,
   the function-valued item since #828), one logged on the plain frame it
   fell forward to stays open. `two-colour-hybrid` stays (no hybrid dress).
+- **A known effect on TLA's legendary saga fronts** (TLA #27 / #61 / #145 /
+  #186, their `ptla` stamps, the borderless #354–358): they land on the
+  plain saga, `nearest` (`dfc/colourless-face`, 5.11), with their
+  colourless "Legendary Creature — Avatar" back as a LEGACY back, drawn on
+  the front's frame with the front's switches. The import names the crown
+  from the printing's `legendary` frame effect (`printsStandardCrown`),
+  which describes the back, and the saga now keeps it: the front (not
+  legendary) draws none, the legacy back draws the saga crown in the
+  front's colour (the back-face preview, `?face=back`). Print does crown
+  that back, on another body. New imports only — stored cards keep their
+  frame_style. Pinned by `tests/unit/scryfall/saga-crown-legacy-back.test.ts`;
+  the alternative, not built, keys the import's crown switch on the FRONT
+  face's type line.
 - **Tests:** `tests/unit/frames/saga-crown-pairs.test.ts` (the recipes,
   the published objects and provenance, the bands' and pair masters'
   pixels), `tests/unit/render/saga-crown-pairs-bake.test.tsx` (real bakes:

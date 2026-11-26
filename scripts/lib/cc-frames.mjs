@@ -2715,9 +2715,11 @@ export const SAGA_CHAPTER_PIECES = Object.freeze({
 // No HYBRID saga was printed (Scryfall `layout:saga is:hybrid`: none), so
 // the saga draws the gold-split dress only (an all-hybrid cost draws it
 // too, as m15artifact's does). The folded back of the ribbon above the
-// first chapter is the first colour's, as each one-colour master paints its
-// own (print shows it tan on every saga, one-colour ones too: a correction
-// of every saga master, not this addition). The crown over a pair is the
+// first chapter is the GOLD master's on a pair: the Banner mask covers the
+// ribbon's front only, so sagaFrameM's tan-brown fold (128,101,72) shows
+// through — as print's fold is tan to gold-brown on every saga. It is the
+// one-colour masters that paint the fold in the card's colour (a correction
+// of those, not this addition). The crown over a pair is the
 // saga's own band of the pair (sagacrown/<pair>, built by
 // scripts/build-saga-crown.mjs). Verification: a pair rides the template's
 // `m` tick (4.6b's V-A).

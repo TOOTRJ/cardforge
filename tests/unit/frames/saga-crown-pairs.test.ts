@@ -254,6 +254,17 @@ describe.skipIf(!haveMasters)("the published pair masters (set FRAMES_BUILD_DIR 
     }
   }, 60_000);
 
+  it("the ribbon's fold above chapter I is the gold master's (the Banner mask covers the front only) — tan-brown, as print's on every saga", async () => {
+    const gold = await at("m");
+    for (const pair of TWO_COLOR_PAIRS) {
+      const p = await at(pair);
+      for (const [x, y] of [[80, 350], [85, 400], [90, 450]] as const) expect(p(x, y), `${pair} fold ${x},${y}`).toEqual(gold(x, y));
+    }
+    expect(gold(80, 350)).toEqual([128, 101, 72, 255]);
+    // …where a one-colour master paints the fold in its own colour.
+    expect((await at("u"))(80, 350)).toEqual([0, 92, 149, 255]);
+  }, 60_000);
+
   it("the pinline: the first colour's left end, the second's right end; the paper: the first colour's left of the ramp, the second's right of it", async () => {
     for (const pair of TWO_COLOR_PAIRS) {
       const [a, b] = pair.split("");
